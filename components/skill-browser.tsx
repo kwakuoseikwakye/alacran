@@ -3,12 +3,14 @@
 import { useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { SkillEntry } from "@/lib/skills/types"
 import type { SkillAgentResult } from "@/lib/get-all-skills"
 import { getActivityDetail } from "@/lib/get-activity-detail"
 import { SkillEditor } from "@/components/skill-editor"
+import { SkillHistory } from "@/components/skill-history"
 
 export function SkillBrowser({
   results,
@@ -20,11 +22,13 @@ export function SkillBrowser({
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
+  const [view, setView] = useState<"content" | "history">("content")
 
   async function openEntry(entry: SkillEntry) {
     setSelected(entry)
     setDetail(null)
     setDetailError(null)
+    setView("content")
     try {
       const content = await getActivityDetail(entry.path)
       setDetail(content)
@@ -67,12 +71,25 @@ export function SkillBrowser({
           <SheetHeader>
             <SheetTitle>{selected?.name}</SheetTitle>
           </SheetHeader>
+          <div className="flex gap-2 px-4">
+            <Button size="sm" variant={view === "content" ? "default" : "outline"} onClick={() => setView("content")}>
+              Content
+            </Button>
+            <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
+              History
+            </Button>
+          </div>
           <ScrollArea className="h-[80vh] pr-4">
-            {detailError && <p className="text-destructive">{detailError}</p>}
-            {!detailError && detail !== null && selected && (
-              <SkillEditor path={selected.path} initialContent={detail} />
+            {view === "content" && (
+              <>
+                {detailError && <p className="text-destructive">{detailError}</p>}
+                {!detailError && detail !== null && selected && (
+                  <SkillEditor path={selected.path} initialContent={detail} />
+                )}
+                {!detailError && detail === null && <p>Loading…</p>}
+              </>
             )}
-            {!detailError && detail === null && <p>Loading…</p>}
+            {view === "history" && selected && <SkillHistory path={selected.path} />}
           </ScrollArea>
         </SheetContent>
       </Sheet>
