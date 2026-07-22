@@ -17,7 +17,7 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       if (throwOnBad456 && typeof filePath === "string" && filePath.endsWith("bad456.md")) {
         throw new Error("simulated unreadable file")
       }
-      return actual.readFile(filePath as any, ...args)
+      return actual.readFile(filePath as Parameters<typeof actual.readFile>[0], ...args)
     }),
   }
 })

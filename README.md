@@ -1,0 +1,49 @@
+# AI-Native Control Panel
+
+Read-only local dashboard for the agents/tools in `~/AI-Native/`
+(`plh-takeshi-agent`, `ai-company-starter-main`, `plh-ops`). Shows each
+agent's most recent activity and a merged activity board, built entirely
+from files/state those tools already produce — nothing here writes to any
+of them.
+
+## Run it
+
+    npm install
+    npm run dev
+
+Open http://localhost:3000 for the agent tree view, or
+http://localhost:3000/activity for the merged activity board.
+
+## Test it
+
+    npm test
+
+## Add a new agent
+
+1. Add an entry to `AGENTS` in `lib/config.ts` with a unique `id` and its
+   `rootPath`.
+2. Write an adapter in `lib/adapters/<id>.ts` implementing the `Adapter`
+   type from `lib/adapters/types.ts` — a pure, read-only
+   `(agent) => Promise<Activity[]>` function. Follow the existing adapters
+   as examples of the error-handling pattern (never throw past your own
+   boundary; return `[]` or skip on missing files).
+3. Register it in `ADAPTERS` in `lib/config.ts` under the same `id`.
+4. Add adapter tests under `lib/adapters/<id>.test.ts` using a temp
+   directory (see `lib/adapters/plh-ops.test.ts` for the pattern).
+
+`lib/config.test.ts` will fail if `AGENTS` and `ADAPTERS` ever drift out of
+sync, so a missing adapter registration is caught immediately.
+
+## Known v1 limitations
+
+- Read-only: no way to trigger/assign agent runs from this UI yet.
+- No skill-editing/versioning UI yet.
+- `ai-company-starter-main`'s `state/cycles/*/*/cycle.jsonl` parsing is
+  best-effort/lenient, since that directory ships empty by default and its
+  exact schema wasn't verified against real data.
+- `plh-ops` activity timestamps come from the report filename, not git log
+  (see the adapter's inline note for why).
+
+See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
+full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
+for the implementation plan this was built from.
