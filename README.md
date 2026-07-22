@@ -73,6 +73,17 @@ means writing one adapter under `lib/skills/` matching the pattern of the
 existing three, registering it in `SKILL_ADAPTERS` in `lib/config.ts`, same
 as adding an activity adapter.
 
+## v4: skill/command editor
+
+Any entry in `/skills` can now be edited in place. Clicking "Edit" swaps
+the read-only view for a textarea; "Save" shows a real diff of what will
+change before anything is written. Confirming writes the file and creates
+a git commit scoped to exactly that one file in its own agent's repo — no
+custom version history to maintain, `git log`/`git diff`/`git revert`
+already work on every edit. Writes are restricted to files that are
+current, real skill/command entries — not just anything living inside an
+agent's directory.
+
 See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
 full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
 for the implementation plan this was built from.
