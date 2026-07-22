@@ -102,3 +102,12 @@ The other 9 slash-commands under `ai-company-starter-main/.claude/commands/`
 this dashboard yet — they're interactive, multi-turn dialogues that need a
 real Claude Code session, a separate and larger mechanism than running one
 existing script.
+
+## v6: skill edit history
+
+Every skill/command's detail panel in `/skills` now has a "History" toggle
+alongside "Content". It lists every commit that has touched that file and
+shows a diff for whichever one you click — reusing the same `DiffView`
+v4's editor uses, just fed two revisions of the file pulled via `git show`
+instead of a live draft. Nothing here writes anything; it's a viewer on
+top of the git history v4's edits were already creating.
