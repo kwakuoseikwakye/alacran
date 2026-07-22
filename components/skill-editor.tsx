@@ -16,7 +16,15 @@ import {
 import { DiffView } from "@/components/diff-view"
 import { saveSkillContent } from "@/lib/save-skill-content"
 
-export function SkillEditor({ path, initialContent }: { path: string; initialContent: string }) {
+export function SkillEditor({
+  path,
+  initialContent,
+  onSaved,
+}: {
+  path: string
+  initialContent: string
+  onSaved?: (newContent: string) => void
+}) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initialContent)
   const [savedContent, setSavedContent] = useState(initialContent)
@@ -45,6 +53,7 @@ export function SkillEditor({ path, initialContent }: { path: string; initialCon
     if (result.saved) {
       setSavedContent(draft)
       setEditing(false)
+      onSaved?.(draft)
     }
   }
 
