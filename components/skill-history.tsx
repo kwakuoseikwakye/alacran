@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -35,9 +35,11 @@ export function SkillHistory({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [reverting, setReverting] = useState(false)
   const [revertMessage, setRevertMessage] = useState<string | null>(null)
+  const selectRequestRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
+    selectRequestRef.current++
     setCommits(null)
     setError(null)
     setSelectedIndex(null)
@@ -59,6 +61,7 @@ export function SkillHistory({
 
   async function selectCommit(index: number) {
     if (!commits) return
+    const requestId = ++selectRequestRef.current
     setSelectedIndex(index)
     setDiffLoading(true)
     setRevertMessage(null)
@@ -69,6 +72,7 @@ export function SkillHistory({
       getSkillRevision(path, commit.sha),
       olderCommit ? getSkillRevision(path, olderCommit.sha) : Promise.resolve({ ok: true, content: "", message: "" }),
     ])
+    if (requestId !== selectRequestRef.current) return
     setDiffLoading(false)
     setNewContent(newResult.ok ? newResult.content : "")
     setOldContent(oldResult.ok ? oldResult.content : "")
