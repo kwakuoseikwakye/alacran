@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, mkdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import * as fsModule from "node:fs"
 
 let root: string
 
@@ -16,12 +15,12 @@ afterEach(async () => {
   vi.resetModules()
 })
 
-describe("triggerPoll", () => {
+describe("triggerPollImpl", () => {
   it("spawns bin/poll.sh with the correct command/args/cwd when no lock is held", async () => {
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
     }))
-    const { triggerPoll } = await import("./trigger-poll")
+    const { triggerPollImpl } = await import("./trigger-poll-impl")
 
     const spawnCalls: { command: string; args: string[]; options: { cwd: string; detached: boolean } }[] = []
     const fakeSpawn = (command: string, args: string[], options: { cwd: string; detached: boolean; stdio: ["ignore", number, number] }) => {
@@ -29,7 +28,7 @@ describe("triggerPoll", () => {
       return { unref: () => {} }
     }
 
-    const result = await triggerPoll(fakeSpawn)
+    const result = await triggerPollImpl(fakeSpawn)
 
     expect(result).toEqual({ started: true, message: "Poll started" })
     expect(spawnCalls).toHaveLength(1)
@@ -44,7 +43,7 @@ describe("triggerPoll", () => {
       AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
     }))
     await mkdir(path.join(root, "state", "poll.lock"), { recursive: true })
-    const { triggerPoll } = await import("./trigger-poll")
+    const { triggerPollImpl } = await import("./trigger-poll-impl")
 
     let spawnCalled = false
     const fakeSpawn = () => {
@@ -52,7 +51,7 @@ describe("triggerPoll", () => {
       return { unref: () => {} }
     }
 
-    const result = await triggerPoll(fakeSpawn)
+    const result = await triggerPollImpl(fakeSpawn)
 
     expect(result).toEqual({ started: false, message: "Already running" })
     expect(spawnCalled).toBe(false)
@@ -62,22 +61,22 @@ describe("triggerPoll", () => {
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
     }))
-    const { triggerPoll } = await import("./trigger-poll")
+    const { triggerPollImpl } = await import("./trigger-poll-impl")
 
     const fakeSpawn = () => {
       throw new Error("spawn failed")
     }
 
-    const result = await triggerPoll(fakeSpawn)
+    const result = await triggerPollImpl(fakeSpawn)
 
     expect(result).toEqual({ started: false, message: "spawn failed" })
   })
 
   it("reports an error when email-pipeline-agent isn't in AGENTS", async () => {
     vi.doMock("./config", () => ({ AGENTS: [] }))
-    const { triggerPoll } = await import("./trigger-poll")
+    const { triggerPollImpl } = await import("./trigger-poll-impl")
 
-    const result = await triggerPoll(() => ({ unref: () => {} }))
+    const result = await triggerPollImpl(() => ({ unref: () => {} }))
 
     expect(result).toEqual({ started: false, message: 'Agent "email-pipeline-agent" is not configured' })
   })
@@ -97,13 +96,13 @@ describe("triggerPoll", () => {
       }
     })
 
-    const { triggerPoll } = await import("./trigger-poll")
+    const { triggerPollImpl } = await import("./trigger-poll-impl")
 
     const fakeSpawn = () => {
       throw new Error("spawn failed")
     }
 
-    const result = await triggerPoll(fakeSpawn)
+    const result = await triggerPollImpl(fakeSpawn)
 
     expect(result).toEqual({ started: false, message: "spawn failed" })
     expect(mockCloseSync).toHaveBeenCalledTimes(2)

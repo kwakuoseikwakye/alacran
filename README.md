@@ -1,10 +1,11 @@
 # AI-Native Control Panel
 
-Read-only local dashboard for the agents/tools in `~/AI-Native/`
+Local dashboard for the agents/tools in `~/AI-Native/`
 (`email-pipeline-agent`, `ai-company-starter-main`, `plh-ops`). Shows each
 agent's most recent activity and a merged activity board, built entirely
-from files/state those tools already produce — nothing here writes to any
-of them.
+from files/state those tools already produce — `email-pipeline-agent` has a
+single trigger action (see "v2" below), while `ai-company-starter-main` and
+`plh-ops` remain read-only.
 
 ## Run it
 
@@ -36,7 +37,8 @@ sync, so a missing adapter registration is caught immediately.
 
 ## Known v1 limitations
 
-- Read-only: no way to trigger/assign agent runs from this UI yet.
+- No way to trigger/assign runs for `ai-company-starter-main` or `plh-ops`
+  from this UI (see "v2" below for the one exception: `email-pipeline-agent`).
 - No skill-editing/versioning UI yet.
 - `ai-company-starter-main`'s `state/cycles/*/*/cycle.jsonl` parsing is
   best-effort/lenient, since that directory ships empty by default and its
