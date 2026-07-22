@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -7,6 +7,20 @@ import type { Agent } from "./types"
 
 let root: string
 let agent: Agent
+let throwOnBad456 = false
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs/promises")>()
+  return {
+    ...actual,
+    readFile: vi.fn(async (filePath, ...args) => {
+      if (throwOnBad456 && typeof filePath === "string" && filePath.endsWith("bad456.md")) {
+        throw new Error("simulated unreadable file")
+      }
+      return actual.readFile(filePath as any, ...args)
+    }),
+  }
+})
 
 beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "plh-takeshi-agent-test-"))
@@ -113,27 +127,33 @@ describe("plhTakeshiAgentAdapter", () => {
       path.join(root, "reports", "20260101-120000-good123.md"),
       "# Good email\n\n## Needs human attention\n\nNone.\n"
     )
-    // Create bad456 report but then delete it to simulate it becoming unreadable
-    const badReportPath = path.join(root, "reports", "20260101-120000-bad456.md")
-    await writeFile(badReportPath, "# Bad email\n\n## Needs human attention\n\nNone.\n")
-    await rm(badReportPath)
+    // Create bad456 report - readdir will see it, but readFile will fail
+    await writeFile(
+      path.join(root, "reports", "20260101-120000-bad456.md"),
+      "# Bad email\n\n## Needs human attention\n\nNone.\n"
+    )
 
-    const activities = await plhTakeshiAgentAdapter(agent)
+    throwOnBad456 = true
+    try {
+      const activities = await plhTakeshiAgentAdapter(agent)
 
-    // Should still return activities for both emails
-    expect(activities).toHaveLength(2)
-    // good123 should have the proper title from report
-    expect(activities[0]).toMatchObject({
-      id: "good123",
-      title: "Good email",
-      status: "done",
-    })
-    // bad456 should fall back to default title and state path
-    expect(activities[1]).toMatchObject({
-      id: "bad456",
-      title: "Email bad456",
-      status: "done",
-      detailPath: path.join(root, "state", "processed.json"),
-    })
+      // Should still return activities for both emails
+      expect(activities).toHaveLength(2)
+      // good123 should have the proper title from report
+      expect(activities[0]).toMatchObject({
+        id: "good123",
+        title: "Good email",
+        status: "done",
+      })
+      // bad456 should fall back to default title and state path
+      expect(activities[1]).toMatchObject({
+        id: "bad456",
+        title: "Email bad456",
+        status: "done",
+        detailPath: path.join(root, "state", "processed.json"),
+      })
+    } finally {
+      throwOnBad456 = false
+    }
   })
 })
