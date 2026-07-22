@@ -1,14 +1,20 @@
 import { AGENTS, ADAPTERS, PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
+import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
 
 export const dynamic = "force-dynamic"
 
 export default async function AgentTreePage() {
-  const [results, launchdHealth] = await Promise.all([
+  const pipelineAgent = AGENTS.find((agent) => agent.id === "email-pipeline-agent")
+
+  const [results, launchdHealth, pollStatus] = await Promise.all([
     getAllActivities(AGENTS, ADAPTERS),
     checkLaunchdJob(PIPELINE_LAUNCHD_LABEL),
+    pipelineAgent
+      ? checkPollLockStatus(pipelineAgent.rootPath)
+      : Promise.resolve({ running: false, lockAgeSeconds: null }),
   ])
 
   return (
@@ -17,13 +23,15 @@ export default async function AgentTreePage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {results.map((result) => {
           const latest = mergeAndSortActivities([result])[0] ?? null
+          const ispipelineAgent = result.agent.id === "email-pipeline-agent"
           return (
             <AgentCard
               key={result.agent.id}
               agent={result.agent}
               latestActivity={latest}
               error={result.error}
-              launchdHealth={result.agent.id === "email-pipeline-agent" ? launchdHealth : undefined}
+              launchdHealth={ispipelineAgent ? launchdHealth : undefined}
+              pollStatus={ispipelineAgent ? pollStatus : undefined}
             />
           )
         })}
