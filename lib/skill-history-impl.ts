@@ -68,6 +68,10 @@ export async function getSkillRevisionImpl(
     return { ok: false, content: "", message: boundaryMessage(resolved.reason, "view history") }
   }
 
+  if (!/^[0-9a-f]{4,40}$/i.test(sha)) {
+    return { ok: false, content: "", message: "Invalid revision" }
+  }
+
   const relativePath = path.relative(resolved.agentRootPath, resolved.realPath)
 
   try {

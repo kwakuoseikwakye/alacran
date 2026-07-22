@@ -161,8 +161,24 @@ describe("getSkillRevisionImpl", () => {
       throw new Error("fatal: invalid object name")
     }
 
-    const result = await getSkillRevisionImpl(skillFile, "nonexistent", fakeExec)
+    const result = await getSkillRevisionImpl(skillFile, "deadbeef", fakeExec)
 
     expect(result).toEqual({ ok: false, content: "", message: "fatal: invalid object name" })
+  })
+
+  it("rejects a flag-shaped sha before ever calling execFn (git show argv injection)", async () => {
+    await mockAgents()
+    const skillFile = await makeSkillFile()
+    const { getSkillRevisionImpl } = await import("./skill-history-impl")
+    let execCalls = 0
+    const fakeExec: ExecFileFn = async () => {
+      execCalls++
+      return { stdout: "leaked content", stderr: "" }
+    }
+
+    const result = await getSkillRevisionImpl(skillFile, "--pretty=format:%s", fakeExec)
+
+    expect(result).toEqual({ ok: false, content: "", message: "Invalid revision" })
+    expect(execCalls).toBe(0)
   })
 })
