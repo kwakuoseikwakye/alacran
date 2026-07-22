@@ -28,8 +28,13 @@ export const plhTakeshiAgentAdapter: Adapter = async (agent: Agent): Promise<Act
   const statePath = path.join(agent.rootPath, "state", "processed.json")
   const reportsDir = path.join(agent.rootPath, "reports")
 
-  const stateRaw = await readFile(statePath, "utf-8")
-  const state = JSON.parse(stateRaw) as ProcessedState
+  let state: ProcessedState
+  try {
+    const stateRaw = await readFile(statePath, "utf-8")
+    state = JSON.parse(stateRaw) as ProcessedState
+  } catch {
+    return []
+  }
 
   let reportFiles: string[] = []
   try {
@@ -58,10 +63,17 @@ export const plhTakeshiAgentAdapter: Adapter = async (agent: Agent): Promise<Act
 
     if (report) {
       detailPath = path.join(reportsDir, report.file)
-      const content = await readFile(detailPath, "utf-8")
-      flagsAttention = reportFlagsAttention(content)
-      const firstLine = content.split("\n").find((line) => line.startsWith("# "))
-      if (firstLine) title = firstLine.replace(/^# /, "").trim()
+      try {
+        const content = await readFile(detailPath, "utf-8")
+        flagsAttention = reportFlagsAttention(content)
+        const firstLine = content.split("\n").find((line) => line.startsWith("# "))
+        if (firstLine) title = firstLine.replace(/^# /, "").trim()
+      } catch {
+        // If report file is unreadable, fall back to defaults
+        flagsAttention = false
+        detailPath = statePath
+        title = `Email ${emailId}`
+      }
     }
 
     const status = entry.status === "done" && !flagsAttention ? "done" : "needs-attention"

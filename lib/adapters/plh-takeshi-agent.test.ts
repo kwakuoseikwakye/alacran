@@ -85,4 +85,55 @@ describe("plhTakeshiAgentAdapter", () => {
 
     expect(activities[0]).toMatchObject({ title: "Second attempt", status: "done" })
   })
+
+  it("returns empty array when state/processed.json is missing", async () => {
+    // Don't create processed.json file
+    const activities = await plhTakeshiAgentAdapter(agent)
+    expect(activities).toEqual([])
+  })
+
+  it("returns empty array when state/processed.json is corrupt JSON", async () => {
+    await writeFile(path.join(root, "state", "processed.json"), "{ invalid json }")
+
+    const activities = await plhTakeshiAgentAdapter(agent)
+    expect(activities).toEqual([])
+  })
+
+  it("gracefully handles a report file that becomes unreadable after readdir lists it", async () => {
+    await writeFile(
+      path.join(root, "state", "processed.json"),
+      JSON.stringify({
+        processed: {
+          good123: { attempts: 1, status: "done", ts: 1700000400 },
+          bad456: { attempts: 1, status: "done", ts: 1700000500 },
+        },
+      })
+    )
+    await writeFile(
+      path.join(root, "reports", "20260101-120000-good123.md"),
+      "# Good email\n\n## Needs human attention\n\nNone.\n"
+    )
+    // Create bad456 report but then delete it to simulate it becoming unreadable
+    const badReportPath = path.join(root, "reports", "20260101-120000-bad456.md")
+    await writeFile(badReportPath, "# Bad email\n\n## Needs human attention\n\nNone.\n")
+    await rm(badReportPath)
+
+    const activities = await plhTakeshiAgentAdapter(agent)
+
+    // Should still return activities for both emails
+    expect(activities).toHaveLength(2)
+    // good123 should have the proper title from report
+    expect(activities[0]).toMatchObject({
+      id: "good123",
+      title: "Good email",
+      status: "done",
+    })
+    // bad456 should fall back to default title and state path
+    expect(activities[1]).toMatchObject({
+      id: "bad456",
+      title: "Email bad456",
+      status: "done",
+      detailPath: path.join(root, "state", "processed.json"),
+    })
+  })
 })
