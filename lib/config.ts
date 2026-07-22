@@ -4,6 +4,10 @@ import type { Agent, Adapter } from "./adapters/types"
 import { plhTakeshiAgentAdapter } from "./adapters/plh-takeshi-agent"
 import { aiCompanyStarterMainAdapter } from "./adapters/ai-company-starter-main"
 import { plhOpsAdapter } from "./adapters/plh-ops"
+import type { SkillAdapter } from "./skills/types"
+import { aiCompanyStarterMainSkillsAdapter } from "./skills/ai-company-starter-main"
+import { plhTakeshiAgentSkillsAdapter } from "./skills/plh-takeshi-agent"
+import { plhOpsSkillsAdapter } from "./skills/plh-ops"
 
 const AI_NATIVE_ROOT = path.join(os.homedir(), "AI-Native")
 
@@ -32,6 +36,12 @@ export const ADAPTERS: Record<string, Adapter> = {
   "plh-takeshi-agent": plhTakeshiAgentAdapter,
   "ai-company-starter-main": aiCompanyStarterMainAdapter,
   "plh-ops": plhOpsAdapter,
+}
+
+export const SKILL_ADAPTERS: Record<string, SkillAdapter> = {
+  "plh-takeshi-agent": plhTakeshiAgentSkillsAdapter,
+  "ai-company-starter-main": aiCompanyStarterMainSkillsAdapter,
+  "plh-ops": plhOpsSkillsAdapter,
 }
 
 export const TAKESHI_AGENT_LAUNCHD_LABEL = "com.plh.takeshi-agent"
