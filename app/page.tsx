@@ -3,6 +3,8 @@ import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activiti
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { AgentCard } from "@/components/agent-card"
 
+export const dynamic = "force-dynamic"
+
 export default async function AgentTreePage() {
   const [results, launchdHealth] = await Promise.all([
     getAllActivities(AGENTS, ADAPTERS),

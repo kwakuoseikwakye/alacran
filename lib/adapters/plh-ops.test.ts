@@ -48,6 +48,35 @@ describe("plhOpsAdapter", () => {
     expect(activities).toEqual([])
   })
 
+  it("skips YAML frontmatter when extracting the title, using the first real content line", async () => {
+    await mkdir(path.join(root, "reports", "Nana"), { recursive: true })
+    await writeFile(
+      path.join(root, "reports", "Nana", "2026-06-29.md"),
+      "---\ntitle: something\ndate: 2026-06-29\n---\n# Real Heading\n\nBody text.\n"
+    )
+
+    const activities = await plhOpsAdapter(agent)
+
+    expect(activities).toHaveLength(1)
+    expect(activities[0]).toMatchObject({
+      id: "Nana/2026-06-29",
+      title: "Nana: Real Heading",
+    })
+  })
+
+  it("extracts the title correctly for a file with no frontmatter (regression check)", async () => {
+    await mkdir(path.join(root, "reports", "Nana"), { recursive: true })
+    await writeFile(path.join(root, "reports", "Nana", "2026-06-30.md"), "# No Frontmatter Here\n")
+
+    const activities = await plhOpsAdapter(agent)
+
+    expect(activities).toHaveLength(1)
+    expect(activities[0]).toMatchObject({
+      id: "Nana/2026-06-30",
+      title: "Nana: No Frontmatter Here",
+    })
+  })
+
   it("skips unreadable files and continues with others (per-file isolation)", async () => {
     await mkdir(path.join(root, "reports", "Nana"), { recursive: true })
     const goodFile = path.join(root, "reports", "Nana", "2026-07-08.md")
