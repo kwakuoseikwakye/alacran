@@ -4,6 +4,10 @@ import type { Agent, Adapter } from "./adapters/types"
 import { emailPipelineAdapter } from "./adapters/email-pipeline-agent"
 import { aiCompanyStarterMainAdapter } from "./adapters/ai-company-starter-main"
 import { plhOpsAdapter } from "./adapters/plh-ops"
+import type { SkillAdapter } from "./skills/types"
+import { aiCompanyStarterMainSkillsAdapter } from "./skills/ai-company-starter-main"
+import { emailPipelineSkillsAdapter } from "./skills/email-pipeline-agent"
+import { plhOpsSkillsAdapter } from "./skills/plh-ops"
 
 const AI_NATIVE_ROOT = path.join(os.homedir(), "AI-Native")
 
@@ -32,6 +36,12 @@ export const ADAPTERS: Record<string, Adapter> = {
   "email-pipeline-agent": emailPipelineAdapter,
   "ai-company-starter-main": aiCompanyStarterMainAdapter,
   "plh-ops": plhOpsAdapter,
+}
+
+export const SKILL_ADAPTERS: Record<string, SkillAdapter> = {
+  "email-pipeline-agent": emailPipelineSkillsAdapter,
+  "ai-company-starter-main": aiCompanyStarterMainSkillsAdapter,
+  "plh-ops": plhOpsSkillsAdapter,
 }
 
 export const PIPELINE_LAUNCHD_LABEL = "com.example.email-pipeline"
