@@ -44,6 +44,19 @@ sync, so a missing adapter registration is caught immediately.
 - `plh-ops` activity timestamps come from the report filename, not git log
   (see the adapter's inline note for why).
 
+## v2: triggering email-pipeline-agent
+
+The Email Pipeline Agent card has a "Run now" button that runs `bin/poll.sh`
+immediately instead of waiting for the next scheduled 5-minute launchd tick.
+It's safe to click at any time — `poll.sh` has its own lock file
+(`state/poll.lock`) that makes an overlapping run (whether triggered here or
+by the scheduler) a fast no-op rather than a double-run. The button is
+disabled and shows "Running…" whenever that lock is held, regardless of what
+started the run.
+
+This is still the only write action in the app — `ai-company-starter-main`
+and `plh-ops` remain read-only in this dashboard.
+
 See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
 full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
 for the implementation plan this was built from.
