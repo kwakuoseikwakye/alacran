@@ -84,7 +84,7 @@ export function SkillBrowser({
               <>
                 {detailError && <p className="text-destructive">{detailError}</p>}
                 {!detailError && detail !== null && selected && (
-                  <SkillEditor path={selected.path} initialContent={detail} />
+                  <SkillEditor path={selected.path} initialContent={detail} onSaved={(newContent) => setDetail(newContent)} />
                 )}
                 {!detailError && detail === null && <p>Loading…</p>}
               </>
