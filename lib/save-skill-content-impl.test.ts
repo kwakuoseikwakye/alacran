@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, writeFile, mkdir, rm, readFile } from "node:fs/promises"
+import { mkdtemp, writeFile, mkdir, rm, readFile, realpath } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import type { ExecFileFn } from "./git-commit-file"
@@ -49,7 +49,7 @@ describe("saveSkillContentImpl", () => {
     expect(result).toEqual({ saved: true, message: "Saved and committed" })
     const written = await readFile(skillFile, "utf-8")
     expect(written).toContain("new body")
-    expect(calls[0]).toEqual(["-C", root, "add", "--", path.join("skills", "plh-dev-team", "SKILL.md")])
+    expect(calls[0]).toEqual(["-C", await realpath(root), "add", "--", path.join("skills", "plh-dev-team", "SKILL.md")])
     expect(calls[1][0]).toBe("-C")
   })
 

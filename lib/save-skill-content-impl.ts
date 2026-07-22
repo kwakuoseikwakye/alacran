@@ -51,28 +51,9 @@ export async function saveSkillContentImpl(
     await writeFile(guard.realPath, newContent, "utf-8")
     const relativePath = path.relative(guard.agentRootPath, guard.realPath)
     const fileName = path.basename(guard.realPath)
-    // Run git against the as-configured agent root (not guard.agentRootPath, which
-    // path-guard.ts realpath()-resolves for its containment check) so `-C` matches
-    // what operators actually configured, even when that root is reached through a
-    // symlink (e.g. macOS's /var -> /private/var for os.tmpdir()-based paths).
-    const configuredRootPath = await resolveConfiguredRootPath(guard.agentRootPath)
-    await commitFile(configuredRootPath, relativePath, `Edit ${fileName} via AI-Native control panel`, execFn)
+    await commitFile(guard.agentRootPath, relativePath, `Edit ${fileName} via AI-Native control panel`, execFn)
     return { saved: true, message: "Saved and committed" }
   } catch (err) {
     return { saved: false, message: err instanceof Error ? err.message : String(err) }
   }
-}
-
-async function resolveConfiguredRootPath(resolvedAgentRootPath: string): Promise<string> {
-  for (const agent of AGENTS) {
-    try {
-      const resolved = await realpath(path.resolve(agent.rootPath))
-      if (resolved === resolvedAgentRootPath) {
-        return agent.rootPath
-      }
-    } catch {
-      // ignore agents whose root doesn't exist/resolve
-    }
-  }
-  return resolvedAgentRootPath
 }
