@@ -2,15 +2,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Agent, Activity } from "@/lib/adapters/types"
 import type { LaunchdHealth } from "@/lib/adapters/launchd"
+import type { PollLockStatus } from "@/lib/adapters/poll-lock"
+import { TriggerPollButton } from "@/components/trigger-poll-button"
 
 type AgentCardProps = {
   agent: Agent
   latestActivity: Activity | null
   error: string | null
   launchdHealth?: LaunchdHealth
+  pollStatus?: PollLockStatus
 }
 
-export function AgentCard({ agent, latestActivity, error, launchdHealth }: AgentCardProps) {
+export function AgentCard({ agent, latestActivity, error, launchdHealth, pollStatus }: AgentCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -36,6 +39,7 @@ export function AgentCard({ agent, latestActivity, error, launchdHealth }: Agent
             {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
           </p>
         )}
+        {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
       </CardContent>
     </Card>
   )
