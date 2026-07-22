@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, writeFile, rm } from "node:fs/promises"
+import { mkdtemp, writeFile, rm, symlink } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 
@@ -37,5 +37,33 @@ describe("getActivityDetail", () => {
     await expect(getActivityDetail(outsidePath)).rejects.toThrow(
       "Refusing to read a path outside configured agent directories"
     )
+  })
+
+  it("refuses to read a symlink inside agent root pointing to a file outside", async () => {
+    vi.doMock("./config", () => ({
+      AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
+    }))
+    const { getActivityDetail } = await import("./get-activity-detail")
+
+    // Create a file outside the agent root
+    const outsideRoot = await mkdtemp(path.join(tmpdir(), "outside-test-"))
+    try {
+      const outsideFile = path.join(outsideRoot, "secret.md")
+      await writeFile(outsideFile, "secret content")
+
+      // Create a symlink inside the agent root pointing to the outside file
+      const symlinkPath = path.join(root, "link.md")
+      await symlink(outsideFile, symlinkPath)
+
+      // Verify the symlink exists and points to the outside file
+      expect(outsideFile).toBeDefined()
+
+      // Attempting to read via the symlink should be rejected
+      await expect(getActivityDetail(symlinkPath)).rejects.toThrow(
+        "Refusing to read a path outside configured agent directories"
+      )
+    } finally {
+      await rm(outsideRoot, { recursive: true, force: true })
+    }
   })
 })
