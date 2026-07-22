@@ -4,6 +4,16 @@ import type { Activity, Agent, Adapter } from "./types"
 
 const REPORT_FILENAME = /^(\d{4}-\d{2}-\d{2})\.md$/
 
+function stripFrontmatter(content: string): string {
+  const lines = content.split("\n")
+  if (lines[0]?.trim() !== "---") return content
+
+  const closingIdx = lines.findIndex((line, idx) => idx > 0 && line.trim() === "---")
+  if (closingIdx === -1) return content
+
+  return lines.slice(closingIdx + 1).join("\n")
+}
+
 export const plhOpsAdapter: Adapter = async (agent: Agent): Promise<Activity[]> => {
   const reportsDir = path.join(agent.rootPath, "reports")
   let people: string[]
@@ -36,7 +46,8 @@ export const plhOpsAdapter: Adapter = async (agent: Agent): Promise<Activity[]> 
         continue
       }
 
-      const firstLine = content.split("\n").find((line) => line.trim().length > 0)
+      const contentAfterFrontmatter = stripFrontmatter(content)
+      const firstLine = contentAfterFrontmatter.split("\n").find((line) => line.trim().length > 0)
       const title = firstLine ? firstLine.replace(/^#+\s*/, "").trim() : `${person} — ${dateStr}`
 
       activities.push({

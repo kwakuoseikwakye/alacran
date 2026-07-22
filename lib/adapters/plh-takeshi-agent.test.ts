@@ -106,11 +106,10 @@ describe("plhTakeshiAgentAdapter", () => {
     expect(activities).toEqual([])
   })
 
-  it("returns empty array when state/processed.json is corrupt JSON", async () => {
+  it("throws when state/processed.json exists but is corrupt JSON, instead of silently returning empty", async () => {
     await writeFile(path.join(root, "state", "processed.json"), "{ invalid json }")
 
-    const activities = await plhTakeshiAgentAdapter(agent)
-    expect(activities).toEqual([])
+    await expect(plhTakeshiAgentAdapter(agent)).rejects.toThrow()
   })
 
   it("gracefully handles a report file that becomes unreadable after readdir lists it", async () => {

@@ -28,13 +28,16 @@ export const plhTakeshiAgentAdapter: Adapter = async (agent: Agent): Promise<Act
   const statePath = path.join(agent.rootPath, "state", "processed.json")
   const reportsDir = path.join(agent.rootPath, "reports")
 
-  let state: ProcessedState
+  let stateRaw: string
   try {
-    const stateRaw = await readFile(statePath, "utf-8")
-    state = JSON.parse(stateRaw) as ProcessedState
-  } catch {
-    return []
+    stateRaw = await readFile(statePath, "utf-8")
+  } catch (err) {
+    if (err instanceof Error && "code" in err && err.code === "ENOENT") {
+      return []
+    }
+    throw err
   }
+  const state = JSON.parse(stateRaw) as ProcessedState
 
   let reportFiles: string[] = []
   try {

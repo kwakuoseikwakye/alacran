@@ -2,6 +2,8 @@ import { AGENTS, ADAPTERS } from "@/lib/config"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { ActivityBoard } from "@/components/activity-board"
 
+export const dynamic = "force-dynamic"
+
 export default async function ActivityPage() {
   const results = await getAllActivities(AGENTS, ADAPTERS)
   const activities = mergeAndSortActivities(results)
