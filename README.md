@@ -87,3 +87,18 @@ agent's directory.
 See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
 full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
 for the implementation plan this was built from.
+
+## v5: triggering ai-company-starter-main's /verify
+
+The "AI Company Starter" card has a "Run verify" button that runs
+`scripts/verify.py --json` directly and shows the PASS/WARN/FAIL/INFO
+results, with a details view for the full row list. Unlike the
+`plh-takeshi-agent` trigger (v2) or skill editing (v4), this needs no
+confirmation dialog — `verify.py` only reads files, per its own docstring,
+so there's nothing to confirm before running it.
+
+The other 9 slash-commands under `ai-company-starter-main/.claude/commands/`
+(`/decision`, `/retro`, `/define-company`, etc.) are NOT triggerable from
+this dashboard yet — they're interactive, multi-turn dialogues that need a
+real Claude Code session, a separate and larger mechanism than running one
+existing script.
