@@ -33,21 +33,24 @@ export async function triggerPoll(
     return { started: false, message: "Already running" }
   }
 
+  let outFd: number | undefined
+  let errFd: number | undefined
   try {
     const outPath = path.join(agent.rootPath, "logs", "poll.out.log")
     const errPath = path.join(agent.rootPath, "logs", "poll.err.log")
-    const outFd = openSync(outPath, "a")
-    const errFd = openSync(errPath, "a")
+    outFd = openSync(outPath, "a")
+    errFd = openSync(errPath, "a")
     const child = spawnFn("bash", [path.join(agent.rootPath, "bin", "poll.sh")], {
       cwd: agent.rootPath,
       detached: true,
       stdio: ["ignore", outFd, errFd],
     })
     child.unref()
-    closeSync(outFd)
-    closeSync(errFd)
     return { started: true, message: "Poll started" }
   } catch (err) {
     return { started: false, message: err instanceof Error ? err.message : String(err) }
+  } finally {
+    if (outFd !== undefined) closeSync(outFd)
+    if (errFd !== undefined) closeSync(errFd)
   }
 }
