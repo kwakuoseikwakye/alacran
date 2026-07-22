@@ -111,3 +111,16 @@ shows a diff for whichever one you click — reusing the same `DiffView`
 v4's editor uses, just fed two revisions of the file pulled via `git show`
 instead of a live draft. Nothing here writes anything; it's a viewer on
 top of the git history v4's edits were already creating.
+
+## v7: revert to a past skill revision
+
+The History view's per-commit diff now has a "Revert to this version"
+button. It reuses the exact same save action v4's editor uses — reverting
+is just "write this historical content as the new current content, then
+commit" — so there's no new write surface to reason about, only a new way
+to supply what gets saved. The confirmation dialog diffs the file's
+current content against the version you're reverting to (not the
+in-commit diff shown above it, since edits since that commit could make
+the two differ). Switching between Content and History always reflects
+the latest saved/reverted content now, fixing a staleness gap that existed
+since v6 added a second view to switch to.
