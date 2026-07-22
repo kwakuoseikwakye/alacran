@@ -8,6 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import type { SkillEntry } from "@/lib/skills/types"
 import type { SkillAgentResult } from "@/lib/get-all-skills"
 import { getActivityDetail } from "@/lib/get-activity-detail"
+import { SkillEditor } from "@/components/skill-editor"
 
 export function SkillBrowser({
   results,
@@ -68,7 +69,10 @@ export function SkillBrowser({
           </SheetHeader>
           <ScrollArea className="h-[80vh] pr-4">
             {detailError && <p className="text-destructive">{detailError}</p>}
-            {!detailError && <pre className="whitespace-pre-wrap text-sm">{detail ?? "Loading…"}</pre>}
+            {!detailError && detail !== null && selected && (
+              <SkillEditor path={selected.path} initialContent={detail} />
+            )}
+            {!detailError && detail === null && <p>Loading…</p>}
           </ScrollArea>
         </SheetContent>
       </Sheet>
