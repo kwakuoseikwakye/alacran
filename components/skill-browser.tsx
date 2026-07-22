@@ -89,7 +89,16 @@ export function SkillBrowser({
                 {!detailError && detail === null && <p>Loading…</p>}
               </>
             )}
-            {view === "history" && selected && <SkillHistory path={selected.path} />}
+            {view === "history" && selected && (
+              <SkillHistory
+                path={selected.path}
+                currentContent={detail}
+                onReverted={(newContent) => {
+                  setDetail(newContent)
+                  setView("content")
+                }}
+              />
+            )}
           </ScrollArea>
         </SheetContent>
       </Sheet>
