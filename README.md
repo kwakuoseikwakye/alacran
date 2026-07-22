@@ -59,6 +59,20 @@ started the run.
 This is still the only write action in the app — `ai-company-starter-main`
 and `plh-ops` remain read-only in this dashboard.
 
+## v3: skill/command browser
+
+`/skills` lists every skill and command across all three agents — read-only,
+same as v1's status board. It's built from the same YAML frontmatter
+(`name`/`description`) every skill/command file already has; nothing new to
+maintain in those files. Clicking an entry reuses the same file-detail Server
+Action the activity board uses (`lib/get-activity-detail.ts`), since every
+skill/command lives inside an agent root that function already trusts.
+
+Still no editing — this is a viewer, not yet an editor. Adding a 4th agent
+means writing one adapter under `lib/skills/` matching the pattern of the
+existing three, registering it in `SKILL_ADAPTERS` in `lib/config.ts`, same
+as adding an activity adapter.
+
 See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
 full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
 for the implementation plan this was built from.
