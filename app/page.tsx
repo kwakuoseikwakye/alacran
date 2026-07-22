@@ -24,6 +24,7 @@ export default async function AgentTreePage() {
         {results.map((result) => {
           const latest = mergeAndSortActivities([result])[0] ?? null
           const isTakeshiAgent = result.agent.id === "plh-takeshi-agent"
+          const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
           return (
             <AgentCard
               key={result.agent.id}
@@ -32,6 +33,7 @@ export default async function AgentTreePage() {
               error={result.error}
               launchdHealth={isTakeshiAgent ? launchdHealth : undefined}
               pollStatus={isTakeshiAgent ? pollStatus : undefined}
+              showVerifyButton={isAiCompanyStarterMain}
             />
           )
         })}

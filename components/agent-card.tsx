@@ -4,6 +4,7 @@ import type { Agent, Activity } from "@/lib/adapters/types"
 import type { LaunchdHealth } from "@/lib/adapters/launchd"
 import type { PollLockStatus } from "@/lib/adapters/poll-lock"
 import { TriggerPollButton } from "@/components/trigger-poll-button"
+import { VerifyButton } from "@/components/verify-button"
 
 type AgentCardProps = {
   agent: Agent
@@ -11,9 +12,17 @@ type AgentCardProps = {
   error: string | null
   launchdHealth?: LaunchdHealth
   pollStatus?: PollLockStatus
+  showVerifyButton?: boolean
 }
 
-export function AgentCard({ agent, latestActivity, error, launchdHealth, pollStatus }: AgentCardProps) {
+export function AgentCard({
+  agent,
+  latestActivity,
+  error,
+  launchdHealth,
+  pollStatus,
+  showVerifyButton,
+}: AgentCardProps) {
   return (
     <Card>
       <CardHeader>
@@ -40,6 +49,7 @@ export function AgentCard({ agent, latestActivity, error, launchdHealth, pollSta
           </p>
         )}
         {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
+        {showVerifyButton && <VerifyButton />}
       </CardContent>
     </Card>
   )
