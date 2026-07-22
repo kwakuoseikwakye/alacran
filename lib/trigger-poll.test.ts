@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, mkdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import * as fsModule from "node:fs"
 
 let root: string
 
@@ -79,5 +80,32 @@ describe("triggerPoll", () => {
     const result = await triggerPoll(() => ({ unref: () => {} }))
 
     expect(result).toEqual({ started: false, message: 'Agent "email-pipeline-agent" is not configured' })
+  })
+
+  it("closes fds even when spawnFn throws, proving the fd leak is fixed", async () => {
+    vi.doMock("./config", () => ({
+      AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
+    }))
+
+    const mockCloseSync = vi.fn()
+
+    vi.doMock("node:fs", async (importOriginal) => {
+      const actual = await importOriginal() as Record<string, unknown>
+      return {
+        ...actual,
+        closeSync: mockCloseSync,
+      }
+    })
+
+    const { triggerPoll } = await import("./trigger-poll")
+
+    const fakeSpawn = () => {
+      throw new Error("spawn failed")
+    }
+
+    const result = await triggerPoll(fakeSpawn)
+
+    expect(result).toEqual({ started: false, message: "spawn failed" })
+    expect(mockCloseSync).toHaveBeenCalledTimes(2)
   })
 })
