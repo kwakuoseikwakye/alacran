@@ -9,6 +9,9 @@ export function Nav() {
       <Link href="/activity" className="hover:underline">
         Activity
       </Link>
+      <Link href="/skills" className="hover:underline">
+        Skills
+      </Link>
     </nav>
   )
 }
