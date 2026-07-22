@@ -45,6 +45,7 @@ function parseCycleLine(line: string): { timestamp: number; title: string } | nu
   } catch {
     return null
   }
+  if (obj === null || typeof obj !== "object") return null
   const ts = typeof obj.ts === "number" ? obj.ts : typeof obj.timestamp === "number" ? obj.timestamp : null
   if (ts === null) return null
   const title =
@@ -103,10 +104,10 @@ export const aiCompanyStarterMainAdapter: Adapter = async (agent: Agent): Promis
   ])
 
   const fileActivities = await Promise.all([
-    ...decisionFiles.map((f) => fileToActivity(agent.id, "decision", f)),
-    ...handoffFiles.map((f) => fileToActivity(agent.id, "handoff", f)),
-    ...retroFiles.map((f) => fileToActivity(agent.id, "retro", f)),
-  ])
+    ...decisionFiles.map((f) => fileToActivity(agent.id, "decision", f).catch(() => null)),
+    ...handoffFiles.map((f) => fileToActivity(agent.id, "handoff", f).catch(() => null)),
+    ...retroFiles.map((f) => fileToActivity(agent.id, "retro", f).catch(() => null)),
+  ]).then((results) => results.filter((a): a is Activity => a !== null))
 
   const cycleEvents = await cycleActivities(agent.id, agent.rootPath)
 

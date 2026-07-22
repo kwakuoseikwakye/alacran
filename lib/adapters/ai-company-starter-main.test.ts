@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises"
+import { mkdtemp, writeFile, mkdir, rm, chmod } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { aiCompanyStarterMainAdapter } from "./ai-company-starter-main"
@@ -63,5 +63,49 @@ describe("aiCompanyStarterMainAdapter", () => {
     expect(activities).toHaveLength(2)
     expect(activities.map((a) => a.title).sort()).toEqual(["cycle-closed", "cycle-started"])
     expect(activities.every((a) => a.type === "cycle-event")).toBe(true)
+  })
+
+  it("isolates file read errors: one unreadable file doesn't discard other readable files", async () => {
+    const decisionsDir = path.join(root, "docs", "decisions")
+    await mkdir(decisionsDir, { recursive: true })
+
+    // Write one readable file
+    const readableFile = path.join(decisionsDir, "readable.md")
+    await writeFile(readableFile, "# Readable decision\n")
+
+    // Write one unreadable file (make it unreadable via chmod)
+    const unreadableFile = path.join(decisionsDir, "unreadable.md")
+    await writeFile(unreadableFile, "# Unreadable decision\n")
+    await chmod(unreadableFile, 0o000)
+
+    try {
+      const activities = await aiCompanyStarterMainAdapter(agent)
+
+      // Should have exactly one activity (from readable file), not throw
+      expect(activities).toHaveLength(1)
+      expect(activities[0].title).toBe("Readable decision")
+    } finally {
+      // Restore permissions for cleanup to succeed
+      await chmod(unreadableFile, 0o644)
+    }
+  })
+
+  it("skips cycle.jsonl lines that are null or non-objects without crashing", async () => {
+    const cycleDir = path.join(root, "state", "cycles", "ec-team", "2026-07-01")
+    await mkdir(cycleDir, { recursive: true })
+    await writeFile(
+      path.join(cycleDir, "cycle.jsonl"),
+      [
+        "null",
+        JSON.stringify({ ts: 1700000000, event: "cycle-started" }),
+        JSON.stringify({ ts: 1700003600, type: "cycle-closed" }),
+      ].join("\n")
+    )
+
+    const activities = await aiCompanyStarterMainAdapter(agent)
+
+    // Should have exactly 2 activities (the valid cycle events), not throw on null line
+    expect(activities).toHaveLength(2)
+    expect(activities.map((a) => a.title).sort()).toEqual(["cycle-closed", "cycle-started"])
   })
 })
