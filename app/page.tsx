@@ -1,4 +1,5 @@
-import { AGENTS, ADAPTERS, TAKESHI_AGENT_LAUNCHD_LABEL } from "@/lib/config"
+import { TAKESHI_AGENT_LAUNCHD_LABEL } from "@/lib/config"
+import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
@@ -7,10 +8,11 @@ import { AgentCard } from "@/components/agent-card"
 export const dynamic = "force-dynamic"
 
 export default async function AgentTreePage() {
-  const takeshiAgent = AGENTS.find((agent) => agent.id === "plh-takeshi-agent")
+  const [agents, adapters] = await Promise.all([getEffectiveAgents(), getEffectiveAdapters()])
+  const takeshiAgent = agents.find((agent) => agent.id === "plh-takeshi-agent")
 
   const [results, launchdHealth, pollStatus] = await Promise.all([
-    getAllActivities(AGENTS, ADAPTERS),
+    getAllActivities(agents, adapters),
     checkLaunchdJob(TAKESHI_AGENT_LAUNCHD_LABEL),
     takeshiAgent
       ? checkPollLockStatus(takeshiAgent.rootPath)

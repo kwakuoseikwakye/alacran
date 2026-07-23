@@ -1,6 +1,6 @@
 import { realpath } from "node:fs/promises"
 import path from "node:path"
-import { AGENTS } from "./config"
+import { getEffectiveAgents } from "./get-effective-agents"
 
 export type PathGuardResult = { realPath: string; agentRootPath: string } | null
 
@@ -18,7 +18,8 @@ export async function resolveWithinAgentRoot(requestedPath: string): Promise<Pat
     return null
   }
 
-  for (const agent of AGENTS) {
+  const agents = await getEffectiveAgents()
+  for (const agent of agents) {
     const root = await tryRealpath(path.resolve(agent.rootPath))
     if (root === null) continue
     if (resolved === root || resolved.startsWith(root + path.sep)) {

@@ -16,6 +16,7 @@ afterEach(async () => {
 
 describe("resolveWithinAgentRoot", () => {
   it("resolves a path inside a configured agent root", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))
@@ -33,6 +34,7 @@ describe("resolveWithinAgentRoot", () => {
   })
 
   it("returns null for a path outside any configured agent root", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))
@@ -44,6 +46,7 @@ describe("resolveWithinAgentRoot", () => {
   })
 
   it("returns null for a symlink inside agent root pointing to a file outside", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))

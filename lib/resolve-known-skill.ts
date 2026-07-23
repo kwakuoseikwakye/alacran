@@ -1,6 +1,6 @@
 import { realpath } from "node:fs/promises"
 import { resolveWithinAgentRoot } from "./path-guard"
-import { AGENTS, SKILL_ADAPTERS } from "./config"
+import { getEffectiveAgents, getEffectiveSkillAdapters } from "./get-effective-agents"
 import { getAllSkills } from "./get-all-skills"
 
 export type ResolveKnownSkillResult =
@@ -13,7 +13,8 @@ export async function resolveKnownSkillPath(filePath: string): Promise<ResolveKn
     return { ok: false, reason: "outside-root" }
   }
 
-  const results = await getAllSkills(AGENTS, SKILL_ADAPTERS)
+  const [agents, skillAdapters] = await Promise.all([getEffectiveAgents(), getEffectiveSkillAdapters()])
+  const results = await getAllSkills(agents, skillAdapters)
   const allEntryPaths = results.flatMap((r) => r.entries.map((entry) => entry.path))
   // Entry paths come from scanning the (unresolved) configured agent root, while
   // guard.realPath has been through realpath() (see path-guard.ts). On macOS,
