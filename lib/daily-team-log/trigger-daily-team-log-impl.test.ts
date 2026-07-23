@@ -101,4 +101,32 @@ describe("triggerDailyTeamLogImpl", () => {
     expect(result).toEqual({ started: false, message: "spawn claude ENOENT" })
     expect(await checkLockStatus(lockPath)).toEqual({ running: false })
   })
+
+  it("releases the lock when the spawned child later emits an async 'error' event", async () => {
+    await writeFile(configPath, JSON.stringify(VALID_CONFIG))
+    let errorListener: ((arg?: number | null | Error) => void) | undefined
+    const asyncErrorSpawn = () => {
+      return {
+        unref: () => {},
+        on: (event: "exit" | "error", listener: (arg?: number | null | Error) => void) => {
+          if (event === "error") errorListener = listener
+        },
+      }
+    }
+
+    const result = await triggerDailyTeamLogImpl(configPath, lockPath, logPath, asyncErrorSpawn as never)
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(errorListener).toBeDefined()
+
+    // Simulate the real child_process 'error' event firing asynchronously
+    // (e.g. the "claude" binary not being on PATH in the spawned environment).
+    errorListener?.(new Error("spawn claude ENOENT"))
+
+    // The listener releases the lock via a fire-and-forget promise, so poll
+    // briefly rather than asserting immediately after the synchronous call.
+    await vi.waitFor(async () => {
+      expect(await checkLockStatus(lockPath)).toEqual({ running: false })
+    })
+  })
 })
