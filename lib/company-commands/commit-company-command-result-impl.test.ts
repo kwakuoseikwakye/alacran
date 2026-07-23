@@ -89,6 +89,36 @@ describe("commitCompanyCommandResultImpl", () => {
     expect(execCalled).toBe(false)
   })
 
+  it("refuses a path-traversal string that textually starts with the expected output dir but resolves outside it", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    await mkdir(path.join(root, "docs/decisions"), { recursive: true })
+    await writeFile(path.join(root, "HANDOFF.md"), "content")
+    const { commitCompanyCommandResultImpl } = await import("./commit-company-command-result-impl")
+
+    let execCalled = false
+    const fakeExec = async () => {
+      execCalled = true
+      return { stdout: "", stderr: "" }
+    }
+
+    // Deliberately NOT built with path.join/path.normalize: this is meant to
+    // simulate the raw, un-normalized string an attacker-controlled caller of
+    // the "use server" action would send. Textually, it starts with
+    // "docs/decisions/" (the "decision" command's declared outputPath), so a
+    // raw-string prefix check would wrongly allow it. Once joined with the
+    // agent root and resolved, it actually points at HANDOFF.md at the repo
+    // root — a completely different file.
+    const maliciousRelativePath = "docs/decisions/../../HANDOFF.md"
+    expect(maliciousRelativePath.startsWith("docs/decisions" + path.sep)).toBe(true)
+
+    const result = await commitCompanyCommandResultImpl("decision", maliciousRelativePath, fakeExec)
+
+    expect(result).toEqual({ committed: false, message: 'Refusing to commit a path outside "decision"\'s expected output location' })
+    expect(execCalled).toBe(false)
+  })
+
   it("refuses an unknown commandId", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],

@@ -20,12 +20,18 @@ export async function commitCompanyCommandResultImpl(
     return { committed: false, message: `Unknown command "${commandId}"` }
   }
 
-  const isWithinExpectedScope =
+  // Cheap pre-check only: this runs on the raw, un-normalized string and can
+  // be bypassed with "../" traversal (e.g. "docs/decisions/../../HANDOFF.md"
+  // textually starts with "docs/decisions/"). It exists purely to fail fast
+  // on obviously-wrong input without doing filesystem work. It must NEVER be
+  // the sole gate — the authoritative decision is the realpath-based check
+  // below, which runs on every input that passes this pre-check.
+  const cheapIsWithinExpectedScope =
     command.outputKind === "new-file-in-dir"
       ? relativeOutputPath === command.outputPath || relativeOutputPath.startsWith(command.outputPath + path.sep)
       : relativeOutputPath === command.outputPath
 
-  if (!isWithinExpectedScope) {
+  if (!cheapIsWithinExpectedScope) {
     return { committed: false, message: `Refusing to commit a path outside "${command.id}"'s expected output location` }
   }
 
@@ -45,6 +51,24 @@ export async function commitCompanyCommandResultImpl(
   const guard = await resolveWithinAgentRoot(absolutePath)
   if (!guard || guard.agentRootPath !== expectedRoot) {
     return { committed: false, message: "Refusing to commit a path outside the configured agent root" }
+  }
+
+  // Authoritative check: compare the fully-resolved absolute path against a
+  // realpath'd version of the command's expected output location. This is
+  // what actually gates whether commitFile runs — never the raw string
+  // comparison above.
+  const expectedOutputAbs = await realpath(path.join(agent.rootPath, command.outputPath)).catch(() => null)
+  if (!expectedOutputAbs) {
+    return { committed: false, message: `Refusing to commit — "${command.id}"'s expected output location doesn't exist` }
+  }
+
+  const isWithinExpectedScope =
+    command.outputKind === "new-file-in-dir"
+      ? guard.realPath === expectedOutputAbs || guard.realPath.startsWith(expectedOutputAbs + path.sep)
+      : guard.realPath === expectedOutputAbs
+
+  if (!isWithinExpectedScope) {
+    return { committed: false, message: `Refusing to commit a path outside "${command.id}"'s expected output location` }
   }
 
   try {
