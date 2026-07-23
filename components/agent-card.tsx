@@ -6,6 +6,7 @@ import type { PollLockStatus } from "@/lib/adapters/poll-lock"
 import { TriggerPollButton } from "@/components/trigger-poll-button"
 import { VerifyButton } from "@/components/verify-button"
 import { DailyTeamLogButton } from "@/components/daily-team-log-button"
+import { RemoveCompanyButton } from "@/components/remove-company-button"
 
 type AgentCardProps = {
   agent: Agent
@@ -15,6 +16,7 @@ type AgentCardProps = {
   pollStatus?: PollLockStatus
   showVerifyButton?: boolean
   showDailyTeamLogButton?: boolean
+  removable?: boolean
 }
 
 export function AgentCard({
@@ -25,6 +27,7 @@ export function AgentCard({
   pollStatus,
   showVerifyButton,
   showDailyTeamLogButton,
+  removable,
 }: AgentCardProps) {
   return (
     <Card>
@@ -54,6 +57,7 @@ export function AgentCard({
         {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
         {showVerifyButton && <VerifyButton />}
         {showDailyTeamLogButton && <DailyTeamLogButton />}
+        {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
       </CardContent>
     </Card>
   )

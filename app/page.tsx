@@ -4,6 +4,7 @@ import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activiti
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
+import { AddCompanyForm } from "@/components/add-company-form"
 
 export const dynamic = "force-dynamic"
 
@@ -28,6 +29,9 @@ export default async function AgentTreePage() {
           const ispipelineAgent = result.agent.id === "email-pipeline-agent"
           const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
           const isPlhOps = result.agent.id === "plh-ops"
+          const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
+            result.agent.id
+          )
           return (
             <AgentCard
               key={result.agent.id}
@@ -38,10 +42,12 @@ export default async function AgentTreePage() {
               pollStatus={ispipelineAgent ? pollStatus : undefined}
               showVerifyButton={isAiCompanyStarterMain}
               showDailyTeamLogButton={isPlhOps}
+              removable={isRegisteredCompany}
             />
           )
         })}
       </div>
+      <AddCompanyForm />
     </main>
   )
 }
