@@ -42,7 +42,7 @@ export function RemoveCompanyButton({ id, name }: { id: string; name: string }) 
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove "{name}"?</AlertDialogTitle>
+            <AlertDialogTitle>Remove &quot;{name}&quot;?</AlertDialogTitle>
             <AlertDialogDescription>
               This only un-registers it from the dashboard — the actual directory and its git history are
               never touched.
