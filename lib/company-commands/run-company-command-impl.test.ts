@@ -70,7 +70,7 @@ describe("runCompanyCommandImpl", () => {
     expect(calls).toHaveLength(0)
   })
 
-  it("spawns claude with -p, --add-dir scoped to the output dir, and Bash disallowed, for a new-file-in-dir command", async () => {
+  it("spawns claude with -p, --allowedTools Edit-scoped to the output dir, Bash disallowed, permission-mode default, for a new-file-in-dir command", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
     }))
@@ -89,10 +89,14 @@ describe("runCompanyCommandImpl", () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].command).toBe("claude")
     expect(calls[0].args).toContain("-p")
-    expect(calls[0].args).toContain("--add-dir")
-    expect(calls[0].args[calls[0].args.indexOf("--add-dir") + 1]).toBe(path.join(root, "notes/company/digests"))
+    expect(calls[0].args).toContain("--allowedTools")
+    expect(calls[0].args[calls[0].args.indexOf("--allowedTools") + 1]).toBe(
+      "Read,Grep,Glob,Edit(notes/company/digests/**)"
+    )
     expect(calls[0].args).toContain("--disallowedTools")
     expect(calls[0].args[calls[0].args.indexOf("--disallowedTools") + 1]).toBe("Bash")
+    expect(calls[0].args).toContain("--permission-mode")
+    expect(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1]).toBe("default")
     expect(calls[0].options.cwd).toBe(root)
     expect(calls[0].options.detached).toBe(true)
 
@@ -100,7 +104,7 @@ describe("runCompanyCommandImpl", () => {
     expect(record).toEqual({ commandId: "digest", outputKind: "new-file-in-dir", outputPath: "notes/company/digests", before: [] })
   })
 
-  it("scopes --add-dir to the containing directory for a known-file command", async () => {
+  it("scopes --allowedTools' Edit rule to the exact file for a known-file command", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
     }))
@@ -117,7 +121,9 @@ describe("runCompanyCommandImpl", () => {
     )
 
     expect(result).toEqual({ started: true, message: "Started" })
-    expect(calls[0].args[calls[0].args.indexOf("--add-dir") + 1]).toBe(path.join(root, "definitions", "ontology"))
+    expect(calls[0].args[calls[0].args.indexOf("--allowedTools") + 1]).toBe(
+      "Read,Grep,Glob,Edit(definitions/ontology/company.yaml)"
+    )
   })
 
   it("does not spawn and reports 'Already running' when the lock is already held", async () => {

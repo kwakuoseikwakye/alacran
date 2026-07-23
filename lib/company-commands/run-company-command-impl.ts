@@ -132,10 +132,8 @@ export async function runCompanyCommandImpl(
     const prefetch = command.needsPrefetch ? await buildPrefetch(agent.rootPath, execFn) : ""
     const prompt = command.buildPrompt(fieldValues, today, prefetch)
 
-    const addDirAbs =
-      command.outputKind === "known-file"
-        ? path.join(agent.rootPath, path.dirname(command.outputPath))
-        : path.join(agent.rootPath, command.outputPath)
+    const editScopePattern =
+      command.outputKind === "new-file-in-dir" ? `${command.outputPath}/**` : command.outputPath
 
     const logPath = path.join(dataDir, `${command.id}.log`)
     outFd = openSync(logPath, "a")
@@ -144,14 +142,12 @@ export async function runCompanyCommandImpl(
       [
         "-p",
         prompt,
-        "--add-dir",
-        addDirAbs,
         "--allowedTools",
-        "Read,Grep,Glob,Write",
+        `Read,Grep,Glob,Edit(${editScopePattern})`,
         "--disallowedTools",
         "Bash",
         "--permission-mode",
-        "acceptEdits",
+        "default",
         "--output-format",
         "text",
       ],
