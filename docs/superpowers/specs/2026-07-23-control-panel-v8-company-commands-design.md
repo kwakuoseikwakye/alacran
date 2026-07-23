@@ -53,12 +53,13 @@ split into three risk tiers that need three different treatments:
   — matching how `/verify` and `/run poll` are already single-click, not
   conversational.
 - Spawns a real, headless `claude -p` session in `ai-company-starter-main`,
-  scoped as tightly as the CLI allows: **no Bash tool at all**, `Write`
-  confined via `--add-dir` to only that command's expected output
-  location. The agent can read/grep/glob anywhere in the repo (already
-  true of every existing read path in this app) and write to one place;
-  it cannot run shell commands, cannot `git add`/`git commit`, cannot call
-  `gh`, cannot touch any other repo.
+  scoped as tightly as the CLI allows: **no Bash tool at all**, file-editing
+  confined via a path-scoped `Edit(<pattern>)` permission rule (never a bare
+  `Write` grant — see the Spawning section below for why) to only that
+  command's expected output location. The agent can read/grep/glob anywhere
+  in the repo (already true of every existing read path in this app) and
+  write to one place; it cannot run shell commands, cannot `git add`/`git
+  commit`, cannot call `gh`, cannot touch any other repo.
 - After the run, the control panel — not the spawned agent — detects
   what changed (new file in the command's output directory, or a content
   change to a known fixed file) and shows the SAME confirm-with-diff
