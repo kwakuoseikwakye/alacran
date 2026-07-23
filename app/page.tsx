@@ -1,4 +1,5 @@
-import { AGENTS, ADAPTERS, PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
+import { PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
+import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
@@ -7,10 +8,11 @@ import { AgentCard } from "@/components/agent-card"
 export const dynamic = "force-dynamic"
 
 export default async function AgentTreePage() {
-  const pipelineAgent = AGENTS.find((agent) => agent.id === "email-pipeline-agent")
+  const [agents, adapters] = await Promise.all([getEffectiveAgents(), getEffectiveAdapters()])
+  const pipelineAgent = agents.find((agent) => agent.id === "email-pipeline-agent")
 
   const [results, launchdHealth, pollStatus] = await Promise.all([
-    getAllActivities(AGENTS, ADAPTERS),
+    getAllActivities(agents, adapters),
     checkLaunchdJob(PIPELINE_LAUNCHD_LABEL),
     pipelineAgent
       ? checkPollLockStatus(pipelineAgent.rootPath)

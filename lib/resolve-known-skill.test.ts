@@ -15,6 +15,7 @@ afterEach(async () => {
 })
 
 async function mockAgents() {
+  vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
   vi.doMock("./config", async (importOriginal) => {
     const actual = await importOriginal<typeof import("./config")>()
     return {

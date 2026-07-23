@@ -1,11 +1,12 @@
-import { AGENTS, SKILL_ADAPTERS } from "@/lib/config"
+import { getEffectiveAgents, getEffectiveSkillAdapters } from "@/lib/get-effective-agents"
 import { getAllSkills, mergeAndSortSkills } from "@/lib/get-all-skills"
 import { SkillBrowser } from "@/components/skill-browser"
 
 export const dynamic = "force-dynamic"
 
 export default async function SkillsPage() {
-  const results = await getAllSkills(AGENTS, SKILL_ADAPTERS)
+  const [agents, skillAdapters] = await Promise.all([getEffectiveAgents(), getEffectiveSkillAdapters()])
+  const results = await getAllSkills(agents, skillAdapters)
   const entries = mergeAndSortSkills(results)
 
   return (
