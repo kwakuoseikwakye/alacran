@@ -11,6 +11,8 @@ import type { SkillAgentResult } from "@/lib/get-all-skills"
 import { getActivityDetail } from "@/lib/get-activity-detail"
 import { SkillEditor } from "@/components/skill-editor"
 import { SkillHistory } from "@/components/skill-history"
+import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
+import { CompanyCommandRunner } from "@/components/company-command-runner"
 
 export function SkillBrowser({
   results,
@@ -22,7 +24,12 @@ export function SkillBrowser({
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
-  const [view, setView] = useState<"content" | "history">("content")
+  const [view, setView] = useState<"content" | "history" | "run">("content")
+
+  const matchedCompanyCommand =
+    selected && selected.agentId === "ai-company-starter-main"
+      ? COMPANY_COMMANDS.find((c) => selected.path.endsWith(`/commands/${c.commandFileName}`))
+      : undefined
 
   async function openEntry(entry: SkillEntry) {
     setSelected(entry)
@@ -78,6 +85,11 @@ export function SkillBrowser({
             <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
               History
             </Button>
+            {matchedCompanyCommand && (
+              <Button size="sm" variant={view === "run" ? "default" : "outline"} onClick={() => setView("run")}>
+                Run
+              </Button>
+            )}
           </div>
           <ScrollArea className="h-[80vh] pr-4">
             {view === "content" && (
@@ -99,6 +111,7 @@ export function SkillBrowser({
                 }}
               />
             )}
+            {view === "run" && matchedCompanyCommand && <CompanyCommandRunner command={matchedCompanyCommand} />}
           </ScrollArea>
         </SheetContent>
       </Sheet>
