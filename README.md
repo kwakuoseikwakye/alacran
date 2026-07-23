@@ -154,3 +154,30 @@ issues with no further confirmation gate once started — a different design
 problem than this slice solves), and `ingest-context` / `office` (hard
 interactive gates and a persistent background server, respectively, neither
 of which fits "run once, produce a file, exit").
+
+## v9: trigger plh-ops's daily-team-log on demand
+
+The `plh-ops` card now has a "Run now" button that triggers the exact same
+routine already registered as a nightly (22:00) scheduled task on this
+machine — reading `~/.claude/daily-team-log/config.json`, summarizing the
+operator's own local Claude Code session history, and committing the
+result to the shared `plh-ops` repo. Unlike every other write action in
+this app, this one **pushes to a remote shared with Owner's analysis
+agent and teammates** — the confirm dialog discloses this plainly before
+the run starts, since there's no local diff to preview beforehand (the
+routine's job is to summarize and commit autonomously, same as its
+existing nightly schedule). The spawned session still follows this
+project's least-privilege discipline: no bare `Write` grant (only
+`Edit(<output_repo>/**)`), `--permission-mode default` (not `acceptEdits`),
+and Bash scoped to the exact five command shapes the routine needs — never
+a blanket grant, even though this routine's prompt has no user-field
+interpolation at all (there's nothing here for a user to inject into).
+
+If the machine hasn't run the daily-team-log skill's one-time setup yet,
+the button reports that plainly instead of attempting a run.
+
+This slice was deliberately verified with unit tests only, never a real
+end-to-end run — the routine reads real private session history and
+pushes to a real shared repo, so the real "Run now" button is left for
+the user to click themselves, at their own discretion, whenever they're
+ready.
