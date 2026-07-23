@@ -109,4 +109,81 @@ describe("saveSkillContentImpl", () => {
 
     expect(result).toEqual({ saved: false, message: "not a git repository" })
   })
+
+  it("uses a custom commit message verbatim when provided", async () => {
+    await mockAgents()
+    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
+    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await writeFile(skillFile, "old")
+
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+    const calls: string[][] = []
+    const fakeExec: ExecFileFn = async (_command, args) => {
+      calls.push(args)
+      return { stdout: "", stderr: "" }
+    }
+
+    const result = await saveSkillContentImpl(skillFile, "new", fakeExec, "Fix the onboarding step")
+
+    expect(result).toEqual({ saved: true, message: "Saved and committed" })
+    expect(calls[1]).toContain("Fix the onboarding step")
+  })
+
+  it("trims whitespace from a custom commit message", async () => {
+    await mockAgents()
+    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
+    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await writeFile(skillFile, "old")
+
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+    const calls: string[][] = []
+    const fakeExec: ExecFileFn = async (_command, args) => {
+      calls.push(args)
+      return { stdout: "", stderr: "" }
+    }
+
+    await saveSkillContentImpl(skillFile, "new", fakeExec, "  spaced out  ")
+
+    expect(calls[1]).toContain("spaced out")
+  })
+
+  it("falls back to the default message when customMessage is blank/whitespace-only", async () => {
+    await mockAgents()
+    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
+    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await writeFile(skillFile, "old")
+
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+    const calls: string[][] = []
+    const fakeExec: ExecFileFn = async (_command, args) => {
+      calls.push(args)
+      return { stdout: "", stderr: "" }
+    }
+
+    await saveSkillContentImpl(skillFile, "new", fakeExec, "   ")
+
+    expect(calls[1]).toContain("Edit SKILL.md via AI-Native control panel")
+  })
+
+  it("rejects an overly long custom commit message before writing anything", async () => {
+    await mockAgents()
+    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
+    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await writeFile(skillFile, "old")
+
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+    let execCalled = false
+    const fakeExec: ExecFileFn = async () => {
+      execCalled = true
+      return { stdout: "", stderr: "" }
+    }
+
+    const tooLong = "a".repeat(501)
+    const result = await saveSkillContentImpl(skillFile, "new", fakeExec, tooLong)
+
+    expect(result).toEqual({ saved: false, message: "Commit message is too long (max 500 characters)" })
+    expect(execCalled).toBe(false)
+    const written = await readFile(skillFile, "utf-8")
+    expect(written).toBe("old")
+  })
 })
