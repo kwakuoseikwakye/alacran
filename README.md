@@ -124,3 +124,33 @@ in-commit diff shown above it, since edits since that commit could make
 the two differ). Switching between Content and History always reflects
 the latest saved/reverted content now, fixing a staleness gap that existed
 since v6 added a second view to switch to.
+
+## v8: run ai-company-starter-main commands
+
+Five of `ai-company-starter-main`'s ten slash-commands (`digest`, `decision`,
+`retro`, `define-company`, `handoff`) can now be run directly from the
+`/skills` detail panel's new "Run" tab, instead of only from an interactive
+`claude` session. Filling in the command's fields and clicking Run spawns a
+real, headless `claude -p` session — but with Bash entirely disallowed and
+its file-editing access scoped, via a path-scoped `Edit(<pattern>)` permission
+rule (not a bare `Write` grant, which Claude Code silently never enforces by
+path — only `Edit` rules are path-matched), to only that command's expected
+output location, under `--permission-mode default` (not `acceptEdits`, which
+would auto-approve edits anywhere in the working directory regardless of that
+scoping). This exact mechanism was corrected mid-implementation after a real
+live test showed an earlier `--add-dir`-based design didn't actually confine
+writes at all. The spawned agent can read/grep/glob the repository and write
+to that one place; it cannot run shell commands, cannot `git commit`, and
+cannot call `gh`. Once the run finishes, the dashboard diffs what changed and
+shows the same confirm-with-diff dialog used everywhere else in this app
+before committing anything, through the same single-file-scoped commit path
+v4 already established — the agent never commits on its own, and the commit
+wrapper independently re-validates (via realpath'd path comparison, not the
+raw path) that the file being committed is actually within the requesting
+command's declared output location.
+
+Three commands were deliberately left out: `create-epic` (files real GitHub
+issues with no further confirmation gate once started — a different design
+problem than this slice solves), and `ingest-context` / `office` (hard
+interactive gates and a persistent background server, respectively, neither
+of which fits "run once, produce a file, exit").
