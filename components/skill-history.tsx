@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -35,6 +36,7 @@ export function SkillHistory({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [reverting, setReverting] = useState(false)
   const [revertMessage, setRevertMessage] = useState<string | null>(null)
+  const [revertCommitMessage, setRevertCommitMessage] = useState("")
   const selectRequestRef = useRef(0)
 
   useEffect(() => {
@@ -44,6 +46,7 @@ export function SkillHistory({
     setError(null)
     setSelectedIndex(null)
     setRevertMessage(null)
+    setRevertCommitMessage("")
     async function load() {
       const result = await getSkillHistory(path)
       if (cancelled) return
@@ -65,6 +68,7 @@ export function SkillHistory({
     setSelectedIndex(index)
     setDiffLoading(true)
     setRevertMessage(null)
+    setRevertCommitMessage("")
     const commit = commits[index]
     const olderCommit = commits[index + 1]
 
@@ -80,7 +84,7 @@ export function SkillHistory({
 
   async function handleConfirmRevert() {
     setReverting(true)
-    const result = await saveSkillContent(path, newContent)
+    const result = await saveSkillContent(path, newContent, revertCommitMessage.trim() || undefined)
     setReverting(false)
     setConfirmOpen(false)
     setRevertMessage(result.message)
@@ -137,6 +141,15 @@ export function SkillHistory({
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Commit message (optional)</label>
+            <Textarea
+              rows={1}
+              value={revertCommitMessage}
+              onChange={(e) => setRevertCommitMessage(e.target.value)}
+              placeholder={`Edit ${path.split("/").pop() ?? path} via AI-Native control panel`}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmRevert}>Confirm &amp; commit</AlertDialogAction>
