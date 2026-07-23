@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -36,6 +36,13 @@ export function TriggerPollButton({ pollStatus }: { pollStatus: PollLockStatus }
     }
     setRunning(false)
   }
+
+  useEffect(() => {
+    if (pollStatus.running) {
+      pollUntilDone()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleConfirm() {
     setMessage(null)
