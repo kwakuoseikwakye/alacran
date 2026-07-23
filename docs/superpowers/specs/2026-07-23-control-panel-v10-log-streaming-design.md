@@ -54,16 +54,37 @@ lib/
 ├── log-tail.ts                        # NEW: tailLines(content, maxLines) — pure string logic
 ├── log-tail.test.ts
 ├── adapters/get-poll-log-tail.ts       # NEW: "use server" — plh-takeshi-agent's poll.{out,err}.log
+├── get-poll-status.ts                 # NEW: "use server" — zero-param wrapper over checkPollLockStatus
 ├── company-commands/
 │   └── company-command-log-tail.ts    # NEW: "use server" — .data/company-runs/<commandId>.log
 └── daily-team-log/
     └── daily-team-log-log-tail.ts      # NEW: "use server" — .data/daily-team-log/run.log
 components/
 ├── log-tail-view.tsx                  # NEW: shared <pre> scrollable tail renderer
-├── trigger-poll-button.tsx            # MODIFIED: poll + show tail while running
+├── trigger-poll-button.tsx            # MODIFIED: see note below — bigger change than the other two
 ├── company-command-runner.tsx         # MODIFIED: poll + show tail while running
 └── daily-team-log-button.tsx          # MODIFIED: poll + show tail while running
 ```
+
+**Important asymmetry discovered while scoping this**: v8's and v9's
+components already have a genuine client-side poll loop (`pollUntilDone`,
+`setTimeout`-recursive, checking a "use server" status action every ~3s).
+v2's `TriggerPollButton` does **not** — it only reflects `pollStatus`, a
+prop computed once at server-render time in `app/page.tsx`, plus its own
+`pending` flag which flips back to `false` as soon as the (fire-and-forget,
+near-instant) `triggerPoll()` call returns — long before `poll.sh` itself
+actually finishes running in the background. This means v2's button has
+never live-tracked the real running state beyond the initial page load, a
+latent gap since v2 shipped. Adding tail-viewing to it properly requires
+first giving it the same real poll loop v8/v9 already have — this is a bit
+more than "one extra fetch on an existing tick," and is a legitimate,
+worthwhile fix uncovered by scoping this slice, not scope creep: showing a
+live tail while `running` is stuck at a stale snapshot would be
+inconsistent and confusing. `get-poll-status.ts` is the new zero-param
+action this requires (mirroring `getCompanyCommandStatus`/
+`getDailyTeamLogStatus`'s existing shape, wrapping the already-existing
+`checkPollLockStatus(rootPath)` with `plh-takeshi-agent`'s configured
+`rootPath` resolved internally).
 
 ### `lib/log-tail.ts`
 
@@ -108,15 +129,29 @@ export function LogTailView({ content }: { content: string }) {
 ```
 Reused, unmodified, by all three call sites.
 
-### UI wiring (all three components, same shape)
+### UI wiring
 
-Each component's existing poll loop (`setTimeout`-based, already checking
-running/idle) gains one additional fetch per tick while `running` is
-true: call the feature's tail action, store the result in a new piece of
-state, render `<LogTailView content={tail} />` beneath the existing
-status text whenever `running` is true (hidden once idle, same as today's
-behavior — the final result/message still comes from each feature's
-existing idle-state logic, unchanged).
+**`CompanyCommandRunner` and `DailyTeamLogButton`** (v8/v9): each
+component's EXISTING poll loop (`setTimeout`-based, already checking
+running/idle via `getCompanyCommandStatus`/`getDailyTeamLogStatus`) gains
+one additional fetch per tick while `running` is true: call the feature's
+tail action, store the result in a new piece of state, render
+`<LogTailView content={tail} />` beneath the existing status text whenever
+`running` is true (hidden once idle — the final result/message still
+comes from each feature's existing idle-state logic, unchanged).
+
+**`TriggerPollButton`** (v2): needs a NEW `pollUntilDone`-shaped loop added
+(mirroring v8/v9's exact pattern), replacing the current
+`pollStatus.running || pending` computation with real state:
+`running` becomes a `useState`, set `true` on a successful `triggerPoll()`
+response and driven to `false` by the new poll loop once
+`getPollStatus()` reports not-running — the same shape as the other two,
+just newly introduced here rather than extended. The `pollStatus` prop
+(still passed from `app/page.tsx`'s server-render) seeds the initial
+button state on first paint (so the button still shows "Running…"
+correctly if the page loads mid-run) but the new client poll loop takes
+over from there. `<LogTailView>` renders the same way as the other two
+once this loop exists.
 
 ## Error handling
 
