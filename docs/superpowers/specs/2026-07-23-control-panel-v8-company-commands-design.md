@@ -182,13 +182,40 @@ missing required keys, cap each value's length). Builds the prompt, then:
 
 ```
 claude -p "<built prompt>" \
-  --add-dir <agent.rootPath>/<command.outputPath's containing dir> \
-  --allowedTools "Read,Grep,Glob,Write" \
+  --allowedTools "Read,Grep,Glob,Edit(<edit-scope-pattern>)" \
   --disallowedTools "Bash" \
-  --permission-mode acceptEdits \
+  --permission-mode default \
   --output-format text
 ```
-run detached, `stdio` redirected to a log file under this app's OWN data
+where `<edit-scope-pattern>` is `<command.outputPath>/**` for
+`new-file-in-dir` commands or the bare `<command.outputPath>` for
+`known-file` commands.
+
+**This exact flag set was corrected mid-implementation after a live-tested
+security finding, and the previous design must not be reintroduced:** an
+earlier draft of this spec used `--add-dir <output dir>` plus a bare
+`--allowedTools "...,Write"` plus `--permission-mode acceptEdits`, believing
+`--add-dir` narrowed the agent's writable surface to that one directory. A
+real headless `claude -p` test (disposable temp repo, never against a real
+`~/AI-Native` project) proved this false: `--add-dir` only *adds* directories
+on top of an already-fully-writable `cwd` — it never narrows anything — and
+`acceptEdits` auto-approves edits anywhere in `cwd` regardless of any
+allow-list scoping. The test agent successfully wrote to a directory
+explicitly meant to be off-limits under that configuration. The fix,
+confirmed by a second live test that blocked the same write: `Write(path)`
+rules are accepted but silently never matched (per Claude Code's own
+permission-check docs — only `Edit(path)`/`Read(path)` rules are actually
+enforced, and `Edit` rules apply to every built-in tool that edits files,
+including `Write`), so the allow-list must grant `Edit(<pattern>)` — never a
+bare `Write` — and `--permission-mode` must be `default` (which still runs
+fully non-interactively under `-p`/print mode, confirmed by the same live
+test completing headless with a clean `permission_denials: []`/populated
+`permission_denials: [...]` result rather than hanging), not `acceptEdits`.
+`--add-dir` is dropped entirely — every command's `outputPath` is already
+inside the repo root that `cwd` covers, so it added nothing real and only
+invited the false confidence above.
+
+Run detached, `stdio` redirected to a log file under this app's OWN data
 directory (`.data/company-runs/<commandId>.log` in the control-panel
 repo, gitignored — NOT inside the target repo, so `ai-company-starter-main`
 never gets polluted with control-panel bookkeeping files), `unref()`'d,
@@ -271,9 +298,15 @@ function. The mitigations, stacked:
    field value or the agent's own reasoning goes somewhere unintended,
    it cannot run `git commit`, cannot call `gh`, cannot touch anything
    outside the file system tools it's given.
-2. **`--add-dir` scopes `Write` to exactly the command's output
-   location** — the agent cannot write outside `docs/decisions/`,
-   `docs/retros/`, etc., regardless of what it decides to do.
+2. **`--allowedTools "...,Edit(<pattern>)"` (never a bare `Write`) scopes
+   file-editing to exactly the command's output location**, enforced via
+   `--permission-mode default` (never `acceptEdits`, which bypasses this
+   scoping for anything already inside `cwd`) — the agent cannot write
+   outside `docs/decisions/`, `docs/retros/`, etc., regardless of what it
+   decides to do. This exact mechanism was verified with a real live test
+   before implementation (see the Spawning section above) after an earlier
+   `--add-dir`-based design was live-tested and found NOT to confine
+   writes at all.
 3. **The control panel commits, not the agent** — post-run diff detection
    plus the existing confirm-dialog-then-single-file-git-commit pattern
    means a human always reviews real content before it becomes a commit,
