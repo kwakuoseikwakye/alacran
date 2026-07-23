@@ -13,22 +13,39 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { LogTailView } from "@/components/log-tail-view"
 import type { PollLockStatus } from "@/lib/adapters/poll-lock"
 import { triggerPoll } from "@/lib/trigger-poll"
+import { getPollStatus } from "@/lib/get-poll-status"
+import { getPollLogTail } from "@/lib/adapters/get-poll-log-tail"
+
+const POLL_INTERVAL_MS = 3000
 
 export function TriggerPollButton({ pollStatus }: { pollStatus: PollLockStatus }) {
-  const [pending, setPending] = useState(false)
+  const [running, setRunning] = useState(pollStatus.running)
   const [message, setMessage] = useState<string | null>(null)
+  const [tail, setTail] = useState("")
+
+  async function pollUntilDone() {
+    const status = await getPollStatus()
+    const logTail = await getPollLogTail()
+    setTail([logTail.stdout, logTail.stderr].filter(Boolean).join("\n"))
+    if (status.running) {
+      setTimeout(pollUntilDone, POLL_INTERVAL_MS)
+      return
+    }
+    setRunning(false)
+  }
 
   async function handleConfirm() {
-    setPending(true)
     setMessage(null)
     const result = await triggerPoll()
     setMessage(result.message)
-    setPending(false)
+    if (result.started) {
+      setRunning(true)
+      setTimeout(pollUntilDone, POLL_INTERVAL_MS)
+    }
   }
-
-  const running = pollStatus.running || pending
 
   return (
     <div className="space-y-1">
@@ -52,6 +69,7 @@ export function TriggerPollButton({ pollStatus }: { pollStatus: PollLockStatus }
         </AlertDialogContent>
       </AlertDialog>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
+      {running && <LogTailView content={tail} />}
     </div>
   )
 }
