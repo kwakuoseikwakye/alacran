@@ -13,7 +13,7 @@ export type SpawnOptions = {
 }
 export type SpawnedProcess = {
   unref: () => void
-  on: (event: "exit", listener: (code: number | null) => void) => void
+  on: (event: "exit" | "error", listener: (arg?: number | null | Error) => void) => void
 }
 export type SpawnFn = (command: string, args: string[], options: SpawnOptions) => SpawnedProcess
 
@@ -62,6 +62,9 @@ export async function triggerDailyTeamLogImpl(
       { cwd: config.clone, detached: true, stdio: ["ignore", outFd, outFd] }
     )
     child.on("exit", () => {
+      releaseLock(lockPath).catch(() => {})
+    })
+    child.on("error", () => {
       releaseLock(lockPath).catch(() => {})
     })
     child.unref()
