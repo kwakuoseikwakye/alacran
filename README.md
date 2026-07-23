@@ -208,3 +208,28 @@ type something. Typed, that text becomes the commit message instead,
 trimmed of surrounding whitespace and capped at 500 characters (rejected
 outright above that, not truncated, matching every other length-validated
 field in this app).
+
+## v11: register a second AI company
+
+The dashboard's home page now has an "Add a company" form: point it at
+an existing local directory (one you've already created or cloned
+yourself, e.g. via GitHub's "Use this template" on `ai-company-starter-main`
++ `gh repo clone`) that has both a `.git` and a `.claude` directory, and
+it becomes a fully managed agent — showing up in the agent tree, the
+activity board (via a generic recent-commits feed), and the skills
+browser with full editing/history/revert, with zero per-company code.
+"Remove" only un-registers it; the actual directory and its git history
+are never touched.
+
+Deliberately NOT generalized to registered companies: `ai-company-starter-main`'s
+"Run verify" button (v5) and its 5 runnable slash-commands (v8) — both
+are hand-authored for this one company's actual script and actual
+commands, and a genuinely different second company (different concept,
+per the original idea behind this whole project) wouldn't have the same
+`scripts/verify.py` or the same commands. Building a truly dynamic
+version of either is a bigger, separate effort, not attempted here. Also
+not attempted: creating a new company FROM the template automatically —
+`ai-company-starter-main`'s local clone has no git remote configured, so
+there's no way to discover which GitHub template to clone from the
+filesystem alone; you create the new company's directory yourself, the
+dashboard only registers it.
