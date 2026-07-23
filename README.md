@@ -181,3 +181,19 @@ end-to-end run — the routine reads real private session history and
 pushes to a real shared repo, so the real "Run now" button is left for
 the user to click themselves, at their own discretion, whenever they're
 ready.
+
+## v10: live log streaming for in-flight runs
+
+The Takeshi-agent poll button, every company-command's "Run" tab, and the
+plh-ops daily-team-log button all now show the growing tail of their log
+file while running, instead of only a static "Running…" label — polled
+the same ~3s interval each already used for its running/idle status, not
+a separate mechanism. No websockets or SSE; it's the same file each
+feature already writes, just read a little more of it on every tick. The
+Takeshi-agent button also gained a real client-side poll loop for the
+first time (`getPollStatus`), including a mount-time resume so loading the
+dashboard while the automated 5-minute cron job happens to be running
+doesn't leave the button stuck — previously it only reflected the page's
+initial server-render snapshot plus its own button-press state, which
+meant it never actually tracked `poll.sh`'s real running state after the
+button was clicked or across a page reload.
