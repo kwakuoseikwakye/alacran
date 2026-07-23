@@ -178,7 +178,7 @@ Add a section:
 ### Blockers
 ${fields.blockers?.trim() || "None (autonomous run — not confirmed with a user; verify and correct if inaccurate)"}
 
-If the file now has more than 5 dated sections (headings starting with "## "), move the oldest excess sections to docs/handoffs/<YYYY-MM>.md (the month of that section's date), creating it with a "# HANDOFF archive <YYYY-MM>" heading if needed, appending in chronological order, and removing them from HANDOFF.md itself. Write the file(s) and stop — do not run any other commands, and do not attempt to git add or commit anything.`,
+Do not move or archive older sections to a separate file even if there are more than 5 — just append the new section and leave everything else as-is; archival rotation is a manual/interactive-session task outside this run's scope. Write the file and stop — do not run any other commands, and do not attempt to git add or commit anything.`,
   },
 ]
 
