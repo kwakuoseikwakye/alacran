@@ -20,6 +20,8 @@ import { getCompanyCommandResult } from "@/lib/company-commands/company-command-
 import type { CompanyCommandResult } from "@/lib/company-commands/company-command-result-impl"
 import { commitCompanyCommandResult } from "@/lib/company-commands/commit-company-command-result"
 import type { CompanyCommand } from "@/lib/company-commands/types"
+import { getCompanyCommandLogTail } from "@/lib/company-commands/company-command-log-tail"
+import { LogTailView } from "@/components/log-tail-view"
 
 const POLL_INTERVAL_MS = 3000
 
@@ -31,6 +33,7 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [committing, setCommitting] = useState(false)
   const [commitMessage, setCommitMessage] = useState<string | null>(null)
+  const [tail, setTail] = useState("")
 
   function setField(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -38,6 +41,8 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
 
   async function pollUntilDone() {
     const status = await getCompanyCommandStatus()
+    const logTail = await getCompanyCommandLogTail(command.id)
+    setTail(logTail.tail)
     if (status.running) {
       setTimeout(pollUntilDone, POLL_INTERVAL_MS)
       return
@@ -92,6 +97,7 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
         {running ? "Running…" : `Run /${command.id}`}
       </Button>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
+      {running && <LogTailView content={tail} />}
 
       {result && !result.changed && <p className="text-sm text-muted-foreground">{result.message}</p>}
 

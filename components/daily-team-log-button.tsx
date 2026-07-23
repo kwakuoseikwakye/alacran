@@ -16,15 +16,20 @@ import {
 import { triggerDailyTeamLog } from "@/lib/daily-team-log/trigger-daily-team-log"
 import { getDailyTeamLogStatus } from "@/lib/daily-team-log/daily-team-log-status"
 import { getDailyTeamLogResult } from "@/lib/daily-team-log/daily-team-log-result"
+import { getDailyTeamLogLogTail } from "@/lib/daily-team-log/daily-team-log-log-tail"
+import { LogTailView } from "@/components/log-tail-view"
 
 const POLL_INTERVAL_MS = 3000
 
 export function DailyTeamLogButton() {
   const [running, setRunning] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [tail, setTail] = useState("")
 
   async function pollUntilDone() {
     const status = await getDailyTeamLogStatus()
+    const logTail = await getDailyTeamLogLogTail()
+    setTail(logTail.tail)
     if (status.running) {
       setTimeout(pollUntilDone, POLL_INTERVAL_MS)
       return
@@ -69,6 +74,7 @@ export function DailyTeamLogButton() {
         </AlertDialogContent>
       </AlertDialog>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
+      {running && <LogTailView content={tail} />}
     </div>
   )
 }
