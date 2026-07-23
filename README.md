@@ -197,3 +197,14 @@ doesn't leave the button stuck — previously it only reflected the page's
 initial server-render snapshot plus its own button-press state, which
 meant it never actually tracked `poll.sh`'s real running state after the
 button was clicked or across a page reload.
+
+## v13: user-typed commit messages for skill edits
+
+Both the skill editor's save dialog and the history view's revert dialog
+now have an optional "Commit message" field. Left blank, the exact same
+auto-generated message (`Edit <fileName> via AI-Native control panel`)
+v4 always used is still what gets committed — nothing changes unless you
+type something. Typed, that text becomes the commit message instead,
+trimmed of surrounding whitespace and capped at 500 characters (rejected
+outright above that, not truncated, matching every other length-validated
+field in this app).
