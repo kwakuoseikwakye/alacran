@@ -5,11 +5,17 @@ import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
 import { AddCompanyForm } from "@/components/add-company-form"
+import { getAvatars } from "@/lib/avatars-registry"
 
 export const dynamic = "force-dynamic"
 
 export default async function AgentTreePage() {
-  const [agents, adapters] = await Promise.all([getEffectiveAgents(), getEffectiveAdapters()])
+  const [agents, adapters, avatars] = await Promise.all([
+    getEffectiveAgents(),
+    getEffectiveAdapters(),
+    getAvatars(),
+  ])
+  const avatarByAgentId = Object.fromEntries(avatars.map((a) => [a.agentId, a.imageUrl]))
   const takeshiAgent = agents.find((agent) => agent.id === "plh-takeshi-agent")
 
   const [results, launchdHealth, pollStatus] = await Promise.all([
@@ -43,6 +49,7 @@ export default async function AgentTreePage() {
               showVerifyButton={isAiCompanyStarterMain}
               showDailyTeamLogButton={isPlhOps}
               removable={isRegisteredCompany}
+              avatarUrl={avatarByAgentId[result.agent.id] ?? null}
             />
           )
         })}

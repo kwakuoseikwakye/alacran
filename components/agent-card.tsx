@@ -7,6 +7,8 @@ import { TriggerPollButton } from "@/components/trigger-poll-button"
 import { VerifyButton } from "@/components/verify-button"
 import { DailyTeamLogButton } from "@/components/daily-team-log-button"
 import { RemoveCompanyButton } from "@/components/remove-company-button"
+import { AgentAvatar } from "@/components/agent-avatar"
+import { AgentAvatarForm } from "@/components/agent-avatar-form"
 
 type AgentCardProps = {
   agent: Agent
@@ -17,6 +19,7 @@ type AgentCardProps = {
   showVerifyButton?: boolean
   showDailyTeamLogButton?: boolean
   removable?: boolean
+  avatarUrl?: string | null
 }
 
 export function AgentCard({
@@ -28,12 +31,16 @@ export function AgentCard({
   showVerifyButton,
   showDailyTeamLogButton,
   removable,
+  avatarUrl,
 }: AgentCardProps) {
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>{agent.name}</span>
+          <span className="flex items-center gap-2">
+            <AgentAvatar imageUrl={avatarUrl ?? null} />
+            {agent.name}
+          </span>
           <Badge variant="outline">{agent.kind}</Badge>
         </CardTitle>
       </CardHeader>
@@ -58,6 +65,7 @@ export function AgentCard({
         {showVerifyButton && <VerifyButton />}
         {showDailyTeamLogButton && <DailyTeamLogButton />}
         {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
+        <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
       </CardContent>
     </Card>
   )
