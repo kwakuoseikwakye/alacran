@@ -16,6 +16,7 @@ afterEach(async () => {
 
 describe("getActivityDetail", () => {
   it("reads a file inside a configured agent root", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))
@@ -28,6 +29,7 @@ describe("getActivityDetail", () => {
   })
 
   it("refuses to read a path outside any configured agent root", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))
@@ -40,6 +42,7 @@ describe("getActivityDetail", () => {
   })
 
   it("refuses to read a symlink inside agent root pointing to a file outside", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
     vi.doMock("./config", () => ({
       AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
     }))
@@ -65,5 +68,15 @@ describe("getActivityDetail", () => {
     } finally {
       await rm(outsideRoot, { recursive: true, force: true })
     }
+  })
+
+  it("refuses to read a path that is a directory, with a clear message instead of a raw fs error", async () => {
+    vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
+    vi.doMock("./config", () => ({
+      AGENTS: [{ id: "a", name: "A", rootPath: root, kind: "pipeline" }],
+    }))
+    const { getActivityDetail } = await import("./get-activity-detail")
+
+    await expect(getActivityDetail(root)).rejects.toThrow("This activity has no single file to display")
   })
 })
