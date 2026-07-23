@@ -31,22 +31,25 @@ export function SkillEditor({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [commitMessage, setCommitMessage] = useState("")
 
   function startEditing() {
     setDraft(savedContent)
+    setCommitMessage("")
     setEditing(true)
     setMessage(null)
   }
 
   function cancelEditing() {
     setDraft(savedContent)
+    setCommitMessage("")
     setEditing(false)
     setMessage(null)
   }
 
   async function handleConfirmSave() {
     setPending(true)
-    const result = await saveSkillContent(path, draft)
+    const result = await saveSkillContent(path, draft, commitMessage.trim() || undefined)
     setPending(false)
     setConfirmOpen(false)
     setMessage(result.message)
@@ -96,6 +99,15 @@ export function SkillEditor({
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
+          <div className="space-y-1">
+            <label className="text-sm font-medium">Commit message (optional)</label>
+            <Textarea
+              rows={1}
+              value={commitMessage}
+              onChange={(e) => setCommitMessage(e.target.value)}
+              placeholder={`Edit ${path.split("/").pop() ?? path} via AI-Native control panel`}
+            />
+          </div>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmSave}>Confirm &amp; commit</AlertDialogAction>
