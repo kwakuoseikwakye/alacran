@@ -233,3 +233,18 @@ not attempted: creating a new company FROM the template automatically —
 there's no way to discover which GitHub template to clone from the
 filesystem alone; you create the new company's directory yourself, the
 dashboard only registers it.
+
+## v12: agent avatars (display-only)
+
+Every agent card (the 3 built-in agents and any v11-registered company)
+now has an inline "Save avatar" field: paste an image URL
+(`https://`/`http://`/`data:image/...`) and it's shown as a small round
+image on the card. This slice is deliberately display-only — it does not
+call Higgsfield's image-generation MCP, because that tool isn't reachable
+in any session yet (added to local config via `claude mcp add`, but a
+running session has to be started after that to see it). The registry
+this slice ships (`agentId -> imageUrl`, a simple key-value set,
+upserting on a second save) is exactly what a future "Generate with
+Higgsfield" button would feed into — no changes needed here once that
+tool is reachable, just a new button that calls it and passes the result
+to the same `setAvatar` action.
