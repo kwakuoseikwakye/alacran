@@ -9,6 +9,7 @@ import { DailyTeamLogButton } from "@/components/daily-team-log-button"
 import { RemoveCompanyButton } from "@/components/remove-company-button"
 import { AgentAvatar } from "@/components/agent-avatar"
 import { AgentAvatarForm } from "@/components/agent-avatar-form"
+import { StatusDot } from "@/components/status-dot"
 
 type AgentCardProps = {
   agent: Agent
@@ -20,6 +21,12 @@ type AgentCardProps = {
   showDailyTeamLogButton?: boolean
   removable?: boolean
   avatarUrl?: string | null
+}
+
+const KIND_BADGE_CLASS: Record<Agent["kind"], string> = {
+  pipeline: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+  "command-set": "border-violet-500/30 bg-violet-500/10 text-violet-400",
+  "report-log": "border-teal-500/30 bg-teal-500/10 text-teal-400",
 }
 
 export function AgentCard({
@@ -34,38 +41,45 @@ export function AgentCard({
   avatarUrl,
 }: AgentCardProps) {
   return (
-    <Card>
+    <Card className="transition-colors hover:border-border/80">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 font-semibold">
             <AgentAvatar imageUrl={avatarUrl ?? null} />
             {agent.name}
           </span>
-          <Badge variant="outline">{agent.kind}</Badge>
+          <Badge variant="outline" className={KIND_BADGE_CLASS[agent.kind]}>
+            {agent.kind}
+          </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+      <CardContent className="space-y-3 text-sm">
         {error && <p className="text-destructive">Source unavailable: {error}</p>}
         {!error && !latestActivity && <p className="text-muted-foreground">No activity recorded yet.</p>}
         {!error && latestActivity && (
-          <div>
-            <p className="font-medium">{latestActivity.title}</p>
-            <p className="text-muted-foreground">
+          <div className="space-y-1">
+            <p className="flex items-center gap-2 font-medium">
+              <StatusDot status={latestActivity.status} />
+              {latestActivity.title}
+            </p>
+            <p className="text-xs text-muted-foreground">
               {new Date(latestActivity.timestamp * 1000).toLocaleString()} · {latestActivity.status}
             </p>
           </div>
         )}
         {launchdHealth && (
-          <p className="text-muted-foreground">
+          <p className="text-xs text-muted-foreground">
             launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
             {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
           </p>
         )}
-        {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
-        {showVerifyButton && <VerifyButton />}
-        {showDailyTeamLogButton && <DailyTeamLogButton />}
-        {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
-        <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
+        <div className="space-y-2 pt-1">
+          {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
+          {showVerifyButton && <VerifyButton />}
+          {showDailyTeamLogButton && <DailyTeamLogButton />}
+          {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
+          <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
+        </div>
       </CardContent>
     </Card>
   )
