@@ -271,3 +271,21 @@ Two more slices follow: v15 restructures the Activity page (currently a
 single 12,000+px column with no grouping), and v16 covers the Skills
 page, remaining dialogs, and a full responsive audit at phone/tablet/
 desktop widths.
+
+## v15: Activity page restructure (piece 2 of 3)
+
+Second of 3 slices for the visual/UX pass (v14 shipped the design system,
+nav, and Agents page). The `/activity` page previously rendered a fixed
+3-column status board where each column listed every matching activity
+with no grouping or limit — a real screenshot before this work measured
+the page at 12,000+px tall. Replaced with two sections: a "Needs
+Attention" list pinned at the top (always expanded, so nothing that needs
+action is ever buried in scroll), and a day-grouped history feed below it
+— today's activities expanded by default, every earlier day collapsed
+into a one-line, click-to-expand header. No data-fetching or adapter
+changes; this is a client-side grouping and rendering change only, using
+a new pure `groupActivitiesByDay` helper (unit tested for the
+midnight-straddling edge case) and a new `ActivityDayGroup` component.
+
+One more slice follows: v16 covers the Skills page, remaining dialogs,
+and a full responsive audit at phone/tablet/desktop widths.
