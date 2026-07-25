@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,8 +143,7 @@ export function SkillHistory({
           </AlertDialogHeader>
           <div className="space-y-1">
             <label className="text-sm font-medium">Commit message (optional)</label>
-            <Textarea
-              rows={1}
+            <Input
               value={revertCommitMessage}
               onChange={(e) => setRevertCommitMessage(e.target.value)}
               placeholder={`Edit ${path.split("/").pop() ?? path} via AI-Native control panel`}
