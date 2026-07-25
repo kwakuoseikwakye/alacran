@@ -248,3 +248,26 @@ upserting on a second save) is exactly what a future "Generate with
 Higgsfield" button would feed into — no changes needed here once that
 tool is reachable, just a new button that calls it and passes the result
 to the same `setAvatar` action.
+
+## v14: design system, nav, and Agents page (piece 1 of 3)
+
+The first of 3 slices for a full visual pass, brainstormed with real
+screenshots of the app as it looked before this work (not assumed from
+memory) and a browser-based mockup comparison. Dark, Linear/Vercel-
+inspired palette (one indigo accent, three semantic status colors),
+replacing the plain grayscale shadcn defaults — dark-only, not a
+light/dark toggle, since this is a personal, single-operator tool kept
+open for hours, not a multi-tenant product. A missing `Input` primitive
+(this project only ever added `Textarea`) replaces every single-line
+field that was awkwardly using a multi-line textarea. The "Add a
+company" form — previously always-open with the same visual weight as a
+real agent card — is now a collapsed disclosure. Nav gained an
+active-route indicator and icons. No functional changes anywhere; every
+existing action (register/remove a company, save/remove an avatar, edit
+a skill, revert to a past revision) works exactly as before, just
+restyled.
+
+Two more slices follow: v15 restructures the Activity page (currently a
+single 12,000+px column with no grouping), and v16 covers the Skills
+page, remaining dialogs, and a full responsive audit at phone/tablet/
+desktop widths.
