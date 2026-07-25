@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { setAvatar } from "@/lib/set-avatar"
 import { removeAvatar } from "@/lib/remove-avatar"
 
@@ -40,8 +40,7 @@ export function AgentAvatarForm({ agentId, currentUrl }: { agentId: string; curr
 
   return (
     <div className="space-y-1">
-      <Textarea
-        rows={1}
+      <Input
         value={url}
         onChange={(e) => setUrl(e.target.value)}
         placeholder="https://... or data:image/..."
