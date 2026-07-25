@@ -81,12 +81,16 @@ grouped and rendered client-side.
     `openActivity` function, and the existing `Sheet` detail view,
     unchanged.
 - A new small helper, `lib/group-activities-by-day.ts`, pure and unit
-  tested: takes `Activity[]`, returns an ordered array of
-  `{ label: string; activities: Activity[] }` groups (newest day first,
-  activities within a group newest first), using the user's local
-  timezone (`Date` methods, no library). "Today"/"Yesterday" labels are
-  computed by comparing calendar dates (year/month/day), not by
-  timestamp subtraction, so a 2am activity yesterday and an 11pm activity
+  tested: takes `(activities: Activity[], nowSeconds?: number)`, returns
+  an ordered array of `{ key: string; label: string; activities:
+  Activity[] }` groups (newest day first, activities within a group
+  newest first), using the user's local timezone (`Date` methods, no
+  library). `nowSeconds` defaults to the real clock in production but
+  lets tests inject a fixed reference instant — this project's existing
+  DI-for-testability convention (`ExecFn`/`SpawnFn` elsewhere), applied
+  here to the wall clock instead of an OS call. "Today"/"Yesterday"
+  labels are computed by comparing calendar dates (year/month/day), not
+  by timestamp subtraction, so a 2am activity yesterday and an 11pm activity
   today are correctly one calendar day apart even though they're less
   than 24 hours apart in absolute time.
 - A new small presentational component, `components/activity-day-group.tsx`,
@@ -98,11 +102,12 @@ grouped and rendered client-side.
 
 - `lib/group-activities-by-day.test.ts`: empty input; single activity;
   multiple activities same day; activities spanning several days
-  (ordering newest-first); "Today"/"Yesterday" boundary using two
-  timestamps that are >24h apart in absolute terms but land on the
-  literal same calendar day, and vice versa (a pair <24h apart that
-  straddles local midnight) — this is the one genuinely tricky case
-  worth a dedicated test.
+  (ordering newest-first); "Today"/"Yesterday" labeling relative to an
+  injected reference time (never the real wall clock, so the test is
+  deterministic). The one genuinely tricky case: two activities under 24h
+  apart in absolute time but straddling local midnight must land in
+  *different* day groups — a naive "timestamp difference < 86400s = same
+  day" implementation would wrongly merge them.
 - No new Server Action, so no new integration test beyond the existing
   `ActivityBoard` consumer — manual/live verification (real activity
   data from the three built-in agents, real click-to-expand, real
