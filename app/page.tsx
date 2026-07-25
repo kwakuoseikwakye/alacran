@@ -27,9 +27,12 @@ export default async function AgentTreePage() {
   ])
 
   return (
-    <main className="mx-auto max-w-4xl space-y-4 p-8">
-      <h1 className="text-2xl font-semibold">AI-Native Agents</h1>
-      <div className="grid gap-4 sm:grid-cols-2">
+    <main className="mx-auto max-w-5xl space-y-6 p-8">
+      <div>
+        <h1 className="text-2xl font-semibold">AI-Native Agents</h1>
+        <p className="text-sm text-muted-foreground">Status, avatars, and quick actions for every managed agent.</p>
+      </div>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {results.map((result) => {
           const latest = mergeAndSortActivities([result])[0] ?? null
           const isTakeshiAgent = result.agent.id === "plh-takeshi-agent"
