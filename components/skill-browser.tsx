@@ -74,7 +74,7 @@ export function SkillBrowser({
         ))}
       </div>
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="sm:max-w-xl">
+        <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>{selected?.name}</SheetTitle>
           </SheetHeader>

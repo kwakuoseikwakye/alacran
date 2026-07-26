@@ -43,7 +43,7 @@ export function VerifyButton() {
         </p>
       )}
       <Sheet open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <SheetContent className="sm:max-w-xl">
+        <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>Verify results</SheetTitle>
           </SheetHeader>
