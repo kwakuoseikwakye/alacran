@@ -9,9 +9,9 @@ export function DiffView({ oldText, newText }: { oldText: string; newText: strin
           key={i}
           className={
             part.added
-              ? "bg-green-500/20 text-green-700 dark:text-green-400"
+              ? "bg-success/20 text-success"
               : part.removed
-                ? "bg-red-500/20 text-red-700 dark:text-red-400 line-through"
+                ? "bg-destructive/20 text-destructive line-through"
                 : ""
           }
         >
