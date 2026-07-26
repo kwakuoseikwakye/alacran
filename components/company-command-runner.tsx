@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,13 +83,22 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
               {field.label}
               {field.required && " *"}
             </label>
-            <Textarea
-              rows={field.multiline ? 4 : 1}
-              value={values[field.key] ?? ""}
-              onChange={(e) => setField(field.key, e.target.value)}
-              placeholder={field.placeholder}
-              disabled={running}
-            />
+            {field.multiline ? (
+              <Textarea
+                rows={4}
+                value={values[field.key] ?? ""}
+                onChange={(e) => setField(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                disabled={running}
+              />
+            ) : (
+              <Input
+                value={values[field.key] ?? ""}
+                onChange={(e) => setField(field.key, e.target.value)}
+                placeholder={field.placeholder}
+                disabled={running}
+              />
+            )}
           </div>
         ))}
       </div>
