@@ -289,3 +289,26 @@ midnight-straddling edge case) and a new `ActivityDayGroup` component.
 
 One more slice follows: v16 covers the Skills page, remaining dialogs,
 and a full responsive audit at phone/tablet/desktop widths.
+
+## v16: Skills page, remaining dialogs, and responsive audit (piece 3 of 3)
+
+The third and final slice of the visual/UX pass (v14: design system, nav,
+Agents page; v15: Activity page restructure). Unlike v14/v15, this
+slice's scope came from a direct audit — reading every remaining
+dialog-bearing component and taking real Playwright screenshots at
+375/768/1280px — rather than a mockup, and fixed exactly what that audit
+found: detail Sheets (Activity, Skills, and the verify-results dialog)
+were cramped and overlapping the page below the 640px breakpoint, because
+each consumer's `sm:max-w-xl` only overrides the desktop width, leaving
+the Sheet primitive's own mobile-width default (`w-3/4`) in place; the
+diff view's added/removed text colors relied on a `dark:` Tailwind
+variant that never activates in this dark-only app, so it's now using
+this project's own `--success`/`--destructive` design tokens instead;
+the company-command runner's single-line fields still used a `rows={1}`
+`Textarea` (the one place v14's `Input`-primitive sweep missed); and the
+Skills page's kind badges ("skill"/"command") had no color coding, unlike
+the Agents page. Every other page and component, at every tested width,
+was already correct — this slice touches only what the audit confirmed
+needed it.
+
+This completes the 3-slice visual/UX pass.
