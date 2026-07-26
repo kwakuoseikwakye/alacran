@@ -14,6 +14,11 @@ import { SkillHistory } from "@/components/skill-history"
 import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
 import { CompanyCommandRunner } from "@/components/company-command-runner"
 
+const KIND_BADGE_CLASS: Record<SkillEntry["kind"], string> = {
+  skill: "border-teal-500/30 bg-teal-500/10 text-teal-400",
+  command: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+}
+
 export function SkillBrowser({
   results,
   entries,
@@ -60,7 +65,9 @@ export function SkillBrowser({
                       <CardHeader className="p-3">
                         <CardTitle className="flex items-center justify-between text-sm font-medium">
                           <span>{entry.name}</span>
-                          <Badge variant="outline">{entry.kind}</Badge>
+                          <Badge variant="outline" className={KIND_BADGE_CLASS[entry.kind]}>
+                            {entry.kind}
+                          </Badge>
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="p-3 pt-0 text-xs text-muted-foreground">
