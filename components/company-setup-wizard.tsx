@@ -8,6 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { saveCompanyOntology } from "@/lib/save-company-ontology"
 import type { Stakeholder } from "@/lib/build-company-ontology"
+import { formatDefineCompanyFields } from "@/lib/format-define-company-fields"
+import { DefineCompanyAiDraft } from "@/components/define-company-ai-draft"
 
 const STEPS = ["about", "stakeholders", "value-flow", "bottleneck", "review"] as const
 type Step = (typeof STEPS)[number]
@@ -23,6 +25,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
   const [bottleneck, setBottleneck] = useState("")
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [aiDraftFields, setAiDraftFields] = useState<Record<string, string> | null>(null)
 
   const stepIndex = STEPS.indexOf(step)
 
@@ -35,6 +38,21 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
     setValueFlow({ input: "", transform: "", output: "" })
     setBottleneck("")
     setMessage(null)
+    setAiDraftFields(null)
+  }
+
+  function handleStartAiDraft() {
+    setMessage(null)
+    setAiDraftFields(formatDefineCompanyFields({ domain, stakeholders, valueFlow, bottleneck }))
+  }
+
+  function handleCancelAiDraft() {
+    setAiDraftFields(null)
+  }
+
+  function handleAiDraftCommitted() {
+    resetAndClose()
+    router.refresh()
   }
 
   function goNext() {
@@ -175,7 +193,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 <Textarea value={bottleneck} onChange={(e) => setBottleneck(e.target.value)} className="min-h-24" />
               </div>
             )}
-            {step === "review" && (
+            {step === "review" && !aiDraftFields && (
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="font-medium">Your company</p>
@@ -204,21 +222,36 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 </div>
               </div>
             )}
-            {message && <p className="text-xs text-destructive">{message}</p>}
-            <div className="flex justify-between pt-2">
-              <Button size="sm" variant="ghost" onClick={goBack} disabled={stepIndex === 0 || pending}>
-                Back
-              </Button>
-              {step === "review" ? (
-                <Button size="sm" onClick={handleSave} disabled={pending}>
-                  {pending ? "Saving…" : "Save"}
+            {step === "review" && aiDraftFields && (
+              <DefineCompanyAiDraft
+                agentId={agentId}
+                fieldValues={aiDraftFields}
+                onCancel={handleCancelAiDraft}
+                onCommitted={handleAiDraftCommitted}
+              />
+            )}
+            {!aiDraftFields && message && <p className="text-xs text-destructive">{message}</p>}
+            {!aiDraftFields && (
+              <div className="flex justify-between pt-2">
+                <Button size="sm" variant="ghost" onClick={goBack} disabled={stepIndex === 0 || pending}>
+                  Back
                 </Button>
-              ) : (
-                <Button size="sm" onClick={goNext} disabled={pending || !canGoNext}>
-                  Next
-                </Button>
-              )}
-            </div>
+                {step === "review" ? (
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={handleStartAiDraft} disabled={pending}>
+                      Let AI draft tailored entities
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={pending}>
+                      {pending ? "Saving…" : "Save now"}
+                    </Button>
+                  </div>
+                ) : (
+                  <Button size="sm" onClick={goNext} disabled={pending || !canGoNext}>
+                    Next
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </SheetContent>
       </Sheet>
