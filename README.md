@@ -312,3 +312,29 @@ was already correct — this slice touches only what the audit confirmed
 needed it.
 
 This completes the 3-slice visual/UX pass.
+
+## v17: create a company from the template
+
+"Add a company" (v11) could only register a directory that already had
+`.git` and `.claude` — there was no way to create one. This slice adds
+that: when the typed path doesn't exist yet (but its parent directory
+does), the form now offers to scaffold it from `ai-company-starter-main`'s
+generic parts before registering it, instead of immediately erroring.
+
+`ai-company-starter-main` is simultaneously this template's origin *and*
+a real, working company (real ontology data, real session history, real
+decisions) — so this isn't a blind directory copy. An explicit manifest
+(`lib/company-template-manifest.ts`) lists exactly which ~40 paths are
+genuinely generic (`.claude/*`, `docs/templates`, `scripts/verify.py`,
+empty `definitions/`/`notes/` structure, etc.) and copies only those;
+everything else (the real ontology, real decisions, the teaching
+`examples/` demo, an unrelated leftover project's `.kiro/specs/`, the
+optional `tools/office/` visualization plugin) is never touched. A fresh
+`HANDOFF.md` is generated rather than copying the real 172-line session
+history. The new directory gets its own `git init` and initial commit,
+then registers through the existing, unmodified `registerCompanyImpl`.
+
+This is piece 1 of a larger roadmap toward a Fleece.ai-style onboarding
+experience built on `ai-company-starter-main` as the core: guided
+company-context setup (v18), integrations setup (v19), and guided
+command/workflow discovery (v20) are named but not yet designed.
