@@ -7,6 +7,7 @@ import { AgentCard } from "@/components/agent-card"
 import { AddCompanyForm } from "@/components/add-company-form"
 import { getAvatars } from "@/lib/avatars-registry"
 import { companyOntologyExists } from "@/lib/company-ontology-exists"
+import { getIntegrationStatus } from "@/lib/get-integration-status"
 
 export const dynamic = "force-dynamic"
 
@@ -45,6 +46,7 @@ export default async function AgentTreePage() {
             )
             const needsCompanySetup =
               result.agent.kind === "command-set" && !(await companyOntologyExists(result.agent.rootPath))
+            const integrationStatus = await getIntegrationStatus(result.agent)
             return (
               <AgentCard
                 key={result.agent.id}
@@ -58,6 +60,7 @@ export default async function AgentTreePage() {
                 removable={isRegisteredCompany}
                 avatarUrl={avatarByAgentId[result.agent.id] ?? null}
                 showSetupCompanyButton={needsCompanySetup}
+                integrationStatus={integrationStatus}
               />
             )
           })
