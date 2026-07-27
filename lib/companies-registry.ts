@@ -82,3 +82,15 @@ export async function removeCompanyImpl(
   await writeFile(registryPath, JSON.stringify(remaining, null, 2), "utf-8")
   return { ok: true }
 }
+
+export type CompanyPathStatus = "exists" | "creatable" | "not-creatable"
+
+export async function getCompanyPathStatusImpl(rootPath: string): Promise<CompanyPathStatus> {
+  if (await exists(rootPath)) {
+    return "exists"
+  }
+  if (await isDirectory(path.dirname(rootPath))) {
+    return "creatable"
+  }
+  return "not-creatable"
+}

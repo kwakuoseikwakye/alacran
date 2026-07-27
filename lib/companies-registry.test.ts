@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdtemp, mkdir, rm, readFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { getRegisteredCompanies, registerCompanyImpl, removeCompanyImpl } from "./companies-registry"
+import { getRegisteredCompanies, registerCompanyImpl, removeCompanyImpl, getCompanyPathStatusImpl } from "./companies-registry"
 
 let dataDir: string
 let registryPath: string
@@ -95,5 +95,19 @@ describe("companies-registry", () => {
   it("reports not-found when removing an unknown id", async () => {
     const result = await removeCompanyImpl("nonexistent-id", registryPath)
     expect(result).toEqual({ ok: false, message: "Not found" })
+  })
+
+  it("getCompanyPathStatusImpl returns 'exists' for a path that already exists", async () => {
+    expect(await getCompanyPathStatusImpl(companyDir)).toBe("exists")
+  })
+
+  it("getCompanyPathStatusImpl returns 'creatable' when the path is missing but its parent exists", async () => {
+    const missingChild = path.join(companyDir, "not-yet-created")
+    expect(await getCompanyPathStatusImpl(missingChild)).toBe("creatable")
+  })
+
+  it("getCompanyPathStatusImpl returns 'not-creatable' when neither the path nor its parent exist", async () => {
+    const deeplyMissing = path.join(companyDir, "missing-parent", "missing-child")
+    expect(await getCompanyPathStatusImpl(deeplyMissing)).toBe("not-creatable")
   })
 })
