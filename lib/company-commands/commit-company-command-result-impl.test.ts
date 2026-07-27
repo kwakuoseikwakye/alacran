@@ -39,6 +39,7 @@ describe("commitCompanyCommandResultImpl", () => {
     const result = await commitCompanyCommandResultImpl(
       "digest",
       path.join("notes/company/digests", "2026-07-23-digest.md"),
+      "ai-company-starter-main",
       fakeExec
     )
 
@@ -63,7 +64,7 @@ describe("commitCompanyCommandResultImpl", () => {
       return { stdout: "", stderr: "" }
     }
 
-    const result = await commitCompanyCommandResultImpl("handoff", "HANDOFF.md", fakeExec)
+    const result = await commitCompanyCommandResultImpl("handoff", "HANDOFF.md", "ai-company-starter-main", fakeExec)
 
     expect(result).toEqual({ committed: true, message: "Committed" })
     expect(calls[1].args).toContain("Run /handoff via AI-Native control panel")
@@ -83,7 +84,7 @@ describe("commitCompanyCommandResultImpl", () => {
       return { stdout: "", stderr: "" }
     }
 
-    const result = await commitCompanyCommandResultImpl("digest", "bin/poll.sh", fakeExec)
+    const result = await commitCompanyCommandResultImpl("digest", "bin/poll.sh", "ai-company-starter-main", fakeExec)
 
     expect(result).toEqual({ committed: false, message: 'Refusing to commit a path outside "digest"\'s expected output location' })
     expect(execCalled).toBe(false)
@@ -113,7 +114,7 @@ describe("commitCompanyCommandResultImpl", () => {
     const maliciousRelativePath = "docs/decisions/../../HANDOFF.md"
     expect(maliciousRelativePath.startsWith("docs/decisions" + path.sep)).toBe(true)
 
-    const result = await commitCompanyCommandResultImpl("decision", maliciousRelativePath, fakeExec)
+    const result = await commitCompanyCommandResultImpl("decision", maliciousRelativePath, "ai-company-starter-main", fakeExec)
 
     expect(result).toEqual({ committed: false, message: 'Refusing to commit a path outside "decision"\'s expected output location' })
     expect(execCalled).toBe(false)
@@ -125,7 +126,7 @@ describe("commitCompanyCommandResultImpl", () => {
     }))
     const { commitCompanyCommandResultImpl } = await import("./commit-company-command-result-impl")
 
-    const result = await commitCompanyCommandResultImpl("create-epic", "docs/decisions/x.md")
+    const result = await commitCompanyCommandResultImpl("create-epic", "docs/decisions/x.md", "ai-company-starter-main")
 
     expect(result).toEqual({ committed: false, message: 'Unknown command "create-epic"' })
   })
@@ -142,8 +143,60 @@ describe("commitCompanyCommandResultImpl", () => {
       throw new Error("nothing to commit")
     }
 
-    const result = await commitCompanyCommandResultImpl("retro", path.join("docs/retros", "2026-07-23-retro.md"), fakeExec)
+    const result = await commitCompanyCommandResultImpl(
+      "retro",
+      path.join("docs/retros", "2026-07-23-retro.md"),
+      "ai-company-starter-main",
+      fakeExec
+    )
 
     expect(result).toEqual({ committed: false, message: "nothing to commit" })
+  })
+
+  it("reports an error for an unknown agentId", async () => {
+    vi.doMock("../config", () => ({ AGENTS: [] }))
+    await mkdir(path.join(root, "docs/decisions"), { recursive: true })
+    const { commitCompanyCommandResultImpl } = await import("./commit-company-command-result-impl")
+
+    const result = await commitCompanyCommandResultImpl("decision", "docs/decisions/x.md", "no-such-agent")
+
+    expect(result).toEqual({ committed: false, message: 'Unknown company "no-such-agent"' })
+  })
+
+  it("commits against the correct target when a second agent is registered", async () => {
+    const secondRoot = await mkdtemp(path.join(tmpdir(), "commit-company-command-second-"))
+    try {
+      vi.doMock("../config", () => ({
+        AGENTS: [
+          { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" },
+          { id: "second-co", name: "Second Co", rootPath: secondRoot, kind: "command-set" },
+        ],
+      }))
+      await mkdir(path.join(secondRoot, "definitions/ontology"), { recursive: true })
+      await writeFile(path.join(secondRoot, "definitions/ontology/company.yaml"), "version: 1\n")
+      const { commitCompanyCommandResultImpl } = await import("./commit-company-command-result-impl")
+      const resolvedSecondRoot = await realpath(secondRoot)
+
+      const calls: { command: string; args: string[] }[] = []
+      const fakeExec = async (command: string, args: string[]) => {
+        calls.push({ command, args })
+        return { stdout: "", stderr: "" }
+      }
+
+      const result = await commitCompanyCommandResultImpl(
+        "define-company",
+        "definitions/ontology/company.yaml",
+        "second-co",
+        fakeExec
+      )
+
+      expect(result).toEqual({ committed: true, message: "Committed" })
+      expect(calls[0]).toEqual({
+        command: "git",
+        args: ["-C", resolvedSecondRoot, "add", "--", "definitions/ontology/company.yaml"],
+      })
+    } finally {
+      await rm(secondRoot, { recursive: true, force: true })
+    }
   })
 })

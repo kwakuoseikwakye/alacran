@@ -1,18 +1,17 @@
 import { realpath } from "node:fs/promises"
 import path from "node:path"
-import { AGENTS } from "../config"
+import { getEffectiveAgents } from "../get-effective-agents"
 import { resolveWithinAgentRoot } from "../path-guard"
 import { commitFile } from "../git-commit-file"
 import type { ExecFileFn } from "../git-commit-file"
 import { getCompanyCommand } from "./registry"
-
-const AI_COMPANY_STARTER_MAIN_ID = "ai-company-starter-main"
 
 export type CommitCompanyCommandResult = { committed: boolean; message: string }
 
 export async function commitCompanyCommandResultImpl(
   commandId: string,
   relativeOutputPath: string,
+  agentId: string,
   execFn?: ExecFileFn
 ): Promise<CommitCompanyCommandResult> {
   const command = getCompanyCommand(commandId)
@@ -35,9 +34,10 @@ export async function commitCompanyCommandResultImpl(
     return { committed: false, message: `Refusing to commit a path outside "${command.id}"'s expected output location` }
   }
 
-  const agent = AGENTS.find((a) => a.id === AI_COMPANY_STARTER_MAIN_ID)
+  const agents = await getEffectiveAgents()
+  const agent = agents.find((a) => a.id === agentId)
   if (!agent) {
-    return { committed: false, message: `Agent "${AI_COMPANY_STARTER_MAIN_ID}" is not configured` }
+    return { committed: false, message: `Unknown company "${agentId}"` }
   }
 
   let expectedRoot: string
