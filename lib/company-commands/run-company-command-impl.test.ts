@@ -32,7 +32,14 @@ describe("runCompanyCommandImpl", () => {
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
     const calls: { command: string; args: string[]; options: unknown }[] = []
-    const result = await runCompanyCommandImpl("create-epic", {}, fakeSpawn(calls), undefined, dataDir)
+    const result = await runCompanyCommandImpl(
+      "create-epic",
+      {},
+      "ai-company-starter-main",
+      fakeSpawn(calls),
+      undefined,
+      dataDir
+    )
 
     expect(result).toEqual({ started: false, message: 'Unknown command "create-epic"' })
     expect(calls).toHaveLength(0)
@@ -45,7 +52,14 @@ describe("runCompanyCommandImpl", () => {
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
     const calls: { command: string; args: string[]; options: unknown }[] = []
-    const result = await runCompanyCommandImpl("retro", { keep: "x", problem: "y" }, fakeSpawn(calls), undefined, dataDir)
+    const result = await runCompanyCommandImpl(
+      "retro",
+      { keep: "x", problem: "y" },
+      "ai-company-starter-main",
+      fakeSpawn(calls),
+      undefined,
+      dataDir
+    )
 
     expect(result).toEqual({ started: false, message: 'Field "Try — 1-3 improvements for next cycle" is required' })
     expect(calls).toHaveLength(0)
@@ -61,6 +75,7 @@ describe("runCompanyCommandImpl", () => {
     const result = await runCompanyCommandImpl(
       "digest",
       { period: "last week", bogus: "x" },
+      "ai-company-starter-main",
       fakeSpawn(calls),
       undefined,
       dataDir
@@ -80,6 +95,7 @@ describe("runCompanyCommandImpl", () => {
     const result = await runCompanyCommandImpl(
       "digest",
       { period: "" },
+      "ai-company-starter-main",
       fakeSpawn(calls) as never,
       undefined,
       dataDir
@@ -115,6 +131,7 @@ describe("runCompanyCommandImpl", () => {
     const result = await runCompanyCommandImpl(
       "define-company",
       { domain: "d", stakeholders: "s", valueFlow: "v", bottleneck: "b" },
+      "ai-company-starter-main",
       fakeSpawn(calls) as never,
       undefined,
       dataDir
@@ -135,7 +152,14 @@ describe("runCompanyCommandImpl", () => {
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
     const calls: { command: string; args: string[]; options: unknown }[] = []
-    const result = await runCompanyCommandImpl("digest", { period: "" }, fakeSpawn(calls), undefined, dataDir)
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      fakeSpawn(calls),
+      undefined,
+      dataDir
+    )
 
     expect(result).toEqual({ started: false, message: "Already running" })
     expect(calls).toHaveLength(0)
@@ -151,7 +175,14 @@ describe("runCompanyCommandImpl", () => {
     const throwingSpawn = () => {
       throw new Error("spawn claude ENOENT")
     }
-    const result = await runCompanyCommandImpl("digest", { period: "" }, throwingSpawn as never, undefined, dataDir)
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      throwingSpawn as never,
+      undefined,
+      dataDir
+    )
 
     expect(result).toEqual({ started: false, message: "spawn claude ENOENT" })
     expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
@@ -174,6 +205,7 @@ describe("runCompanyCommandImpl", () => {
     const result = await runCompanyCommandImpl(
       "handoff",
       { blockers: "" },
+      "ai-company-starter-main",
       fakeSpawn(calls) as never,
       fakeExec,
       dataDir
@@ -201,19 +233,72 @@ describe("runCompanyCommandImpl", () => {
     }
 
     const calls: { command: string; args: string[]; options: unknown }[] = []
-    const result = await runCompanyCommandImpl("handoff", {}, fakeSpawn(calls) as never, fakeExec, dataDir)
+    const result = await runCompanyCommandImpl(
+      "handoff",
+      {},
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      fakeExec,
+      dataDir
+    )
 
     expect(result).toEqual({ started: true, message: "Started" })
     const promptIndex = calls[0].args.indexOf("-p") + 1
     expect(calls[0].args[promptIndex]).toContain("gh unavailable or not authenticated")
   })
 
-  it("reports an error when ai-company-starter-main isn't configured", async () => {
+  it("reports an error for an unknown agentId", async () => {
     vi.doMock("../config", () => ({ AGENTS: [] }))
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
-    const result = await runCompanyCommandImpl("digest", { period: "" }, undefined, undefined, dataDir)
+    const result = await runCompanyCommandImpl("digest", { period: "" }, "no-such-agent", undefined, undefined, dataDir)
 
-    expect(result).toEqual({ started: false, message: 'Agent "ai-company-starter-main" is not configured' })
+    expect(result).toEqual({ started: false, message: 'Unknown company "no-such-agent"' })
+  })
+
+  it("keeps two agents' locks and run records fully isolated", async () => {
+    const secondRoot = await mkdtemp(path.join(tmpdir(), "run-company-command-second-"))
+    try {
+      vi.doMock("../config", () => ({
+        AGENTS: [
+          { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" },
+          { id: "second-co", name: "Second Co", rootPath: secondRoot, kind: "command-set" },
+        ],
+      }))
+      const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+      const dataDirA = path.join(dataDir, "ai-company-starter-main")
+      const dataDirB = path.join(dataDir, "second-co")
+
+      const callsA: { command: string; args: string[]; options: unknown }[] = []
+      const callsB: { command: string; args: string[]; options: unknown }[] = []
+      const resultA = await runCompanyCommandImpl(
+        "digest",
+        { period: "" },
+        "ai-company-starter-main",
+        fakeSpawn(callsA) as never,
+        undefined,
+        dataDirA
+      )
+      const resultB = await runCompanyCommandImpl(
+        "digest",
+        { period: "" },
+        "second-co",
+        fakeSpawn(callsB) as never,
+        undefined,
+        dataDirB
+      )
+
+      expect(resultA).toEqual({ started: true, message: "Started" })
+      expect(resultB).toEqual({ started: true, message: "Started" })
+      expect(callsA[0].options).toMatchObject({ cwd: root })
+      expect(callsB[0].options).toMatchObject({ cwd: secondRoot })
+
+      const recordA = JSON.parse(await readFile(path.join(dataDirA, "digest.run.json"), "utf-8"))
+      const recordB = JSON.parse(await readFile(path.join(dataDirB, "digest.run.json"), "utf-8"))
+      expect(recordA.commandId).toBe("digest")
+      expect(recordB.commandId).toBe("digest")
+    } finally {
+      await rm(secondRoot, { recursive: true, force: true })
+    }
   })
 })

@@ -3,14 +3,13 @@ import { promisify } from "node:util"
 import { openSync, closeSync } from "node:fs"
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises"
 import path from "node:path"
-import { AGENTS } from "../config"
+import { getEffectiveAgents } from "../get-effective-agents"
 import { getCompanyCommand } from "./registry"
 import type { CompanyCommand } from "./types"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
 import { acquireRunLock, releaseRunLock } from "./run-lock"
 
 const execFileAsync = promisify(nodeExecFile)
-const AI_COMPANY_STARTER_MAIN_ID = "ai-company-starter-main"
 const MAX_FIELD_LENGTH = 4000
 
 export type SpawnOptions = {
@@ -94,9 +93,10 @@ async function takeBeforeSnapshot(agentRootPath: string, command: CompanyCommand
 export async function runCompanyCommandImpl(
   commandId: string,
   fieldValues: Record<string, string>,
+  agentId: string,
   spawnFn: SpawnFn = defaultSpawn,
   execFn: ExecFileFn = defaultExecFile,
-  dataDir: string = COMPANY_COMMANDS_DATA_DIR
+  dataDir: string = path.join(COMPANY_COMMANDS_DATA_DIR, agentId)
 ): Promise<{ started: boolean; message: string }> {
   const command = getCompanyCommand(commandId)
   if (!command) {
@@ -108,9 +108,10 @@ export async function runCompanyCommandImpl(
     return { started: false, message: fieldError }
   }
 
-  const agent = AGENTS.find((a) => a.id === AI_COMPANY_STARTER_MAIN_ID)
+  const agents = await getEffectiveAgents()
+  const agent = agents.find((a) => a.id === agentId)
   if (!agent) {
-    return { started: false, message: `Agent "${AI_COMPANY_STARTER_MAIN_ID}" is not configured` }
+    return { started: false, message: `Unknown company "${agentId}"` }
   }
 
   await mkdir(dataDir, { recursive: true })
