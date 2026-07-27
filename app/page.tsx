@@ -8,6 +8,7 @@ import { AddCompanyForm } from "@/components/add-company-form"
 import { getAvatars } from "@/lib/avatars-registry"
 import { companyOntologyExists } from "@/lib/company-ontology-exists"
 import { getIntegrationStatus } from "@/lib/get-integration-status"
+import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
 
 export const dynamic = "force-dynamic"
 
@@ -47,6 +48,8 @@ export default async function AgentTreePage() {
             const needsCompanySetup =
               result.agent.kind === "command-set" && !(await companyOntologyExists(result.agent.rootPath))
             const integrationStatus = await getIntegrationStatus(result.agent)
+            const showInstallDailyTeamLogButton =
+              result.agent.kind === "command-set" && !(await dailyTeamLogInstalled(result.agent.rootPath))
             return (
               <AgentCard
                 key={result.agent.id}
@@ -61,6 +64,7 @@ export default async function AgentTreePage() {
                 avatarUrl={avatarByAgentId[result.agent.id] ?? null}
                 showSetupCompanyButton={needsCompanySetup}
                 integrationStatus={integrationStatus}
+                showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
               />
             )
           })
