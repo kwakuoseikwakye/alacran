@@ -369,3 +369,35 @@ rather than reusing what was already installed.
 This is piece 2 of the roadmap toward a Fleece.ai-style onboarding
 experience (v17: create a company; v19: connect an agent/integrations;
 v20: guided command/workflow discovery — still just named, not designed).
+
+## v19: integrations status
+
+The roadmap named v19 "integrations setup (email, calendar, etc.)" —
+investigating what that actually means today found that `plh-takeshi-agent`'s
+email connection isn't something this dashboard could meaningfully
+"set up": it's the `gog` CLI tool, authenticated once at the OS level
+outside any repo, with only a plain, non-secret `account` field in
+`config.json` visible in-repo. New connections already have a
+purpose-built, carefully security-conscious process
+(`ai-company-starter-main`'s `api-connect` Claude Code skill — never lets
+a secret touch chat, hands off via `.env`-paste only, the AI never logs
+in or clicks "agree"/"create" buttons). Reimplementing any part of that
+inside this web app — OAuth flows, credential storage — would duplicate
+an already-solved mechanism and turn the dashboard into a
+credential-holding system in its own right.
+
+It also turned out a freshly-scaffolded company (v17) has nothing that
+would *use* a connected integration yet — `plh-takeshi-agent`'s email
+pipeline is bespoke to Kirirom, not part of the generic template. So
+there's no real "connect email for your new company" scenario to build
+today; that becomes real once v20 (workflow/plugin install) exists.
+
+Given that, v19 ships what's actually real: a read-only "Integrations"
+line on every agent card. `plh-takeshi-agent` shows its already-configured
+email account; every other agent honestly shows "none configured yet."
+No OAuth, no credential storage, no new dependency — one file read, one
+hardcoded check for the one real example that exists.
+
+This is piece 3 of the roadmap. v20 (guided command/workflow discovery,
+possibly formalizing a "plugin" concept) is next, still just named, not
+designed.
