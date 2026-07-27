@@ -26,9 +26,8 @@ AI-Native instance through the UI" product. Concretely:
   typed path doesn't exist yet — scaffolding a manifest of generic paths
   from `ai-company-starter-main`, `git init`-ing it, then registering it.
   See `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`.
-- Still missing (named as roadmap, not built): guided company-context
-  setup, integrations setup, and guided command/workflow discovery — see
-  "Roadmap" below.
+- Still missing (named as roadmap, not built): a general plugin/workflow
+  packaging format — see "Roadmap" below.
 
 ## Established conventions (binding for every slice)
 
@@ -109,11 +108,12 @@ improvising a workaround.
 3. **Implement** (`superpowers:subagent-driven-development`, when
    available) — fresh subagent per task, task review after each, final
    whole-branch review before merge. **This session's subagent-spawn cap
-   (200/session) has been hit twice (during v14, and confirmed still
-   blocking on a fresh attempt during v16)** — when that happens, every
-   task is instead implemented directly (read-before-edit, `tsc`/`vitest`
-   after every step, one commit per task, self-reviewed whole-branch diff
-   in place of a dispatched reviewer). A *new* session gets a fresh cap.
+   (200/session) has been hit repeatedly (v14, v16, v17, v18, v19, v20 —
+   confirmed still blocking on a fresh dispatch attempt every time)** —
+   when that happens, every task is instead implemented directly
+   (read-before-edit, `tsc`/`vitest` after every step, one commit per
+   task, self-reviewed whole-branch diff in place of a dispatched
+   reviewer). A *new* session gets a fresh cap.
 4. **Verify for real** — `npx tsc --noEmit`, `npx vitest run`, `npm run
    build`, then a live Playwright pass against a throwaway dev-server
    port (never 3000 if something's already using it) covering the
@@ -131,7 +131,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v19** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v20** (see `README.md` for the full per-slice changelog).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
@@ -157,11 +157,30 @@ its real, already-configured email account, every other agent honestly
 shows "none configured yet." **No OAuth, no credential storage, no
 "connect X" flow exists anywhere in this app** — new connections still
 go through `ai-company-starter-main`'s existing `api-connect` Claude
-Code skill, which this dashboard deliberately does not duplicate. See
+Code skill, which this dashboard deliberately does not duplicate. v20
+investigated the roadmap's "guided command/workflow discovery, possibly
+formalizing a plugin concept" and found discovery was already fully
+solved (since v11's `genericCommandSetSkillAdapter`), and that a general
+plugin-packaging format has no existing mechanism anywhere in this
+ecosystem to build on — every real workflow is bespoke to its own repo,
+and designing one from scratch would be a bigger effort than v17–v19
+combined for a population of examples deliberately kept at one. So v20
+hand-built a one-off installer for exactly one already-portable
+workflow instead: `plh-ops`'s `daily-team-log` skill
+(`lib/install-daily-team-log-impl.ts`) — copies its generic `gather.py`
+extractor verbatim, regenerates its `SKILL.md`/`Setup.md` to point at
+the installing company's own repo instead of PLH's shared one (the
+originals hardcode `takeman555/plh-ops` and `Eito`/`Lucce`/`Nana`), and
+commits the result. **Known, disclosed limitation:** `gather.py`'s
+config is a fixed, global, per-machine path
+(`~/.claude/daily-team-log/config.json`), so only one company's copy can
+be actively bootstrapped per machine at a time — documented in the
+installed `SKILL.md` itself, not fixed in v20. See
 `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`,
-`...v18-guided-company-setup-design.md`, and
-`...v19-integrations-status-design.md` for full details (the v17 spec
-also has the agent-agnostic design decision: the portable core is
+`...v18-guided-company-setup-design.md`,
+`...v19-integrations-status-design.md`, and
+`...v20-daily-team-log-installer-design.md` for full details (the v17
+spec also has the agent-agnostic design decision: the portable core is
 `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
 `.claude/*` is one Claude-Code-specific adapter on top of it, not the
 core itself).
@@ -172,19 +191,17 @@ Per the user's stated direction, this dashboard is heading toward a
 Fleece.ai-style onboarding + operations UI built around
 `ai-company-starter-main` (+ `harness-engineering`) as the core, with
 things like `plh-takeshi-agent` as example "plugin" workflows on top of a
-company. Next piece after v19:
-
-- **v20**: guided command/workflow discovery, possibly formalizing the
-  "plugin" concept (installing a `plh-takeshi-agent`-style workflow onto
-  a company — e.g. giving a fresh company its own email-handling
-  pipeline). This is also the prerequisite for two things v18/v19
-  deliberately deferred: a fresh company having any real integration to
-  connect in the first place, and (once an agent is genuinely connected)
-  AI-assisted `customer`/`org`/`product` ontology entity generation using
-  that agent's own reasoning — not new AI-calling infrastructure built
-  into this dashboard.
+company. v17–v20 shipped pieces 1–4 of that vision (create a company,
+guided company-context setup, integrations status, one hand-installed
+workflow). **Important: v20 did NOT unlock the two things originally
+expected to follow from it** — `daily-team-log` is a purely local,
+session-history-only skill, not an "integration" in the OAuth/API sense,
+so a fresh company still has nothing that counts as "a real integration
+to connect," and AI-generated `customer`/`org`/`product` ontology
+entities (deferred since v18) are still deferred. Both remain
+genuinely unscoped — there is no "v21" named yet.
 
 Not designed yet — brainstorm fresh when picked up. Given how far v19
-narrowed from its original one-line description, don't assume "v20:
-guided command/workflow discovery" means what it sounds like either —
-investigate what's actually real and buildable before proposing a design.
+and v20 each narrowed from their one-line description, investigate
+what's actually real and buildable before proposing anything, the same
+discipline both slices followed.
