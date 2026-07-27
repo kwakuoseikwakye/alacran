@@ -401,3 +401,44 @@ hardcoded check for the one real example that exists.
 This is piece 3 of the roadmap. v20 (guided command/workflow discovery,
 possibly formalizing a "plugin" concept) is next, still just named, not
 designed.
+
+## v20: install the daily-team-log workflow
+
+The roadmap named v20 "guided command/workflow discovery, possibly
+formalizing the plugin concept." Investigating what's real found that
+command/workflow discovery has been fully solved since v11 (the Skills
+page already scans any registered company's `.claude/skills/` and
+`.claude/commands/`) — nothing needed there. "Formalize the plugin
+concept" as a general, reusable packaging format has no existing
+mechanism to build on anywhere in this ecosystem — every real workflow
+(`plh-takeshi-agent`'s 6-role email pipeline, `plh-ops`'s
+`skill-installer`) is bespoke to its own repo. Designing a real
+plugin-packaging format from scratch would be a bigger effort than
+v17-v19 combined, for a population of examples this project deliberately
+keeps at one.
+
+So v20 hand-builds a one-off installer for exactly one workflow instead:
+`plh-ops`'s `daily-team-log` skill, chosen because it's the one workflow
+in this whole ecosystem that was already designed to be portable — its
+own `config.example.json` and self-bootstrapping `Setup.md` already
+auto-detect who's using it and which projects to include, entirely
+locally (no OAuth, no external API). Its extractor script, `gather.py`,
+is copied verbatim (confirmed zero PLH/Takeshi-specific content); its
+`SKILL.md` and `Setup.md` are regenerated rather than copied, since the
+originals hardcode cloning `takeman555/plh-ops` and writing into
+`reports/{Eito,Lucce,Nana}` — copying them as-is would have pointed a
+new company's daily reports at PLH's shared repo instead of its own. The
+"Install daily-team-log" button appears on any `command-set`-kind
+agent's card that doesn't have it yet; the actual bootstrap (who you
+are, which projects, scheduling) still happens inside Claude Code
+afterward, the same division of labor v19 established for `api-connect`.
+
+**Known, disclosed limitation:** `gather.py`'s config lives at a fixed,
+global, per-machine path (`~/.claude/daily-team-log/config.json`), not
+scoped per-installation — documented in the installed `SKILL.md` itself.
+Only one company's `daily-team-log` can be actively bootstrapped per
+machine at a time in this version; fixing that would mean redesigning
+`gather.py`'s config storage, exactly the "generalize the format" work
+this slice deliberately didn't do.
+
+This is piece 4 of the roadmap.
