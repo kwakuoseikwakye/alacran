@@ -338,3 +338,34 @@ This is piece 1 of a larger roadmap toward a Fleece.ai-style onboarding
 experience built on `ai-company-starter-main` as the core: guided
 company-context setup (v18), integrations setup (v19), and guided
 command/workflow discovery (v20) are named but not yet designed.
+
+## v18: guided company-context setup
+
+`/define-company` (the Claude Code command that fills in a new company's
+`definitions/ontology/company.yaml`) is fully conversational — it assumes
+the user is comfortable chatting with an AI agent in a terminal. This
+dashboard's audience is non-technical people setting up their AI
+company, so v18 adds a plain step-by-step wizard instead: business
+domain, stakeholders, value flow, and biggest bottleneck, one screen at a
+time, with a plain-language review before saving — no YAML, no terminal.
+
+`/define-company` does two different things: asking those four
+structured questions, and using the AI agent's own reasoning to *invent*
+industry-specific `customer`/`org`/`product` domain entities. This slice
+only does the first — the entity sections are copied unmodified from the
+company's own `docs/templates/ontology-starter.yaml` (the same skeleton
+v17 already scaffolds into every new company). Real AI-assisted entity
+generation is deferred until v19 (connect an agent) exists, so it can use
+an already-connected agent instead of this dashboard building its own
+AI-calling infrastructure just for this.
+
+The "Set up your company" button appears on any `command-set`-kind
+agent's card that doesn't have a `company.yaml` yet — which in practice
+today means a company just created via v17, since `ai-company-starter-main`
+already has one. This is the first slice to add a real npm dependency
+(`yaml`, for correct escaping of free-text answers into generated YAML)
+rather than reusing what was already installed.
+
+This is piece 2 of the roadmap toward a Fleece.ai-style onboarding
+experience (v17: create a company; v19: connect an agent/integrations;
+v20: guided command/workflow discovery — still just named, not designed).
