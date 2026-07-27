@@ -9,7 +9,7 @@ import type { CompanyOntologyAnswers } from "./build-company-ontology"
 let root: string
 let execCalls: { command: string; args: string[] }[]
 
-async function fakeExecFn(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
+const fakeExecFn: ExecFileFn = async (command, args) => {
   execCalls.push({ command, args })
   return { stdout: "", stderr: "" }
 }
