@@ -20,17 +20,15 @@ AI-Native instance through the UI" product. Concretely:
 
 - The 3 built-in agents (`plh-takeshi-agent`, `ai-company-starter-main`,
   `plh-ops`) are hardcoded local paths in `lib/config.ts`.
-- "Add a company" (v11) only **registers** an already-existing local
-  directory that already has both `.git` and `.claude` — it does not
-  scaffold, clone, or `git init` anything. This was a deliberate v11
-  scope decision (see `docs/superpowers/specs/2026-07-23-control-panel-v11-company-registry-design.md`),
-  not an oversight: at the time, `ai-company-starter-main`'s local clone
-  had no `git remote` configured, so there was no way to discover which
-  GitHub template to clone from the filesystem alone.
-- **v17 (in progress, see "Current work" below)** is scoping exactly the
-  missing piece: a real "create a new company from a template" flow
-  through the UI, so a user can go from nothing to a registered company
-  without leaving the dashboard.
+- "Add a company" can now do two things (v17): **register** an
+  already-existing local directory (has `.git` + `.claude`, v11's
+  original flow, unchanged), or **create** one from scratch when the
+  typed path doesn't exist yet — scaffolding a manifest of generic paths
+  from `ai-company-starter-main`, `git init`-ing it, then registering it.
+  See `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`.
+- Still missing (named as roadmap, not built): guided company-context
+  setup, integrations setup, and guided command/workflow discovery — see
+  "Roadmap" below.
 
 ## Established conventions (binding for every slice)
 
@@ -133,30 +131,35 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v16** (see `README.md` for the full per-slice changelog).
-The 3-slice visual/UX pass (v14: design system/nav/Agents page; v15:
-Activity page restructure; v16: Skills page/dialogs/responsive audit) is
-complete and merged to `master`.
+**Shipped: v1–v17** (see `README.md` for the full per-slice changelog).
+The 3-slice visual/UX pass (v14–v16) is complete. v17 added
+create-a-company-from-template — "Add a company" can now scaffold a
+brand-new company directory from `ai-company-starter-main`'s generic
+parts (via an explicit manifest, `lib/company-template-manifest.ts`),
+`git init` it, and register it, instead of only registering an
+already-existing directory. See
+`docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`
+for the full template-curation audit (which paths are genuinely generic
+vs. real Kirirom data) and the agent-agnostic design decision (the
+portable core is `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/`
+— plain data; `.claude/*` is one Claude-Code-specific adapter on top of
+it, not the core itself).
 
-## Current work: v17 — create-a-company-from-template
+## Roadmap (named, not yet designed)
 
-**Status: scoping (brainstorming in progress as of this writing).**
+Per the user's stated direction, this dashboard is heading toward a
+Fleece.ai-style onboarding + operations UI built around
+`ai-company-starter-main` (+ `harness-engineering`) as the core, with
+things like `plh-takeshi-agent` as example "plugin" workflows on top of a
+company. Ordered pieces after v17:
 
-**Problem:** "Add a company" only registers a directory that *already*
-has `.git` + `.claude` — there's no way to create one from the UI. A user
-who types a path that doesn't exist yet (e.g. a brand-new company name)
-just gets a validation error ("Path is not a git repository").
+- **v18**: guided company-context setup — a UI walkthrough that fills in
+  `definitions/ontology/company.yaml` (today's `/define-company`
+  command's job) without a terminal.
+- **v19**: integrations setup (email, calendar, etc.) so agents can
+  actually act on a company's behalf.
+- **v20**: guided command/workflow discovery, possibly formalizing the
+  "plugin" concept (installing a `plh-takeshi-agent`-style workflow onto
+  a company).
 
-**Goal:** let a user go from "just a company name" to "a real, registered
-company" without leaving the dashboard — scaffolding a new local directory
-from a template (most likely `ai-company-starter-main`'s own `.claude/` +
-`definitions/` skeleton, stripped of company-specific content — that repo
-*is* this framework's "AI company operating system" template, per
-`~/AI-Native/README.md`), `git init`-ing it fresh, then registering it
-via the existing `registerCompanyImpl` path (which already validates
-`.git` + `.claude` presence — see `lib/companies-registry.ts`).
-
-Check `docs/superpowers/specs/` for a `*v17*` file once the design is
-written — that's the authoritative, up-to-date scope. This section will
-go stale as design decisions get made; the spec file is the source of
-truth once it exists.
+None of these are designed yet — brainstorm each in turn when picked up.
