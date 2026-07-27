@@ -23,6 +23,7 @@ type AgentCardProps = {
   removable?: boolean
   avatarUrl?: string | null
   showSetupCompanyButton?: boolean
+  integrationStatus: string
 }
 
 const KIND_BADGE_CLASS: Record<Agent["kind"], string> = {
@@ -42,6 +43,7 @@ export function AgentCard({
   removable,
   avatarUrl,
   showSetupCompanyButton,
+  integrationStatus,
 }: AgentCardProps) {
   return (
     <Card className="transition-colors hover:border-border/80">
@@ -76,6 +78,7 @@ export function AgentCard({
             {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
           </p>
         )}
+        <p className="text-xs text-muted-foreground">Integrations: {integrationStatus}</p>
         <div className="space-y-2 pt-1">
           {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
           {showVerifyButton && <VerifyButton />}
