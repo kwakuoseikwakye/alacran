@@ -5,7 +5,19 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { registerCompany } from "@/lib/register-company"
+import { getCompanyPathStatus } from "@/lib/get-company-path-status"
+import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 
 export function AddCompanyForm() {
   const router = useRouter()
@@ -14,16 +26,40 @@ export function AddCompanyForm() {
   const [rootPath, setRootPath] = useState("")
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+  const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
 
   async function handleSubmit() {
     setPending(true)
     setMessage(null)
+    const status = await getCompanyPathStatus(rootPath)
+    if (status === "creatable") {
+      setPending(false)
+      setConfirmCreateOpen(true)
+      return
+    }
     const result = await registerCompany(name, rootPath)
     setPending(false)
     if (result.ok) {
       setName("")
       setRootPath("")
       setMessage(`Registered "${result.company.name}"`)
+      setOpen(false)
+      router.refresh()
+    } else {
+      setMessage(result.message)
+    }
+  }
+
+  async function handleConfirmCreate() {
+    setConfirmCreateOpen(false)
+    setPending(true)
+    setMessage(null)
+    const result = await createCompanyFromTemplate(name, rootPath)
+    setPending(false)
+    if (result.ok) {
+      setName("")
+      setRootPath("")
+      setMessage(`Created and registered "${result.company.name}"`)
       setOpen(false)
       router.refresh()
     } else {
@@ -64,6 +100,22 @@ export function AddCompanyForm() {
         </Button>
       </div>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
+
+      <AlertDialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Create this company?</AlertDialogTitle>
+            <AlertDialogDescription>
+              <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the
+              ai-company-starter-main template?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmCreate}>Create &amp; register</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
