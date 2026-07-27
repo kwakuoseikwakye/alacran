@@ -69,6 +69,26 @@ AI-Native instance through the UI" product. Concretely:
   under existing tests, already-shipped test files must keep passing
   unchanged, with at most one clearly-justified additive mock line for a
   genuinely new async dependency.
+- **Any client component whose `useEffect` triggers a real, non-idempotent
+  side effect on mount (spawning a subprocess, starting a paid API call)
+  must guard against React's development Strict Mode double-invoking
+  that effect** — a `useRef` guard (`if (startedRef.current) return;
+  startedRef.current = true`) before the side-effecting call. v21's
+  `DefineCompanyAiDraft` didn't have this at first and it triggered two
+  real headless `claude -p` spawns from one click, caught during live
+  verification. This matters for any future component that spawns a
+  subprocess on mount, not just this one.
+- **Never let an automated live test actually wait for or trigger the
+  completion of a real headless `claude -p` spawn** — verify up through
+  confirming the run reports "Started," then stop; the real end-to-end
+  run is left for the user to trigger themselves. This is the same
+  "ask when the risk shape is new" precedent as v9's autonomous-push
+  decision, now with worked evidence: v21's live-test walkthrough
+  accidentally triggered two real spawns (one from the double-invoke bug
+  above, one from a Next.js Fast Refresh remount while iterating on the
+  fix) — both were killed immediately, left no partial writes, and cost
+  no completed API call, but this is exactly the kind of side effect
+  that must not run unattended in this project's live-verification step.
 
 ## Standing safety rule — read before running any live/manual test
 
@@ -108,8 +128,9 @@ improvising a workaround.
 3. **Implement** (`superpowers:subagent-driven-development`, when
    available) — fresh subagent per task, task review after each, final
    whole-branch review before merge. **This session's subagent-spawn cap
-   (200/session) has been hit repeatedly (v14, v16, v17, v18, v19, v20 —
-   confirmed still blocking on a fresh dispatch attempt every time)** —
+   (200/session) has been hit repeatedly (v14, v16, v17, v18, v19, v20,
+   v21 — confirmed still blocking on a fresh dispatch attempt every
+   time)** —
    when that happens, every task is instead implemented directly
    (read-before-edit, `tsc`/`vitest` after every step, one commit per
    task, self-reviewed whole-branch diff in place of a dispatched
@@ -131,7 +152,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v20** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v21** (see `README.md` for the full per-slice changelog).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
@@ -175,11 +196,33 @@ commits the result. **Known, disclosed limitation:** `gather.py`'s
 config is a fixed, global, per-machine path
 (`~/.claude/daily-team-log/config.json`), so only one company's copy can
 be actively bootstrapped per machine at a time — documented in the
-installed `SKILL.md` itself, not fixed in v20. See
+installed `SKILL.md` itself, not fixed in v20. v21 investigated the
+roadmap's remaining "AI-generated ontology entities via a connected
+agent" thread (deferred since v18) and found `lib/company-commands
+/registry.ts`'s `define-company` command — built in v8, before v18's
+wizard existed — already spawns a headless `claude -p` session that
+does exactly this reasoning; it was just hardcoded to
+`ai-company-starter-main` in four places. v21 generalized
+`run-company-command-impl.ts` and the status/log-tail/result/commit
+wrappers to accept a target `agentId` (resolved via
+`getEffectiveAgents()`, same security boundary as everywhere else) and
+fixed a real, previously-latent bug along the way: the run-lock/
+run-result/log files were keyed only by command id in one shared
+directory, so a second company running `define-company` would have
+silently clobbered a first company's unconfirmed result —
+`COMPANY_COMMANDS_DATA_DIR` is now scoped per agent. Scope stayed
+narrow: only `define-company` is generalized (`digest`/`decision`/
+`retro`/`handoff` still only run through the existing, unchanged
+Skills-page Run tab), and the one new entry point is a "Let AI draft
+tailored entities" step inside v18's wizard
+(`components/define-company-ai-draft.tsx`), spawning `define-company`
+with the wizard's own answers and showing the AI's diff before
+confirming. See
 `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`,
 `...v18-guided-company-setup-design.md`,
-`...v19-integrations-status-design.md`, and
-`...v20-daily-team-log-installer-design.md` for full details (the v17
+`...v19-integrations-status-design.md`,
+`...v20-daily-team-log-installer-design.md`, and
+`...v21-define-company-generalize-design.md` for full details (the v17
 spec also has the agent-agnostic design decision: the portable core is
 `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
 `.claude/*` is one Claude-Code-specific adapter on top of it, not the
@@ -191,17 +234,20 @@ Per the user's stated direction, this dashboard is heading toward a
 Fleece.ai-style onboarding + operations UI built around
 `ai-company-starter-main` (+ `harness-engineering`) as the core, with
 things like `plh-takeshi-agent` as example "plugin" workflows on top of a
-company. v17–v20 shipped pieces 1–4 of that vision (create a company,
+company. v17–v21 shipped pieces 1–5 of that vision (create a company,
 guided company-context setup, integrations status, one hand-installed
-workflow). **Important: v20 did NOT unlock the two things originally
-expected to follow from it** — `daily-team-log` is a purely local,
-session-history-only skill, not an "integration" in the OAuth/API sense,
-so a fresh company still has nothing that counts as "a real integration
-to connect," and AI-generated `customer`/`org`/`product` ontology
-entities (deferred since v18) are still deferred. Both remain
-genuinely unscoped — there is no "v21" named yet.
+workflow, AI-generated ontology entities). **One thread from the
+original vision remains genuinely unscoped: a fresh company having a
+real integration worth connecting.** v21's investigation confirmed this
+again — a fresh company already has `api-connect` available as a skill,
+but no generic workflow in `ai-company-starter-main`'s template
+consumes an external integration, and building one would mean designing
+something like `plh-takeshi-agent`'s bespoke email pipeline as a generic
+feature, the same scale of "no format to build on" problem v20 declined
+to solve. There is no "v22" named yet.
 
-Not designed yet — brainstorm fresh when picked up. Given how far v19
-and v20 each narrowed from their one-line description, investigate
-what's actually real and buildable before proposing anything, the same
-discipline both slices followed.
+Not designed yet — brainstorm fresh when picked up. Given how far v19,
+v20, and v21 each narrowed from (or, in v21's case, exceeded) their
+one-line description, investigate what's actually real and buildable
+before proposing anything, the same discipline all three slices
+followed.
