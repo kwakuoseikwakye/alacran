@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { DiffView } from "@/components/diff-view"
 import { LogTailView } from "@/components/log-tail-view"
@@ -30,6 +30,7 @@ export function DefineCompanyAiDraft({
   const [result, setResult] = useState<CompanyCommandResult | null>(null)
   const [tail, setTail] = useState("")
   const [committing, setCommitting] = useState(false)
+  const startedRef = useRef(false)
 
   async function pollUntilDone() {
     const status = await getCompanyCommandStatus(agentId)
@@ -56,6 +57,8 @@ export function DefineCompanyAiDraft({
   }
 
   useEffect(() => {
+    if (startedRef.current) return
+    startedRef.current = true
     start()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
