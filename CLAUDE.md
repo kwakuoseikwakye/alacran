@@ -131,19 +131,28 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v17** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v18** (see `README.md` for the full per-slice changelog).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
 parts (via an explicit manifest, `lib/company-template-manifest.ts`),
 `git init` it, and register it, instead of only registering an
-already-existing directory. See
+already-existing directory. v18 added a guided, non-technical
+company-context setup wizard (`components/company-setup-wizard.tsx`) —
+a step-by-step form (business domain, stakeholders, value flow,
+bottleneck, plain-language review) that fills in a freshly-scaffolded
+company's `definitions/ontology/company.yaml`, replacing the need to run
+`/define-company` in a terminal. It ships only the structured-fields
+half of `/define-company`: the `customer`/`org`/`product` domain
+entities are copied verbatim from the company's own
+`docs/templates/ontology-starter.yaml`, not AI-generated — that's
+deferred until v19 (connect an agent) exists. See
 `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`
-for the full template-curation audit (which paths are genuinely generic
-vs. real Kirirom data) and the agent-agnostic design decision (the
-portable core is `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/`
-— plain data; `.claude/*` is one Claude-Code-specific adapter on top of
-it, not the core itself).
+and `...v18-guided-company-setup-design.md` for the full details (the
+v17 spec also has the agent-agnostic design decision: the portable core
+is `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain
+data; `.claude/*` is one Claude-Code-specific adapter on top of it, not
+the core itself).
 
 ## Roadmap (named, not yet designed)
 
@@ -151,13 +160,14 @@ Per the user's stated direction, this dashboard is heading toward a
 Fleece.ai-style onboarding + operations UI built around
 `ai-company-starter-main` (+ `harness-engineering`) as the core, with
 things like `plh-takeshi-agent` as example "plugin" workflows on top of a
-company. Ordered pieces after v17:
+company. Ordered pieces after v18:
 
-- **v18**: guided company-context setup — a UI walkthrough that fills in
-  `definitions/ontology/company.yaml` (today's `/define-company`
-  command's job) without a terminal.
 - **v19**: integrations setup (email, calendar, etc.) so agents can
-  actually act on a company's behalf.
+  actually act on a company's behalf. Once an agent is actually
+  connected, this is also where AI-assisted `customer`/`org`/`product`
+  entity generation (deferred from v18) becomes possible — using the
+  connected agent's own reasoning, not new AI-calling infrastructure
+  built into this dashboard.
 - **v20**: guided command/workflow discovery, possibly formalizing the
   "plugin" concept (installing a `plh-takeshi-agent`-style workflow onto
   a company).
