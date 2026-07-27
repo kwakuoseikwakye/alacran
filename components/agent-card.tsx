@@ -10,6 +10,7 @@ import { RemoveCompanyButton } from "@/components/remove-company-button"
 import { AgentAvatar } from "@/components/agent-avatar"
 import { AgentAvatarForm } from "@/components/agent-avatar-form"
 import { StatusDot } from "@/components/status-dot"
+import { CompanySetupWizard } from "@/components/company-setup-wizard"
 
 type AgentCardProps = {
   agent: Agent
@@ -21,6 +22,7 @@ type AgentCardProps = {
   showDailyTeamLogButton?: boolean
   removable?: boolean
   avatarUrl?: string | null
+  showSetupCompanyButton?: boolean
 }
 
 const KIND_BADGE_CLASS: Record<Agent["kind"], string> = {
@@ -39,6 +41,7 @@ export function AgentCard({
   showDailyTeamLogButton,
   removable,
   avatarUrl,
+  showSetupCompanyButton,
 }: AgentCardProps) {
   return (
     <Card className="transition-colors hover:border-border/80">
@@ -77,6 +80,7 @@ export function AgentCard({
           {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
           {showVerifyButton && <VerifyButton />}
           {showDailyTeamLogButton && <DailyTeamLogButton />}
+          {showSetupCompanyButton && <CompanySetupWizard agentId={agent.id} companyName={agent.name} />}
           {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
           <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
         </div>

@@ -6,6 +6,7 @@ import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
 import { AddCompanyForm } from "@/components/add-company-form"
 import { getAvatars } from "@/lib/avatars-registry"
+import { companyOntologyExists } from "@/lib/company-ontology-exists"
 
 export const dynamic = "force-dynamic"
 
@@ -33,29 +34,34 @@ export default async function AgentTreePage() {
         <p className="text-sm text-muted-foreground">Status, avatars, and quick actions for every managed agent.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {results.map((result) => {
-          const latest = mergeAndSortActivities([result])[0] ?? null
-          const ispipelineAgent = result.agent.id === "email-pipeline-agent"
-          const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
-          const isPlhOps = result.agent.id === "plh-ops"
-          const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
-            result.agent.id
-          )
-          return (
-            <AgentCard
-              key={result.agent.id}
-              agent={result.agent}
-              latestActivity={latest}
-              error={result.error}
-              launchdHealth={ispipelineAgent ? launchdHealth : undefined}
-              pollStatus={ispipelineAgent ? pollStatus : undefined}
-              showVerifyButton={isAiCompanyStarterMain}
-              showDailyTeamLogButton={isPlhOps}
-              removable={isRegisteredCompany}
-              avatarUrl={avatarByAgentId[result.agent.id] ?? null}
-            />
-          )
-        })}
+        {await Promise.all(
+          results.map(async (result) => {
+            const latest = mergeAndSortActivities([result])[0] ?? null
+            const ispipelineAgent = result.agent.id === "email-pipeline-agent"
+            const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
+            const isPlhOps = result.agent.id === "plh-ops"
+            const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
+              result.agent.id
+            )
+            const needsCompanySetup =
+              result.agent.kind === "command-set" && !(await companyOntologyExists(result.agent.rootPath))
+            return (
+              <AgentCard
+                key={result.agent.id}
+                agent={result.agent}
+                latestActivity={latest}
+                error={result.error}
+                launchdHealth={ispipelineAgent ? launchdHealth : undefined}
+                pollStatus={ispipelineAgent ? pollStatus : undefined}
+                showVerifyButton={isAiCompanyStarterMain}
+                showDailyTeamLogButton={isPlhOps}
+                removable={isRegisteredCompany}
+                avatarUrl={avatarByAgentId[result.agent.id] ?? null}
+                showSetupCompanyButton={needsCompanySetup}
+              />
+            )
+          })
+        )}
       </div>
       <AddCompanyForm />
     </main>
