@@ -442,3 +442,60 @@ machine at a time in this version; fixing that would mean redesigning
 this slice deliberately didn't do.
 
 This is piece 4 of the roadmap.
+
+## v21: AI-generated ontology entities via generalized define-company
+
+After v20, two roadmap threads remained unscoped: a fresh company having
+a real integration to connect, and AI-generated `customer`/`org`/
+`product` ontology entities via a connected agent (deferred since v18).
+Investigating the first found no small next step — a fresh company
+already has `api-connect` available as a skill, but no generic workflow
+in `ai-company-starter-main`'s template consumes an external
+integration, and building one would mean designing something like
+`plh-takeshi-agent`'s bespoke email pipeline as a generic feature — the
+same scale of "no format to build on" problem v20 declined to solve.
+
+The second turned out to already be mostly built. v8 (long before v18's
+wizard existed) already shipped a fully-specified `define-company`
+command in `lib/company-commands/registry.ts` that spawns a headless
+`claude -p` session and uses the AI's own reasoning to write
+`definitions/ontology/company.yaml`'s customer/org/product domains —
+exactly the entity-generation half of `/define-company` that v18
+explicitly deferred as needing "a connected agent." It just didn't work
+for any company besides `ai-company-starter-main`, hardcoded in four
+places. v21 generalized all three backend files
+(`run-company-command-impl.ts` and the status/log-tail/result/commit
+wrappers) to accept a target `agentId`, resolved via
+`getEffectiveAgents()` — the same security boundary
+(`resolveWithinAgentRoot`) already worked against any registered
+company, it just wasn't being asked to. Along the way, found and fixed
+a real, previously-invisible bug: the run-lock/run-result/log files were
+keyed only by command id in one shared directory, so a second company
+running `define-company` would have silently overwritten a first
+company's unconfirmed result. `COMPANY_COMMANDS_DATA_DIR` is now scoped
+per agent (`.data/company-runs/<agentId>/`).
+
+Scope stayed narrow on purpose: only `define-company` is generalized —
+`digest`/`decision`/`retro`/`handoff` still only run through the
+existing Skills-page "Run" tab, unchanged and still
+`ai-company-starter-main`-only. The one new entry point is a step added
+to v18's wizard: after the same 4 questions, "Save now" keeps v18's
+exact generic-entity behavior, and a new "Let AI draft tailored
+entities" option spawns `define-company` headlessly using the same
+answers (reformatted from the wizard's structured shape into the plain
+free-text fields `define-company` expects), polls, and shows the AI's
+diff for confirmation before committing — nothing is written until the
+user explicitly confirms, same as every other write path in this
+project.
+
+Per the user's explicit choice, live verification for this slice is
+unit-tests-only for the real spawn path (same precedent as v9) — every
+prior slice's live test was a near-instant, zero-cost local operation,
+and actually triggering `define-company` means a real, paid `claude -p`
+session with genuine reasoning time. The generalized plumbing and the
+wizard's new step are verified with fake spawn/exec functions and a
+live UI walkthrough up to confirming the run reports "Started"; the
+real button ships working, and a real end-to-end AI-generated diff is
+left for the user to trigger themselves whenever ready.
+
+This is piece 5 of the roadmap.
