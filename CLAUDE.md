@@ -131,7 +131,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v18** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v19** (see `README.md` for the full per-slice changelog).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
@@ -145,14 +145,26 @@ company's `definitions/ontology/company.yaml`, replacing the need to run
 `/define-company` in a terminal. It ships only the structured-fields
 half of `/define-company`: the `customer`/`org`/`product` domain
 entities are copied verbatim from the company's own
-`docs/templates/ontology-starter.yaml`, not AI-generated — that's
-deferred until v19 (connect an agent) exists. See
-`docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`
-and `...v18-guided-company-setup-design.md` for the full details (the
-v17 spec also has the agent-agnostic design decision: the portable core
-is `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain
-data; `.claude/*` is one Claude-Code-specific adapter on top of it, not
-the core itself).
+`docs/templates/ontology-starter.yaml`, not AI-generated. v19
+investigated what "integrations setup" actually means today and found
+it's much narrower than it sounds: `email-pipeline-agent`'s email
+connection is a `gog` CLI tool authenticated at the OS level (not
+something this dashboard could "set up"), and a fresh v17-scaffolded
+company has no workflow that would even consume a connected integration
+yet. So v19 shipped only a read-only "Integrations" status line on every
+agent card (`lib/get-integration-status.ts`) — `email-pipeline-agent` shows
+its real, already-configured email account, every other agent honestly
+shows "none configured yet." **No OAuth, no credential storage, no
+"connect X" flow exists anywhere in this app** — new connections still
+go through `ai-company-starter-main`'s existing `api-connect` Claude
+Code skill, which this dashboard deliberately does not duplicate. See
+`docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`,
+`...v18-guided-company-setup-design.md`, and
+`...v19-integrations-status-design.md` for full details (the v17 spec
+also has the agent-agnostic design decision: the portable core is
+`definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
+`.claude/*` is one Claude-Code-specific adapter on top of it, not the
+core itself).
 
 ## Roadmap (named, not yet designed)
 
@@ -160,16 +172,19 @@ Per the user's stated direction, this dashboard is heading toward a
 Fleece.ai-style onboarding + operations UI built around
 `ai-company-starter-main` (+ `harness-engineering`) as the core, with
 things like `email-pipeline-agent` as example "plugin" workflows on top of a
-company. Ordered pieces after v18:
+company. Next piece after v19:
 
-- **v19**: integrations setup (email, calendar, etc.) so agents can
-  actually act on a company's behalf. Once an agent is actually
-  connected, this is also where AI-assisted `customer`/`org`/`product`
-  entity generation (deferred from v18) becomes possible — using the
-  connected agent's own reasoning, not new AI-calling infrastructure
-  built into this dashboard.
 - **v20**: guided command/workflow discovery, possibly formalizing the
   "plugin" concept (installing a `email-pipeline-agent`-style workflow onto
-  a company).
+  a company — e.g. giving a fresh company its own email-handling
+  pipeline). This is also the prerequisite for two things v18/v19
+  deliberately deferred: a fresh company having any real integration to
+  connect in the first place, and (once an agent is genuinely connected)
+  AI-assisted `customer`/`org`/`product` ontology entity generation using
+  that agent's own reasoning — not new AI-calling infrastructure built
+  into this dashboard.
 
-None of these are designed yet — brainstorm each in turn when picked up.
+Not designed yet — brainstorm fresh when picked up. Given how far v19
+narrowed from its original one-line description, don't assume "v20:
+guided command/workflow discovery" means what it sounds like either —
+investigate what's actually real and buildable before proposing a design.
