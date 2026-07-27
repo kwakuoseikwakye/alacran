@@ -26,7 +26,7 @@ import { LogTailView } from "@/components/log-tail-view"
 
 const POLL_INTERVAL_MS = 3000
 
-export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
+export function CompanyCommandRunner({ command, agentId }: { command: CompanyCommand; agentId: string }) {
   const [values, setValues] = useState<Record<string, string>>({})
   const [running, setRunning] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -41,15 +41,15 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
   }
 
   async function pollUntilDone() {
-    const status = await getCompanyCommandStatus()
-    const logTail = await getCompanyCommandLogTail(command.id)
+    const status = await getCompanyCommandStatus(agentId)
+    const logTail = await getCompanyCommandLogTail(command.id, agentId)
     setTail(logTail.tail)
     if (status.running) {
       setTimeout(pollUntilDone, POLL_INTERVAL_MS)
       return
     }
     setRunning(false)
-    const outcome = await getCompanyCommandResult(command.id)
+    const outcome = await getCompanyCommandResult(command.id, agentId)
     setResult(outcome)
   }
 
@@ -57,7 +57,7 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
     setMessage(null)
     setResult(null)
     setCommitMessage(null)
-    const response = await runCompanyCommand(command.id, values)
+    const response = await runCompanyCommand(command.id, values, agentId)
     setMessage(response.message)
     if (response.started) {
       setRunning(true)
@@ -68,7 +68,7 @@ export function CompanyCommandRunner({ command }: { command: CompanyCommand }) {
   async function handleConfirmCommit() {
     if (!result || !result.changed) return
     setCommitting(true)
-    const response = await commitCompanyCommandResult(command.id, result.outputPath)
+    const response = await commitCompanyCommandResult(command.id, result.outputPath, agentId)
     setCommitting(false)
     setConfirmOpen(false)
     setCommitMessage(response.message)

@@ -118,7 +118,9 @@ export function SkillBrowser({
                 }}
               />
             )}
-            {view === "run" && matchedCompanyCommand && <CompanyCommandRunner command={matchedCompanyCommand} />}
+            {view === "run" && matchedCompanyCommand && (
+              <CompanyCommandRunner command={matchedCompanyCommand} agentId="ai-company-starter-main" />
+            )}
           </ScrollArea>
         </SheetContent>
       </Sheet>
