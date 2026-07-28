@@ -9,6 +9,7 @@ import { getAvatars } from "@/lib/avatars-registry"
 import { companyOntologyExists } from "@/lib/company-ontology-exists"
 import { getIntegrationStatus } from "@/lib/get-integration-status"
 import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
+import { OnboardingWelcome } from "@/components/onboarding-welcome"
 
 export const dynamic = "force-dynamic"
 
@@ -18,6 +19,14 @@ export default async function AgentTreePage() {
     getEffectiveAdapters(),
     getAvatars(),
   ])
+  if (agents.length === 0) {
+    return (
+      <main className="mx-auto max-w-5xl p-8">
+        <OnboardingWelcome />
+      </main>
+    )
+  }
+
   const avatarByAgentId = Object.fromEntries(avatars.map((a) => [a.agentId, a.imageUrl]))
   const takeshiAgent = agents.find((agent) => agent.id === "plh-takeshi-agent")
   const plhOpsSource = agents.find((agent) => agent.id === "plh-ops")
