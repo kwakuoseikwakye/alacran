@@ -34,9 +34,12 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 ## Current position  ⬅️ resume here
 
 - **Active stage:** Day 1 — De-PLH + first-run onboarding
-- **Overall:** Day 0 (planning) complete; nothing built yet.
+- **Overall:** Day 0 (planning) complete; 4 of 6 open decisions resolved
+  (2026-07-28); nothing built yet.
 - **Single next action:** brainstorm + spec Day 1, then build it (branch,
   tests, live-verify, merge — same discipline as v1–v22).
+- **Still-open (non-blocking for Day 1):** exact price + trial length; app
+  name/brand/domain — both only bite on Day 2–3.
 - **Days elapsed / remaining:** 0 / 4.
 
 Keep this block honest and current — it is the fastest way for a fresh session
@@ -62,26 +65,33 @@ These were decided with the user on 2026-07-28. Don't relitigate without them.
 - **Delivery mechanism:** decided during Day 2. Electron is the primary target;
   the "packaged local server that opens the browser" is the guaranteed
   fallback so packaging can't sink the date.
+- **[2026-07-28] Target audience for v1:** **CLI-comfortable early adopters** —
+  prosumers/devs who can install Claude Code CLI + `gog`. Onboarding
+  **detects** those deps and **guides** install if missing (no bundling /
+  auto-install). Truly non-technical is a fast-follow, not a v1 blocker.
+- **[2026-07-28] Pricing model:** **free trial → monthly subscription** via
+  Lemon Squeezy (native trial support). Exact price + trial length still TBD
+  (see Open decisions).
+- **[2026-07-28] Template delivery:** **bundle the cleaned generic template
+  inside the app** (ships in the installer; works offline; no dependency on a
+  public repo). v17's `TEMPLATE_MANIFEST` defines the clean file set; the copy
+  source moves from the local `~/AI-Native/...` path to the bundled copy.
+- **[2026-07-28] macOS signing (v1):** **ship unsigned** with clear
+  "right-click → Open" instructions. Notarization is a fast-follow.
 
 ---
 
 ## Open decisions (resolve before they block the relevant day)
 
-- **[HIGH] Target audience for v1.** The app needs Claude Code CLI + `gog` + git
-  installed locally. Truly non-technical users won't have these, and
-  auto-installing them well is not a 4-day job. **Recommendation (pending user
-  confirmation): narrow v1 to "comfortable installing a CLI" early adopters,
-  with detect-and-guide onboarding; true non-technical is a fast-follow.**
-  Blocks: Day 1 onboarding depth, Day 4 demo framing.
-- **[MED] Price + trial.** One-time vs subscription; free trial vs paid-only.
-  Blocks: Day 3 Lemon Squeezy setup + landing page copy.
-- **[MED] Template delivery.** A shipped app can't read `~/AI-Native/ai-company-starter-main`
-  (that path only exists on this dev machine). The generic template must be
-  **bundled inside the app** (or cloned from a public repo on first run).
-  Decide which. Blocks: Day 1 create-company flow.
-- **[LOW] App name / brand / domain** for the landing page. Blocks: Day 3.
-- **[LOW] macOS signing/notarization.** Real Apple Developer cert + notarize, or
-  ship unsigned with "right-click → Open" instructions for v1. Blocks: Day 2/4.
+_Resolved 2026-07-28 → moved to Locked decisions: target audience, pricing
+model, template delivery, macOS signing._
+
+- **[MED] Exact price + trial length.** The model is locked (free trial →
+  monthly). Still need the actual number(s): monthly price and trial length
+  (e.g. 7 or 14 days). Blocks: Day 3 Lemon Squeezy setup + landing page copy.
+- **[LOW] App name / brand / domain** for the landing page + installer.
+  Open-ended — just needs to be chosen. Blocks: Day 3, and the Electron app
+  name on Day 2.
 
 ---
 
@@ -119,18 +129,19 @@ app is a clean product, not your personal Kirirom dashboard.
       daily use (register them as companies via the existing "Add a company"
       flow, or a dev-only seed). Note: this changes how you personally use the
       dashboard — flag before merging.
-- [ ] Decide + implement **template delivery** (Open decision above): bundle the
-      cleaned generic `ai-company-starter-main` template inside the app, OR
-      clone-on-first-run from a public repo. v17's `TEMPLATE_MANIFEST` already
-      defines the clean file set; today it copies FROM the local
-      `~/AI-Native/ai-company-starter-main` path, which won't exist on a user's
-      machine — this must change.
+- [ ] **Bundle the cleaned generic template inside the app** (decision locked:
+      bundle, not clone-on-first-run). v17's `TEMPLATE_MANIFEST` defines the
+      clean file set; today `createCompanyFromTemplate` copies FROM the local
+      `~/AI-Native/ai-company-starter-main` path — repoint that source to the
+      bundled copy that ships in the installer (works offline, no user-side
+      git/network needed for scaffolding).
 - [ ] First-run experience: detect empty state → show a Welcome / "create your
       first company" screen instead of an empty grid.
-- [ ] **Dependency detection:** on launch (or in onboarding), check for `claude`
-      (Claude Code CLI) and `gog` on `PATH`; if missing, show a clear
-      "install these to continue" step with links/commands. This is where the
-      non-technical-install gap gets confronted honestly.
+- [ ] **Dependency detection (detect-and-guide, per locked audience decision):**
+      on launch (or in onboarding), check for `claude` (Claude Code CLI) and
+      `gog` on `PATH`; if missing, show a clear "install these to continue" step
+      with links/commands. v1 does NOT auto-install — it guides CLI-comfortable
+      users through it.
 - [ ] Scrub for any other PLH/Kirirom hardcoding that would leak into a shipped
       build (grep `plh`, `takeshi`, `kirirom`, `nana@plh.life`, absolute
       `~/AI-Native/...` / `/Users/nanaosei/...` paths across `lib/` `app/`
@@ -280,3 +291,9 @@ truthful.
   gate). Wrote this runbook. Nothing built yet. **Next:** start Day 1 (de-PLH +
   first-run onboarding); resolve the [HIGH] target-audience open decision early
   since it shapes onboarding depth.
+- **2026-07-28 — decisions resolved.** Locked 4 of the 6 open decisions:
+  audience = CLI-comfortable early adopters (detect-and-guide, no auto-install);
+  pricing = free trial → monthly (Lemon Squeezy); template delivery = bundle in
+  app; macOS = ship unsigned + right-click→Open for v1. Day 1 tasks firmed up
+  accordingly. Remaining open (non-blocking for Day 1): exact price/trial length,
+  app name/brand/domain. **Next:** brainstorm + spec + build Day 1.
