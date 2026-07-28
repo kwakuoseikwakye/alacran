@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest"
 import { COMPANY_COMMANDS, getCompanyCommand } from "./registry"
 
 describe("COMPANY_COMMANDS registry", () => {
-  it("has exactly the 5 in-scope commands", () => {
+  it("has exactly the 6 in-scope commands", () => {
     expect(COMPANY_COMMANDS.map((c) => c.id).sort()).toEqual(
-      ["decision", "define-company", "digest", "handoff", "retro"].sort()
+      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro"].sort()
     )
   })
 
@@ -24,6 +24,33 @@ describe("COMPANY_COMMANDS registry", () => {
   it("only handoff declares needsPrefetch", () => {
     const withPrefetch = COMPANY_COMMANDS.filter((c) => c.needsPrefetch).map((c) => c.id)
     expect(withPrefetch).toEqual(["handoff"])
+  })
+
+  it("only check-inbox declares bashPatterns, and exactly the two read-only gog commands", () => {
+    const withBash = COMPANY_COMMANDS.filter((c) => c.bashPatterns && c.bashPatterns.length > 0).map((c) => c.id)
+    expect(withBash).toEqual(["check-inbox"])
+    expect(getCompanyCommand("check-inbox")?.bashPatterns).toEqual([
+      "gog -a auto gmail search*",
+      "gog -a auto gmail get*",
+    ])
+  })
+
+  it("check-inbox is a zero-field new-file-in-dir command writing to notes/company/email-checks", () => {
+    const cmd = getCompanyCommand("check-inbox")
+    expect(cmd?.fields).toEqual([])
+    expect(cmd?.outputKind).toBe("new-file-in-dir")
+    expect(cmd?.outputPath).toBe("notes/company/email-checks")
+    expect(cmd?.needsPrefetch).toBe(false)
+  })
+
+  it("check-inbox's buildPrompt is read-only: it names the two gog reads and explicitly forbids send/modify", () => {
+    const prompt = getCompanyCommand("check-inbox")!.buildPrompt({}, "2026-07-28", "")
+    expect(prompt).toContain("gog -a auto gmail search")
+    expect(prompt).toContain("gog -a auto gmail get")
+    expect(prompt).toMatch(/read-only/i)
+    // The prompt must name the mutating commands as forbidden (not merely omit them);
+    // the hard read-only guarantee is the bashPatterns allowlist, tested separately.
+    expect(prompt).toMatch(/Do NOT run gog gmail send, gog gmail messages modify/)
   })
 
   it("getCompanyCommand returns undefined for an unknown id", () => {
