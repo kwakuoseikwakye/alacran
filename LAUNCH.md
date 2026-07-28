@@ -439,3 +439,9 @@ truthful.
   Price + LS checkout remain placeholders (user setting up LS later). 272 tests
   green. **Next:** user sets up Lemon Squeezy + swaps checkout/price placeholders;
   then Day 4 end-to-end + demo.
+- **2026-07-28 — landing v2 (design iteration).** Per user: added a product
+  navbar (Use cases / Templates / Marketplace / Integrations / Docs / How to use
+  / Pricing), switched to a **red scorpion theme**, Geist type (buzz-vibe), and
+  a **scroll-animated "02 — Orchestrate" diagram** (You → Alacrán → companies →
+  workflows, links draw + nodes reveal on scroll) modeled on fleece.ai. Preview
+  URL unchanged. Nav links are on-page anchors for now.
