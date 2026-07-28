@@ -50,6 +50,14 @@ export function OnboardingWelcome() {
         />
       </div>
 
+      <p className="text-sm text-muted-foreground">
+        Then{" "}
+        <a className="text-primary underline underline-offset-4" href="/connect">
+          connect your tools →
+        </a>{" "}
+        so your company can act on your behalf.
+      </p>
+
       <AddCompanyForm />
     </div>
   )
