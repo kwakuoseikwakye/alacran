@@ -2,12 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Activity, BookOpen } from "lucide-react"
+import { Bot, Activity, BookOpen, Plug } from "lucide-react"
 
 const LINKS = [
   { href: "/", label: "Agents", icon: Bot },
   { href: "/activity", label: "Activity", icon: Activity },
   { href: "/skills", label: "Skills", icon: BookOpen },
+  { href: "/connect", label: "Connect", icon: Plug },
 ]
 
 export function Nav() {
