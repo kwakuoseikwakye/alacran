@@ -601,3 +601,42 @@ with zero setup, split into three slices:
   guided (not automated) dependency install.
 
 These are Day 1 of the launch; see `LAUNCH.md` for the full plan.
+
+## v28: Connect page — detect/guide/re-check for your tools
+
+Onboarding *promised* "connect your AI agent / Gmail," but connecting still
+required dropping to a terminal blind — the one genuine in-app break on the
+buy→launch→create-company→**connect Google**→run-`check-inbox` golden path.
+Investigation confirmed connecting is inherently an interactive CLI/OAuth
+flow (`gog auth setup` opens a browser for consent; Claude login happens in
+the `claude` CLI), so the app can't own it — but it *can* honestly detect
+state. `gog auth status -j` returns clean JSON (`account.email`,
+`credentials_exists`, **no tokens**), and `which claude` detects the agent.
+
+v28 ships a dedicated, machine-global **`/connect`** page (both `gog` auth and
+Claude login are per-machine, not per-company) using the same
+**detect → guide → re-check** pattern as v25's dependency check:
+
+- **`lib/connect/connect-status-impl.ts`** — `getConnectStatusImpl(execFn?)`
+  (injectable `ExecFileFn`) probes both tools and returns a typed
+  `ConnectStatus` with per-tool `connected` + `detail` + copy-able connect
+  `command` + install link. Each probe is independently try/caught; the JSON
+  parse is guarded. **Read-only** (`which`, `gog auth status -j`) — no writes,
+  no OAuth, no credential storage, and **no `claude` spawn** (honors the
+  standing no-auto-spawn safety rule; login is proven by running a command,
+  not detected).
+- **`lib/connect/connect-actions.ts`** — zero-extra-param `"use server"`
+  `getConnectStatus()` (seam stays in the impl), same shape as
+  `checkDependencies`.
+- **`app/connect/page.tsx`** (`force-dynamic`) fetches initial status
+  server-side (no loading flash) and renders **`components/connect-panel.tsx`**
+  (client): two tool cards with a Connected/Not-connected badge, guidance
+  steps, a code block + Copy button for the connect command, and a global
+  **Re-check** button that re-invokes the action. Nav gains a **Connect**
+  link; onboarding links to it.
+
+5 new unit tests (both-connected / claude-missing / gog-missing / no-account /
+malformed-JSON) with a fake `ExecFileFn`; 277 tests green; `tsc`/`build`
+clean; live-verified both the connected path (real account email shown) and
+the not-connected guidance UI. See
+`docs/superpowers/specs/2026-07-28-control-panel-v28-connect-tools-design.md`.

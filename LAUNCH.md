@@ -33,9 +33,11 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 
 ## Current position  ⬅️ resume here
 
-- **Active stage:** Days 1-3 app-side all **BUILT** (v23-v27 + landing page).
-  Two things now sit with the **user**: (a) verify the packaged `.app` on your
-  Mac, (b) set up Lemon Squeezy + pick the app name/price and swap the
+- **Active stage:** Days 1-3 app-side all **BUILT** (v23-v27 + landing page),
+  **plus v28 Connect page** (closes the one in-app golden-path gap: users can now
+  see + get guided through connecting their Claude agent and Google, in-app).
+  Two things still sit with the **user**: (a) verify the packaged `.app` on your
+  Mac (done once already), (b) set up Lemon Squeezy + pick the price and swap the
   placeholders. Day 4 (end-to-end + demo) can't fully run until those land.
 - **Overall:** Day 1 DONE (v23-v25). Day 2 build DONE (v26, browser-runner
   `.app`, server verified). Day 3 app-side DONE (v27 license gate + landing
@@ -439,6 +441,17 @@ truthful.
   Price + LS checkout remain placeholders (user setting up LS later). 272 tests
   green. **Next:** user sets up Lemon Squeezy + swaps checkout/price placeholders;
   then Day 4 end-to-end + demo.
+- **2026-07-28 — v28 Connect page (in-app tool connection).** Closed the one
+  genuine in-app hole on the buy→run golden path. New machine-global `/connect`
+  page (nav + onboarding link): detect→guide→re-check for the **Claude agent**
+  (`which claude`) and **Google** (`gog auth status -j` — clean JSON, no tokens).
+  Not-connected cards show the exact connect command with a Copy button +
+  Instructions link; Re-check re-probes. Read-only, no OAuth/credential storage,
+  no `claude` spawn. 5 new tests (277 total green), tsc/build clean, live-verified
+  connected + guidance paths. Spec: `docs/superpowers/specs/2026-07-28-control-panel-v28-connect-tools-design.md`.
+  Deviation note: built directly on `master` (not a worktree) — small slice, and
+  worktrees hit the empty-node_modules build gotcha (v26/v27). **Next:** user's LS
+  + price steps unblock Day 4 end-to-end + demo.
 - **2026-07-28 — landing v4 (3D logo + polish).** Replaced the hero
   logo with a **WebGL/Three.js 3D scorpion emblem** (`landing/logo3d.js`,
   vendored `landing/vendor/three.min.js` r160) — a curled segmented tail
