@@ -1,262 +1,65 @@
 <!doctype html>
-<!--
-  Alacrán landing page. Self-contained except the Geist webfont (Google Fonts @import
-  in the stylesheet) — deploys anywhere static: Vercel / Netlify / GitHub Pages / Cloudflare.
-
-  PLACEHOLDERS to swap at launch (search this file):
-    - CHECKOUT URL:  https://your-store.lemonsqueezy.com/buy/REPLACE-ME
-    - DOWNLOAD URL:  https://REPLACE-ME/download/Alacran.dmg
-    - CONTACT EMAIL: hello@REPLACE-ME
-    - PRICE:         "$29/mo" (keep in sync with lib/branding.ts PRICE_LABEL)
-  Name "Alacrán" is final. Nav links are anchors to on-page sections for now.
--->
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Alacrán — run your own AI-native company, on your Mac</title>
-  <meta name="description" content="Stand up an AI-native company on your own Mac, hand it your own AI agent, and let it run the work — locally, privately, and never a step you didn't approve." />
-  <meta property="og:title" content="Alacrán — your AI-native company, on your machine" />
-  <meta property="og:description" content="You decide. Alacrán executes. Set up a company once and hand it to your own AI agent — local, private, approved by you." />
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%A6%82%3C/text%3E%3C/svg%3E" />
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Alacrán — run your own AI-native company, on your Mac</title>
+<meta name="description" content="Stand up an AI-native company on your own Mac, bring your own AI agent, and let it run the work — locally, privately, and never a step you didn't approve." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%A6%82%3C/text%3E%3C/svg%3E" />
+<link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<style>
-  /* Geist — loads on deploy / local open; artifact CSP falls back to system. */
-  @import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap");
-
-  /* ===== Alacrán — red scorpion theme. Dark = venom-night; light = desert day. ===== */
-  :root {
-    --void: #0c0708;
-    --shell: #16100f;
-    --shell-2: #1e1514;
-    --line: #2c1f1e;
-    --bone: #f1e9e5;
-    --dune: #a08d87;
-    --red: #ff2e43;
-    --ember: #ff6b35;
-    --glow-soft: rgba(255, 46, 67, 0.16);
-    --red-ink: #1a0406;
-    --maxw: 1120px;
-    --ease: cubic-bezier(0.22, 1, 0.36, 1);
-    --font-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    --font-body: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --void: #f6efe9; --shell: #fdf8f4; --shell-2: #f2e8e1; --line: #eaddd5;
-      --bone: #1a1210; --dune: #7a6862; --red: #dc1f31; --ember: #d1591f;
-      --glow-soft: rgba(220, 31, 49, 0.12); --red-ink: #fff6f3;
-    }
-  }
-  :root[data-theme="dark"] {
-    --void: #0c0708; --shell: #16100f; --shell-2: #1e1514; --line: #2c1f1e;
-    --bone: #f1e9e5; --dune: #a08d87; --red: #ff2e43; --ember: #ff6b35;
-    --glow-soft: rgba(255,46,67,0.16); --red-ink: #1a0406;
-  }
-  :root[data-theme="light"] {
-    --void: #f6efe9; --shell: #fdf8f4; --shell-2: #f2e8e1; --line: #eaddd5;
-    --bone: #1a1210; --dune: #7a6862; --red: #dc1f31; --ember: #d1591f;
-    --glow-soft: rgba(220,31,49,0.12); --red-ink: #fff6f3;
-  }
-
-  * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { margin: 0; background: var(--void); color: var(--bone); font-family: var(--font-body); font-size: 17px; line-height: 1.6; -webkit-font-smoothing: antialiased; overflow-x: hidden; }
-  ::selection { background: var(--red); color: #fff; }
-  a { color: inherit; text-decoration: none; }
-  .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 30px; }
-  .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red); }
-  h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.035em; text-wrap: balance; margin: 0; }
-  p { margin: 0; }
-  .muted { color: var(--dune); }
-
-  .btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 999px; border: 1px solid transparent; cursor: pointer; transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease); }
-  .btn-primary { background: var(--red); color: #fff; box-shadow: 0 8px 30px -10px var(--red); }
-  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -12px var(--red); }
-  .btn-ghost { background: transparent; color: var(--bone); border-color: var(--line); }
-  .btn-ghost:hover { border-color: var(--red); color: var(--red); }
-  .btn:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
-
-  /* ---------- nav ---------- */
-  .nav { position: sticky; top: 0; z-index: 60; backdrop-filter: blur(16px); background: color-mix(in srgb, var(--void) 80%, transparent); border-bottom: 1px solid var(--line); }
-  .nav-in { display: flex; align-items: center; gap: 28px; height: 68px; }
-  .brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; font-size: 19px; }
-  .brand .glyph { width: 25px; height: 25px; color: var(--red); filter: drop-shadow(0 0 8px var(--red)); }
-  .navlinks { display: flex; gap: 26px; margin-left: 8px; }
-  .navlinks a { font-size: 14.5px; color: var(--dune); transition: color .15s ease; }
-  .navlinks a:hover { color: var(--bone); }
-  .nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
-  .theme-toggle { font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dune); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
-  .theme-toggle:hover { color: var(--red); border-color: var(--red); }
-  @media (max-width: 980px) { .navlinks { display: none; } }
-
-  /* ---------- hero ---------- */
-  .hero { position: relative; padding: 104px 0 90px; text-align: center; overflow: hidden; }
-  .halo { position: absolute; left: 50%; top: 36%; transform: translate(-50%, -50%); width: 760px; height: 760px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, var(--glow-soft) 0%, transparent 60%); filter: blur(6px); animation: breathe 7s ease-in-out infinite; }
-  @keyframes breathe { 0%,100% { opacity: .5; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.12); } }
-  .hero .mark { width: 104px; height: 104px; margin: 0 auto 28px; color: var(--red); filter: drop-shadow(0 0 20px var(--red)); animation: floaty 8s ease-in-out infinite; }
-  @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-  .hero h1 { font-size: clamp(2.8rem, 6.6vw, 5rem); line-height: 1.0; font-weight: 800; margin-top: 16px; }
-  .hero h1 .ex { color: var(--red); }
-  .hero-sub { max-width: 640px; margin: 24px auto 0; color: var(--dune); font-size: clamp(1.05rem, 2vw, 1.25rem); }
-  .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 36px; }
-  .hero-trust { margin-top: 20px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .06em; color: var(--dune); }
-  .hero-trust b { color: var(--red); font-weight: 400; }
-  .reveal-word { display: inline-block; opacity: 0; transform: translateY(0.5em); animation: word .7s var(--ease) forwards; }
-  @keyframes word { to { opacity: 1; transform: none; } }
-
-  .band { border-top: 1px solid var(--line); padding: 92px 0; }
-  .sec-head { max-width: 640px; margin-bottom: 46px; }
-  .sec-head h2 { font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.06; margin-top: 14px; }
-  .sec-head p { margin-top: 16px; color: var(--dune); font-size: 1.08rem; }
-  .center { text-align: center; margin-left: auto; margin-right: auto; }
-
-  /* ---------- orchestrate diagram ---------- */
-  .orch { border-top: 1px solid var(--line); padding: 96px 0; }
-  .orch .head { text-align: center; max-width: 640px; margin: 0 auto 20px; }
-  .orch .head h2 { font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.05; margin-top: 12px; }
-  .orch .head p { margin-top: 14px; color: var(--dune); font-size: 1.08rem; }
-  .stage { margin: 44px auto 0; max-width: 940px; }
-  .stage svg { width: 100%; height: auto; display: block; overflow: visible; }
-  .link { fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 1; stroke-dashoffset: 1; transition: stroke-dashoffset 1.2s var(--ease), stroke 1.2s var(--ease); }
-  .diagram.drawn .link { stroke-dashoffset: 0; stroke: color-mix(in srgb, var(--red) 45%, var(--line)); }
-  .node-box { fill: var(--shell); stroke: var(--line); stroke-width: 1.2; }
-  .node-label { font-family: var(--font-display); font-weight: 600; font-size: 15px; fill: var(--bone); }
-  .node-sub { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .12em; fill: var(--dune); text-transform: uppercase; }
-  .node { opacity: 0; transition: opacity .55s var(--ease); }
-  .diagram.drawn .node { opacity: 1; }
-  .node.root .node-box { stroke: var(--red); }
-  .node.hub .node-box { fill: color-mix(in srgb, var(--red) 14%, var(--shell)); stroke: var(--red); }
-  .node.hub .node-label { fill: var(--red); }
-  .pulse { fill: var(--red); opacity: 0; }
-  .diagram.drawn .pulse { animation: pulse 2.4s ease-in-out 1.2s infinite; }
-  @keyframes pulse { 0% { opacity: 0; } 20% { opacity: 1; } 100% { opacity: 0; } }
-
-  /* features */
-  .features { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(236px, 1fr)); }
-  .feat { background: var(--shell); border: 1px solid var(--line); border-radius: 16px; padding: 22px; transition: transform .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease); }
-  .feat:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--red) 50%, var(--line)); box-shadow: 0 18px 40px -22px var(--red); }
-  .feat .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); box-shadow: 0 0 12px var(--red); margin-bottom: 14px; }
-  .feat h3 { font-size: 1.08rem; }
-  .feat p { color: var(--dune); font-size: 0.92rem; margin-top: 7px; }
-
-  .local { text-align: center; padding: 108px 0; border-top: 1px solid var(--line); background: radial-gradient(620px 300px at 50% 0%, var(--glow-soft), transparent 70%); }
-  .local h2 { font-size: clamp(2rem, 5vw, 3.2rem); line-height: 1.05; }
-  .local h2 .glow { color: var(--red); }
-  .local p { max-width: 600px; margin: 20px auto 0; color: var(--dune); font-size: 1.1rem; }
-  .local .row { display: flex; gap: 26px; justify-content: center; flex-wrap: wrap; margin-top: 28px; font-family: var(--font-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--dune); }
-  .local .row span::before { content: "▪ "; color: var(--red); }
-
-  .price-card { max-width: 460px; margin: 0 auto; background: var(--shell); border: 1px solid var(--line); border-radius: 22px; padding: 40px 36px; text-align: center; position: relative; }
-  .price-card::before { content: ""; position: absolute; inset: -1px; border-radius: 23px; padding: 1px; background: linear-gradient(160deg, color-mix(in srgb, var(--red) 60%, transparent), transparent 55%); -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
-  .price-card .tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--ember); }
-  .price-card .amt { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.04em; font-size: 3.6rem; line-height: 1; margin: 14px 0 4px; }
-  .price-card .amt span { font-size: 1.1rem; color: var(--dune); font-weight: 600; }
-  .price-card .ph { font-family: var(--font-mono); font-size: 11px; color: var(--dune); margin-top: 18px; }
-  .price-list { list-style: none; padding: 0; margin: 26px 0; text-align: left; display: grid; gap: 11px; }
-  .price-list li { display: flex; gap: 10px; font-size: 0.96rem; }
-  .price-list li::before { content: ""; flex: 0 0 8px; height: 8px; margin-top: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 9px var(--red); }
-
-  .req { background: var(--shell); border: 1px solid var(--line); border-radius: 18px; padding: 28px 30px; }
-  .req ul { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
-  .req li { font-family: var(--font-mono); font-size: 13px; color: var(--dune); }
-  .req li b { color: var(--bone); font-weight: 500; }
-  .req .note { margin-top: 16px; color: var(--dune); font-size: 0.95rem; font-family: var(--font-body); }
-
-  .final { text-align: center; padding: 120px 0; border-top: 1px solid var(--line); position: relative; overflow: hidden; }
-  .final h2 { font-size: clamp(2.3rem, 6vw, 4rem); line-height: 1.02; font-weight: 800; }
-  .final p { color: var(--dune); margin: 18px auto 0; max-width: 480px; }
-  .final .mark { width: 60px; height: 60px; margin: 0 auto 24px; color: var(--red); filter: drop-shadow(0 0 16px var(--red)); }
-  .final .cta { margin-top: 30px; }
-
-  footer { border-top: 1px solid var(--line); padding: 34px 0; color: var(--dune); font-family: var(--font-mono); font-size: 12px; letter-spacing: .05em; }
-  .foot-in { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; align-items: center; }
-
-  .r { opacity: 0; transform: translateY(26px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
-  .r.in { opacity: 1; transform: none; }
-
-  @media (prefers-reduced-motion: reduce) {
-    html { scroll-behavior: auto; }
-    .halo, .hero .mark, .final .mark { animation: none; }
-    .reveal-word { animation: none; opacity: 1; transform: none; }
-    .r { opacity: 1; transform: none; transition: none; }
-    .link { transition: none; stroke-dashoffset: 0; }
-    .node { opacity: 1; }
-    .diagram.drawn .pulse { animation: none; }
-  }
-  @media (max-width: 560px) { .hero { padding: 72px 0 60px; } .band, .local, .final, .orch { padding: 64px 0; } }
-</style>
-
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="alacran" viewBox="0 0 100 100">
-    <!-- realistic top-down scorpion: pincers up, segmented body, 8 legs,
-         tail curling over the back to a bulbous telson + forward sting -->
-    <g fill="currentColor">
-      <!-- legs (8), behind the body -->
-      <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-        <path d="M42 41 Q29 38 19 32" />
-        <path d="M43 47 Q28 47 16 45" />
-        <path d="M44 53 Q29 55 18 60" />
-        <path d="M45 59 Q31 63 23 71" />
-        <path d="M58 41 Q71 38 81 32" />
-        <path d="M57 47 Q72 47 84 45" />
-        <path d="M56 53 Q71 55 82 60" />
-        <path d="M55 59 Q69 63 77 71" />
-      </g>
-      <!-- pedipalp arms -->
-      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">
-        <path d="M44 39 Q34 29 28 23" />
-        <path d="M56 39 Q66 29 72 23" />
-      </g>
-      <!-- claws (open pincers) -->
-      <ellipse cx="24" cy="19" rx="6.6" ry="3.7" transform="rotate(-32 24 19)" />
-      <ellipse cx="29" cy="14" rx="5.4" ry="3" transform="rotate(-68 29 14)" />
-      <ellipse cx="76" cy="19" rx="6.6" ry="3.7" transform="rotate(32 76 19)" />
-      <ellipse cx="71" cy="14" rx="5.4" ry="3" transform="rotate(68 71 14)" />
-      <!-- cephalothorax + segmented abdomen (mesosoma) -->
-      <ellipse cx="50" cy="43" rx="12" ry="10" />
-      <ellipse cx="50" cy="53" rx="10.4" ry="6" />
-      <ellipse cx="50" cy="61" rx="8.7" ry="5.3" />
-      <ellipse cx="50" cy="68" rx="6.9" ry="4.7" />
-      <!-- metasoma: segmented tail curling up-and-over to the right -->
-      <circle cx="53" cy="73" r="4.7" />
-      <circle cx="60" cy="75" r="4.5" />
-      <circle cx="67" cy="72" r="4.2" />
-      <circle cx="72" cy="66" r="4.0" />
-      <circle cx="75" cy="59" r="3.8" />
-      <circle cx="74" cy="51" r="3.6" />
-      <!-- telson (venom bulb) + aculeus (sting) arched forward -->
-      <ellipse cx="70" cy="45" rx="4.6" ry="5.1" />
-      <path d="M67 42 Q61 41 58 46 Q63 44.5 66.5 47 Z" />
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <radialGradient id="scGrad" cx="36%" cy="30%" r="82%">
+    <stop offset="0%" stop-color="#ffb0b8"/><stop offset="42%" stop-color="#ff2e43"/><stop offset="100%" stop-color="#8c0f1c"/>
+  </radialGradient>
+  <linearGradient id="scLimb" x1="0" y1="0" x2="1" y2="1">
+    <stop offset="0%" stop-color="#ff5566"/><stop offset="100%" stop-color="#9d1220"/>
+  </linearGradient>
+  <filter id="scShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="1.4" stdDeviation="1.5" flood-color="#000" flood-opacity="0.42"/></filter>
+</defs>
+<symbol id="alacran" viewBox="0 0 100 100">
+  <g filter="url(#scShadow)">
+    <g fill="none" stroke="url(#scLimb)" stroke-width="2.6" stroke-linecap="round">
+      <path d="M42 41 Q29 38 19 32"/><path d="M43 47 Q28 47 16 45"/><path d="M44 53 Q29 55 18 60"/><path d="M45 59 Q31 63 23 71"/>
+      <path d="M58 41 Q71 38 81 32"/><path d="M57 47 Q72 47 84 45"/><path d="M56 53 Q71 55 82 60"/><path d="M55 59 Q69 63 77 71"/>
     </g>
-  </symbol>
-</svg>
-
+    <g fill="none" stroke="url(#scLimb)" stroke-width="5" stroke-linecap="round"><path d="M44 39 Q34 29 28 23"/><path d="M56 39 Q66 29 72 23"/></g>
+    <ellipse cx="24" cy="19" rx="6.6" ry="3.7" transform="rotate(-32 24 19)" fill="url(#scGrad)"/>
+    <ellipse cx="29" cy="14" rx="5.4" ry="3" transform="rotate(-68 29 14)" fill="url(#scGrad)"/>
+    <ellipse cx="76" cy="19" rx="6.6" ry="3.7" transform="rotate(32 76 19)" fill="url(#scGrad)"/>
+    <ellipse cx="71" cy="14" rx="5.4" ry="3" transform="rotate(68 71 14)" fill="url(#scGrad)"/>
+    <ellipse cx="50" cy="43" rx="12" ry="10" fill="url(#scGrad)"/>
+    <ellipse cx="50" cy="53" rx="10.4" ry="6" fill="url(#scGrad)"/>
+    <ellipse cx="50" cy="61" rx="8.7" ry="5.3" fill="url(#scGrad)"/>
+    <ellipse cx="50" cy="68" rx="6.9" ry="4.7" fill="url(#scGrad)"/>
+    <circle cx="53" cy="73" r="4.7" fill="url(#scGrad)"/><circle cx="60" cy="75" r="4.5" fill="url(#scGrad)"/>
+    <circle cx="67" cy="72" r="4.2" fill="url(#scGrad)"/><circle cx="72" cy="66" r="4.0" fill="url(#scGrad)"/>
+    <circle cx="75" cy="59" r="3.8" fill="url(#scGrad)"/><circle cx="74" cy="51" r="3.6" fill="url(#scGrad)"/>
+    <ellipse cx="70" cy="45" rx="4.6" ry="5.1" fill="url(#scGrad)"/>
+    <path d="M67 42 Q61 41 58 46 Q63 44.5 66.5 47 Z" fill="url(#scGrad)"/>
+  </g>
+</symbol></svg>
 <nav class="nav">
-  <div class="wrap nav-in">
-    <a class="brand" href="#top"><svg class="glyph"><use href="#alacran"/></svg>Alacrán</a>
-    <div class="navlinks">
-      <a href="#usecases">Use cases</a>
-      <a href="#templates">Templates</a>
-      <a href="#marketplace">Marketplace</a>
-      <a href="#integrations">Integrations</a>
-      <a href="#docs">Docs</a>
-      <a href="#how">How to use</a>
-      <a href="#pricing">Pricing</a>
-    </div>
-    <div class="nav-right">
-      <button class="theme-toggle" id="tt" type="button">Day / Night</button>
-      <a class="btn btn-primary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free</a>
-    </div>
+  <a class="brand" href="index.html"><svg class="glyph"><use href="#alacran"/></svg>Alacrán</a>
+  <div class="navlinks">
+    <a href="use-cases.html">Use cases</a>
+    <a href="templates.html">Templates</a>
+    <a href="marketplace.html">Marketplace</a>
+    <a href="integrations.html">Integrations</a>
+    <a href="docs.html">Docs</a>
+    <a href="how-to-use.html">How to use</a>
+    <a href="pricing.html">Pricing</a>
+  </div>
+  <div class="nav-right">
+    <button class="theme-toggle" id="tt" type="button" aria-label="Toggle day / night">&#9680;</button>
+    <a class="btn btn-primary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free</a>
   </div>
 </nav>
-
 <header class="hero" id="top">
   <div class="halo"></div>
   <div class="wrap">
-    <svg class="mark" aria-label="Alacrán"><use href="#alacran"/></svg>
+    <svg class="mark mark-glow" aria-label="Alacrán"><use href="#alacran"/></svg>
     <p class="eyebrow">AI-native company · on your machine</p>
     <h1>
       <span class="reveal-word" style="animation-delay:.05s">You</span>
@@ -264,114 +67,96 @@
       <span class="reveal-word ex" style="animation-delay:.26s">Alacrán</span>
       <span class="reveal-word ex" style="animation-delay:.34s">executes.</span>
     </h1>
-    <p class="hero-sub">Stand up an AI-native company on your own Mac, hand it your own AI agent, and let it run the work — patient, precise, and never a step you didn&rsquo;t approve.</p>
+    <p class="hero-sub">Stand up an AI-native company on your own Mac, bring your own AI agent, and let it run the work — patient, precise, and never a step you didn&rsquo;t approve.</p>
     <div class="hero-cta">
       <a class="btn btn-primary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free trial</a>
       <a class="btn btn-ghost" href="https://REPLACE-ME/download/Alacran.dmg">Download for macOS</a>
     </div>
-    <p class="hero-trust"><b>14-day free trial</b> · bring your own Claude · your data never leaves your machine</p>
+    <p class="hero-trust"><b>14-day free trial</b> · bring your own agent · your data never leaves your machine</p>
   </div>
 </header>
 
-<!-- ===== ORCHESTRATE DIAGRAM (animates on scroll) ===== -->
-<section class="orch" id="how">
+<section class="orch" id="orchestrate">
   <div class="wrap">
     <div class="head r">
       <p class="eyebrow">02 — Orchestrate</p>
       <h2>One company becomes a coordinated team.</h2>
-      <p>Create a company and Alacrán wires it up — a structure, its tools, and its workflows, all linked under your own agent and orchestrated from one place.</p>
+      <p>Create a company and Alacrán wires it up — a structure, its tools, and its workflows, all linked under your own agent and run from one place.</p>
     </div>
-
     <div class="stage r">
-      <svg class="diagram" viewBox="0 0 940 500" role="img" aria-label="Diagram: you delegate to Alacrán, which orchestrates your companies and their workflows">
-        <!-- links (drawn on scroll) -->
+      <svg class="diagram" viewBox="0 0 960 540" role="img" aria-label="You delegate to Alacrán, which orchestrates your companies and their workflows">
         <g>
-          <path class="link" pathLength="1" style="transition-delay:0s"    d="M470 76 L470 138" />
-          <path class="link" pathLength="1" style="transition-delay:.25s"  d="M470 196 C 470 250, 190 240, 190 292" />
-          <path class="link" pathLength="1" style="transition-delay:.30s"  d="M470 196 L470 292" />
-          <path class="link" pathLength="1" style="transition-delay:.35s"  d="M470 196 C 470 250, 750 240, 750 292" />
-          <path class="link" pathLength="1" style="transition-delay:.6s"   d="M190 350 C 190 400, 110 400, 110 430" />
-          <path class="link" pathLength="1" style="transition-delay:.65s"  d="M190 350 C 190 400, 270 400, 270 430" />
-          <path class="link" pathLength="1" style="transition-delay:.7s"   d="M470 350 C 470 400, 390 400, 390 430" />
-          <path class="link" pathLength="1" style="transition-delay:.75s"  d="M470 350 C 470 400, 550 400, 550 430" />
-          <path class="link" pathLength="1" style="transition-delay:.8s"   d="M750 350 C 750 400, 670 400, 670 430" />
-          <path class="link" pathLength="1" style="transition-delay:.85s"  d="M750 350 C 750 400, 830 400, 830 430" />
+          <path class="link" pathLength="1" style="transition-delay:0s"   d="M480 86 L480 130"/>
+          <path class="link" pathLength="1" style="transition-delay:.25s" d="M480 190 C 480 250, 180 246, 180 300"/>
+          <path class="link" pathLength="1" style="transition-delay:.3s"  d="M480 190 L480 300"/>
+          <path class="link" pathLength="1" style="transition-delay:.35s" d="M480 190 C 480 250, 780 246, 780 300"/>
+          <path class="link" pathLength="1" style="transition-delay:.6s"  d="M180 358 C 180 410, 105 408, 105 438"/>
+          <path class="link" pathLength="1" style="transition-delay:.65s" d="M180 358 C 180 410, 265 408, 265 438"/>
+          <path class="link" pathLength="1" style="transition-delay:.7s"  d="M480 358 C 480 410, 405 408, 405 438"/>
+          <path class="link" pathLength="1" style="transition-delay:.75s" d="M480 358 C 480 410, 565 408, 565 438"/>
+          <path class="link" pathLength="1" style="transition-delay:.8s"  d="M780 358 C 780 410, 705 408, 705 438"/>
+          <path class="link" pathLength="1" style="transition-delay:.85s" d="M780 358 C 780 410, 855 408, 855 438"/>
         </g>
-        <!-- a signal that travels the trunk once links are drawn -->
-        <circle class="pulse" r="4"><animateMotion dur="2.4s" begin="1.2s" repeatCount="indefinite" path="M470 76 L470 138 L470 196 L470 292"/></circle>
-
-        <!-- tier 0: you -->
-        <g class="node root" style="transition-delay:.1s">
-          <rect class="node-box" x="370" y="34" width="200" height="42" rx="21"/>
-          <text class="node-label" x="470" y="60" text-anchor="middle">You — set the goal</text>
-        </g>
-        <!-- tier 1: Alacrán hub -->
-        <g class="node hub" style="transition-delay:.35s">
-          <rect class="node-box" x="380" y="138" width="180" height="58" rx="16"/>
-          <text class="node-label" x="470" y="164" text-anchor="middle">Alacrán</text>
-          <text class="node-sub" x="470" y="182" text-anchor="middle">orchestrator · your agent</text>
-        </g>
-        <!-- tier 2: companies -->
-        <g class="node" style="transition-delay:.6s">
-          <rect class="node-box" x="110" y="292" width="160" height="58" rx="14"/>
-          <text class="node-label" x="190" y="318" text-anchor="middle">Acme Co</text>
-          <text class="node-sub" x="190" y="336" text-anchor="middle">company</text>
-        </g>
-        <g class="node" style="transition-delay:.65s">
-          <rect class="node-box" x="390" y="292" width="160" height="58" rx="14"/>
-          <text class="node-label" x="470" y="318" text-anchor="middle">Harbor</text>
-          <text class="node-sub" x="470" y="336" text-anchor="middle">company</text>
-        </g>
-        <g class="node" style="transition-delay:.7s">
-          <rect class="node-box" x="670" y="292" width="160" height="58" rx="14"/>
-          <text class="node-label" x="750" y="318" text-anchor="middle">Field Ops</text>
-          <text class="node-sub" x="750" y="336" text-anchor="middle">company</text>
-        </g>
-        <!-- tier 3: workflows -->
-        <g class="node" style="transition-delay:1.0s"><rect class="node-box" x="46" y="430" width="128" height="40" rx="12"/><text class="node-label" x="110" y="455" text-anchor="middle" style="font-size:13px">Inbox check</text></g>
-        <g class="node" style="transition-delay:1.05s"><rect class="node-box" x="206" y="430" width="128" height="40" rx="12"/><text class="node-label" x="270" y="455" text-anchor="middle" style="font-size:13px">Weekly digest</text></g>
-        <g class="node" style="transition-delay:1.1s"><rect class="node-box" x="326" y="430" width="128" height="40" rx="12"/><text class="node-label" x="390" y="455" text-anchor="middle" style="font-size:13px">Setup</text></g>
-        <g class="node" style="transition-delay:1.15s"><rect class="node-box" x="486" y="430" width="128" height="40" rx="12"/><text class="node-label" x="550" y="455" text-anchor="middle" style="font-size:13px">Decisions</text></g>
-        <g class="node" style="transition-delay:1.2s"><rect class="node-box" x="606" y="430" width="128" height="40" rx="12"/><text class="node-label" x="670" y="455" text-anchor="middle" style="font-size:13px">Daily report</text></g>
-        <g class="node" style="transition-delay:1.25s"><rect class="node-box" x="766" y="430" width="128" height="40" rx="12"/><text class="node-label" x="830" y="455" text-anchor="middle" style="font-size:13px">Retros</text></g>
+        <circle class="pulse" r="4"><animateMotion dur="2.6s" begin="1.3s" repeatCount="indefinite" path="M480 86 L480 130 L480 190 L480 300"/></circle>
+        <g class="node root" style="transition-delay:.1s"><rect class="n-card" x="370" y="42" width="220" height="44" rx="22"/><text class="n-lab" x="480" y="69" text-anchor="middle" font-size="15">You · set the goal</text></g>
+        <g class="node hub" style="transition-delay:.35s"><rect class="n-card" x="375" y="130" width="210" height="60" rx="16"/><text class="n-lab" x="480" y="157" text-anchor="middle" font-size="17">Alacrán</text><text class="n-sub" x="480" y="176" text-anchor="middle" font-size="10">your agent · orchestrator</text></g>
+        <g class="node" style="transition-delay:.6s"><rect class="n-card" x="95" y="300" width="170" height="58" rx="14"/><text class="n-lab" x="180" y="326" text-anchor="middle" font-size="15">Acme Co</text><text class="n-sub" x="180" y="344" text-anchor="middle" font-size="10">company</text></g>
+        <g class="node" style="transition-delay:.65s"><rect class="n-card" x="395" y="300" width="170" height="58" rx="14"/><text class="n-lab" x="480" y="326" text-anchor="middle" font-size="15">Harbor</text><text class="n-sub" x="480" y="344" text-anchor="middle" font-size="10">company</text></g>
+        <g class="node" style="transition-delay:.7s"><rect class="n-card" x="695" y="300" width="170" height="58" rx="14"/><text class="n-lab" x="780" y="326" text-anchor="middle" font-size="15">Field Ops</text><text class="n-sub" x="780" y="344" text-anchor="middle" font-size="10">company</text></g>
+        <g class="node" style="transition-delay:1s"><rect class="n-card" x="30" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="105" y="465" text-anchor="middle" font-size="13">Inbox check</text></g>
+        <g class="node" style="transition-delay:1.05s"><rect class="n-card" x="190" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="265" y="465" text-anchor="middle" font-size="13">Weekly digest</text></g>
+        <g class="node" style="transition-delay:1.1s"><rect class="n-card" x="330" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="405" y="465" text-anchor="middle" font-size="13">Company setup</text></g>
+        <g class="node" style="transition-delay:1.15s"><rect class="n-card" x="490" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="565" y="465" text-anchor="middle" font-size="13">Decisions</text></g>
+        <g class="node" style="transition-delay:1.2s"><rect class="n-card" x="630" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="705" y="465" text-anchor="middle" font-size="13">Daily report</text></g>
+        <g class="node" style="transition-delay:1.25s"><rect class="n-card" x="790" y="438" width="150" height="44" rx="12"/><text class="n-lab" x="865" y="465" text-anchor="middle" font-size="13">Retros</text></g>
       </svg>
     </div>
   </div>
 </section>
 
-<section class="band" id="usecases">
+<section class="section" id="features">
   <div class="wrap">
-    <div class="sec-head r"><p class="eyebrow">Use cases</p><h2>What a small company runs on — automated, but under your hand.</h2></div>
-    <div class="features r" id="integrations">
-      <div class="feat"><div class="dot"></div><h3>Create a company</h3><p>One click scaffolds a whole company from a template, git-initialized.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Guided or AI-drafted setup</h3><p>Answer four questions — or let your agent draft the details.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Bring your own agent</h3><p>Use your own Claude. Your subscription, your keys.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Connect your tools</h3><p>A concierge for linking APIs &amp; CLIs — Google and beyond.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Inbox at a glance</h3><p>A read-only summary of what&rsquo;s unread — never sends or deletes.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Installable workflows</h3><p>Drop packaged jobs onto any company in a click.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Git-tracked, always</h3><p>Every action is a commit. Full history, full undo.</p></div>
-      <div class="feat"><div class="dot"></div><h3>Approve before it commits</h3><p>Irreversible steps pause and wait for your yes.</p></div>
+    <div class="sec-head r"><p class="eyebrow">What&rsquo;s inside</p><h2>Everything a small company runs on — automated, but under your hand.</h2></div>
+    <div class="grid r">
+      <div class="card"><div class="dot"></div><h3>Create a company</h3><p>One click scaffolds a whole company from a template, git-initialized.</p></div>
+      <div class="card"><div class="dot"></div><h3>Guided or AI-drafted setup</h3><p>Answer four questions — or let your agent draft the details.</p></div>
+      <div class="card"><div class="dot"></div><h3>Bring your own agent</h3><p>Use your own Claude today; more agents supported over time.</p></div>
+      <div class="card"><div class="dot"></div><h3>Inbox at a glance</h3><p>A read-only summary of what&rsquo;s unread — never sends or deletes.</p></div>
+      <div class="card"><div class="dot"></div><h3>Installable workflows</h3><p>Drop packaged jobs onto any company in a click.</p></div>
+      <div class="card"><div class="dot"></div><h3>Approve before it commits</h3><p>Every change is a diff you approve. Full git history, full undo.</p></div>
     </div>
   </div>
 </section>
 
-<section class="local" id="templates">
+<section class="section" id="roadmap">
+  <div class="wrap">
+    <div class="sec-head r"><p class="eyebrow">Built to grow</p><h2>Bring your own agent. Add your own skills. Connect everything.</h2></div>
+    <div class="grid r">
+      <div class="card"><div class="dot"></div><h3>Bring your own agent</h3><p>Claude today — with more model and agent providers on the roadmap. Your subscription, your keys.</p></div>
+      <div class="card"><div class="dot"></div><h3>Growing integrations <span class="soon">soon</span></h3><p>Connect Google today; Slack, Notion, GitHub, Calendar and more are on the way — not just one service.</p></div>
+      <div class="card"><div class="dot"></div><h3>Create your own skills <span class="soon">soon</span></h3><p>Package a repeatable job into a skill — or let Alacrán draft a starter skill for you automatically.</p></div>
+      <div class="card"><div class="dot"></div><h3>Skills marketplace <span class="soon">soon</span></h3><p>Install skills others have built, and share your own.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="local" id="local">
   <div class="wrap r">
     <p class="eyebrow">Local by design</p>
     <h2>It runs where <span class="glow">you</span> do.</h2>
-    <p>Alacrán lives on your Mac. Your company&rsquo;s data, your agent, your keys — none of it leaves your machine. No cloud tenant, no black box you can&rsquo;t see into.</p>
+    <p>Alacrán lives on your Mac. Your company&rsquo;s data, your agent, your keys — none of it leaves your machine. No cloud tenant, no black box.</p>
     <div class="row"><span>Local server</span><span>Bring your own model</span><span>No data egress</span><span>Everything in git</span></div>
   </div>
 </section>
 
-<section class="band" id="pricing">
+<section class="section" id="pricing">
   <div class="wrap">
     <div class="sec-head center r"><p class="eyebrow">Pricing</p><h2>One plan. Start free.</h2></div>
     <div class="price-card r">
       <p class="tag">Alacrán</p>
       <div class="amt">$29<span>/mo</span></div>
       <p class="muted" style="font-size:.95rem">14-day free trial · cancel anytime</p>
-      <ul class="price-list">
+      <ul class="plist">
         <li>Unlimited companies on your machine</li>
         <li>Bring your own AI agent</li>
         <li>Guided &amp; AI-drafted setup</li>
@@ -383,60 +168,31 @@
     </div>
   </div>
 </section>
-
-<section class="band" id="docs">
-  <div class="wrap">
-    <div class="sec-head r"><p class="eyebrow">Before you start</p><h2>Built for people comfortable with a command line.</h2></div>
-    <div class="req r" id="marketplace">
-      <ul>
-        <li><b>macOS 12</b> or later</li>
-        <li><b>Node.js</b> installed</li>
-        <li><b>Claude Code CLI</b> — bring your own Claude subscription</li>
-        <li><b>gog</b> (Google CLI) — optional, to connect Gmail &amp; Calendar</li>
-      </ul>
-      <p class="note">Alacrán checks for these on first launch and walks you through anything that&rsquo;s missing — nothing to configure by hand.</p>
-    </div>
-  </div>
-</section>
-
 <section class="final">
-  <div class="halo" style="top:50%"></div>
   <div class="wrap r">
-    <svg class="mark" aria-hidden="true"><use href="#alacran"/></svg>
+    <svg class="mark mark-glow" aria-hidden="true"><use href="#alacran"/></svg>
     <h2>Command your company.</h2>
-    <p>Set it up once. Let Alacrán run the rest — in the dark, on your terms.</p>
+    <p>Set it up once. Let Alacr&aacute;n run the rest — on your terms.</p>
     <div class="cta"><a class="btn btn-primary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free trial</a></div>
   </div>
 </section>
-
 <footer>
   <div class="wrap foot-in">
-    <span>Alacrán &mdash; your AI-native company, on your machine.</span>
-    <span><a href="mailto:hello@REPLACE-ME" style="color:var(--red)">hello@REPLACE-ME</a></span>
+    <span>Alacr&aacute;n &mdash; your AI-native company, on your machine.</span>
+    <span class="foot-nav">
+      <a href="use-cases.html">Use cases</a><a href="integrations.html">Integrations</a>
+      <a href="docs.html">Docs</a><a href="pricing.html">Pricing</a>
+      <a href="mailto:hello@REPLACE-ME" style="color:var(--red)">hello@REPLACE-ME</a>
+    </span>
   </div>
 </footer>
-
 <script>
-  (function () {
-    var root = document.documentElement, btn = document.getElementById("tt");
-    if (btn) btn.addEventListener("click", function () {
-      var cur = root.getAttribute("data-theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
-    });
-  })();
-  (function () {
-    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var els = document.querySelectorAll(".r, .diagram");
-    if (!("IntersectionObserver" in window) || reduce) { els.forEach(function (e) { e.classList.add(e.classList.contains("diagram") ? "drawn" : "in"); }); return; }
-    var io = new IntersectionObserver(function (ents) {
-      ents.forEach(function (en) {
-        if (!en.isIntersecting) return;
-        en.target.classList.add(en.target.classList.contains("diagram") ? "drawn" : "in");
-        io.unobserve(en.target);
-      });
-    }, { threshold: 0.16 });
-    els.forEach(function (e) { io.observe(e); });
-  })();
+  (function(){var r=document.documentElement,b=document.getElementById("tt");
+    if(b)b.addEventListener("click",function(){var c=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");r.setAttribute("data-theme",c==="dark"?"light":"dark");});})();
+  (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".r,.diagram");
+    if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
+    var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});
+    els.forEach(function(e){io.observe(e);});})();
 </script>
 </body>
 </html>
