@@ -301,4 +301,27 @@ describe("runCompanyCommandImpl", () => {
       await rm(secondRoot, { recursive: true, force: true })
     }
   })
+
+  it("grants scoped Bash(gog ...) tools and omits --disallowedTools for a command declaring bashPatterns", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "check-inbox",
+      {},
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls[0].args[calls[0].args.indexOf("--allowedTools") + 1]).toBe(
+      "Read,Grep,Glob,Edit(notes/company/email-checks/**),Bash(gog -a auto gmail search*),Bash(gog -a auto gmail get*)"
+    )
+    expect(calls[0].args).not.toContain("--disallowedTools")
+  })
 })

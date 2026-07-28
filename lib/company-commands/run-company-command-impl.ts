@@ -136,24 +136,33 @@ export async function runCompanyCommandImpl(
     const editScopePattern =
       command.outputKind === "new-file-in-dir" ? `${command.outputPath}/**` : command.outputPath
 
+    const bashPatterns = command.bashPatterns ?? []
+    const allowedTools =
+      bashPatterns.length > 0
+        ? `Read,Grep,Glob,Edit(${editScopePattern}),${bashPatterns.map((p) => `Bash(${p})`).join(",")}`
+        : `Read,Grep,Glob,Edit(${editScopePattern})`
+    const spawnArgs = [
+      "-p",
+      prompt,
+      "--allowedTools",
+      allowedTools,
+      // Only commands that declare no bashPatterns get a blanket Bash
+      // disallow. A command with scoped Bash(...) patterns must NOT also
+      // pass --disallowedTools Bash, which would override the allow.
+      ...(bashPatterns.length > 0 ? [] : ["--disallowedTools", "Bash"]),
+      "--permission-mode",
+      "default",
+      "--output-format",
+      "text",
+    ]
+
     const logPath = path.join(dataDir, `${command.id}.log`)
     outFd = openSync(logPath, "a")
-    const child = spawnFn(
-      "claude",
-      [
-        "-p",
-        prompt,
-        "--allowedTools",
-        `Read,Grep,Glob,Edit(${editScopePattern})`,
-        "--disallowedTools",
-        "Bash",
-        "--permission-mode",
-        "default",
-        "--output-format",
-        "text",
-      ],
-      { cwd: agent.rootPath, detached: true, stdio: ["ignore", outFd, outFd] }
-    )
+    const child = spawnFn("claude", spawnArgs, {
+      cwd: agent.rootPath,
+      detached: true,
+      stdio: ["ignore", outFd, outFd],
+    })
     child.on("exit", () => {
       releaseRunLock(dataDir).catch(() => {})
     })
