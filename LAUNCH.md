@@ -439,6 +439,16 @@ truthful.
   Price + LS checkout remain placeholders (user setting up LS later). 272 tests
   green. **Next:** user sets up Lemon Squeezy + swaps checkout/price placeholders;
   then Day 4 end-to-end + demo.
+- **2026-07-28 — landing v4 (3D logo + polish).** Replaced the hero
+  logo with a **WebGL/Three.js 3D scorpion emblem** (`landing/logo3d.js`,
+  vendored `landing/vendor/three.min.js` r160) — a curled segmented tail
+  with stinger and pincers, metallic red, rim-lit, gentle idle motion;
+  falls back to the SVG scorpion when WebGL/Three is unavailable. Made
+  buttons **square with rounded corners** (`.btn` radius 999px→12px).
+  **Removed Marketplace** (nav item, page, roadmap card). Verified headless
+  (Chromium): 0 JS errors, canvas renders in light + dark. Preview (same
+  URL, three.js inlined): claude.ai/code/artifact/450d8c28-599d-4467-871b-a4a8caa4422b .
+  Best viewed via `open landing/index.html`.
 - **2026-07-28 — landing v3 (multi-page site).** Restructured `landing/`
   into a proper static multi-page site sharing `landing/styles.css`:
   `index.html` + 7 section pages (use-cases, templates, marketplace,
