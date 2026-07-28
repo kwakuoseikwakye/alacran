@@ -1,0 +1,37 @@
+# =============================================================================
+# HITL トリガー雛形 — 障害対応ゲート（incident）
+# =============================================================================
+# 障害・顧客影響・データ損失・セキュリティなど、対応を誤ると重大化する場面で
+# 人間の即時承認を挟むためのトリガー。書き方は _schema.md を参照。
+# <<TODO>> を自社の値に置き換えて使います。
+# =============================================================================
+
+version: 1
+id: incident
+name: 障害対応ゲート
+severity: critical                  # 会社存続レベル → critical（自動承認は禁止）
+
+description: |
+  重大度の高い障害・顧客データへの影響・セキュリティ侵害の疑い・コスト暴走など、
+  対応判断を誤ると取り返しがつかない場面で、人間の即時承認を必須とする。
+
+fire_when:
+  - when: "重大度の高い障害が発生"
+    condition: "<<TODO: 例 incident.severity in [P0, P1]>>"
+  - when: "顧客に影響が及んでいる"
+    condition: "<<TODO: 例 incident.affected_customers > 0>>"
+  - when: "データ損失の疑い"
+    condition: "true"               # データ損失は無条件で発火
+  - when: "セキュリティ侵害の疑い"
+    condition: "true"
+
+approver_role: "<<TODO: 例 owner / on-call>>"   # approver-registry.yaml の役割と対応
+notify: manual                      # 緊急のため即時確認（担当へチャット/口頭）
+on_timeout: escalate                # 時間内に応答なければ上位/代理へエスカレーション
+
+auto_proceed: false                 # critical は必ず false
+
+examples:
+  - "<<TODO: 例 本番サービスの全停止>>"
+  - "<<TODO: 例 顧客データの誤公開>>"
+  - "<<TODO: 例 想定外の従量課金が急増>>"

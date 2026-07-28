@@ -1,0 +1,105 @@
+# Verify — 検証機構 + サニタイズゲート + secret scan + 検証器自身のテスト
+#
+# 本テンプレの CI gate。4 段構え:
+#   1. rqt         — scripts/verify.py で RQT を実行 (機能検証)
+#   2. sanitize    — G1-G4 サニタイズゲート (機密混入検知)
+#   3. secret-scan — gitleaks (認証情報検知、private repo GHAS 未購入代替)
+#   4. test-verify — tests/ の unittest で verify.py 自身の回帰を検知 (偽緑禁止は検証器にも適用)
+#
+# branch protection の required checks には job 名 "rqt" / "sanitize" / "secret-scan" / "test-verify" を登録すること。
+
+name: Verify
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  rqt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pyyaml
+      - name: verify.py (RQT gate — FAIL は exit 1)
+        run: |
+          if [ -f scripts/verify.py ]; then
+            python3 scripts/verify.py
+          else
+            echo "scripts/verify.py 未整備 (Phase B-3 で追加予定)。skip。"
+          fi
+
+  sanitize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: G1 — PII (氏名・メール・GitHub ID) 検知
+        run: |
+          # 参加者は自社利用開始後、この gate を自社向けにカスタマイズしてよい
+          # (テンプレ配布時点では固定名の検知のみ)
+          if grep -rniE "kenken|syn\.ken|@gmail\.com" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .; then
+            echo "::error::G1 FAIL — PII 検出"
+            exit 1
+          fi
+          echo "G1 PASS"
+      - name: G2 — 自社インフラ・ブランド語検知
+        run: |
+          if grep -rniE "aidreams-factory|ai-company-prod|customercloud|customer\.cloud|カスタマークラウド|op://" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .; then
+            echo "::error::G2 FAIL — インフラ・ブランド語検出"
+            exit 1
+          fi
+          echo "G2 PASS"
+      - name: G3 — ホームディレクトリ固定パス検知
+        run: |
+          if grep -rnE "/Users/[a-z]+|~/\.ccagi|~/dev" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .; then
+            echo "::error::G3 FAIL — ホームパス検出"
+            exit 1
+          fi
+          echo "G3 PASS"
+      - name: G4 — 外部 SDK 残滓検知 (HITL-3 準拠)
+        run: |
+          # workflow (.github) + .gitignore は defensive exclusion pattern を含むので除外
+          if grep -rniE "ccagi|skill_execute|agent_run\(|pipeline_run|cci_query" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github --exclude=.gitignore .; then
+            echo "::error::G4 FAIL — 外部 SDK 残滓検出"
+            exit 1
+          fi
+          echo "G4 PASS"
+
+  test-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install pyyaml
+      - name: verify.py 自身の回帰テスト (Issue #42, 標準ライブラリ unittest のみ)
+        run: python3 -m unittest discover -s tests -v
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # gitleaks-action needs PR read to enumerate commits + issue comment for advisory
+    # org 配下のリポジトリでは GITLEAKS_LICENSE (secrets.GITLEAKS_LICENSE) が必須。
+    # 無償取得可（取得先: gitleaks.io）。org の repo secrets に登録した上で、下記 gitleaks
+    # step の env ブロックに GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }} を追加すること
+    # （個人アカウント配下では不要。README.md セキュリティ運用参照。Issue #52）
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (GHAS 未購入 private repo の secret scanning 代替)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'

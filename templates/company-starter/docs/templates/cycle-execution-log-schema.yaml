@@ -1,0 +1,90 @@
+# =============================================================================
+# サイクル実行ログ schema（cycle.jsonl）— チーム単位の汎用サイクルログ
+# =============================================================================
+# 業務サイクル 1 回の中で起きた出来事を 1 行 1 イベントの JSONL で追記していく
+# ための canonical な schema です。KPI 計測（definitions/kpi/）と振り返り
+# （definitions/retro/）はこのログを集計対象にします。
+#
+# 保存先（正）: state/cycles/<team-id>/<YYYY-MM-DD>/cycle.jsonl
+#   - state/ は git 追跡下（.gitignore 対象の一時領域とは別。永続 SSOT）
+#   - <team-id> は org.team の team_id（例: ec-team）
+#   - <YYYY-MM-DD> はサイクル開始日
+#
+# サイクル運用スクリプト（scripts/cycle/）が本 schema に沿ってイベントを追記します。
+# =============================================================================
+
+version: 1
+kind: cycle_execution_log_schema
+
+# ------------------------------------------------------------
+# 保存方式
+# ------------------------------------------------------------
+storage:
+  path_template: "state/cycles/<team-id>/<YYYY-MM-DD>/cycle.jsonl"  # <...> は実行時に自動置換される変数（<<TODO_*>> の要記入 placeholder とは別物）
+  format: "JSONL（1 行 = 1 イベント）"
+  encoding: UTF-8
+  append_only: true                 # 既存行は書き換えない（追記のみ）
+  git_tracked: true
+  retention: "全期間 git 保持"
+
+# ------------------------------------------------------------
+# 全イベント共通フィールド
+# ------------------------------------------------------------
+common_fields:
+  ts: "ISO 8601 のタイムスタンプ（例: 2026-07-06T00:00:01Z）"
+  team_id: "org.team の team_id（例: ec-team）"
+  cycle_id: "サイクル識別子（= 開始日、例: 2026-07-06）"
+  event_type: "イベント種別（下記 event_types のいずれか）"
+  sequence: "サイクル内の通し番号（単調増加、順序保証）"
+
+# ------------------------------------------------------------
+# イベント種別（最小セット）
+# ------------------------------------------------------------
+# 会社ごとに種別を足してよいが、以下 6 種は KPI 集計の基盤なので必ず残す。
+event_types:
+  - id: cycle_started
+    when: "サイクル開始時に 1 回"
+    extra_fields: [cycle_unit, planned_targets]
+
+  - id: task_executed
+    when: "サイクル内のタスク実行ごと（hitl_intervention_rate の分母）"
+    extra_fields: [task_label, outcome]
+
+  - id: hitl_gate_fired
+    when: "承認ゲートが発火したとき（hitl_intervention_rate の分子）"
+    extra_fields: [trigger_id, reason, approver_role]
+
+  - id: hitl_responded
+    when: "承認/却下の応答を受け取ったとき"
+    extra_fields: [paired_sequence, decision, responded_by, latency_min]
+
+  - id: error_occurred
+    when: "サイクル中のエラー（任意のタイミング）"
+    extra_fields: [error_class, severity, recovery_action]
+
+  - id: cycle_completed
+    when: "サイクル終了時に 1 回（成功/中断）"
+    extra_fields: [status, totals, kpi_snapshot]
+
+# ------------------------------------------------------------
+# 集計との対応（KPI へのマッピング）
+# ------------------------------------------------------------
+kpi_mapping:
+  cycle_completion_rate: "count(cycle_completed) / count(cycle_started)"
+  hitl_intervention_rate: "count(hitl_gate_fired) / count(task_executed)"
+
+# ------------------------------------------------------------
+# 不変条件（ログの健全性）
+# ------------------------------------------------------------
+invariants:
+  - "各サイクルに cycle_started と cycle_completed がちょうど 1 つずつ"
+  - "sequence は同一サイクル内で単調増加"
+  - "hitl_gate_fired には対応する hitl_responded か error_occurred がある"
+
+# ------------------------------------------------------------
+# イベント記入例
+# ------------------------------------------------------------
+examples:
+  - '{"ts":"2026-07-06T00:00:00Z","team_id":"ec-team","cycle_id":"2026-07-06","event_type":"cycle_started","sequence":1,"cycle_unit":"weekly"}'
+  - '{"ts":"2026-07-06T01:00:00Z","team_id":"ec-team","cycle_id":"2026-07-06","event_type":"hitl_gate_fired","sequence":5,"trigger_id":"large-deal","approver_role":"owner"}'
+  - '{"ts":"2026-07-12T23:00:00Z","team_id":"ec-team","cycle_id":"2026-07-06","event_type":"cycle_completed","sequence":42,"status":"success"}'

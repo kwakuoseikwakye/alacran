@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIカンパニー はじめてガイド — ai-retreat-starter</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ══════════ DESIGN TOKENS ══════════ */
+    :root {
+      --bg:          #ffffff;
+      --bg2:         #f8fafc;
+      --bg3:         #f1f5f9;
+      --border:      #e2e8f0;
+      --text:        #334155;
+      --heading:     #0f172a;
+      --muted:       #94a3b8;
+      --navy:        #0f2a4a;
+      --teal:        #0d9488;
+      --teal-light:  #f0fdfa;
+      --teal-border: #99f6e4;
+      --amber:       #d97706;
+      --amber-light: #fffbeb;
+      --amber-border:#fde68a;
+      --red:         #dc2626;
+      --red-light:   #fef2f2;
+      --red-border:  #fecaca;
+      --blue:        #2563eb;
+      --blue-light:  #eff6ff;
+      --blue-border: #bfdbfe;
+      --green:       #059669;
+      --green-light: rgba(5,150,105,.08);
+      --code-bg:     #0f172a;
+      --code-text:   #22d3ee;
+      --radius:      12px;
+      --shadow:      0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.08);
+    }
+    [data-theme="dark"] {
+      --bg:          #0e0c1a;
+      --bg2:         #17152c;
+      --bg3:         #201e38;
+      --border:      #2e2b4a;
+      --text:        #ccc8e8;
+      --heading:     #f0eeff;
+      --muted:       #7a7899;
+      --navy:        #818cf8;
+      --teal:        #2dd4bf;
+      --teal-light:  rgba(45,212,191,.07);
+      --teal-border: rgba(45,212,191,.25);
+      --amber:       #fbbf24;
+      --amber-light: rgba(251,191,36,.07);
+      --amber-border:rgba(251,191,36,.25);
+      --red:         #f87171;
+      --red-light:   rgba(248,113,113,.07);
+      --red-border:  rgba(248,113,113,.25);
+      --blue:        #60a5fa;
+      --blue-light:  rgba(96,165,250,.07);
+      --blue-border: rgba(96,165,250,.25);
+      --green:       #34d399;
+      --green-light: rgba(52,211,153,.08);
+      --code-bg:     #0a0a14;
+      --code-text:   #22d3ee;
+      --shadow:      0 1px 3px rgba(0,0,0,.3);
+      --shadow-md:   0 4px 12px rgba(0,0,0,.4);
+    }
+
+    /* ══════════ RESET ══════════ */
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', 'Noto Sans JP', -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.8;
+      transition: background-color .3s, color .3s;
+    }
+
+    /* ══════════ HERO ══════════ */
+    .hero {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 56px 24px 44px;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--teal-light);
+      border: 1px solid var(--teal-border);
+      color: var(--teal);
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      padding: 4px 14px; border-radius: 20px; margin-bottom: 22px;
+    }
+    .hero h1 {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(26px, 5vw, 40px);
+      font-weight: 900;
+      color: var(--heading);
+      line-height: 1.2;
+      margin-bottom: 12px;
+      letter-spacing: -.02em;
+    }
+    .hero h1 em { font-style: normal; color: var(--teal); }
+    .hero-sub { color: var(--muted); font-size: 14px; margin-bottom: 28px; }
+    .badges { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 14px;
+      font-size: 13px; color: var(--text); font-weight: 500;
+    }
+
+    /* ══════════ TOP BAR（テーマ切替のみ） ══════════ */
+    .os-bar {
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      position: sticky; top: 0; z-index: 200;
+      min-height: 53px;
+    }
+    .os-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+    .theme-btn {
+      position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 34px; height: 34px; border-radius: 50%;
+      border: 1.5px solid var(--border);
+      background: transparent; cursor: pointer;
+      font-size: 15px; transition: all .2s;
+    }
+    .theme-btn:hover { background: var(--bg3); }
+
+    /* ══════════ STEP NAV ══════════ */
+    .step-nav {
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+      padding: 8px 16px;
+      display: flex; gap: 6px; overflow-x: auto;
+      justify-content: center; flex-wrap: wrap;
+      position: sticky; top: 53px; z-index: 199;
+      scrollbar-width: none;
+    }
+    .step-nav::-webkit-scrollbar { display: none; }
+    .snav {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 14px; border-radius: 100px;
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--muted); font-size: 12px; font-weight: 700;
+      cursor: pointer; text-decoration: none; white-space: nowrap;
+      transition: all .2s; letter-spacing: .02em;
+    }
+    .snav:hover { border-color: var(--teal); color: var(--teal); background: var(--teal-light); }
+    .snav .n {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 19px; height: 19px; border-radius: 50%;
+      background: var(--bg3); font-size: 10px; font-weight: 700;
+      transition: all .2s;
+    }
+    .snav:hover .n { background: var(--teal); color: #fff; }
+
+    /* ══════════ MAIN ══════════ */
+    .main { max-width: 860px; margin: 0 auto; padding: 32px 20px 100px; }
+
+    /* ══════════ ACCORDION SECTION ══════════ */
+    .sec {
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+    .sec-head {
+      background: var(--bg);
+      padding: 18px 22px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer; user-select: none;
+      transition: background .15s;
+    }
+    .sec-head:hover { background: var(--bg2); }
+    .sec-head-l { display: flex; align-items: center; gap: 16px; }
+    .step-circle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 46px; height: 46px; border-radius: 50%;
+      font-weight: 900; font-size: 18px; flex-shrink: 0;
+      font-family: 'Inter', sans-serif;
+    }
+    .sc-navy { background: var(--navy); color: #fff; }
+    .sc-teal { background: var(--teal); color: #fff; }
+    .sc-gray { background: var(--bg3); color: var(--muted); border: 1.5px solid var(--border); font-size: 20px; }
+    .sec-lbl {
+      font-size: 10px; font-weight: 700; color: var(--teal);
+      letter-spacing: .12em; text-transform: uppercase; margin-bottom: 2px;
+    }
+    .sec-title { font-size: 16px; font-weight: 700; color: var(--heading); }
+    .sec-right { display: flex; align-items: center; gap: 10px; }
+    .sec-time {
+      font-size: 12px; color: var(--muted);
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 3px 10px; border-radius: 100px; white-space: nowrap;
+    }
+    .chev { color: var(--muted); font-size: 14px; flex-shrink: 0; transition: transform .3s; }
+    .sec.open .chev { transform: rotate(180deg); }
+    .sec-body {
+      background: var(--bg);
+      border-top: 1px solid var(--border);
+      max-height: 0; overflow: hidden;
+      transition: max-height .4s ease, padding .3s;
+      padding: 0 24px;
+    }
+    .sec.open .sec-body { max-height: 8000px; padding: 24px 24px 28px; }
+
+    /* ══════════ STEP LIST ══════════ */
+    .slist { list-style: none; counter-reset: sc; }
+    .si { display: flex; gap: 13px; margin-bottom: 14px; counter-increment: sc; }
+    .si::before {
+      content: counter(sc);
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 26px; height: 26px; border-radius: 50%;
+      background: var(--teal); color: #fff;
+      font-size: 12px; font-weight: 700; font-family: 'Inter', sans-serif;
+      flex-shrink: 0; margin-top: 3px;
+    }
+    .si-body { flex: 1; }
+    .si-body strong { color: var(--heading); font-weight: 700; }
+    .si-body small { color: var(--muted); font-size: 12px; }
+
+    /* ══════════ CALLOUTS ══════════ */
+    .cl {
+      border-left: 3px solid; border-radius: 0 8px 8px 0;
+      padding: 12px 15px; margin: 14px 0;
+    }
+    .cl-title {
+      font-size: 13px; font-weight: 700; margin-bottom: 4px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .cl p { font-size: 14px; line-height: 1.75; }
+    .cl-tip   { background: var(--green-light);  border-color: var(--green); }
+    .cl-tip .cl-title   { color: var(--green); }
+    .cl-warn  { background: var(--amber-light);  border-color: var(--amber); }
+    .cl-warn .cl-title  { color: var(--amber); }
+    .cl-info  { background: var(--blue-light);   border-color: var(--blue); }
+    .cl-info .cl-title  { color: var(--blue); }
+    .cl-teal  { background: var(--teal-light);   border-color: var(--teal); }
+    .cl-teal .cl-title  { color: var(--teal); }
+    .cl-err   { background: var(--red-light);    border-color: var(--red); }
+    .cl-err .cl-title   { color: var(--red); }
+
+    /* ══════════ CODE BLOCK ══════════ */
+    .code-block {
+      background: var(--code-bg);
+      border-radius: 8px; padding: 14px 16px;
+      margin: 12px 0; font-size: 13px;
+      font-family: 'Courier New', monospace;
+      color: var(--code-text);
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      word-break: break-all;
+    }
+    .code-block a { color: var(--code-text); }
+    .cp-btn {
+      background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+      color: #94a3b8; border-radius: 6px; padding: 4px 10px;
+      font-size: 11px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+      transition: all .2s; font-family: inherit;
+    }
+    .cp-btn:hover { background: rgba(255,255,255,.18); color: #e2e8f0; }
+    .cp-btn.copied { color: #22d3ee; border-color: rgba(34,211,238,.4); }
+
+    code {
+      background: var(--code-bg); border-radius: 4px;
+      padding: 1px 7px; font-family: 'Courier New', monospace;
+      font-size: 13px; color: var(--code-text);
+    }
+
+    /* ══════════ TABLE ══════════ */
+    .ttable {
+      width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 14px;
+    }
+    .ttable th {
+      background: var(--bg2); border: 1px solid var(--border);
+      padding: 10px 14px; text-align: left;
+      color: var(--heading); font-weight: 700; font-size: 13px;
+    }
+    .ttable td {
+      border: 1px solid var(--border); padding: 10px 14px;
+      vertical-align: top; line-height: 1.65;
+    }
+    .ttable tr:nth-child(even) td { background: var(--bg2); }
+
+    /* ══════════ FLOW DIAGRAM ══════════ */
+    .flow {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 16px; margin: 14px 0;
+      font-family: 'Courier New', monospace; font-size: 13px;
+      color: var(--heading); text-align: center;
+      overflow-x: auto; white-space: pre; line-height: 1.9;
+    }
+
+    /* ══════════ FOOTER ══════════ */
+    .closing {
+      background: var(--teal-light); border: 1px solid var(--teal-border);
+      border-radius: var(--radius); padding: 28px 24px; margin-top: 28px;
+      text-align: center;
+    }
+    .closing h3 { color: var(--teal); font-size: 16px; margin-bottom: 10px; }
+    .closing p { font-size: 14px; line-height: 1.9; }
+    .closing .punch { font-size: 16px; font-weight: 900; color: var(--heading); margin-top: 12px; }
+    .footer-note { text-align: center; color: var(--muted); font-size: 12px; margin-top: 32px; }
+
+    hr { border: none; border-top: 1px solid var(--border); margin: 22px 0; }
+    a { color: var(--teal); text-decoration: underline; text-underline-offset: 3px; text-decoration-thickness: 1px; }
+    a:hover { opacity: .8; }
+    [data-theme="dark"] a { color: #5ce8ff; }
+    strong { color: var(--heading); font-weight: 700; }
+    h4 { color: var(--heading); font-size: 14px; margin: 18px 0 8px; }
+    p { margin-bottom: 10px; }
+
+    @media(max-width:600px){
+      .hero { padding: 36px 16px 28px; }
+      .main { padding: 20px 12px 80px; }
+      .os-bar { padding: 10px 12px; }
+      .sec.open .sec-body { padding: 16px 14px 20px; }
+      .sec-head { padding: 14px 16px; }
+      .step-circle { width: 38px; height: 38px; font-size: 15px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════ HERO ════ -->
+<header class="hero">
+  <div class="hero-tag">🏢 AI 駆動経営合宿｜ai-retreat-starter</div>
+  <h1>AI を「社員」にする、<br>小さな会社の<em>はじめ方</em></h1>
+  <p class="hero-sub">プログラミング経験ゼロでも大丈夫。むずかしい用語は、ぜんぶ日本語で説明します。</p>
+  <div class="badges">
+    <span class="badge">⏱ 最初の1周は 30分〜1時間</span>
+    <span class="badge">🔰 非エンジニア向け</span>
+    <span class="badge">🍎 Mac / 🪟 Windows 両対応</span>
+  </div>
+</header>
+
+<!-- ════ TOP BAR ════ -->
+<nav class="os-bar" id="osBar">
+  <span class="os-label">上から順番に読んでください。コマンド（黒い枠）は、今は読むだけでOK。</span>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="ライト／ダークモード切替">🌙</button>
+</nav>
+
+<!-- ════ STEP NAV ════ -->
+<nav class="step-nav">
+  <a class="snav" href="#s0" onclick="openSec('s0')"><span class="n">0</span> これは何？</a>
+  <a class="snav" href="#s1" onclick="openSec('s1')"><span class="n">1</span> 5つの部品</a>
+  <a class="snav" href="#s2" onclick="openSec('s2')"><span class="n">2</span> 流れとお約束</a>
+  <a class="snav" href="#s3" onclick="openSec('s3')"><span class="n">3</span> メモ箱</a>
+  <a class="snav" href="#s4" onclick="openSec('s4')"><span class="n">4</span> 道具をそろえる</a>
+  <a class="snav" href="#s5" onclick="openSec('s5')"><span class="n">5</span> 最初の1周</a>
+  <a class="snav" href="#s6" onclick="openSec('s6')"><span class="n">6</span> 3日目まで</a>
+  <a class="snav" href="#sq" onclick="openSec('sq')"><span class="n">❓</span> こまったら</a>
+  <a class="snav" href="#sd" onclick="openSec('sd')"><span class="n">📖</span> 用語辞典</a>
+</nav>
+
+<!-- ════ MAIN ════ -->
+<main class="main">
+
+  <!-- ════ SEC 0: これは何？ ════ -->
+  <div class="sec open" id="s0">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-navy">0</div>
+        <div>
+          <div class="sec-lbl">イントロ</div>
+          <div class="sec-title">これは何？ — 30秒でわかる説明</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約3分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <p><strong>AIカンパニー</strong>とは、AI（人工知能）を「社員」のように働かせる、小さな会社のしくみです。</p>
+      <ol class="slist">
+        <li class="si"><div class="si-body"><strong>あなた（社長）</strong>が、AIに「これをやって」と指示を出します。</div></li>
+        <li class="si"><div class="si-body">AIは指示のとおりに、資料を作ったり、計算したり、記録をつけたりします。</div></li>
+        <li class="si"><div class="si-body"><strong>大事な判断（お金を使う、契約する）だけは、必ずあなたが最後にOKを出します。</strong></div></li>
+      </ol>
+      <p>このリポジトリ（=フォルダのかたまり）は、その<strong>会社のしくみのひな形（テンプレート）</strong>です。
+      たとえるなら「マンガ雑誌の投稿用原稿用紙」。枠だけ用意してあって、中身（あなたの会社の情報）は、これから一緒に書きこんでいきます。</p>
+
+      <h4>登場人物は3人だけ</h4>
+      <table class="ttable">
+        <thead><tr><th>登場人物</th><th>役わり</th><th>たとえるなら</th></tr></thead>
+        <tbody>
+          <tr><td><strong>あなた</strong></td><td>社長。指示を出す人、最後にOKを出す人</td><td>クラスの係を決める先生</td></tr>
+          <tr><td><strong>Claude Code</strong>（クロード・コード）</td><td>AI社員。指示を受けて実際に動く人</td><td>まじめでよく働く新入社員</td></tr>
+          <tr><td><strong>GitHub</strong>（ギットハブ）</td><td>記録係。やることリストや作った書類をぜんぶ保管する場所</td><td>クラスの黒板 + ロッカー</td></tr>
+        </tbody>
+      </table>
+      <div class="flow">あなた（社長）
+   │ 「これやって」
+   ▼
+Claude Code（AI社員）
+   │ 「できました」
+   ▼
+GitHub（記録係の黒板）
+   │
+ぜんぶの記録がここに残る</div>
+
+      <h4>なぜ「会社」なの？</h4>
+      <p>「AIに毎回同じことを説明するのが面倒」「昨日どこまで話したか忘れた」「AIが勝手にやりすぎてこまる」——
+      これらは全部、<strong>「会社のしくみ」が無いから</strong>起こります。</p>
+      <div class="cl cl-teal">
+        <div class="cl-title">🏢 会社らしいしくみ = AIが迷わないしくみ</div>
+        <p>会社には<strong>社内ルール</strong>があるから新入社員が迷わない。<strong>引き継ぎノート</strong>があるから担当が変わっても仕事がつづく。<strong>上司の承認</strong>があるから勝手にお金を使われない。このテンプレートは、これらを AI 用に用意した箱です。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 1: 部品5つ ════ -->
+  <div class="sec" id="s1">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-navy">1</div>
+        <div>
+          <div class="sec-lbl">しくみを知る</div>
+          <div class="sec-title">会社のしくみ — 大事な部品は5つ</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約5分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <p>フォルダとファイルはたくさんありますが、<strong>本当に覚えるべき部品は5つ</strong>です。</p>
+      <table class="ttable">
+        <thead><tr><th>部品</th><th>場所</th><th>中身</th><th>たとえ</th></tr></thead>
+        <tbody>
+          <tr><td><strong>① CLAUDE.md</strong><br>会社の憲法</td><td>いちばん上のフォルダ</td><td>「うちの会社はこういう決まりで動きます」というルールブック。Claude Code は仕事を始めるとき<strong>必ずこれを読みます</strong></td><td>学校の校則</td></tr>
+          <tr><td><strong>② .claude/rules/</strong><br>細かい社内ルール</td><td><code>.claude/rules/</code></td><td>「Issue（お仕事チケット）を先に作ってね」「勝手に大きな変更しないでね」などの約束ごと</td><td>部活のルール</td></tr>
+          <tr><td><strong>③ definitions/</strong><br>自社のデータ</td><td><code>definitions/</code></td><td>あなたの会社の情報（お客さんは誰か、商品は何か）。<strong>最初は空っぽ</strong>。これから書きこんでいく場所</td><td>社員名簿と商品カタログ</td></tr>
+          <tr><td><strong>④ .claude/commands/</strong><br>おまじない集</td><td><code>.claude/commands/</code></td><td><code>/define-company</code> みたいな「よく使うおまじない」の作り方。<strong>ぜんぶで9個</strong>。使いたいときにボタンを押すだけ</td><td>電子レンジのあたためボタン</td></tr>
+          <tr><td><strong>⑤ HANDOFF.md</strong><br>引き継ぎノート</td><td>いちばん上のフォルダ</td><td>「きょうはここまでやりました。次はここからやってね」というメモ。セッションが終わるたびに、次の自分に手紙を書く感じ</td><td>リレーのバトン</td></tr>
+        </tbody>
+      </table>
+      <div class="cl cl-tip">
+        <div class="cl-title">💡 ポイント</div>
+        <p>この5つさえ覚えれば、あとは必要なときに調べれば大丈夫です。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 2: 流れとお約束 ════ -->
+  <div class="sec" id="s2">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-navy">2</div>
+        <div>
+          <div class="sec-lbl">しくみを知る</div>
+          <div class="sec-title">仕事の流れ（5ステップ）と 6つのお約束</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約5分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <p>どんな仕事も、この<strong>5つのフェーズ（段階）</strong>をぐるぐる回すだけです。</p>
+      <div class="flow">① 定義 → ② 計画 → ③ 実行 → ④ 検証 → ⑤ 記録
+                                    │
+             ┌──────────────────────┘
+             ▼
+       次のサイクルへ</div>
+      <table class="ttable">
+        <thead><tr><th>フェーズ</th><th>やること</th><th>たとえるなら</th></tr></thead>
+        <tbody>
+          <tr><td>① 定義</td><td>「うちの会社はこういう会社です」を書きだす</td><td>名刺を作る</td></tr>
+          <tr><td>② 計画</td><td>「今度これをやります」と GitHub に書く（お仕事チケット=Issue を作る）</td><td>買い物リストを書く</td></tr>
+          <tr><td>③ 実行</td><td>Claude Code と一緒に、実際に作業する</td><td>買い物に行く</td></tr>
+          <tr><td>④ 検証</td><td>「ちゃんとできてる？」を機械にチェックしてもらう</td><td>レシートで金額を確認する</td></tr>
+          <tr><td>⑤ 記録</td><td>「きょうはここまでやりました」と書き残す</td><td>家計簿に書きこむ</td></tr>
+        </tbody>
+      </table>
+      <p><small>小さな仕事（誤字を1文字直すだけ、など）は ① と ② を飛ばしてもOK。でも大きな仕事や、あとで取り消せない仕事は、必ず ① から順に通してください。</small></p>
+
+      <h4>大事な6つのお約束</h4>
+      <p>全部覚えなくても、最初は名前だけ知っておけば大丈夫。</p>
+      <table class="ttable">
+        <thead><tr><th>お約束</th><th>ひとことで言うと</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Issue-First</strong>（イシューファースト）</td><td>仕事は、まず GitHub にチケットを作ってから始める</td></tr>
+          <tr><td><strong>HITL Gate</strong>（ヒットル・ゲート）</td><td>お金・契約・取り消せない操作は、必ず人間がOKを出す</td></tr>
+          <tr><td><strong>SSOT</strong>（エスエスオーティー）</td><td>大事な情報は「1か所だけ」にまとめる</td></tr>
+          <tr><td><strong>Scope Contract</strong>（スコープ・コントラクト）</td><td>始める前に「どこまでやるか」を宣言する</td></tr>
+          <tr><td><strong>偽緑禁止</strong>（にせみどり・きんし）</td><td>「動いてないのに動いたフリ」をさせない</td></tr>
+          <tr><td><strong>セッション引き継ぎ</strong></td><td>作業の終わりに、次の自分に手紙を書く</td></tr>
+        </tbody>
+      </table>
+      <div class="cl cl-warn">
+        <div class="cl-title">⚠️ とくに大事なのは HITL Gate（人間の承認）</div>
+        <p>AIは速いですが、お金を使ったり、大事なデータを消したりする前には、<strong>必ず一度立ち止まって、あなたに聞くようになっています</strong>。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 3: メモ箱 ════ -->
+  <div class="sec" id="s3">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-teal">3</div>
+        <div>
+          <div class="sec-lbl">しくみを知る</div>
+          <div class="sec-title">メモ箱（notes/）— 思いついたことを放りこむ場所</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約5分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <p>会社には <code>definitions/</code>（社員名簿や商品カタログ）という「きちんとした書類棚」とは別に、
+      <strong>「メモ帳の棚」</strong>が用意されています。それが <code>notes/</code>（ノーツ）です。
+      商談のあと、移動中——ふっと「あ、これメモしておきたい」というときのための場所です。</p>
+
+      <h4>あなたが自由に書いていいのは「メモ箱」だけ</h4>
+      <ol class="slist">
+        <li class="si"><div class="si-body"><strong>あなた（社長）が自由に書いていいのは <code>notes/inbox/</code>（メモ箱）だけ</strong>、と覚えてください。</div></li>
+        <li class="si"><div class="si-body">書き方（format）を気にせず、<strong>走り書きでOK</strong>。「きれいに書かなきゃ」と気負わなくて大丈夫。</div></li>
+        <li class="si"><div class="si-body">他の小部屋（会社の物語・他社情報・お客さんメモ・手順書）には直接書きこまない。そこは <strong>AI社員が整理してくれる場所</strong>だからです。</div></li>
+      </ol>
+
+      <h4>スマホやタブレットからも書ける</h4>
+      <p><strong>Obsidian（オブシディアン）</strong>という無料のメモアプリでこのフォルダを開くと、外出先からでもメモを落とせます。
+      Obsidian が無くても大丈夫——<strong>パソコンで開いたときに、スマホの純正メモからコピペで貼り付けるだけでもOK</strong>。
+      くわしい同期のしかたは <code>notes/inbox/README.md</code> に書いてあります。</p>
+
+      <h4>放りこんだメモは、AI社員が整理してくれる</h4>
+      <p>次に Claude Code と作業を始めたとき、このおまじないでメモ箱の中身を確認してもらえます:</p>
+      <div class="code-block">
+        <span class="code-text">/ingest-context inbox</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p>AI社員は、メモに<strong>機密（実名・金額・パスワードなど）が混ざっていないか</strong>をチェックしてから、正しい小部屋へ整理してくれます。</p>
+      <table class="ttable">
+        <thead><tr><th>メモの中身</th><th>整理される先</th></tr></thead>
+        <tbody>
+          <tr><td>自社の物語・戦略メモ</td><td>「会社の物語」の棚（<code>notes/company/</code>）</td></tr>
+          <tr><td>他社・競合・市場のこと</td><td>「他社情報」の棚（<code>notes/market/</code>）</td></tr>
+          <tr><td>お客さんとの商談メモ</td><td>「お客さんメモ」の棚（<code>notes/clients/</code>）</td></tr>
+          <tr><td>作業の手順</td><td>「手順書」の棚（<code>notes/sops/</code>）</td></tr>
+        </tbody>
+      </table>
+      <div class="cl cl-tip">
+        <div class="cl-title">💡 安心設計</div>
+        <p>メモ箱に7日以上放置すると、<code>/verify</code>（チェック機械）が「たまってるよ」と教えてくれます。つまり、あなたは<strong>「とりあえず放りこむ」だけ</strong>でよくて、片づけは AI社員にまかせられます。</p>
+      </div>
+      <div class="cl cl-err">
+        <div class="cl-title">🚫 大事な注意 — メモ箱にも書いてはいけないもの</div>
+        <p>メモ箱は git（記録係の黒板）に載って保存されます。<strong>実名・金額・パスワードは、メモ箱にも書かないでください。</strong>認証情報は <code>secrets/</code> という別の「金庫」へ（そこは黒板には載りません）。迷ったら <code>secrets/</code> へ、と覚えておけば安全です。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 4: 道具をそろえる ════ -->
+  <div class="sec" id="s4">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-teal">4</div>
+        <div>
+          <div class="sec-lbl">手を動かす（ステップ1〜4）</div>
+          <div class="sec-title">道具をそろえて、起動する</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約20分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <h4>ステップ1. 道具をそろえる（買い物リスト）</h4>
+      <table class="ttable">
+        <thead><tr><th>道具</th><th>何をするもの？</th><th>どうやって入れる？</th></tr></thead>
+        <tbody>
+          <tr><td>Git（ギット）</td><td>ファイルの履歴を残す道具</td><td><a href="https://git-scm.com" target="_blank">git-scm.com</a> からダウンロード</td></tr>
+          <tr><td>Python 3（パイソン）</td><td>チェックスクリプトを動かす言語</td><td><a href="https://python.org" target="_blank">python.org</a> からダウンロード</td></tr>
+          <tr><td>Claude Code</td><td>AI社員本体</td><td>Claude の月額プランに入って、公式サイトからダウンロード</td></tr>
+          <tr><td>GitHub アカウント</td><td>記録係の黒板</td><td><a href="https://github.com" target="_blank">github.com</a> で無料登録</td></tr>
+          <tr><td>GitHub CLI（<code>gh</code>）</td><td>パソコンから GitHub をあやつる道具</td><td><a href="https://cli.github.com" target="_blank">cli.github.com</a> からダウンロード</td></tr>
+        </tbody>
+      </table>
+      <p><strong>確認のしかた</strong> — パソコンの「ターミナル」（黒い画面）を開いて、こう打ちます:</p>
+      <div class="code-block">
+        <span class="code-text">git --version && python3 --version && claude --version && gh --version</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p><small>それぞれバージョン番号が出たら、その道具は入っています。「command not found」と出たら、まだ入っていません。</small></p>
+
+      <h4>ステップ2. 自分のリポジトリを作る</h4>
+      <ol class="slist">
+        <li class="si"><div class="si-body">GitHub の画面で、このテンプレートの <strong>"Use this template"</strong> ボタンを押す。</div></li>
+        <li class="si"><div class="si-body"><strong>必ず "Private"（プライベート）を選ぶ</strong>（あなたの会社の情報を扱うので、外に見えないほうが安全）。名前は好きな名前でOK（例: <code>my-ai-company</code>）。</div></li>
+        <li class="si"><div class="si-body">自分のパソコンにコピー（clone、クローン）する:</div></li>
+      </ol>
+      <div class="code-block">
+        <span class="code-text">git clone git@github.com:あなたのアカウント名/リポジトリ名.git && cd リポジトリ名</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+
+      <h4>ステップ3. Claude Code を起動する</h4>
+      <div class="code-block">
+        <span class="code-text">claude</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p>Claude Code が起動して、あいさつしてきます。このとき<strong>自動で CLAUDE.md（会社の憲法）を読みます</strong>。あいさつの時点で、会社のルールが頭に入っています。</p>
+
+      <h4>ステップ4. まず1回だけ、チェック機械を動かしてみる</h4>
+      <div class="code-block">
+        <span class="code-text">/verify</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <div class="cl cl-tip">
+        <div class="cl-title">💡 最初は「INFO」だらけで正解</div>
+        <p>「うちの会社、ちゃんとルールを守ってる？」を機械にチェックしてもらうおまじないです。<strong>最初はほとんど「INFO（まだデータが無いのでスキップ）」が出ます。それが正解です。</strong>これから中身を入れていくと、だんだん「PASS（合格）」が増えていきます。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 5: 最初の1周 ════ -->
+  <div class="sec" id="s5">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-teal">5</div>
+        <div>
+          <div class="sec-lbl">手を動かす（ステップ5〜9）</div>
+          <div class="sec-title">自社を定義して、最初の1周を回す</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 約30分</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <h4>ステップ5. 自社を定義する（いちばん大事!）</h4>
+      <div class="code-block">
+        <span class="code-text">/define-company</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p>Claude Code が、4つの質問を1つずつ聞いてきます:</p>
+      <ol class="slist">
+        <li class="si"><div class="si-body"><strong>どんな問題を解決している会社ですか？</strong><br><small>例: 「近所のパン屋さんの、レシピ管理と在庫管理を楽にする道具を作っています」</small></div></li>
+        <li class="si"><div class="si-body"><strong>主なお客さんは誰ですか？</strong><br><small>例: 「街の小さなパン屋の店長さん」</small></div></li>
+        <li class="si"><div class="si-body"><strong>どんな流れで価値を生み出していますか？</strong><br><small>例: 「レシピ入力 → 材料の在庫チェック → 発注アラート」</small></div></li>
+        <li class="si"><div class="si-body"><strong>今、いちばん困っていることは何ですか？</strong><br><small>例: 「発注を人の勘でやっているので、材料が余ったり足りなかったりする」</small></div></li>
+      </ol>
+      <p>急がなくて大丈夫。答えをもとに、<code>definitions/ontology/company.yaml</code> という「会社の名刺ファイル」を作ってくれます。</p>
+
+      <h4>ステップ6. できあがった名刺を眺める</h4>
+      <p><code>definitions/ontology/company.yaml</code> を開いて、「これで合ってるかな？」と眺めてください。ちがうところは、その場で書き直しても大丈夫。<strong>この時点で、AI社員はあなたの会社のことを知っている状態になりました。</strong></p>
+
+      <h4>ステップ7. 最初のお仕事チケット（Issue）を作る</h4>
+      <p>なにか小さな仕事をやってみましょう。Issue-First の原則にしたがって、先にチケットを作ります:</p>
+      <div class="code-block">
+        <span class="code-text">新しい Issue を作って: 「HANDOFF.md に自己紹介を追加する」</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p>Claude Code が GitHub に Issue を起票してくれます。これで<strong>作業の予約</strong>ができました。</p>
+
+      <h4>ステップ8. 作業する</h4>
+      <div class="code-block">
+        <span class="code-text">今作った Issue の作業を進めて</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p>Claude Code は、始める前にかならず<strong>「これを変えます、これは触りません」</strong>を宣言してから作業します（= Scope Contract のお約束）。あなたはそれを見て、OKなら「進めて」と答えるだけ。終わったら自動でコミット（=セーブ）してくれます。</p>
+
+      <h4>ステップ9. 記録を残して終わる</h4>
+      <div class="code-block">
+        <span class="code-text">/handoff</span>
+        <button class="cp-btn" onclick="cp(this)">コピー</button>
+      </div>
+      <p><strong>HANDOFF.md（引き継ぎノート）</strong>が更新され、「きょうはここまで。次はここから」というメモが残ります。次のセッションは、このノートを読むところから始めればOK。</p>
+      <div class="cl cl-tip">
+        <div class="cl-title">🎉 おつかれさまでした</div>
+        <p>これで最初のサイクルが1周まわりました！</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ════ SEC 6: 3日目まで ════ -->
+  <div class="sec" id="s6">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-teal">6</div>
+        <div>
+          <div class="sec-lbl">慣れる</div>
+          <div class="sec-title">3日目までにやるといいこと</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="sec-time">⏱ 3日間</span>
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <p>はじめの1〜3日で慣れるために、こんな順番で試すのがおすすめです。</p>
+      <table class="ttable">
+        <thead><tr><th>日</th><th>やること</th><th>使うおまじない</th></tr></thead>
+        <tbody>
+          <tr><td>1日目</td><td>「ステップ1〜9」を通して1周まわす</td><td><code>/define-company</code> <code>/verify</code> <code>/handoff</code></td></tr>
+          <tr><td>2日目</td><td>大きめの仕事を Epic（親チケット）に分解してみる</td><td><code>/create-epic</code></td></tr>
+          <tr><td>3日目</td><td>大事な決めごとの記録を残す練習。メモを AI に質問されながら、きちんとした形で棚に直接しまう練習</td><td><code>/decision</code> <code>/retro</code> <code>/stock-note</code></td></tr>
+          <tr><td>慣れてきたら</td><td>この1週間で増えたメモ・決めごとのまとめ（週報のようなもの）を AI に作ってもらう</td><td><code>/digest</code></td></tr>
+        </tbody>
+      </table>
+      <p>これで、5つのフェーズ全部を1回ずつ体験できます。体験しおわると、「あ、これはこう回すのか」というリズムがつかめます。</p>
+    </div>
+  </div>
+
+  <!-- ════ TROUBLESHOOTING ════ -->
+  <div class="sec" id="sq">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-gray">❓</div>
+        <div>
+          <div class="sec-lbl">トラブルシュート</div>
+          <div class="sec-title">こまったときの逃げ道</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <table class="ttable">
+        <thead><tr><th>症状</th><th>対処法</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Claude Code がルールを守ってくれない気がする</td>
+            <td>「CLAUDE.md を読んだ？ 5フェーズと6原則を教えて」と聞いてみる。答えられればルールを知っています。答えられなければ CLAUDE.md を Read してもらいましょう</td>
+          </tr>
+          <tr>
+            <td><code>/verify</code> が「FAIL」と言ってきた</td>
+            <td><strong>かならず中身を読む</strong>。「めんどうだから消しちゃえ」はNG（=偽緑禁止のお約束違反）。FAIL の内容をコピペして「これ、どうすれば直る？」と聞けば、直し方を教えてくれます</td>
+          </tr>
+          <tr>
+            <td>Claude Code が勝手にお金や契約のことをやろうとしている</td>
+            <td><strong>止めてください</strong>。それは HITL Gate（人間の承認）が必要な操作です。「これは私が判断するから、止まって」と言えば止まります</td>
+          </tr>
+          <tr>
+            <td>何をどこに書けばいいのか、迷った</td>
+            <td>CLAUDE.md の <strong>§4.5「コンテキスト地図」</strong>に「この情報はどこに置く？」の対応表があります</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ════ 用語辞典 + 次に読むもの ════ -->
+  <div class="sec" id="sd">
+    <div class="sec-head" onclick="tog(this)">
+      <div class="sec-head-l">
+        <div class="step-circle sc-gray">📖</div>
+        <div>
+          <div class="sec-lbl">リファレンス</div>
+          <div class="sec-title">用語ミニ辞典 と 次に読むもの</div>
+        </div>
+      </div>
+      <div class="sec-right">
+        <span class="chev">▼</span>
+      </div>
+    </div>
+    <div class="sec-body">
+      <h4>用語ミニ辞典</h4>
+      <table class="ttable">
+        <thead><tr><th>言葉</th><th>意味</th></tr></thead>
+        <tbody>
+          <tr><td><strong>リポジトリ</strong></td><td>ファイルとその歴史をまるごと入れておく箱。GitHub にあるものと、パソコンにあるものが対になる</td></tr>
+          <tr><td><strong>クローン</strong></td><td>GitHub の箱を、自分のパソコンにコピーしてくること</td></tr>
+          <tr><td><strong>コミット</strong></td><td>作業のセーブポイントを作ること。あとから「ここに戻して」と言える</td></tr>
+          <tr><td><strong>Issue（イシュー）</strong></td><td>GitHub 上の「お仕事チケット」。仕事の予約票</td></tr>
+          <tr><td><strong>PR（プルリクエスト）</strong></td><td>「この変更をとりこんでいい？」というお伺い。Issue と組で使う</td></tr>
+          <tr><td><strong>ラベル</strong></td><td>Issue に貼るタグ（例: <code>phase:planning</code>）。状態を表す</td></tr>
+          <tr><td><strong>hooks（フック）</strong></td><td>Claude Code が特定のタイミングで自動で動かす小さな検査</td></tr>
+          <tr><td><strong>CLI（シーエルアイ）</strong></td><td>パソコンの黒い画面（ターミナル）から命令を打つやり方</td></tr>
+          <tr><td><strong>YAML（ヤムル）</strong></td><td>情報を整理して書くための文字のならべ方。人間もAIも読める</td></tr>
+          <tr><td><strong>SSOT</strong></td><td>Single Source of Truth。「大事な情報は1か所にだけ書く」というお約束</td></tr>
+          <tr><td><strong>HITL</strong></td><td>Human-In-The-Loop。「大事な判断は人間を通す」というお約束</td></tr>
+          <tr><td><strong>RQT</strong></td><td>Required Quality Test。<code>scripts/verify.py</code> が回してくれる自動チェックの正体</td></tr>
+          <tr><td><strong>frontmatter（フロントマター）</strong></td><td>ノートの先頭につける名札。いつ書いたか・何のメモかを機械が読めるようにする</td></tr>
+          <tr><td><strong>Obsidian（オブシディアン）</strong></td><td>メモを見たり書いたりできる無料アプリ。無くてもこのテンプレは全部動く</td></tr>
+        </tbody>
+      </table>
+
+      <h4>次に読むもの（おすすめ順）</h4>
+      <ol class="slist">
+        <li class="si"><div class="si-body"><code>docs/starter-manual.md</code> — このガイドより1段くわしいスタートマニュアル（15分）</div></li>
+        <li class="si"><div class="si-body"><code>notes/README.md</code> — メモ箱（notes/）の全体像。どの小部屋に何が入るか</div></li>
+        <li class="si"><div class="si-body"><code>exercises/01-define-your-company.md</code> — 実際に手を動かす演習1本目</div></li>
+        <li class="si"><div class="si-body"><code>exercises/02-first-hitl-gate.md</code> — HITL Gate を体験する演習</div></li>
+        <li class="si"><div class="si-body"><code>exercises/03-run-verify-loop.md</code> — 検証ループを体験する演習</div></li>
+        <li class="si"><div class="si-body"><code>docs/ai-company-explainer.md</code> — 「なぜこの構造なのか」の解説</div></li>
+        <li class="si"><div class="si-body"><code>CLAUDE.md</code> — 会社の憲法。慣れてきたら、これをカスタマイズしていきます</div></li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- ════ CLOSING ════ -->
+  <div class="closing">
+    <h3>覚えておいてほしい、たったひとつのこと</h3>
+    <p>このテンプレートに<strong>正解の中身はまだ入っていません</strong>。<br>
+    入っているのは<strong>「入れ物」と「書き方の約束」だけ</strong>です。<br>
+    正解を作るのは、あなたです。そして、それを一緒に整理してくれるのが Claude Code（AI社員）です。</p>
+    <p class="punch">道具はそろった。あとは、あなたの会社を入れていくだけ。</p>
+  </div>
+
+  <p class="footer-note">ai-retreat-starter — AIカンパニー はじめてガイド（LP版）｜元原稿: docs/ai-company-beginner-guide.md</p>
+
+</main>
+
+<script>
+  /* ── アコーディオン ── */
+  function tog(head) {
+    head.parentElement.classList.toggle('open');
+  }
+  function openSec(id) {
+    document.getElementById(id)?.classList.add('open');
+  }
+
+  /* ── ライト/ダーク切替 ── */
+  function toggleTheme() {
+    const root = document.documentElement;
+    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    root.dataset.theme = next;
+    document.getElementById('themeBtn').textContent = next === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('ws-theme', next);
+  }
+  (function(){
+    const saved = localStorage.getItem('ws-theme') || 'light';
+    document.documentElement.dataset.theme = saved;
+    document.addEventListener('DOMContentLoaded', () => {
+      const btn = document.getElementById('themeBtn');
+      if (btn) btn.textContent = saved === 'dark' ? '☀️' : '🌙';
+    });
+  })();
+
+  /* ── コピーボタン ── */
+  function cp(btn) {
+    const parent = btn.parentElement;
+    const a = parent.querySelector('a');
+    const span = parent.querySelector('span');
+    const text = (a?.href || a?.textContent || span?.textContent || '').trim();
+    navigator.clipboard.writeText(text).then(() => {
+      btn.textContent = 'コピー済み ✓';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+    });
+  }
+</script>
+</body>
+</html>

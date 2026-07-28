@@ -1,0 +1,66 @@
+# =============================================================================
+# 承認者レジストリ雛形（approver-registry）
+# =============================================================================
+# HITL トリガー（definitions/hitl/triggers/*.yaml）の approver_role を
+# 「実在の承認者」に写像する SSOT。トリガー側は役割名（role）を参照するだけにし、
+# 誰が承認するかは本ファイルの書き換えだけで更新できるようにする。
+#
+# 記入済みの例: examples/harukaze-ec/definitions/hitl/approver-registry.yaml
+# 承認 SPOF（承認者 1 人で全停止）の考え方: docs/concepts/hitl-async-approval.md
+# =============================================================================
+
+version: 1
+schema_version: "<<TODO: YYYY-MM-DD>>"
+
+# ------------------------------------------------------------
+# A. 承認者（persons）— 実名は書かず、役職ラベルと GitHub ハンドルまでに留める
+# ------------------------------------------------------------
+persons:
+  - id: person-001
+    display_name: "<<TODO: 例 オーナー（sole）>>"   # 役職ラベル。個人名は書かない
+    status: active
+    github_handle: "<<TODO: github ユーザー名>>"     # github_label 通知の宛先
+
+# ------------------------------------------------------------
+# B. 役割 → 承認者（role_assignments）
+# ------------------------------------------------------------
+# トリガー yaml の approver_role がここの役割名に対応する。
+# 承認者が 1 人しかいない会社では、全役割を正直に同一人物へ写像してよい（下記 sole-owner 規則）。
+role_assignments:
+  owner: person-001
+  # finance: person-001
+  # on-call: person-001
+
+# ------------------------------------------------------------
+# C. 代理承認者（deputy_assignments）
+# ------------------------------------------------------------
+# sole-owner 縮退規則: 承認者が 1 人しかいない場合、代理は正直に「vacant（空席）」と書く。
+# 別人がいるフリ（擬制）をしないことが SPOF 対策の出発点。将来 2 人目が入ったらここを更新する。
+deputy_assignments:
+  owner: vacant
+  # finance: vacant
+  # on-call: vacant
+
+# ------------------------------------------------------------
+# D. sole-owner モード縮退規則（degradation_rules）
+# ------------------------------------------------------------
+# 承認者と代理が同一人物に解決される（＝実質 1 人）とき、severity 別にどう縮退するかを明文化する。
+# critical / high は「自動承認しない」を絶対に崩さない。
+sole_owner_mode: true               # 承認者が実質 1 人なら true
+
+degradation_rules:
+  critical:
+    on_timeout: hold_item_only      # 該当項目のみ保留（他タスクは継続）
+    auto_approve: forbidden         # critical の自動承認は禁止
+  high:
+    on_timeout: hold_item_only
+    auto_approve: forbidden         # high の自動承認も禁止
+  medium:
+    on_timeout: auto_approve_with_log  # medium のみ、ログを残して自動承認を許可
+    auto_approve: allowed_with_log
+
+  # 承認者不在で「会社全体が停止」するのを防ぐ縮退方針:
+  # 承認待ちの項目だけを保留し、承認の要らない他タスクはサイクルごと止めない。
+  item_isolation:
+    hold_scope: item_only
+    suspend_whole_cycle: false

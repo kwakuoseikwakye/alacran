@@ -1,0 +1,31 @@
+name: 📖 ドキュメント不足の報告
+description: 「ここに書いてあるべきなのに書いてない」箇所の指摘
+title: "[feedback:doc-gap] "
+labels: ["feedback:doc-gap"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        「探したのに見つからなかった」「あると思ったのに無かった」を報告してください。
+  - type: input
+    id: search-context
+    attributes:
+      label: 何を探していましたか
+      placeholder: "例: /verify のオプション一覧、HITL Gate の具体例、Windows での前提ツール差分"
+    validations:
+      required: true
+  - type: textarea
+    id: where-looked
+    attributes:
+      label: どこを見ましたか (探した順に)
+      placeholder: |
+        1. README.md
+        2. docs/starter-manual.md
+        3. .claude/commands/verify.md
+    validations:
+      required: true
+  - type: input
+    id: expected-location
+    attributes:
+      label: どこに書いてあるべきだと思いましたか
+      placeholder: "例: docs/setup-walkthrough.md の Troubleshooting セクション"

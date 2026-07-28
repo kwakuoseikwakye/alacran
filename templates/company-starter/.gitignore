@@ -1,0 +1,82 @@
+# === Secrets (絶対に commit しない) ===
+# secrets/ 配下は .gitkeep 以外すべて無視。ディレクトリ構造は保持
+secrets/**
+!secrets/**/
+!secrets/**/.gitkeep
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Editors ===
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# === Obsidian (notes/ を vault として開く場合の設定ノイズ・トークン混入防止) ===
+# APP-1: docs/decisions/2026-07-03-obsidian-context-stock.md 参照
+.obsidian/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# === Node ===
+node_modules/
+.pnpm-store/
+dist/
+build/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# === Test / Coverage ===
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+.test-logs/
+
+# === Context Funnel の一時置き場（検査前の生データ。相 1 → 相 2 で本棚に昇格） ===
+# /ingest-context が受領した生データを検疫するまで置く場所。中身はコミットしない。
+definitions/.staging/
+
+# === External SDK-derived artifacts (本テンプレは非依存だが誤持ち込み防止) ===
+# 外部の重量級 SDK を過去に使っていた repo からファイルを持ち込む場合の残置防止
+.ccagi/
+.pil-state/
+.ai/
+
+# === Vendored tools/office (ビルド済みvendor同梱・オフライン完結) ===
+# tools/office はビルド済みvendor同梱(オフライン完結)のため丸ごと追跡する
+# (上の node_modules/ dist/ build/ より後に置くこと。gitignoreは後勝ち)
+!tools/office/
+!tools/office/**
+
+# vendor配下でも秘密ファイルとOSノイズは追跡しない(上のre-includeより後=優先)
+tools/office/**/.DS_Store
+tools/office/**/.env
+tools/office/**/.env.*
+tools/office/**/*.pem
+tools/office/**/*.key
+tools/office/**/*.p12

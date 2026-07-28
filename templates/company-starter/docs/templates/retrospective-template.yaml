@@ -1,0 +1,113 @@
+# =============================================================================
+# 雛形 — definitions/retro/<team>-retrospective.yaml の記入元
+# =============================================================================
+# チーム/部門の振り返り（週次 KPT + 月次 pivot 判定）の型を立ち上げるための出発点です。
+# 本ファイル自体は稼働しません。コピーして記入します。
+#
+# 共通骨格の解説: docs/templates/common-retro-pattern.yaml
+# 記入済みの例:   examples/harukaze-ec/definitions/retro/ec-team-retrospective.yaml
+# 関連:           docs/templates/kpi-measurement-template.yaml /
+#                 docs/templates/cycle-plan-template.yaml
+#
+# 使い方:
+# 1. 本ファイルを definitions/retro/<team>-retrospective.yaml にコピー
+# 2. <<TODO_*>> を全て埋め、team_id でチームを明示する
+# 3. サイクル単位に合う方（weekly / monthly）を必須で埋める
+# 4. 月次の pivot 判定は continue / extend / pivot / retire の 4 区分
+# 5. 振り返り記録そのものは docs/retros/<team>/ に置く（/retro が補助）
+# =============================================================================
+
+version: 1
+schema_version_meta: "<<TODO_YYYY-MM-DD>>"
+status: draft
+team_id: <<TODO_team_id>>                          # 例: ec-team（org.team の team_id と一致）
+
+# =============================================================================
+# 週次振り返り（cycle_unit = weekly なら必須、monthly でも任意）
+# =============================================================================
+weekly_retrospective:
+  trigger:
+    schedule: "<<TODO_weekly_schedule>>"           # 例: "Friday 17:00 JST"
+    timezone: "Asia/Tokyo"
+    duration_minutes: 30
+  output_path: "docs/retros/<<TODO_team_id>>/weekly/{YYYY-Www}.md"
+
+  # 必須 4 セクション（KPT を中心に）
+  required_sections:
+    - id: kpi_dashboard
+      title: "## 1. KPI ダッシュボード"
+      content: "共通 2 KPI + 固有 KPI の実績 vs 目標テーブル（kpi の weekly_digest から取り込み）"
+    - id: kpt
+      title: "## 2. KPT（Keep / Problem / Try）"
+      subsections:
+        keep: "今サイクルで機能したこと・続けたいこと"
+        problem: "閾値超過や観察された摩擦・詰まり"
+        try: "次サイクルで試す改善（1〜3 件）"
+    - id: decision_pending
+      title: "## 3. 保留中の意思決定"
+      content: "サイクル中に保留した判断（title / 提起日 / blocker / 解決予定サイクル）"
+    - id: next_cycle_action
+      title: "## 4. 次サイクルのアクション"
+      content: "Try と保留判断の解決期限から作る TODO（担当・期限つき）"
+
+# =============================================================================
+# 月次振り返り（続けるか見直すかの pivot 判定レイヤー）
+# =============================================================================
+monthly_retrospective:
+  trigger:
+    schedule: "<<TODO_monthly_schedule>>"          # 例: "月末最終金曜 17:00 JST"
+    timezone: "Asia/Tokyo"
+    duration_minutes: 60
+    occurrence: "<<TODO_occurrence>>"              # 例: "last_friday_of_month"
+  output_path: "docs/retros/<<TODO_team_id>>/monthly/{YYYY-MM}.md"
+
+  required_sections:
+    - id: kpi_trend
+      title: "## 1. KPI トレンド（直近 4 サイクル）"
+      content: "全 KPI の 4 サイクル分トレンドと目標達成率"
+    - id: pivot_judgment
+      title: "## 2. Pivot 判定"
+      content: "下記 4 区分から verdict を 1 つ選び、根拠を書く"
+
+  # pivot 判定の 4 区分
+  pivot_verdicts:
+    continue:
+      meaning: "現状維持"
+      criteria: "共通 2 KPI が 4 サイクル連続で目標達成、固有 KPI の閾値超過なし"
+    extend:
+      meaning: "運用範囲を広げる（新チャネル/自動化の追加検討）"
+      criteria: "運用が 4 サイクル安定し、担当が拡張の必要性を挙げた"
+    pivot:
+      meaning: "サイクル設計を見直す"
+      criteria: "共通 KPI が 3 サイクル連続で未達、または固有 KPI の閾値超過が多発"
+    retire:
+      meaning: "この運用を畳む（チーム再編・撤退）"
+      criteria: "対象事業の撤退、または運用の全面再設計が必要"
+
+  cross_reference:
+    weekly_aggregation: "直近 4 サイクルの週次 KPT をまとめて重複除去する"
+    decision_promotion: "解決した保留判断を docs/decisions/ の Decision RFC に昇格させる"
+
+# =============================================================================
+# 記録先
+# =============================================================================
+storage:
+  weekly_path: "docs/retros/<<TODO_team_id>>/weekly/"
+  monthly_path: "docs/retros/<<TODO_team_id>>/monthly/"
+  git_tracked: true
+
+# =============================================================================
+# 記入時の確認項目（本テンプレをコピーした instance に適用）
+# =============================================================================
+acceptance_criteria:
+  - "team_id でチームを明示している"
+  - "サイクル単位に合う方（weekly / monthly）を選び、採用した側のセクションのみ必須で埋めている
+     （採用しなかった側は空のままでよい）"
+  - "weekly を採用した場合: required_sections に kpi_dashboard / kpt（keep / problem / try の 3 節）/
+     decision_pending / next_cycle_action を満たしている"
+  - "monthly を採用した場合: required_sections に kpi_trend / pivot_judgment を満たし、
+     pivot_verdicts に continue / extend / pivot / retire の 4 区分がある"
+  - "記録先が docs/retros/<team>/ に一本化されている"
+  - "全 <<TODO_*>> を埋めた状態"
+
+# 検証: python3 scripts/verify.py の DEF-RETRO-01（parse + <<TODO 残存ゼロ + team_id 存在）

@@ -1,0 +1,36 @@
+# =============================================================================
+# HITL トリガー雛形 — 大口取引ゲート（large-deal）
+# =============================================================================
+# 一定金額以上の商談・支出を AI が単独で進めないよう、承認を挟むためのトリガー。
+# 書き方は definitions/hitl/triggers/_schema.md を参照。
+# <<TODO>> を自社の値に置き換えて使います。記入済みの例:
+#   examples/harukaze-ec/definitions/hitl/triggers/large-deal.yaml
+# =============================================================================
+
+version: 1
+id: large-deal
+name: 大口取引ゲート
+severity: high                      # 財務影響が大きい → high（自動承認は禁止）
+
+description: |
+  発注・見積・値引き・支払条件変更のうち、一定額を超えるものは
+  AI が単独で確定せず、決裁権を持つ人間の承認を必須とする。
+
+fire_when:
+  - when: "発注・支出の金額が承認閾値以上"
+    condition: "<<TODO: 例 order.amount_band in [30k_100k, over_100k]>>"
+  - when: "一定割合以上の値引き"
+    condition: "<<TODO: 例 deal.discount_pct >= 20>>"
+  - when: "支払サイトの延長など資金繰りに影響する条件変更"
+    condition: "<<TODO: 例 deal.payment_terms_days > 60>>"
+
+approver_role: "<<TODO: 例 owner / finance>>"   # approver-registry.yaml の役割と対応
+notify: github_label
+notify_label: "hitl:large-deal"
+on_timeout: hold_item_only          # 期限超過は該当案件のみ保留（他タスクは継続）
+
+auto_proceed: false                 # high は必ず false
+
+examples:
+  - "<<TODO: 例 30 万円以上の仕入れ発注>>"
+  - "<<TODO: 例 既存契約の 25% 値引き要請>>"

@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 合宿事務局への連絡
+    url: https://example.invalid/retreat-support
+    about: 個別の相談・機密を含む問い合わせは Issue でなく事務局へ (URL は事務局から個別案内)

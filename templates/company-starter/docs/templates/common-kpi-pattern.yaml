@@ -1,0 +1,103 @@
+# =============================================================================
+# 共通 KPI パターン（業種を問わない KPI 計測の骨格）
+# =============================================================================
+# どんなチーム・部門でも使える KPI 計測の「共通骨格」を示す参照ファイルです。
+# チーム個別の KPI 仕様は docs/templates/kpi-measurement-template.yaml を
+# definitions/kpi/<team>-kpi.yaml にコピーして記入します。本ファイルは
+# 「共通で必ず入れる KPI」と「業種固有 KPI の足し方」を示す設計リファレンスで、
+# 直接コピーして使うものではありません。
+#
+# 記入済みの例: examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml
+# =============================================================================
+
+version: 1
+kind: kpi_pattern
+pattern_id: common-kpi-pattern
+
+# =============================================================================
+# 1. 計測インフラの共通構造（3 要素）
+# =============================================================================
+# チームによって値は変わるが、この 3 要素の「枠」は共通で持つ。
+measurement_infrastructure:
+  collection_window:
+    # 計測の窓（いつからいつまでを 1 サイクルとして集計するか）
+    required_fields: [cycle_start, cycle_end, duration_hours, measurement_finalize]
+    weekly_hint: "duration_hours ≈ 167（週次）"
+    monthly_hint: "duration_hours ≈ 720（月次）"
+
+  data_sources:
+    # 集計元。少なくとも 1 つはサイクルログ（git 追跡下）を持つ。
+    cycle_log:
+      path_hint: "state/cycles/<team-id>/<YYYY-MM-DD>/cycle.jsonl"
+      format: jsonl
+      note: "サイクル運用スクリプトが追記する（cycle-execution-log-schema.yaml 準拠）"
+    industry_source_hint: "業種固有ソースを足す（例: 注文エクスポート CSV / 問い合わせログ）"
+
+  notification:
+    # 通知手段は自社で運用できる 2 択に抽象化する。
+    channels:
+      - id: github_label
+        use_for: "警告アラート（Issue にラベルを付けて担当に周知）"
+      - id: manual
+        use_for: "重大アラート（担当へチャット/口頭で即時確認）"
+
+# =============================================================================
+# 2. 共通 KPI（どのチームでも必ず定義する 2 つ）
+# =============================================================================
+common_kpis:
+  cycle_completion_rate:
+    description: "1 サイクルで全フェーズが期限までに完了した比率"
+    target_hint: 0.95                 # 全チーム共通の目安
+    measurement_formula: |
+      completed_cycles / total_cycles
+      completed_cycles = count(event.type == "cycle_completed")
+      total_cycles     = count(event.type == "cycle_started")
+    threshold_hint:
+      low_alert: "3 サイクル連続で目標を大きく下回る"
+    data_source: cycle_log
+
+  hitl_intervention_rate:
+    description: "全タスクのうち人間承認ゲートを経由した比率（低いほど自律的）"
+    target_hint: "チーム別 0.20〜0.30（承認の要る業務が多いほど高め）"
+    measurement_formula: |
+      hitl_invoked / total_tasks
+      hitl_invoked = count(event.type == "hitl_gate_fired")
+      total_tasks  = count(event.type == "task_executed")
+    threshold_hint:
+      low_alert: "3 サイクル連続で目標＋0.10 を超える"
+    data_source: cycle_log
+
+# =============================================================================
+# 3. 業種固有 KPI の足し方
+# =============================================================================
+# 共通 2 KPI に加えて、チーム固有の KPI を 2 件以上足す。各 KPI には
+# description / target / measurement_formula / threshold / notification /
+# data_source / audit_format の 7 項目を必ず持たせる。
+industry_kpi_guidance:
+  min_count: 2
+  required_fields_per_kpi:
+    - description
+    - target
+    - measurement_formula
+    - threshold
+    - notification            # github_label / manual / null
+    - data_source
+    - audit_format
+  examples_by_industry:
+    ec: [conversion_rate, repeat_purchase_rate, inventory_turnover_days]
+    support: [first_response_hours, resolution_rate]
+    manufacturing: [on_time_delivery_rate, quality_rejection_count]
+    professional_services: [billable_ratio, escalation_count]
+
+# =============================================================================
+# 4. 週次ダイジェスト（共通）
+# =============================================================================
+weekly_digest:
+  description: "週次の振り返り時点で生成する KPI ダッシュボード"
+  format: markdown
+  output_path_hint: "docs/retros/<team-id>/weekly/{YYYY-Www}.md"
+  contents:
+    - "全 KPI の実績 vs 目標テーブル"
+    - "閾値超過アラートの要約"
+    - "直近 4 サイクルの移動平均トレンド"
+    - "次サイクルの推奨アクション"

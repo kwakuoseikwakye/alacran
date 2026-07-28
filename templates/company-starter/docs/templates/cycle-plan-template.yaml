@@ -1,0 +1,125 @@
+# =============================================================================
+# 雛形 — definitions/cycles/<team>-cycle-plan.yaml の記入元
+# =============================================================================
+# チーム/部門の業務サイクル計画（粒度・フェーズ・レビュー・指標・エスカレーション）を
+# 立ち上げるための出発点です。本ファイル自体は稼働しません。コピーして記入します。
+#
+# 記入済みの例: examples/harukaze-ec/definitions/cycles/ec-team-cycle-plan.yaml
+# 関連:         docs/templates/kpi-measurement-template.yaml /
+#               docs/templates/retrospective-template.yaml
+#
+# 使い方:
+# 1. 本ファイルを definitions/cycles/<team>-cycle-plan.yaml にコピー
+# 2. <<TODO_*>> を全て埋め、team_id でチームを明示する
+# 3. cycle_unit の選び方:
+#    - monthly: 月締めが本質（経理 / 請求 / 専門サービス）
+#    - weekly:  週次工程・受注速度が高い（EC / 製造 / 在庫管理）
+#    - daily:   高頻度トランザクション（CS / 監視）
+# 4. cycle_phases は 3〜4 フェーズを推奨
+# 5. hitl_gates は definitions/hitl/triggers/ のトリガー id と整合させる
+# =============================================================================
+
+version: 1
+schema_version_meta: "<<TODO_YYYY-MM-DD>>"
+status: draft
+team_id: <<TODO_team_id>>                        # 例: ec-team（org.team の team_id と一致）
+
+cycle_plan:
+  # === サイクルの粒度 ===
+  cycle_unit: <<TODO_unit>>                      # monthly / weekly / daily
+  cycle_calendar:
+    cycle_start_day: <<TODO_start>>              # monthly: 1 / weekly: "Monday"
+    cycle_close_day: <<TODO_close>>              # monthly: 31 / weekly: "Sunday"
+    <<TODO_anchor_field>>: <<TODO_anchor_value>> # 業種固有アンカー
+                                                  # 例: sale_anchor_event: "週末セール"
+                                                  #     billing_anchor_day: 25
+
+  # === サイクルのフェーズ ===
+  # 3〜4 フェーズ推奨。各フェーズに day_range / activities / hitl_gates 必須。
+  cycle_phases:
+    - id: P-01
+      name: "<<TODO_phase1_name>>"               # 例: "週初準備 + 在庫調整"
+      day_range: "<<TODO_range>>"                # 例: "Mon-Tue"
+      activities:
+        - "<<TODO_activity_1>>"
+        - "<<TODO_activity_2>>"
+      hitl_gates: [<<TODO_hitl_gate>>]           # definitions/hitl/triggers/ の id
+
+    - id: P-02
+      name: "<<TODO_phase2_name>>"
+      day_range: "<<TODO_range>>"
+      activities:
+        - "<<TODO_activity>>"
+        - "<<TODO_activity>>"
+      hitl_gates: [<<TODO_hitl_gate>>]
+
+    - id: P-03
+      name: "<<TODO_phase3_name>>"
+      day_range: "<<TODO_range>>"
+      activities:
+        - "<<TODO_activity>>"
+        - "<<TODO_activity>>"
+      hitl_gates: [<<TODO_hitl_gate>>]
+
+    # 4 フェーズ目は cycle_unit によっては不要（weekly は 3 フェーズで完結することが多い）
+
+  # === 四半期レビュー ===
+  quarterly_review:
+    schedule: "<<TODO_schedule>>"                # 例: "毎四半期最終週の月曜"
+    participants:
+      - "<<TODO_participant_1>>"                 # 役職ラベル（例: "店長"）
+      - "<<TODO_participant_2>>"
+    agenda:
+      - "前 Q の承認ゲート通過率レビュー"
+      - "<<TODO_industry_agenda_1>>"             # 業種特有（例: 在庫回転 / 納期遵守率）
+      - "<<TODO_industry_agenda_2>>"
+      - "次 Q の改善バックログ設定"
+
+  # === 年次レビュー ===
+  annual_review:
+    schedule: "<<TODO_annual_schedule>>"         # 例: "年度末（3 月最終週）"
+    activities:
+      - "<<TODO_annual_activity_1>>"             # 年間総括（業種特有）
+      - "<<TODO_annual_activity_2>>"
+      - "取扱範囲・チャネルの追加/撤退判断"
+
+  # === サイクル指標 ===
+  # 共通 2 KPI + チーム固有 2 件を推奨（KPI 詳細は kpi-measurement-template.yaml）
+  metrics:
+    cycle_completion_rate:
+      target: 0.95
+      measurement: "全フェーズが cycle_close_day までに完了"
+    hitl_intervention_rate:
+      target: <<TODO_hitl_rate>>                 # 例: 0.25
+      escalation_threshold: <<TODO_threshold>>   # 例: 0.35
+    <<TODO_team_metric_1>>:
+      target: <<TODO_target>>                    # "<=1 per week" 等の string も可
+      anomaly_threshold: <<TODO_threshold>>
+    <<TODO_team_metric_2>>:
+      target: <<TODO_target>>
+      anomaly_threshold: <<TODO_threshold>>
+
+  # === エスカレーション経路 ===
+  # 最低 3 condition を推奨（サイクル健全性 + 業種特有 + 顧客満足）
+  escalation_paths:
+    - condition: "cycle_completion_rate < 0.80"
+      action: "承認者レビュー → 原因分析とサイクル再設計"
+    - condition: "<<TODO_industry_condition>>"
+      action: "<<TODO_industry_action>>"
+    - condition: "<<TODO_satisfaction_condition>>"
+      action: "<<TODO_satisfaction_action>>"
+
+# =============================================================================
+# 記入時の確認項目（本テンプレをコピーした instance に適用）
+# =============================================================================
+acceptance_criteria:
+  - "team_id でチームを明示している"
+  - "cycle_unit が monthly / weekly / daily のいずれか"
+  - "cycle_phases 3 件以上、各フェーズに day_range / activities / hitl_gates 全件"
+  - "業種固有アンカーが cycle_calendar に存在"
+  - "quarterly + annual review の schedule 定義"
+  - "metrics に共通 2（cycle_completion_rate / hitl_intervention_rate）+ 固有 2 件以上"
+  - "escalation_paths 3 件以上、全 condition に対応 action 指定"
+  - "全 <<TODO_*>> を埋めた状態"
+
+# 検証: python3 scripts/verify.py の DEF-CYCLE-01（parse + <<TODO 残存ゼロ + team_id 存在）

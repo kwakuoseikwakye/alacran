@@ -1,0 +1,41 @@
+name: 📝 テンプレ内容へのフィードバック
+description: CLAUDE.md / rules / commands / docs / templates の内容についての意見・提案
+title: "[feedback:content] "
+labels: ["feedback:content"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        テンプレ本体の内容に関するフィードバックをお寄せください。
+        自社機密を含む内容は書かず、抽象化してから起票してください。
+  - type: input
+    id: file-path
+    attributes:
+      label: 対象ファイル (repo-root からのパス)
+      placeholder: "例: CLAUDE.md、docs/starter-manual.md、.claude/rules/hitl-gate.md"
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: 現状の記述で困った / 分かりにくかった箇所
+      placeholder: どの記述が、どういう文脈で、なぜ困ったか
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: どう改善したいか (proposal)
+      placeholder: 具体的な文言差分や、追加すべきセクションの提案
+  - type: dropdown
+    id: severity
+    attributes:
+      label: 影響度
+      options:
+        - critical (合宿進行が止まる)
+        - high (参加者の 30%以上が混乱)
+        - medium (自分だけかもしれないが困った)
+        - low (nice-to-have)
+      default: 2
+    validations:
+      required: true
