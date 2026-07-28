@@ -33,17 +33,20 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 
 ## Current position  ⬅️ resume here
 
-- **Active stage:** Day 2 — Desktop packaging (Electron; browser fallback).
-- **Overall:** Day 1 **DONE** (v23/v24/v25 shipped + merged, app is
-  product-shaped: starts empty, bundled template, onboarding). Day 0 planning
-  + 4/6 decisions resolved.
-- **Single next action:** start Day 2 — spike Electron wrapping of the Next.js
-  server app; if it fights past mid-day, switch to the packaged-local-server +
-  browser fallback. Resolve the [MED] app-name open decision (needed for the
-  Electron app name).
-- **Still-open (non-blocking so far):** exact price + trial length; app
-  name/brand/domain — the latter now bites on Day 2 (Electron app name).
-- **Days elapsed / remaining:** 1 / 4.
+- **Active stage:** Day 2 build **DONE** (browser-runner `.app` shipped as v26);
+  **blocked on user Mac verification** before calling Day 2 fully closed. Day 3
+  can start in parallel.
+- **Overall:** Day 1 DONE (v23-v25). Day 2 build DONE (v26 — `scripts/package-macos.sh`
+  → `dist/<App>.app`, packaged server verified serving 200 headlessly; GUI
+  double-click needs the user's Mac).
+- **Single next action (user):** `bash scripts/package-macos.sh`, then
+  right-click `dist/AI Company Panel.app` → Open, and report what happens.
+  **Single next action (me):** start Day 3 — Lemon Squeezy product + license
+  gate + landing page (mostly buildable/verifiable headlessly).
+- **Still-open:** exact price + trial length; **app name/brand/domain** (now
+  actively needed — it's the placeholder `APP_NAME` in the packaging script AND
+  the landing-page/checkout brand for Day 3).
+- **Days elapsed / remaining:** ~1.5 / 4.
 
 Keep this block honest and current — it is the fastest way for a fresh session
 to know where things stand.
@@ -183,7 +186,27 @@ polished Welcome visuals (a plain screen is fine).
 
 ## Day 2 — Desktop packaging
 
-**Status:** NOT STARTED
+**Status:** BUILD DONE (2026-07-28), awaiting user verification on a real Mac.
+Mechanism decided = **browser-runner** (not Electron), per the Day-2 fork
+decision. Shipped as v26 (merged to master). Everything headless-verifiable is
+green; the double-click / GUI parts need the user to run the artifact.
+
+**How to build + try it (user, on your Mac):**
+1. `bash scripts/package-macos.sh` → produces `dist/AI Company Panel.app`
+   (the script self-tests the packaged server headlessly first).
+2. In Finder, **right-click the .app → Open → Open** (it's unsigned for v1).
+3. It should start the local server and open your browser to the app.
+4. Report back what happens; I'll fix from there.
+
+**Known rough edges to check / decide (feed back into the runbook):**
+- **App name is a placeholder** ("AI Company Panel") — set `APP_NAME` at the top
+  of `scripts/package-macos.sh` once the name is chosen (open decision).
+- **Node.js required** on the user's machine (v1 assumption; the launcher shows a
+  guided alert if it's missing). Bundling Node is a post-launch step.
+- **Process lifecycle is rough for v1:** closing the browser tab does NOT stop the
+  server; quitting the app process does. A menubar-app polish is post-launch.
+- Confirm the app's own spawned `claude`/`gog` resolve when launched from Finder
+  (the launcher prepends `/opt/homebrew/bin` etc. to PATH — verify on your setup).
 
 **Goal:** a real downloadable artifact. **Time-box the Electron attempt — do
 not let packaging perfection sink the launch.**
@@ -216,7 +239,22 @@ company command.
 instructions; Windows/Linux builds → macOS only for v1.
 
 **Updates log:**
-- _(append dated notes here as you work Day 2)_
+- **2026-07-28** — Fork decided: **browser-runner** over Electron (the app is a
+  Next.js server app; my environment has no display to verify an Electron window;
+  CLI-comfortable audience makes a browser launch fine; far lower risk). Spiked
+  `output: "standalone"` — hit the multi-lockfile workspace-root bug (server.js
+  nested under `.next/standalone/.claude/worktrees/...`), fixed with
+  `outputFileTracingRoot: appDir` in `next.config.ts` → flat
+  `.next/standalone/server.js`. Booted the standalone server headlessly: `/` and
+  `/skills` both 200. Wrote `scripts/package-macos.sh` → builds
+  `dist/<App>.app` (standalone payload + static + bundled `templates/` co-located
+  so the `process.cwd()`-relative template path resolves; launcher ensures PATH,
+  guided-alerts if Node missing, starts server + opens browser). **Independently
+  verified the packaged .app's server serves HTTP 200** (dashboard) from the
+  payload. Fixed a self-test PID-capture bug (`\$!` → `$!`). Merged as v26 (258
+  tests green). Remaining = user verifies the double-click on their Mac (I can't
+  launch a GUI). Cost note: no subagents (packaging is a spike + manual GUI
+  verify, not subagent-transcribable; spawn cap also still blocking).
 
 ---
 
@@ -325,3 +363,10 @@ truthful.
   install and onboards to first-company creation; dev machine unchanged.
   **Next:** Day 2 — Electron packaging spike (browser fallback ready); pick an
   app name (needed for the Electron build).
+- **2026-07-28 — Day 2 build DONE (browser-runner, v26).** Chose browser-runner
+  over Electron. `output: "standalone"` + `outputFileTracingRoot` fix →
+  `scripts/package-macos.sh` builds `dist/<App>.app`; packaged server verified
+  serving 200 headlessly. Merged (258 tests). **Blocked on user Mac verify**
+  (double-click). App name still a placeholder — needed for both the packaging
+  script and Day 3's landing page. **Next:** user runs the .app on their Mac; I
+  start Day 3 (Lemon Squeezy + license gate + landing page) in parallel.
