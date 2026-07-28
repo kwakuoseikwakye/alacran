@@ -45,7 +45,6 @@
   <div class="navlinks">
     <a href="use-cases.html">Use cases</a>
     <a href="templates.html">Templates</a>
-    <a href="marketplace.html">Marketplace</a>
     <a href="integrations.html">Integrations</a>
     <a href="docs.html">Docs</a>
     <a href="how-to-use.html">How to use</a>
@@ -59,7 +58,10 @@
 <header class="hero" id="top">
   <div class="halo"></div>
   <div class="wrap">
-    <svg class="mark mark-glow" aria-label="Alacrán"><use href="#alacran"/></svg>
+    <div class="logo3d-wrap" id="logo3d-wrap">
+      <canvas class="logo3d" role="img" aria-label="Alacrán — a 3D scorpion mark"></canvas>
+      <svg class="mark mark-glow logo3d-fallback" aria-hidden="true"><use href="#alacran"/></svg>
+    </div>
     <p class="eyebrow">AI-native company · on your machine</p>
     <h1>
       <span class="reveal-word" style="animation-delay:.05s">You</span>
@@ -135,7 +137,6 @@
       <div class="card"><div class="dot"></div><h3>Bring your own agent</h3><p>Claude today — with more model and agent providers on the roadmap. Your subscription, your keys.</p></div>
       <div class="card"><div class="dot"></div><h3>Growing integrations <span class="soon">soon</span></h3><p>Connect Google today; Slack, Notion, GitHub, Calendar and more are on the way — not just one service.</p></div>
       <div class="card"><div class="dot"></div><h3>Create your own skills <span class="soon">soon</span></h3><p>Package a repeatable job into a skill — or let Alacrán draft a starter skill for you automatically.</p></div>
-      <div class="card"><div class="dot"></div><h3>Skills marketplace <span class="soon">soon</span></h3><p>Install skills others have built, and share your own.</p></div>
     </div>
   </div>
 </section>
@@ -168,6 +169,8 @@
     </div>
   </div>
 </section>
+<script src="vendor/three.min.js" defer></script>
+<script src="logo3d.js" defer></script>
 <section class="final">
   <div class="wrap r">
     <svg class="mark mark-glow" aria-hidden="true"><use href="#alacran"/></svg>
