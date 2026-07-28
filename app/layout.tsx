@@ -6,8 +6,8 @@ import { getLicenseStatus } from "@/lib/license/license-actions"
 import { LicenseGate } from "@/components/license-gate"
 
 export const metadata: Metadata = {
-  title: "AI-Native Control Panel",
-  description: "Read-only status board for AI-Native agents",
+  title: "Alacrán",
+  description: "Run your own AI-native company, locally on your Mac.",
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

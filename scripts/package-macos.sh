@@ -15,7 +15,7 @@
 
 set -euo pipefail
 
-APP_NAME="AI Company Panel"     # TODO: replace with the final product name
+APP_NAME="Alacrán"             # scorpion — final product name (keep in sync with lib/branding.ts)
 DEFAULT_PORT="4319"             # uncommon default to avoid collisions
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -91,7 +91,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
   <key>CFBundleName</key><string>$APP_NAME</string>
   <key>CFBundleDisplayName</key><string>$APP_NAME</string>
-  <key>CFBundleIdentifier</key><string>ai.company.panel</string>
+  <key>CFBundleIdentifier</key><string>app.alacran.desktop</string>
   <key>CFBundleVersion</key><string>0.1.0</string>
   <key>CFBundleShortVersionString</key><string>0.1.0</string>
   <key>CFBundlePackageType</key><string>APPL</string>
