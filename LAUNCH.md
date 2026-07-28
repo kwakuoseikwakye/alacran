@@ -439,6 +439,18 @@ truthful.
   Price + LS checkout remain placeholders (user setting up LS later). 272 tests
   green. **Next:** user sets up Lemon Squeezy + swaps checkout/price placeholders;
   then Day 4 end-to-end + demo.
+- **2026-07-28 — landing v3 (multi-page site).** Restructured `landing/`
+  into a proper static multi-page site sharing `landing/styles.css`:
+  `index.html` + 7 section pages (use-cases, templates, marketplace,
+  integrations, docs, how-to-use, pricing). Added a **liquid-glass floating
+  navbar** (fully-rounded, blurred), a **3D glossy scorpion** logo (SVG
+  gradients), **removed the visible section dividers**, **fixed + redesigned
+  the orchestrate diagram** (SVG cards sized to fit labels, hub accent,
+  travelling pulse), and marketing for **bring-your-own-agent + future
+  integrations (not just Google) + create-your-own/auto-drafted skills**
+  (tagged `soon`). Preview (home): claude.ai/code/artifact/450d8c28-599d-4467-871b-a4a8caa4422b .
+  Nav links now resolve to real pages. Placeholders (checkout/price/download/
+  email) still `REPLACE-ME`. Best viewed via `open landing/index.html`.
 - **2026-07-28 — landing v2 (design iteration).** Per user: added a product
   navbar (Use cases / Templates / Marketplace / Integrations / Docs / How to use
   / Pricing), switched to a **red scorpion theme**, Geist type (buzz-vibe), and
