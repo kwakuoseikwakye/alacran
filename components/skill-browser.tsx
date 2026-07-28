@@ -31,8 +31,9 @@ export function SkillBrowser({
   const [detailError, setDetailError] = useState<string | null>(null)
   const [view, setView] = useState<"content" | "history" | "run">("content")
 
+  const selectedAgent = selected ? results.find((r) => r.agent.id === selected.agentId)?.agent : undefined
   const matchedCompanyCommand =
-    selected && selected.agentId === "ai-company-starter-main"
+    selected && selectedAgent?.kind === "command-set"
       ? COMPANY_COMMANDS.find((c) => selected.path.endsWith(`/commands/${c.commandFileName}`))
       : undefined
 
@@ -118,8 +119,8 @@ export function SkillBrowser({
                 }}
               />
             )}
-            {view === "run" && matchedCompanyCommand && (
-              <CompanyCommandRunner command={matchedCompanyCommand} agentId="ai-company-starter-main" />
+            {view === "run" && matchedCompanyCommand && selected && (
+              <CompanyCommandRunner command={matchedCompanyCommand} agentId={selected.agentId} />
             )}
           </ScrollArea>
         </SheetContent>
