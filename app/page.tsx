@@ -20,6 +20,7 @@ export default async function AgentTreePage() {
   ])
   const avatarByAgentId = Object.fromEntries(avatars.map((a) => [a.agentId, a.imageUrl]))
   const takeshiAgent = agents.find((agent) => agent.id === "plh-takeshi-agent")
+  const plhOpsSource = agents.find((agent) => agent.id === "plh-ops")
 
   const [results, launchdHealth, pollStatus] = await Promise.all([
     getAllActivities(agents, adapters),
@@ -49,7 +50,9 @@ export default async function AgentTreePage() {
               result.agent.kind === "command-set" && !(await companyOntologyExists(result.agent.rootPath))
             const integrationStatus = await getIntegrationStatus(result.agent)
             const showInstallDailyTeamLogButton =
-              result.agent.kind === "command-set" && !(await dailyTeamLogInstalled(result.agent.rootPath))
+              Boolean(plhOpsSource) &&
+              result.agent.kind === "command-set" &&
+              !(await dailyTeamLogInstalled(result.agent.rootPath))
             return (
               <AgentCard
                 key={result.agent.id}

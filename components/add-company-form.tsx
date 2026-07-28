@@ -107,7 +107,7 @@ export function AddCompanyForm() {
             <AlertDialogTitle>Create this company?</AlertDialogTitle>
             <AlertDialogDescription>
               <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the
-              ai-company-starter-main template?
+              company starter template?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
