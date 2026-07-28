@@ -33,20 +33,22 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 
 ## Current position  ⬅️ resume here
 
-- **Active stage:** Day 2 build **DONE** (browser-runner `.app` shipped as v26);
-  **blocked on user Mac verification** before calling Day 2 fully closed. Day 3
-  can start in parallel.
-- **Overall:** Day 1 DONE (v23-v25). Day 2 build DONE (v26 — `scripts/package-macos.sh`
-  → `dist/<App>.app`, packaged server verified serving 200 headlessly; GUI
-  double-click needs the user's Mac).
-- **Single next action (user):** `bash scripts/package-macos.sh`, then
-  right-click `dist/AI Company Panel.app` → Open, and report what happens.
-  **Single next action (me):** start Day 3 — Lemon Squeezy product + license
-  gate + landing page (mostly buildable/verifiable headlessly).
-- **Still-open:** exact price + trial length; **app name/brand/domain** (now
-  actively needed — it's the placeholder `APP_NAME` in the packaging script AND
-  the landing-page/checkout brand for Day 3).
-- **Days elapsed / remaining:** ~1.5 / 4.
+- **Active stage:** Days 1-3 app-side all **BUILT** (v23-v27 + landing page).
+  Two things now sit with the **user**: (a) verify the packaged `.app` on your
+  Mac, (b) set up Lemon Squeezy + pick the app name/price and swap the
+  placeholders. Day 4 (end-to-end + demo) can't fully run until those land.
+- **Overall:** Day 1 DONE (v23-v25). Day 2 build DONE (v26, browser-runner
+  `.app`, server verified). Day 3 app-side DONE (v27 license gate + landing
+  page); external LS setup + branding pending user.
+- **Single next actions (user):** (1) `bash scripts/package-macos.sh` →
+  right-click `dist/AI Company Panel.app` → Open → report. (2) Set up Lemon
+  Squeezy, pick name+price, swap placeholders (see Day 3 "What YOU need to do").
+  **Single next action (me):** Day 4 prep / whatever you point me at — most of
+  Day 4 (real end-to-end buy→key→unlock, demo video) needs the LS + Mac steps
+  above first.
+- **Still-open (now user-blocking):** app name/brand/domain; exact price/trial;
+  Lemon Squeezy account setup.
+- **Days elapsed / remaining:** ~2 / 4.
 
 Keep this block honest and current — it is the fastest way for a fresh session
 to know where things stand.
@@ -260,7 +262,35 @@ instructions; Windows/Linux builds → macOS only for v1.
 
 ## Day 3 — Payments (Lemon Squeezy) + license gate + landing page
 
-**Status:** NOT STARTED
+**Status:** APP-SIDE BUILT (2026-07-28) — license gate shipped (v27) + landing
+page (`landing/index.html`). Remaining is the part only you can do: create the
+Lemon Squeezy product + checkout, and swap the placeholder brand/price/URLs.
+
+**What's built + verified (headless):**
+- **License gate (v27, merged).** `lib/license/*`: validates a key against Lemon
+  Squeezy's license API (no store secret needed — the key authenticates), caches
+  the result, re-validates at most daily, and keeps a paying user working up to
+  7 days offline. Enforced **only in a production build** (the packaged app) and
+  bypassable with `LICENSE_BYPASS=1` — so `next dev` (your daily use) is never
+  gated. Verified: dev → dashboard; prod + no key → gate; prod + `LICENSE_BYPASS=1`
+  → dashboard. 14 unit tests cover offline grace / revalidation / invalid key.
+  The gate lives in `app/layout.tsx`, so it wraps every page.
+- **Landing page.** `landing/index.html` — self-contained static page (inline
+  CSS, deploys anywhere: Vercel / Netlify / GH Pages), dark theme matching the
+  app, grounded in the real shipped features. Well-formed, no external assets.
+
+**What YOU need to do to finish Day 3:**
+1. Create the Lemon Squeezy product + a **subscription with a 14-day free trial**
+   (or your chosen price/trial). Turn on **license keys** for it. Grab the
+   checkout URL.
+2. Swap the placeholders (all marked with TODO / `REPLACE-ME`):
+   - `lib/branding.ts` — `APP_NAME`, `PRICE_LABEL`, `CHECKOUT_URL`.
+   - `scripts/package-macos.sh` — `APP_NAME` (keep in sync with branding).
+   - `landing/index.html` — app name, price, checkout URL, download URL, contact.
+3. Deploy `landing/` to your host + domain; put the built `.app` download behind
+   the purchase flow (LS "download after purchase", or a gated link).
+4. Test the loop: buy → get a license key → open the app → paste the key on the
+   gate → it validates and unlocks.
 
 **Goal:** people can pay and get a working download; a page explains + sells it.
 
@@ -284,7 +314,17 @@ download link → app accepts the key and unlocks.
 fancy landing visuals (ship a clean single-scroll page).
 
 **Updates log:**
-- _(append dated notes here as you work Day 3)_
+- **2026-07-28** — Built the app-side of Day 3 headlessly with placeholder
+  brand/price (per "keep moving"). **v27 license gate** (merged): Lemon Squeezy
+  key validation + `.data/license.json` cache + offline grace, prod-only
+  enforcement with a `LICENSE_BYPASS` escape hatch, gate in `app/layout.tsx`,
+  14 unit tests + live-verified all three paths (dev/prod-gate/prod-bypass).
+  Hit the same incomplete-worktree-node_modules issue as v26 during the
+  production build — fixed with `npm install` in the worktree (a worktree
+  artifact, not a code issue). **Landing page** `landing/index.html`
+  (committed to master): self-contained, dark, feature-grounded, placeholders
+  marked. Everything external (LS account, real brand/price, deploy) is the
+  user's — see "What YOU need to do" above.
 
 ---
 
@@ -370,3 +410,10 @@ truthful.
   (double-click). App name still a placeholder — needed for both the packaging
   script and Day 3's landing page. **Next:** user runs the .app on their Mac; I
   start Day 3 (Lemon Squeezy + license gate + landing page) in parallel.
+- **2026-07-28 — Day 3 app-side DONE.** v27 license gate merged (272 tests) +
+  `landing/index.html`. Built with placeholder brand/price per "keep moving."
+  All the app-side, headless-verifiable parts of Days 1-3 are now done. The
+  remaining launch work is user-owned + external: verify the .app on a Mac, set
+  up Lemon Squeezy, choose the name/price, swap placeholders, deploy the landing
+  page + download. **Next:** those user steps unblock Day 4 (real buy→key→unlock
+  end-to-end + demo video).

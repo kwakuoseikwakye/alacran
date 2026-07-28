@@ -1,0 +1,181 @@
+<!doctype html>
+<!--
+  PLACEHOLDER landing page for the launch. Self-contained (inline CSS, no build)
+  so it deploys anywhere static — Vercel / Netlify / GitHub Pages / Cloudflare.
+
+  Swap the placeholders before going live (keep these in sync with
+  lib/branding.ts and scripts/package-macos.sh's APP_NAME):
+    - APP NAME:      "AI Company Panel"       (search this file)
+    - PRICE / TRIAL: "$29/mo · 14-day trial"  (search this file)
+    - CHECKOUT URL:  https://your-store.lemonsqueezy.com/buy/REPLACE-ME
+    - DOWNLOAD URL:  https://REPLACE-ME/download/AI-Company-Panel.dmg
+    - CONTACT EMAIL: hello@REPLACE-ME
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AI Company Panel — run your own AI-native company from your desktop</title>
+  <meta name="description" content="A desktop app to set up your AI-native company, connect your own AI agent, and run its workflows — locally, on your machine." />
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --panel: #12151c;
+      --border: #232733;
+      --text: #e7e9ee;
+      --muted: #9aa3b2;
+      --accent: #5865f2;
+      --accent-hover: #4954d6;
+      --success: #37d399;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+    .btn {
+      display: inline-block; padding: 12px 22px; border-radius: 10px;
+      background: var(--accent); color: #fff; text-decoration: none; font-weight: 600;
+      border: 1px solid transparent; transition: background .15s ease;
+    }
+    .btn:hover { background: var(--accent-hover); }
+    .btn.secondary { background: transparent; border-color: var(--border); color: var(--text); }
+    .btn.secondary:hover { border-color: var(--muted); background: transparent; }
+    .muted { color: var(--muted); }
+
+    header { border-bottom: 1px solid var(--border); }
+    .nav { display: flex; align-items: center; justify-content: space-between; padding: 18px 0; }
+    .brand { font-weight: 700; letter-spacing: -.2px; }
+
+    .hero { padding: 84px 0 64px; text-align: center; }
+    .hero h1 { font-size: 44px; line-height: 1.1; letter-spacing: -1px; margin: 0 0 16px; }
+    .hero p.lead { font-size: 19px; color: var(--muted); max-width: 640px; margin: 0 auto 32px; }
+    .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .hero .tiny { margin-top: 16px; font-size: 13px; }
+
+    section { padding: 56px 0; border-top: 1px solid var(--border); }
+    h2 { font-size: 26px; letter-spacing: -.4px; margin: 0 0 24px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .card h3 { margin: 0 0 8px; font-size: 16px; }
+    .card p { margin: 0; color: var(--muted); font-size: 14px; }
+
+    .steps { counter-reset: step; display: grid; gap: 14px; }
+    .step { display: flex; gap: 14px; align-items: flex-start; }
+    .step .n {
+      counter-increment: step; flex: 0 0 28px; height: 28px; width: 28px; border-radius: 999px;
+      background: var(--accent); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700;
+    }
+    .step .n::before { content: counter(step); }
+    .step p { margin: 0; }
+    .step p .muted { display: block; font-size: 14px; }
+
+    .price { text-align: center; }
+    .price .amount { font-size: 40px; font-weight: 700; letter-spacing: -1px; }
+    .price .sub { color: var(--muted); margin-bottom: 24px; }
+
+    .req { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; padding: 20px; }
+    .req ul { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; }
+
+    footer { border-top: 1px solid var(--border); padding: 32px 0; color: var(--muted); font-size: 14px; text-align: center; }
+    @media (max-width: 640px) { .hero h1 { font-size: 34px; } .hero { padding: 56px 0 40px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap nav">
+      <div class="brand">AI Company Panel</div>
+      <a class="btn secondary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Get started</a>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+      <div class="hero">
+        <h1>Run your own AI-native company, from your desktop.</h1>
+        <p class="lead">
+          Set up your company, connect your own AI agent, and run its everyday workflows —
+          all locally on your Mac. Bring your own Claude; your data never leaves your machine.
+        </p>
+        <div class="cta-row">
+          <a class="btn" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start your free trial</a>
+          <a class="btn secondary" href="https://REPLACE-ME/download/AI-Company-Panel.dmg">Download for macOS</a>
+        </div>
+        <p class="tiny muted">$29/mo · 14-day free trial. macOS. Bring your own AI agent.</p>
+      </div>
+    </div>
+
+    <section>
+      <div class="wrap">
+        <h2>What you can do</h2>
+        <div class="grid">
+          <div class="card">
+            <h3>Create your company</h3>
+            <p>Scaffold a new company from a built-in template in one click — no terminal, no boilerplate.</p>
+          </div>
+          <div class="card">
+            <h3>Define it in plain language</h3>
+            <p>A guided setup captures your business, stakeholders, and workflow — or lets your AI draft the details for you.</p>
+          </div>
+          <div class="card">
+            <h3>Connect your tools</h3>
+            <p>Link your own Google account and other services securely, so your agent can act on real work.</p>
+          </div>
+          <div class="card">
+            <h3>Run real workflows</h3>
+            <p>Trigger read-only commands like an inbox summary, and install packaged workflows onto any company.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>How it works</h2>
+        <div class="steps">
+          <div class="step"><div class="n"></div><p>Download and open the app.<span class="muted">It runs locally on your Mac and opens in your browser.</span></p></div>
+          <div class="step"><div class="n"></div><p>Create your first company.<span class="muted">From the built-in template — everything scaffolds automatically.</span></p></div>
+          <div class="step"><div class="n"></div><p>Connect your AI agent and tools.<span class="muted">Bring your own Claude; connect Google and more.</span></p></div>
+          <div class="step"><div class="n"></div><p>Run your company.<span class="muted">Set up context, run workflows, and grow from there.</span></p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap price">
+        <h2>Simple pricing</h2>
+        <div class="amount">$29<span class="muted" style="font-size:18px;">/mo</span></div>
+        <div class="sub">14-day free trial · cancel anytime</div>
+        <a class="btn" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free trial</a>
+      </div>
+    </section>
+
+    <section>
+      <div class="wrap">
+        <h2>Requirements</h2>
+        <div class="req">
+          <p class="muted">Built for people comfortable installing a command-line tool. For v1 you&apos;ll need:</p>
+          <ul>
+            <li>macOS 12 or later</li>
+            <li>Node.js installed</li>
+            <li>The Claude Code CLI (bring your own Claude subscription)</li>
+            <li>The <code>gog</code> Google CLI, if you want to connect Gmail / Calendar</li>
+          </ul>
+          <p class="muted" style="margin-top:12px;">The app detects these on first launch and guides you through anything that&apos;s missing.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <p>AI Company Panel · <a href="mailto:hello@REPLACE-ME">hello@REPLACE-ME</a></p>
+    </div>
+  </footer>
+</body>
+</html>
