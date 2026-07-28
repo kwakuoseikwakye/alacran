@@ -86,6 +86,11 @@ These were decided with the user on 2026-07-28. Don't relitigate without them.
   source moves from the local `~/AI-Native/...` path to the bundled copy.
 - **[2026-07-28] macOS signing (v1):** **ship unsigned** with clear
   "right-click → Open" instructions. Notarization is a fast-follow.
+- **[2026-07-28] App name = `Alacrán`** (Spanish for scorpion). Brand built
+  around it: UV-bioluminescence glow (cyan-green) + desert amber, day/night
+  theme, glowing curled-tail scorpion mark. Applied to `lib/branding.ts`,
+  `scripts/package-macos.sh` (→ builds `Alacrán.app`), the app tab title, and
+  the landing page. Domain/logo-file still TBD.
 
 ---
 
@@ -97,9 +102,12 @@ model, template delivery, macOS signing._
 - **[MED] Exact price + trial length.** The model is locked (free trial →
   monthly). Still need the actual number(s): monthly price and trial length
   (e.g. 7 or 14 days). Blocks: Day 3 Lemon Squeezy setup + landing page copy.
-- **[LOW] App name / brand / domain** for the landing page + installer.
-  Open-ended — just needs to be chosen. Blocks: Day 3, and the Electron app
-  name on Day 2.
+- **[RESOLVED 2026-07-28] App name = Alacrán** (see Locked decisions). Still to
+  pick: a domain, and a real logo asset (the landing uses an inline SVG mark +
+  🦂 favicon for now).
+- **[MED] Lemon Squeezy checkout URL + real price** — the landing page and
+  license gate use placeholders (`REPLACE-ME`, `$29/mo`) until the LS product
+  exists. Blocks going live.
 
 ---
 
@@ -275,9 +283,14 @@ Lemon Squeezy product + checkout, and swap the placeholder brand/price/URLs.
   gated. Verified: dev → dashboard; prod + no key → gate; prod + `LICENSE_BYPASS=1`
   → dashboard. 14 unit tests cover offline grace / revalidation / invalid key.
   The gate lives in `app/layout.tsx`, so it wraps every page.
-- **Landing page.** `landing/index.html` — self-contained static page (inline
-  CSS, deploys anywhere: Vercel / Netlify / GH Pages), dark theme matching the
-  app, grounded in the real shipped features. Well-formed, no external assets.
+- **Landing page.** `landing/index.html` — a full **Alacrán-branded** marketing
+  page (scorpion / UV-glow identity, day-night theme, glowing scorpion mark,
+  staggered hero reveal + scroll animations), self-contained (inline CSS/JS/SVG,
+  no external assets), content modeled on fleece.ai's "you decide · it executes ·
+  approves before anything irreversible" thesis but grounded only in Alacrán's
+  real features. Live preview (private): claude.ai/code/artifact/80654d67-997a-412b-b632-64931a77302a
+  — swap the `REPLACE-ME` checkout/download/email + confirm the price before
+  deploying.
 
 **What YOU need to do to finish Day 3:**
 1. Create the Lemon Squeezy product + a **subscription with a 14-day free trial**
@@ -417,3 +430,12 @@ truthful.
   up Lemon Squeezy, choose the name/price, swap placeholders, deploy the landing
   page + download. **Next:** those user steps unblock Day 4 (real buy→key→unlock
   end-to-end + demo video).
+- **2026-07-28 — user verified the .app runs on their Mac (no errors)** — Day 2
+  packaging confirmed end-to-end. **Name chosen: Alacrán** (scorpion). Rebranded
+  `lib/branding.ts` + packaging (→ `Alacrán.app`) + app tab title, and **rebuilt
+  the landing page as a full scorpion-branded marketing site** (UV-glow/desert
+  identity, animations, day/night, fleece-modeled content, all real features).
+  Live preview: claude.ai/code/artifact/80654d67-997a-412b-b632-64931a77302a.
+  Price + LS checkout remain placeholders (user setting up LS later). 272 tests
+  green. **Next:** user sets up Lemon Squeezy + swaps checkout/price placeholders;
+  then Day 4 end-to-end + demo.
