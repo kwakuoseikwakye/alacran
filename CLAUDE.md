@@ -12,6 +12,13 @@ For the full chronological changelog of every shipped slice (v1–v16), see
 safety rules, and workflow — that every slice must follow. It doesn't
 change per-slice; `README.md` and this repo's git history do.
 
+> **Active epic:** as of 2026-07-28 the project is in a 4-day push to
+> ship this as a downloadable product (login/download gate, payments,
+> onboarding, desktop packaging, landing page). The cross-session tracker
+> for that push is **`LAUNCH.md`** at the repo root — read its "Current
+> position" block first when picking up launch work. `LAUNCH.md` is the
+> living runbook; this file remains the standing engineering guide.
+
 ## What this app actually is (and isn't) today
 
 This is a **read/manage dashboard for tools you already set up via the
