@@ -1,9 +1,15 @@
 # AI-Native Control Panel — project guide
 
-Local Next.js 15 / React 19 / Tailwind v4 dashboard for managing the tools
-in `~/AI-Native/` (`email-pipeline-agent`, `ai-company-starter-main`,
-`plh-ops`), plus any number of additional "companies" registered at
-runtime through the UI (see v11 in README.md). Built entirely via
+Local Next.js 15 / React 19 / Tailwind v4 dashboard for managing AI
+"companies." As of v23 it is a **product-shaped** app: a fresh install
+starts empty and onboards the user to create their first company. The 3
+example agents (`email-pipeline-agent`, `ai-company-starter-main`,
+`plh-ops`) are no longer hardcoded — they load as **existence-gated
+built-ins** (`lib/builtin-agents.ts`): present only if their
+`~/AI-Native/*` directories exist, so a developer machine keeps full
+daily use while a shipped install starts clean. Any number of additional
+companies can be registered at runtime through the UI (see v11 in
+README.md). Built entirely via
 `brainstorm → spec → plan → subagent-driven-development`, one versioned
 slice at a time, each merged to `master` before the next starts.
 
@@ -159,7 +165,14 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v22** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v25** (see `README.md` for the full per-slice changelog).
+**v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
+agents are now existence-gated (`lib/builtin-agents.ts`'s
+`buildBuiltins`), the company template is a committed in-repo snapshot
+(`templates/company-starter/`, sourced by `create-company-from-template.ts`
+instead of `~/AI-Native/...`), and an empty install shows an
+`OnboardingWelcome` with `checkDependencies()` (claude + gog) detection.
+See `LAUNCH.md` for the launch runbook and `docs/superpowers/specs/2026-07-28-control-panel-day1-productize-design.md`.
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
