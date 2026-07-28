@@ -8,8 +8,7 @@
     - DOWNLOAD URL:  https://REPLACE-ME/download/Alacran.dmg
     - CONTACT EMAIL: hello@REPLACE-ME
     - PRICE:         "$29/mo" (keep in sync with lib/branding.ts PRICE_LABEL)
-  Name "Alacrán" is final. Nav links are anchors to on-page sections for now;
-  repoint to real /use-cases, /docs, etc. pages when they exist.
+  Name "Alacrán" is final. Nav links are anchors to on-page sections for now.
 -->
 <html lang="en">
 <head>
@@ -192,17 +191,46 @@
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="alacran" viewBox="0 0 100 100">
-    <g fill="none" stroke="currentColor" stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M34 30 Q24 22 26 13 Q30 6 37 10" />
-      <path d="M66 30 Q76 22 74 13 Q70 6 63 10" />
-      <path d="M34 30 L44 37" />
-      <path d="M66 30 L56 37" />
-      <path d="M50 34 L50 62" />
-      <path d="M42 40 L58 40 M43 48 L57 48 M44 56 L56 56" />
-      <path d="M46 44 L30 44 M46 52 L31 55 M54 44 L70 44 M54 52 L69 55" />
-      <path d="M50 62 Q54 78 68 82 Q84 86 84 68 Q84 56 74 56" />
+    <!-- realistic top-down scorpion: pincers up, segmented body, 8 legs,
+         tail curling over the back to a bulbous telson + forward sting -->
+    <g fill="currentColor">
+      <!-- legs (8), behind the body -->
+      <g fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <path d="M42 41 Q29 38 19 32" />
+        <path d="M43 47 Q28 47 16 45" />
+        <path d="M44 53 Q29 55 18 60" />
+        <path d="M45 59 Q31 63 23 71" />
+        <path d="M58 41 Q71 38 81 32" />
+        <path d="M57 47 Q72 47 84 45" />
+        <path d="M56 53 Q71 55 82 60" />
+        <path d="M55 59 Q69 63 77 71" />
+      </g>
+      <!-- pedipalp arms -->
+      <g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round">
+        <path d="M44 39 Q34 29 28 23" />
+        <path d="M56 39 Q66 29 72 23" />
+      </g>
+      <!-- claws (open pincers) -->
+      <ellipse cx="24" cy="19" rx="6.6" ry="3.7" transform="rotate(-32 24 19)" />
+      <ellipse cx="29" cy="14" rx="5.4" ry="3" transform="rotate(-68 29 14)" />
+      <ellipse cx="76" cy="19" rx="6.6" ry="3.7" transform="rotate(32 76 19)" />
+      <ellipse cx="71" cy="14" rx="5.4" ry="3" transform="rotate(68 71 14)" />
+      <!-- cephalothorax + segmented abdomen (mesosoma) -->
+      <ellipse cx="50" cy="43" rx="12" ry="10" />
+      <ellipse cx="50" cy="53" rx="10.4" ry="6" />
+      <ellipse cx="50" cy="61" rx="8.7" ry="5.3" />
+      <ellipse cx="50" cy="68" rx="6.9" ry="4.7" />
+      <!-- metasoma: segmented tail curling up-and-over to the right -->
+      <circle cx="53" cy="73" r="4.7" />
+      <circle cx="60" cy="75" r="4.5" />
+      <circle cx="67" cy="72" r="4.2" />
+      <circle cx="72" cy="66" r="4.0" />
+      <circle cx="75" cy="59" r="3.8" />
+      <circle cx="74" cy="51" r="3.6" />
+      <!-- telson (venom bulb) + aculeus (sting) arched forward -->
+      <ellipse cx="70" cy="45" rx="4.6" ry="5.1" />
+      <path d="M67 42 Q61 41 58 46 Q63 44.5 66.5 47 Z" />
     </g>
-    <circle cx="72" cy="56" r="4.6" fill="currentColor" />
   </symbol>
 </svg>
 
