@@ -1,5 +1,18 @@
 # AI-Native Control Panel
 
+## Packaging (browser-runner, macOS)
+
+`bash scripts/package-macos.sh` builds a downloadable, double-clickable
+`dist/<App>.app`. It bundles the Next.js production server in
+`output: "standalone"` mode plus the company template; on launch the app
+starts the server locally and opens the user's browser to it. Requires the
+end user to have Node.js on their PATH (the v1 audience is CLI-comfortable
+early adopters). Unsigned for v1 — first launch is right-click → Open. The
+script self-tests the packaged server headlessly before finishing. See
+`LAUNCH.md` for the launch runbook and the Day-2 status/handoff.
+
+---
+
 Local dashboard for the agents/tools in `~/AI-Native/`
 (`email-pipeline-agent`, `ai-company-starter-main`, `plh-ops`). Shows each
 agent's most recent activity and a merged activity board, built entirely
