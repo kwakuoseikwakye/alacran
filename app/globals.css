@@ -3,26 +3,53 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ===========================================================================
+   Alacrán — "venom-night"
+   One design language shared with the marketing site (landing/styles.css).
+   Warm near-black shell, bone text, a single red accent, rounded Nunito type.
+   Token NAMES are unchanged from v14 on purpose: every components/ui/*
+   primitive already consumes them, so re-skinning needs zero primitive edits.
+   =========================================================================== */
+
 :root {
-  --radius: 0.625rem;
-  --background: #0b0d12;
-  --foreground: #e6e8eb;
-  --card: #12151b;
-  --card-foreground: #e6e8eb;
-  --primary: #5865f2;
+  --radius: 0.75rem;
+
+  /* surfaces — warm, not blue-black */
+  --background: #0c0708; /* void  */
+  --foreground: #f1e9e5; /* bone  */
+  --card: #16100f; /* shell */
+  --card-foreground: #f1e9e5;
+  --secondary: #1e1514; /* shell-2 */
+  --secondary-foreground: #d8ccc7;
+  --muted: #1e1514;
+  --muted-foreground: #a08d87; /* dune */
+  --accent: #1e1514;
+  --accent-foreground: #f1e9e5;
+  --border: #241a19; /* line */
+  --input: #241a19;
+
+  /* the one accent */
+  --primary: #ff2e43;
   --primary-foreground: #ffffff;
-  --secondary: #1d2129;
-  --secondary-foreground: #c7cbd3;
-  --muted: #1d2129;
-  --muted-foreground: #8b93a1;
-  --accent: #1d2129;
-  --accent-foreground: #e6e8eb;
-  --destructive: #f75353;
-  --success: #3ecf8e;
-  --warning: #f5b93e;
-  --border: #1d2129;
-  --input: #1d2129;
-  --ring: #5865f2;
+  --ring: #ff2e43;
+  --ember: #ff6b35;
+
+  /* semantics — destructive is a flatter, less pink red than the brand accent
+     so an error never reads as a call to action */
+  --destructive: #ff4d4d;
+  --success: #2fd39b;
+  --warning: #ffab3d;
+
+  --glow-soft: rgba(255, 46, 67, 0.16);
+  --glass: rgba(22, 16, 15, 0.62);
+  --glass-edge: rgba(241, 233, 229, 0.14);
+  --glass-sheen: rgba(241, 233, 229, 0.16);
+
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  --typeface-display: var(--font-nunito), ui-rounded, "Nunito", system-ui, sans-serif;
+  --typeface-body: var(--font-nunito-sans), "Nunito Sans", system-ui, sans-serif;
+  --typeface-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 }
 
 @theme inline {
@@ -41,15 +68,207 @@
   --color-destructive: var(--destructive);
   --color-success: var(--success);
   --color-warning: var(--warning);
+  --color-ember: var(--ember);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
+
+  --font-sans: var(--typeface-body);
+  --font-display: var(--typeface-display);
+  --font-mono: var(--typeface-mono);
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
+  font-family: var(--typeface-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--typeface-display);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+::selection {
+  background: var(--primary);
+  color: #fff;
+}
+
+/* the same uppercase mono eyebrow the marketing site uses */
+.eyebrow {
+  font-family: var(--typeface-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border: 3px solid var(--background);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--primary) 45%, var(--border));
+}
+
+/* ============================== motion ==================================== */
+
+@keyframes a-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes a-pop {
+  0% {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes a-breathe {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+}
+
+@keyframes a-halo {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--primary) 55%, transparent);
+  }
+  70% {
+    box-shadow: 0 0 0 9px transparent;
+  }
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+@keyframes a-sweep {
+  from {
+    background-position: -160% 0;
+  }
+  to {
+    background-position: 260% 0;
+  }
+}
+
+@keyframes a-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* Staggered entrance. Set `--d` per item for a cascade:
+   <div className="a-rise" style={{ "--d": "120ms" }} /> */
+.a-rise {
+  opacity: 0;
+  animation: a-rise 0.62s var(--ease) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+.a-pop {
+  opacity: 0;
+  animation: a-pop 0.45s var(--ease) forwards;
+  animation-delay: var(--d, 0ms);
+}
+
+.a-float {
+  animation: a-float 7s ease-in-out infinite;
+}
+
+/* a live/running signal — a ring that keeps expanding out of the element */
+.a-live {
+  animation: a-halo 2s ease-out infinite;
+}
+
+/* indeterminate progress sheen, used while a check is in flight */
+.a-sweep {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--primary) 26%, transparent) 45%,
+    transparent 90%
+  );
+  background-size: 45% 100%;
+  background-repeat: no-repeat;
+  animation: a-sweep 1.25s linear infinite;
+}
+
+/* the marketing site's radial halo, reused behind app hero moments */
+.a-glow {
+  position: absolute;
+  left: 50%;
+  top: 42%;
+  width: 620px;
+  height: 620px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(circle, var(--glow-soft) 0%, transparent 62%);
+  animation: a-breathe 7s ease-in-out infinite;
+}
+
+/* liquid-glass surface — the floating nav pill, shared with the landing nav */
+.a-glass {
+  background: var(--glass);
+  backdrop-filter: blur(22px) saturate(180%);
+  -webkit-backdrop-filter: blur(22px) saturate(180%);
+  border: 1px solid var(--glass-edge);
+  box-shadow:
+    0 12px 40px -14px rgba(0, 0, 0, 0.55),
+    inset 0 1px 0 var(--glass-sheen);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .a-rise,
+  .a-pop {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .a-float,
+  .a-live,
+  .a-sweep,
+  .a-glow {
+    animation: none;
+  }
 }

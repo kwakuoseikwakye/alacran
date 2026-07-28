@@ -2,7 +2,7 @@
    Red scorpion brand. Dark = venom-night (committed); light = desert day.
    One stylesheet for the whole marketing site (index + section pages). */
 
-@import url("https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap");
 
 :root {
   --void: #0c0708;
@@ -20,9 +20,15 @@
   --glass: rgba(22, 16, 15, 0.55);
   --glass-edge: rgba(241, 233, 229, 0.14);
   --glass-sheen: rgba(241, 233, 229, 0.16);
-  --font-display: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-body: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  /* Same type stack the app loads via next/font — Nunito for display weight,
+     Nunito Sans for running text, system mono for technical labels. */
+  --font-display: "Nunito", ui-rounded, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+
+  /* mirrors of the app's semantic tokens, so shared chrome reads identically */
+  --success: #2fd39b;
+  --card-radius: 16px;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -50,12 +56,16 @@ body { margin: 0; background: var(--void); color: var(--bone); font-family: var(
 a { color: inherit; text-decoration: none; }
 .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 30px; }
 .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red); }
-h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.035em; text-wrap: balance; margin: 0; }
+/* Nunito is rounder and optically wider than the old Geist, so it needs less
+   negative tracking and one weight step up to hold the same presence. */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
 p { margin: 0; }
 .muted { color: var(--dune); }
 .soon { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ember); border: 1px solid color-mix(in srgb, var(--ember) 40%, transparent); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
 
-.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-weight: 600; font-size: 15px; padding: 12px 22px; border-radius: 12px; border: 1px solid transparent; cursor: pointer; transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease); }
+/* nowrap matters in the nav: a wrapped label makes the pill taller, and at
+   border-radius 999px that turns the whole bar into a lozenge. */
+.btn { display: inline-flex; align-items: center; gap: 8px; font-family: var(--font-body); font-weight: 700; font-size: 15px; padding: 12px 22px; border-radius: 12px; border: 1px solid transparent; cursor: pointer; white-space: nowrap; transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s var(--ease), color .2s var(--ease); }
 .btn-primary { background: var(--red); color: #fff; box-shadow: 0 8px 30px -10px var(--red); }
 .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 18px 44px -12px var(--red); }
 .btn-ghost { background: transparent; color: var(--bone); border-color: var(--glass-edge); }
@@ -63,7 +73,10 @@ p { margin: 0; }
 .btn:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
 
 /* ---------- liquid-glass floating nav (curved both ends) ---------- */
-.nav { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 70;
+/* Centred with auto margins rather than left:50% + translateX: a fixed element
+   positioned at left:50% only gets HALF the viewport as available width, so
+   shrink-to-fit squeezed the CTA into two lines and distorted the pill. */
+.nav { position: fixed; top: 14px; left: 0; right: 0; margin-inline: auto; width: fit-content; z-index: 70;
   display: flex; align-items: center; gap: 22px;
   padding: 7px 7px 7px 20px; border-radius: 999px;
   background: var(--glass);
@@ -73,7 +86,9 @@ p { margin: 0; }
   max-width: calc(100vw - 28px);
 }
 .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; font-size: 18px; }
-.brand .glyph { width: 24px; height: 24px; filter: drop-shadow(0 0 8px var(--red)); }
+/* The mark is a 600x626 raster (scripts/generate-logo.py) — always size by
+   width and leave height auto, or it gets squashed ~4%. */
+.brand .glyph { width: 26px; height: auto; filter: drop-shadow(0 0 8px var(--red)); }
 .navlinks { display: flex; gap: 20px; }
 .navlinks a { font-size: 14px; color: var(--dune); white-space: nowrap; transition: color .15s ease; }
 .navlinks a:hover, .navlinks a[aria-current="page"] { color: var(--bone); }
@@ -94,12 +109,13 @@ p { margin: 0; }
 .hero { position: relative; padding: 150px 0 90px; text-align: center; overflow: hidden; }
 .halo { position: absolute; left: 50%; top: 40%; transform: translate(-50%, -50%); width: 760px; height: 760px; border-radius: 50%; pointer-events: none; background: radial-gradient(circle, var(--glow-soft) 0%, transparent 60%); filter: blur(6px); animation: breathe 7s ease-in-out infinite; }
 @keyframes breathe { 0%,100% { opacity: .5; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.12); } }
-.hero .mark { width: 118px; height: 118px; margin: 0 auto 28px; animation: floaty 8s ease-in-out infinite; }
 @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
-/* WebGL scorpion emblem (Three.js) — hero centerpiece, with SVG fallback */
-.logo3d-wrap { position: relative; width: clamp(160px, 30vw, 216px); aspect-ratio: 1 / 1; margin: 0 auto 20px; }
-.logo3d { display: block; width: 100%; height: 100%; filter: drop-shadow(0 12px 34px rgba(255,46,67,.4)); }
-.logo3d-fallback { display: none; position: absolute; inset: 0; width: 100%; height: 100%; }
+/* Hero centrepiece — the real scorpion artwork. This replaced a Three.js WebGL
+   emblem that never legibly read as a scorpion; vendor/three.min.js (656 KB)
+   and logo3d.js were deleted with it. Both are recoverable from git history. */
+.hero-logo { margin: 0 auto 22px; width: clamp(150px, 26vw, 210px); }
+.hero-logo .mark { display: block; width: 100%; height: auto; animation: floaty 8s ease-in-out infinite; }
+.final .mark, .hero-logo .mark { filter: drop-shadow(0 12px 34px rgba(255, 46, 67, .42)); }
 .hero h1 { font-size: clamp(2.8rem, 6.6vw, 5rem); line-height: 1.0; font-weight: 800; margin-top: 16px; }
 .hero h1 .ex { color: var(--red); }
 .hero-sub { max-width: 640px; margin: 24px auto 0; color: var(--dune); font-size: clamp(1.05rem, 2vw, 1.25rem); }
@@ -174,13 +190,101 @@ p { margin: 0; }
 .final { text-align: center; padding: 120px 0; position: relative; overflow: hidden; }
 .final h2 { font-size: clamp(2.3rem, 6vw, 4rem); line-height: 1.02; font-weight: 800; }
 .final p { color: var(--dune); margin: 18px auto 0; max-width: 480px; }
-.final .mark { width: 66px; height: 66px; margin: 0 auto 24px; }
+.final .mark { width: 72px; height: auto; margin: 0 auto 24px; }
 .final .cta { margin-top: 30px; }
 
 footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); font-size: 12px; letter-spacing: .05em; border-top: 1px solid var(--line); margin-top: 40px; }
 .foot-in { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 16px; align-items: center; }
 .foot-nav { display: flex; gap: 16px; flex-wrap: wrap; }
 .foot-nav a:hover { color: var(--bone); }
+
+/* ================= real product marks (see landing/brands.js) =============
+   Marks are monochrome by default so a wall of vendor logos doesn't fight the
+   single-accent palette; each tile reveals the vendor's own colour on hover. */
+.bi { width: 20px; height: 20px; fill: currentColor; display: block; }
+
+.brandtile {
+  display: inline-grid; place-items: center; width: 44px; height: 44px;
+  border-radius: 12px; border: 1px solid var(--line); background: var(--shell-2);
+  color: var(--dune); flex: none;
+  transition: color .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease), box-shadow .25s var(--ease);
+}
+.brandtile:hover { color: var(--brand, var(--red)); border-color: color-mix(in srgb, var(--brand, var(--red)) 55%, var(--line)); transform: translateY(-3px); box-shadow: 0 14px 30px -18px var(--brand, var(--red)); }
+.brandtile.lit { color: var(--brand, var(--red)); border-color: color-mix(in srgb, var(--brand, var(--red)) 45%, var(--line)); }
+.brandtile.sm { width: 34px; height: 34px; border-radius: 10px; }
+.brandtile.sm .bi { width: 16px; height: 16px; }
+
+/* card variant that leads with a real mark instead of the generic red dot */
+.card .cardmark { display: flex; align-items: center; gap: 11px; margin-bottom: 13px; }
+.card .cardmark .brandtile { width: 36px; height: 36px; border-radius: 10px; }
+.card .cardmark .brandtile .bi { width: 17px; height: 17px; }
+.card:hover .brandtile { color: var(--brand, var(--red)); border-color: color-mix(in srgb, var(--brand, var(--red)) 45%, var(--line)); }
+
+/* status pill — the same shape the app's Connect page uses */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-body); font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+.pill.live { color: var(--success); background: color-mix(in srgb, var(--success) 14%, transparent); border-color: color-mix(in srgb, var(--success) 30%, transparent); }
+.pill.next { color: var(--ember); background: color-mix(in srgb, var(--ember) 12%, transparent); border-color: color-mix(in srgb, var(--ember) 32%, transparent); }
+.pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; font-style: normal; }
+.pill.live i { animation: beacon 2s ease-out infinite; }
+@keyframes beacon {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent); }
+  70%  { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+
+/* ---------------- the orbit: real product marks circling the mark ---------
+   Two counter-rotating rings. Each mark counter-spins by the same duration so
+   the logo itself stays upright while its orbit turns. */
+/* Radii are derived from --size, never hard-coded: a fixed px radius overflowed
+   the viewport once the container shrank on phones. */
+.orbit { --size: min(460px, 84vw); position: relative; width: var(--size); aspect-ratio: 1; margin: 0 auto; }
+.orbit .sat { --r: calc(var(--size) * 0.425); }
+.orbit .spin.inner .sat { --r: calc(var(--size) * 0.243); }
+.orbit .core { position: absolute; inset: 0; display: grid; place-items: center; }
+.orbit .core .mark { width: 100px; height: auto; }
+.orbit .ring { position: absolute; inset: 0; border-radius: 50%; border: 1px dashed color-mix(in srgb, var(--red) 16%, var(--line)); }
+.orbit .ring.inner { inset: 21%; }
+.orbit .spin { position: absolute; inset: 0; animation: orbit-cw 34s linear infinite; }
+.orbit .spin.inner { inset: 21%; animation: orbit-ccw 26s linear infinite; }
+.orbit .sat { position: absolute; top: 50%; left: 50%; margin: -22px 0 0 -22px;
+  transform: rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a))); }
+.orbit .sat > .brandtile { animation: orbit-ccw 34s linear infinite; background: var(--shell); }
+.orbit .spin.inner .sat { margin: -17px 0 0 -17px; }
+.orbit .spin.inner .sat > .brandtile { animation: orbit-cw 26s linear infinite; }
+@keyframes orbit-cw  { to { transform: rotate(360deg); } }
+@keyframes orbit-ccw { to { transform: rotate(-360deg); } }
+.orbit-cap { text-align: center; margin-top: 22px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--dune); }
+
+/* ---------------- in-app preview: the real dashboard chrome ---------------
+   Deliberately built from the same tokens as app/globals.css so the marketing
+   promise and the product look like one thing. */
+.appshot { max-width: 880px; margin: 0 auto; border-radius: 18px; border: 1px solid var(--line); background: var(--shell); overflow: hidden; box-shadow: 0 40px 90px -50px #000; }
+.appshot .bar { display: flex; align-items: center; gap: 7px; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--shell-2); }
+.appshot .bar b { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.appshot .bar b:first-child { background: color-mix(in srgb, var(--red) 70%, var(--line)); }
+.appshot .body { padding: 20px 18px 24px; background:
+  radial-gradient(520px 200px at 50% -10%, var(--glow-soft), transparent 70%), var(--void); }
+.appnav { display: flex; align-items: center; gap: 16px; width: fit-content; margin: 0 auto 22px;
+  padding: 6px 6px 6px 14px; border-radius: 999px;
+  background: var(--glass); backdrop-filter: blur(18px) saturate(180%); -webkit-backdrop-filter: blur(18px) saturate(180%);
+  border: 1px solid var(--glass-edge); box-shadow: inset 0 1px 0 var(--glass-sheen); }
+.appnav .who { display: flex; align-items: center; gap: 7px; font-family: var(--font-display); font-weight: 800; font-size: 14px; }
+.appnav .who img { width: 18px; height: auto; }
+.appnav .tabs { display: flex; gap: 3px; font-size: 12.5px; color: var(--dune); }
+.appnav .tabs span { padding: 5px 11px; border-radius: 999px; }
+.appnav .tabs span.on { color: var(--red); background: color-mix(in srgb, var(--red) 15%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 30%, transparent); }
+.appgrid { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+.appcard { border: 1px solid var(--line); border-radius: var(--card-radius); background: var(--shell); padding: 15px; }
+.appcard .top { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 11px; }
+.appcard .nm { font-family: var(--font-display); font-weight: 800; font-size: 14px; }
+.appcard .kind { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
+.appcard .kind.a { color: var(--ember); background: color-mix(in srgb, var(--ember) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ember) 30%, transparent); }
+.appcard .kind.b { color: #ffab3d; background: rgba(255,171,61,.12); box-shadow: inset 0 0 0 1px rgba(255,171,61,.3); }
+.appcard .kind.c { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--success) 30%, transparent); }
+.appcard .ln { font-size: 12px; color: var(--dune); display: flex; align-items: center; gap: 7px; }
+.appcard .ln + .ln { margin-top: 6px; }
+.appcard .ln .bi { width: 13px; height: 13px; }
+.appcard .ln em { width: 6px; height: 6px; border-radius: 50%; background: var(--success); font-style: normal; flex: none; }
 
 /* scroll reveal */
 .r { opacity: 0; transform: translateY(26px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
@@ -194,5 +298,18 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
   .link { transition: none; stroke-dashoffset: 0; }
   .node { opacity: 1; }
   .diagram.drawn .pulse { animation: none; }
+  .orbit .spin, .orbit .sat > .brandtile { animation: none; }
+  .pill.live i { animation: none; }
 }
 @media (max-width: 560px) { .hero { padding: 128px 0 60px; } .section, .local, .final, .orch { padding: 64px 0; } .page-hero { padding: 130px 0 30px; } }
+
+/* The in-app preview's nav is wider than a phone; let it wrap onto two rows
+   instead of pushing the page into horizontal scroll. A wrapped pill needs a
+   smaller radius, or 999px turns the taller box into a lozenge. */
+@media (max-width: 620px) {
+  .appnav { flex-wrap: wrap; justify-content: center; max-width: 100%; border-radius: 18px; padding: 9px 11px; gap: 10px; }
+  .appnav .tabs { font-size: 11.5px; }
+  .appnav .tabs span { padding: 5px 9px; }
+  .appshot .body { padding: 16px 12px 20px; }
+  .orbit .core .mark { width: 74px; height: auto; }
+}

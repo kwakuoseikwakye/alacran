@@ -64,15 +64,44 @@ AI-Native instance through the UI" product. Concretely:
   written/read path must resolve inside a known agent's root) and
   `lib/resolve-known-skill.ts` (membership — the path must correspond to
   an actual known skill/command file), used together on every write path.
-- **Design tokens (v14)**: dark-only palette, CSS custom properties in
-  `app/globals.css`'s `:root` + `@theme inline` block. Every
-  `components/ui/*` primitive already consumes these via Tailwind
-  utility classes — changing a token's *value* cascades everywhere with
-  zero edits to the primitives themselves. **Never edit
+- **Design tokens (v14 mechanism, v29 values)**: dark-only palette, CSS
+  custom properties in `app/globals.css`'s `:root` + `@theme inline`
+  block. Every `components/ui/*` primitive already consumes these via
+  Tailwind utility classes — changing a token's *value* cascades
+  everywhere with zero edits to the primitives themselves. **Never edit
   `components/ui/*`** to fix a styling issue; fix the token or the
   *consumer*'s className instead (see v16's Sheet-mobile-width fix for
   the pattern: primitive untouched, 3 consumers each got
-  `className="w-full sm:max-w-xl"`).
+  `className="w-full sm:max-w-xl"`; and v29's `min-w-0` fixes on
+  `CardTitle` consumers, which is a **grid** item whose automatic minimum
+  size otherwise defeats `truncate`).
+- **One brand across app + marketing (v29)**: the palette is Alacrán
+  "venom-night" (`#0c0708`/`#16100f` surfaces, bone text, one red accent
+  `#ff2e43`) and the type is Nunito / Nunito Sans, in BOTH
+  `app/globals.css` and `landing/styles.css`. **A change to one must be
+  mirrored in the other.** The app is dark-only, so the landing site
+  defaults to dark too (its light theme is an opt-in toggle persisted to
+  `localStorage`).
+- **The logo is generated, not hand-edited.** `scripts/generate-logo.py`
+  keys and recolours the user-supplied artwork (`landing/scorpion.png` —
+  a JPEG with no alpha, despite the name) into FOUR committed outputs:
+  `landing/logo.png`, `components/alacran-logo.png`,
+  `landing/favicon.png`, `app/icon.png`. Never edit those by hand — change
+  the script's `RAMP` and rerun so all four stay in sync. The app consumes
+  it via a **static import + `next/image` with `unoptimized`**: the static
+  import emits it into `.next/static/media` (already copied by
+  `scripts/package-macos.sh`), and `unoptimized` avoids a runtime `sharp`
+  dependency the packaged app doesn't ship. The mark is 600x626 —
+  **always size it by width with `height:auto`**, never `size-*` or a
+  fixed square, or it squashes ~4%.
+- **Real product marks only**: brand logos come from
+  `scripts/generate-brand-icons.mjs`, which extracts official Simple Icons
+  (CC0) path data into the committed `lib/brand-icons.ts` and
+  `landing/brands.js`. `simple-icons` is installed `--no-save` for the
+  regeneration only — never add it as a runtime dependency. **Never
+  hand-draw or approximate a vendor logo.** Slack and OpenAI had their
+  marks withdrawn from the dataset; name them in prose instead of
+  redrawing them.
 - **Single-file-scoped git commits**: `lib/git-commit-file.ts` runs
   `git add -- <file> && git commit -m <msg> -- <file>` — never a bare
   `git commit` that could sweep up unrelated changes in a target repo.

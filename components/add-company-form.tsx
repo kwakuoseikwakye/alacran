@@ -19,7 +19,10 @@ import { registerCompany } from "@/lib/register-company"
 import { getCompanyPathStatus } from "@/lib/get-company-path-status"
 import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 
-export function AddCompanyForm() {
+export function AddCompanyForm({
+  /** Onboarding shows this as the step's primary action; the dashboard keeps it quiet. */
+  prominent = false,
+}: { prominent?: boolean } = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
@@ -68,7 +71,15 @@ export function AddCompanyForm() {
   }
 
   if (!open) {
-    return (
+    return prominent ? (
+      <Button
+        className="w-full shadow-[0_10px_30px_-12px_var(--primary)] transition-transform hover:-translate-y-0.5"
+        onClick={() => setOpen(true)}
+      >
+        <Plus className="h-4 w-4" />
+        Create my first company
+      </Button>
+    ) : (
       <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setOpen(true)}>
         <Plus className="h-4 w-4" />
         Add a company
@@ -77,7 +88,9 @@ export function AddCompanyForm() {
   }
 
   return (
-    <div className="max-w-sm space-y-3 rounded-lg border border-border bg-card p-4">
+    <div
+      className={`${prominent ? "w-full" : "max-w-sm"} a-rise space-y-3 rounded-lg border border-border bg-card p-4`}
+    >
       <h2 className="text-sm font-medium">Add a company</h2>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Name</label>
