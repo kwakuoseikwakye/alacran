@@ -65,7 +65,7 @@ export async function createCompanyFromTemplateImpl(
 
     await execFn("git", ["-C", rootPath, "init"])
     await execFn("git", ["-C", rootPath, "add", "-A"])
-    await execFn("git", ["-C", rootPath, "commit", "-m", "Initial commit from ai-company-starter-main template"])
+    await execFn("git", ["-C", rootPath, "commit", "-m", "Initial commit from company starter template"])
   } catch (err) {
     return {
       ok: false,

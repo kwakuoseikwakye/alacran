@@ -69,7 +69,7 @@ describe("createCompanyFromTemplateImpl", () => {
       { command: "git", args: ["-C", target, "add", "-A"] },
       {
         command: "git",
-        args: ["-C", target, "commit", "-m", "Initial commit from ai-company-starter-main template"],
+        args: ["-C", target, "commit", "-m", "Initial commit from company starter template"],
       },
     ])
   })
