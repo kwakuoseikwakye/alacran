@@ -547,3 +547,44 @@ command at a time — the same shape as v20's `daily-team-log`
 config-collision limitation, documented rather than fixed.
 
 This is piece 6 of the roadmap.
+
+## v23–v25: productize (Day 1 of the 4-day launch push)
+
+The project pivoted from a personal local tool to a downloadable product
+(see `LAUNCH.md` for the launch runbook). Day 1 makes a fresh install a
+clean product while the developer's own machine keeps full daily use
+with zero setup, split into three slices:
+
+- **v23 — de-PLH the config.** The 3 example agents (`plh-takeshi-agent`,
+  `ai-company-starter-main`, `plh-ops`) were hardcoded in `lib/config.ts`
+  at `~/AI-Native/*` paths. They now load via a testable
+  `buildBuiltins(exists)` (`lib/builtin-agents.ts`) **only if their
+  directories exist on disk**. On a developer machine they exist → all
+  three load with their full bespoke features (v2/v5/v9/v19/v20),
+  unchanged, zero setup. On a fresh install none exist → `AGENTS`/
+  `ADAPTERS`/`SKILL_ADAPTERS` are empty → the app starts clean. Their
+  bespoke features already gate on `agent.id`, so they simply go dormant
+  when absent — no deletion. Also: the install-daily-team-log button now
+  hides when its `plh-ops` source is absent (no broken action on a fresh
+  install), and the two cosmetic "ai-company-starter-main template"
+  strings are genericized to "company starter template".
+
+- **v24 — bundle the template.** Creating a company copied from
+  `~/AI-Native/ai-company-starter-main`, which doesn't exist on a user's
+  machine. The cleaned template (exactly v17's audited `TEMPLATE_MANIFEST`
+  allowlist) is now a committed in-repo snapshot at
+  `templates/company-starter/`, and the create action sources from there —
+  deterministic, offline, no `~/AI-Native` dependency. The impl was
+  already parameterized on the source path, so this was a one-line
+  repoint plus the bundled files (scrub-verified free of PLH/Kirirom
+  data).
+
+- **v25 — first-run onboarding + dependency detection.** An empty agent
+  list now renders an `OnboardingWelcome` screen (instead of a bare grid)
+  with a `checkDependencies()` server action that detects Claude Code CLI
+  + `gog` on `PATH` and shows detect-and-guide install steps for whatever
+  is missing, plus the "create your first company" CTA. Matches the
+  locked launch decision to target CLI-comfortable early adopters with
+  guided (not automated) dependency install.
+
+These are Day 1 of the launch; see `LAUNCH.md` for the full plan.

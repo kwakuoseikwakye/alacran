@@ -33,14 +33,17 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 
 ## Current position  ⬅️ resume here
 
-- **Active stage:** Day 1 — De-PLH + first-run onboarding
-- **Overall:** Day 0 (planning) complete; 4 of 6 open decisions resolved
-  (2026-07-28); nothing built yet.
-- **Single next action:** brainstorm + spec Day 1, then build it (branch,
-  tests, live-verify, merge — same discipline as v1–v22).
-- **Still-open (non-blocking for Day 1):** exact price + trial length; app
-  name/brand/domain — both only bite on Day 2–3.
-- **Days elapsed / remaining:** 0 / 4.
+- **Active stage:** Day 2 — Desktop packaging (Electron; browser fallback).
+- **Overall:** Day 1 **DONE** (v23/v24/v25 shipped + merged, app is
+  product-shaped: starts empty, bundled template, onboarding). Day 0 planning
+  + 4/6 decisions resolved.
+- **Single next action:** start Day 2 — spike Electron wrapping of the Next.js
+  server app; if it fights past mid-day, switch to the packaged-local-server +
+  browser fallback. Resolve the [MED] app-name open decision (needed for the
+  Electron app name).
+- **Still-open (non-blocking so far):** exact price + trial length; app
+  name/brand/domain — the latter now bites on Day 2 (Electron app name).
+- **Days elapsed / remaining:** 1 / 4.
 
 Keep this block honest and current — it is the fastest way for a fresh session
 to know where things stand.
@@ -109,7 +112,8 @@ model, template delivery, macOS signing._
 
 ## Day 1 — De-PLH + first-run onboarding + dependency detection
 
-**Status:** NOT STARTED
+**Status:** DONE (2026-07-28) — shipped as v23/v24/v25, all merged to master
+(258 tests green, build clean, live-verified).
 
 **Goal:** a fresh install starts **empty** and walks the user from nothing to
 their first working company. This is pure critical path and low-risk — do it
@@ -156,7 +160,24 @@ template and see it appear — with no PLH data anywhere and no assumption that
 polished Welcome visuals (a plain screen is fine).
 
 **Updates log:**
-- _(append dated notes here as you work Day 1)_
+- **2026-07-28** — Built as three merged slices:
+  - **v23** — `buildBuiltins(exists)` in `lib/builtin-agents.ts`; `config.ts`
+    loads built-ins only if their `~/AI-Native/*` dirs exist. Install-daily-team-log
+    button gated on `plh-ops` presence; template strings genericized. Dev
+    machine keeps all 3 agents (verified via Playwright — grid still shows them).
+  - **v24** — committed `templates/company-starter/` snapshot (42 manifest
+    paths, 117 files, scrub-verified clean; removed stray `__pycache__` so it
+    doesn't propagate); `create-company-from-template.ts` repointed to the
+    bundle. Live-verified: created a disposable company from the bundle with the
+    genericized commit message, `check-inbox.md` present, no PLH data,
+    `ai-company-starter-main` untouched.
+  - **v25** — `checkDependencies()` (claude + gog via `which`) +
+    `OnboardingWelcome`; `app/page.tsx` renders it when `agents.length === 0`.
+    Live-verified by running the dev server with `HOME` pointed at an empty dir
+    → onboarding rendered with real dep status (both ✓ installed) + "Add a
+    company" CTA.
+  - README/CLAUDE.md/memory updated. Cost note: the spawn cap (200/200) blocked
+    subagent dispatch again (9th time), so all slices implemented directly.
 
 ---
 
@@ -297,3 +318,10 @@ truthful.
   app; macOS = ship unsigned + right-click→Open for v1. Day 1 tasks firmed up
   accordingly. Remaining open (non-blocking for Day 1): exact price/trial length,
   app name/brand/domain. **Next:** brainstorm + spec + build Day 1.
+- **2026-07-28 — Day 1 DONE.** Shipped v23 (existence-gated built-ins), v24
+  (bundled `templates/company-starter/` + repointed create action), v25
+  (`OnboardingWelcome` + `checkDependencies`). All merged to master, 258 tests
+  green, build clean, each live-verified. App now starts empty on a fresh
+  install and onboards to first-company creation; dev machine unchanged.
+  **Next:** Day 2 — Electron packaging spike (browser fallback ready); pick an
+  app name (needed for the Electron build).
