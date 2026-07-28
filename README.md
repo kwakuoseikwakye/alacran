@@ -499,3 +499,51 @@ real button ships working, and a real end-to-end AI-generated diff is
 left for the user to trigger themselves whenever ready.
 
 This is piece 5 of the roadmap.
+
+## v22: check-inbox — a real, generic integration-consuming command
+
+After v21, one roadmap thread remained: a fresh company having a real
+integration worth connecting. Investigating turned up two things prior
+slices had missed. First, `harness-engineering` — named as "core"
+alongside `ai-company-starter-main` since v17 but never examined — is a
+clone of a third-party public repo (a methodology thesis on writing
+agent-facing docs), not functional infrastructure; `ai-company-starter-main`
+doesn't reference it. Second, and the real finding: `email-pipeline-agent`'s
+"email connection," long assumed bespoke, is actually a call into `gog`
+(gogcli) — a real, already-installed, general-purpose Google API CLI
+(Gmail, Calendar, Drive, and more) with its own OAuth account store. And
+`api-connect` (already scaffolded into every company) is a fully generic
+"connect anything" skill that already handles OAuth for exactly this kind
+of tool.
+
+So "connect an integration" was never the missing piece — it's already
+solved and already generic. The actual gap was narrower: no command in
+the template *does* anything with a connected integration. v22 adds
+exactly one: `check-inbox`, a strictly read-only "summarize my unread
+mail" command that runs `gog -a auto gmail search`/`get` and writes a
+metadata-only summary to `notes/company/email-checks/`. It never sends,
+labels, archives, or reads message bodies.
+
+Two pieces of machinery made this fit the existing system. The headless
+command-runner (v8, generalized in v21) spawned every command with
+`--disallowedTools "Bash"`; `check-inbox` is the first that needs a real
+CLI, so `CompanyCommand` gained an optional `bashPatterns` field — a
+command that declares patterns gets narrowly-scoped `Bash(gog ...)`
+access (exactly the two read-only gog calls, nothing else) instead of a
+blanket disallow, reusing the same scoped-Bash approach v9's
+`daily-team-log` trigger already used. The 5 existing commands omit the
+field and spawn byte-identically to before. And the Skills-page "Run"
+tab, gated to `ai-company-starter-main` only since v21, now opens to any
+`command-set` company — a natural completion of v21's generalization,
+running each command against the selected company's own repo. The
+`check-inbox.md` command file was added to the `ai-company-starter-main`
+template, so every new company inherits it through v17's existing
+whole-folder copy.
+
+**Known, disclosed limitation:** `gog`'s auth store is global
+per-machine and `check-inbox` uses `-a auto`, so only one company can
+meaningfully have its own connected Google account active for this
+command at a time — the same shape as v20's `daily-team-log`
+config-collision limitation, documented rather than fixed.
+
+This is piece 6 of the roadmap.
