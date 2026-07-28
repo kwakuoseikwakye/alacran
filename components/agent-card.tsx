@@ -12,6 +12,7 @@ import { AgentAvatarForm } from "@/components/agent-avatar-form"
 import { StatusDot } from "@/components/status-dot"
 import { CompanySetupWizard } from "@/components/company-setup-wizard"
 import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
+import { BrandIcon } from "@/components/brand-icon"
 
 type AgentCardProps = {
   agent: Agent
@@ -26,12 +27,16 @@ type AgentCardProps = {
   showSetupCompanyButton?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
+  /** Position in the grid — drives the staggered entrance animation. */
+  index?: number
 }
 
+// Warm hues only, so the kind badges read as part of the venom-night palette
+// rather than leftovers from the old indigo theme.
 const KIND_BADGE_CLASS: Record<Agent["kind"], string> = {
-  pipeline: "border-blue-500/30 bg-blue-500/10 text-blue-400",
-  "command-set": "border-violet-500/30 bg-violet-500/10 text-violet-400",
-  "report-log": "border-teal-500/30 bg-teal-500/10 text-teal-400",
+  pipeline: "border-ember/30 bg-ember/10 text-ember",
+  "command-set": "border-warning/30 bg-warning/10 text-warning",
+  "report-log": "border-success/30 bg-success/10 text-success",
 }
 
 export function AgentCard({
@@ -47,14 +52,24 @@ export function AgentCard({
   showSetupCompanyButton,
   integrationStatus,
   showInstallDailyTeamLogButton,
+  index = 0,
 }: AgentCardProps) {
+  // getIntegrationStatus returns prose; anything other than the "none" sentinel
+  // means a real Google account is wired up, so show the product mark.
+  const hasIntegration = integrationStatus !== "none configured yet"
+
   return (
-    <Card className="transition-colors hover:border-border/80">
+    <Card
+      className="a-rise transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-[0_18px_40px_-26px_var(--primary)]"
+      style={{ "--d": `${index * 70}ms` } as React.CSSProperties}
+    >
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <span className="flex items-center gap-2 font-semibold">
+        {/* min-w-0: CardTitle is a grid item, whose automatic minimum size would
+            otherwise stop the agent name ever truncating on narrow screens. */}
+        <CardTitle className="flex min-w-0 items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-2 font-display font-bold">
             <AgentAvatar imageUrl={avatarUrl ?? null} />
-            {agent.name}
+            <span className="truncate">{agent.name}</span>
           </span>
           <Badge variant="outline" className={KIND_BADGE_CLASS[agent.kind]}>
             {agent.kind}
@@ -81,7 +96,14 @@ export function AgentCard({
             {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
           </p>
         )}
-        <p className="text-xs text-muted-foreground">Integrations: {integrationStatus}</p>
+        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          {hasIntegration ? (
+            <BrandIcon id="gmail" tone="brand" className="size-3.5" />
+          ) : (
+            <span className="inline-block size-1.5 rounded-full bg-border" aria-hidden="true" />
+          )}
+          <span className="truncate">{integrationStatus}</span>
+        </p>
         <div className="space-y-2 pt-1">
           {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
           {showVerifyButton && <VerifyButton />}

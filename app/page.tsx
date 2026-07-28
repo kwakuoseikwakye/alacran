@@ -21,7 +21,7 @@ export default async function AgentTreePage() {
   ])
   if (agents.length === 0) {
     return (
-      <main className="mx-auto max-w-5xl p-8">
+      <main className="mx-auto max-w-5xl px-8 pb-12">
         <OnboardingWelcome />
       </main>
     )
@@ -40,14 +40,15 @@ export default async function AgentTreePage() {
   ])
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 p-8">
-      <div>
-        <h1 className="text-2xl font-semibold">AI-Native Agents</h1>
+    <main className="mx-auto max-w-5xl space-y-6 px-8 pt-2 pb-12">
+      <div className="a-rise">
+        <p className="eyebrow">Your machine</p>
+        <h1 className="mt-1 font-display text-3xl font-extrabold">Agents</h1>
         <p className="text-sm text-muted-foreground">Status, avatars, and quick actions for every managed agent.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {await Promise.all(
-          results.map(async (result) => {
+          results.map(async (result, index) => {
             const latest = mergeAndSortActivities([result])[0] ?? null
             const isTakeshiAgent = result.agent.id === "plh-takeshi-agent"
             const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
@@ -77,6 +78,7 @@ export default async function AgentTreePage() {
                 showSetupCompanyButton={needsCompanySetup}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
+                index={index}
               />
             )
           })

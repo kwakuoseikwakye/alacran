@@ -5,43 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Pricing — Alacrán</title>
 <meta name="description" content="One plan, start free. 14-day trial, cancel anytime. Bring your own agent." />
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%A6%82%3C/text%3E%3C/svg%3E" />
+<link rel="icon" type="image/png" href="favicon.png" />
 <link rel="stylesheet" href="styles.css" />
+<script>(function(){var r=document.documentElement,s=null;try{s=localStorage.getItem('alacran-theme')}catch(e){}r.setAttribute('data-theme',s==='light'?'light':'dark');})();</script>
+
 </head>
 <body>
-<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
-  <radialGradient id="scGrad" cx="36%" cy="30%" r="82%">
-    <stop offset="0%" stop-color="#ffb0b8"/><stop offset="42%" stop-color="#ff2e43"/><stop offset="100%" stop-color="#8c0f1c"/>
-  </radialGradient>
-  <linearGradient id="scLimb" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0%" stop-color="#ff5566"/><stop offset="100%" stop-color="#9d1220"/>
-  </linearGradient>
-  <filter id="scShadow" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="1.4" stdDeviation="1.5" flood-color="#000" flood-opacity="0.42"/></filter>
-</defs>
-<symbol id="alacran" viewBox="0 0 100 100">
-  <g filter="url(#scShadow)">
-    <g fill="none" stroke="url(#scLimb)" stroke-width="2.6" stroke-linecap="round">
-      <path d="M42 41 Q29 38 19 32"/><path d="M43 47 Q28 47 16 45"/><path d="M44 53 Q29 55 18 60"/><path d="M45 59 Q31 63 23 71"/>
-      <path d="M58 41 Q71 38 81 32"/><path d="M57 47 Q72 47 84 45"/><path d="M56 53 Q71 55 82 60"/><path d="M55 59 Q69 63 77 71"/>
-    </g>
-    <g fill="none" stroke="url(#scLimb)" stroke-width="5" stroke-linecap="round"><path d="M44 39 Q34 29 28 23"/><path d="M56 39 Q66 29 72 23"/></g>
-    <ellipse cx="24" cy="19" rx="6.6" ry="3.7" transform="rotate(-32 24 19)" fill="url(#scGrad)"/>
-    <ellipse cx="29" cy="14" rx="5.4" ry="3" transform="rotate(-68 29 14)" fill="url(#scGrad)"/>
-    <ellipse cx="76" cy="19" rx="6.6" ry="3.7" transform="rotate(32 76 19)" fill="url(#scGrad)"/>
-    <ellipse cx="71" cy="14" rx="5.4" ry="3" transform="rotate(68 71 14)" fill="url(#scGrad)"/>
-    <ellipse cx="50" cy="43" rx="12" ry="10" fill="url(#scGrad)"/>
-    <ellipse cx="50" cy="53" rx="10.4" ry="6" fill="url(#scGrad)"/>
-    <ellipse cx="50" cy="61" rx="8.7" ry="5.3" fill="url(#scGrad)"/>
-    <ellipse cx="50" cy="68" rx="6.9" ry="4.7" fill="url(#scGrad)"/>
-    <circle cx="53" cy="73" r="4.7" fill="url(#scGrad)"/><circle cx="60" cy="75" r="4.5" fill="url(#scGrad)"/>
-    <circle cx="67" cy="72" r="4.2" fill="url(#scGrad)"/><circle cx="72" cy="66" r="4.0" fill="url(#scGrad)"/>
-    <circle cx="75" cy="59" r="3.8" fill="url(#scGrad)"/><circle cx="74" cy="51" r="3.6" fill="url(#scGrad)"/>
-    <ellipse cx="70" cy="45" rx="4.6" ry="5.1" fill="url(#scGrad)"/>
-    <path d="M67 42 Q61 41 58 46 Q63 44.5 66.5 47 Z" fill="url(#scGrad)"/>
-  </g>
-</symbol></svg>
 <nav class="nav">
-  <a class="brand" href="index.html"><svg class="glyph"><use href="#alacran"/></svg>Alacrán</a>
+  <a class="brand" href="index.html"><img class="glyph" src="logo.png" alt="" width="600" height="626" />Alacrán</a>
   <div class="navlinks">
     <a href="use-cases.html">Use cases</a>
     <a href="templates.html">Templates</a>
@@ -72,7 +43,7 @@
 </div></div></section>
 <section class="final">
   <div class="wrap r">
-    <svg class="mark mark-glow" aria-hidden="true"><use href="#alacran"/></svg>
+    <img class="mark mark-glow" src="logo.png" alt="" width="600" height="626" />
     <h2>Command your company.</h2>
     <p>Set it up once. Let Alacr&aacute;n run the rest — on your terms.</p>
     <div class="cta"><a class="btn btn-primary" href="https://your-store.lemonsqueezy.com/buy/REPLACE-ME">Start free trial</a></div>
@@ -90,7 +61,7 @@
 </footer>
 <script>
   (function(){var r=document.documentElement,b=document.getElementById("tt");
-    if(b)b.addEventListener("click",function(){var c=r.getAttribute("data-theme")||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");r.setAttribute("data-theme",c==="dark"?"light":"dark");});})();
+    if(b)b.addEventListener("click",function(){var n=(r.getAttribute("data-theme")==="dark")?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem('alacran-theme',n)}catch(e){}});})();
   (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".r,.diagram");
     if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
     var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});

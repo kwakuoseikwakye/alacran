@@ -640,3 +640,137 @@ malformed-JSON) with a fake `ExecFileFn`; 277 tests green; `tsc`/`build`
 clean; live-verified both the connected path (real account email shown) and
 the not-connected guidance UI. See
 `docs/superpowers/specs/2026-07-28-control-panel-v28-connect-tools-design.md`.
+
+## v29 (2026-07-28): one design language — Alacrán across app + landing
+
+The landing site and the dashboard had drifted into two different products:
+the site was the Alacrán brand (warm near-black, red scorpion, Geist, glass
+nav, light-by-default), the app was the generic indigo `#5865f2` shadcn dark
+theme from v14. Asked which way to unify, the user chose **brand wins** — the
+app moves onto the Alacrán palette and the two share one language.
+
+**Design tokens.** `app/globals.css` keeps every v14 token *name* and changes
+only the values (venom-night surfaces `#0c0708`/`#16100f`, bone text, one red
+accent `#ff2e43`, warm `#241a19` borders) — so per the standing rule **no
+`components/ui/*` primitive was edited**; the whole re-skin cascades. Two
+judgement calls: `--destructive` became a flatter `#ff4d4d` so an error never
+reads as a call to action next to a red brand accent, and `AgentCard`'s kind
+badges moved off blue/violet/teal onto warm ember/amber/teal.
+
+**Type.** Nunito (display) + Nunito Sans (body) replace Geist on both halves.
+The app loads them through `next/font/google`, which downloads and self-hosts
+at build time — **verified: 10 `.woff2` in `.next/static/media`, no
+`fonts.gstatic.com` reference in the server output**, so the packaged `.app`
+still renders correctly with no network. Nunito is rounder and optically wider
+than Geist, so headings went to weight 800 with `-0.02em` tracking instead of
+700/`-0.035em`.
+
+**Real product marks.** `scripts/generate-brand-icons.mjs` extracts official
+path data from the Simple Icons dataset (CC0) into two committed artefacts —
+`lib/brand-icons.ts` (React `<BrandIcon>`) and `landing/brands.js` (an SVG
+`<symbol>` sprite). `simple-icons` is `--no-save`, build-time only: the shipped
+app has no runtime dependency and works offline. Marks are monochrome by
+default and take the vendor's colour only when it means something (a live
+connection, a hover, the hero orbit), so a wall of logos doesn't fight the
+single-accent palette. Each has an `onDark` variant because GitHub, Notion,
+Anthropic and Apple ship pure-black marks that would be invisible.
+**Slack and OpenAI are deliberately absent** — both vendors had their marks
+withdrawn from Simple Icons, and a redrawn trademark is worse than none; they
+are named in prose instead.
+
+**Interactive onboarding.** `OnboardingWelcome` went from a static checklist to
+a three-step flow (Install → Connect → Create) with a clickable step rail,
+per-step live detection, animated status chips, copy-able install/auth
+commands, "Skip for now" escapes, and a **`focus`/`visibilitychange`
+re-probe** so leaving to run `gog auth setup` in a terminal and coming back
+updates the flow without a manual click. It composes the existing
+`checkDependencies()` (installed?) and `getConnectStatus()` (signed in?)
+actions — no new server surface. `AddCompanyForm` gained an optional
+`prominent` prop so the final step gets a real CTA while the dashboard keeps
+its quiet ghost button.
+
+**Motion.** A small vocabulary in `globals.css` (`a-rise`, `a-pop`, `a-live`,
+`a-sweep`, `a-glow`, `a-float`, `a-glass`) driven by a `--d` custom property
+for staggered entrances, all disabled under `prefers-reduced-motion`.
+
+**Landing.** Now **dark by default** (the app has no light mode, so a
+light-by-default site was the single biggest mismatch); the toggle survives as
+an opt-in and now persists to `localStorage`, applied by a head-level script so
+there's no flash. New sections: a counter-rotating **orbit** of real product
+marks around the scorpion (marks counter-spin to stay upright), and an
+**"Inside the app"** panel built from the same tokens as the real dashboard —
+same glass nav pill, same card shapes, same kind-badge colours. The emoji
+favicon was replaced with the real mark (`landing/favicon.svg` + `app/icon.svg`,
+which also fixes a 404 the app was serving for `/favicon.ico`).
+
+**Four real bugs found and fixed during live verification, not review:**
+1. `.nav` used `position:fixed; left:50%; transform:translateX(-50%)` — a fixed
+   element at `left:50%` only gets **half the viewport** as available width, so
+   shrink-to-fit wrapped the CTA to two lines and, at `border-radius:999px`,
+   turned the whole bar into a lozenge. Fixed with `left:0; right:0;
+   margin-inline:auto; width:fit-content`.
+2. The orbit's satellite radius was a hard-coded `196px` while its container
+   shrank to `min(460px,84vw)` — on a 375px phone the marks sat at `-37..412`
+   and pushed the document to a 462px scroll width. Radii are now derived from
+   a `--size` custom property.
+3. The app nav's scrolling link row lacked `min-w-0`: a flex child defaults to
+   `min-width:auto` and refused to shrink, pushing "Connect" off-screen and
+   making the whole page scroll horizontally at 364px.
+4. `CardTitle` is a **grid** item inside `CardHeader`, so its automatic minimum
+   size meant `truncate` never engaged and the title overflowed its own card.
+   Fixed on the two consumers (`connect-panel`, `agent-card`), primitive
+   untouched.
+
+Verified: `tsc` clean, **277 tests green**, `eslint` 0 errors (2 pre-existing
+warnings in untouched test files), `npm run build` clean. Live-checked with
+real screenshots at 1280px and 375px across the dashboard, the Connect page
+(both the real connected account and, via a `HOME`-pointed-at-an-empty-dir dev
+server, the not-connected path), all three onboarding steps, and the landing
+site — plus a scripted overflow audit confirming **no horizontal scroll and
+zero escaping elements** at 364px on both halves.
+
+### v29a: the supplied scorpion artwork becomes the logo
+
+The user supplied `landing/scorpion.png` and asked for it as the logo, in red.
+Two things had to be solved before it could sit on a dark surface.
+
+**It isn't what its name says.** Despite the `.png` extension the file is a
+**JPEG, 840x916, RGB with no alpha** — the "transparency" is a checkerboard
+pattern flattened into the image. So the artwork had to be keyed out.
+
+**A luminance threshold would have punched holes in it**, because interior
+white highlights are exactly as bright as the background. Instead
+`scripts/generate-logo.py` labels every light region as a connected component
+and classifies it by the *checkerboard signature*: the background alternates
+239/255, so ~50% of its pixels are "dim" (<247), while an interior highlight is
+uniformly white. Measured on the real file the separation is clean — outer
+background 54% dim, the two regions enclosed by the pincer loops 55% and 50%,
+every genuine highlight between 4% and 11%. That gap is what the threshold
+splits, and it is why the enclosed loops come out transparent while the
+highlights survive. Edges are then feathered by luminance, since JPEG blurs
+background into outline over a pixel or two.
+
+Colour is a gradient map of luminance onto the brand's scorpion gradient. The
+darkest stop was lifted from `#8c0f1c` to `#a61426` after comparing renders at
+22/40/84px: the original floor made outlines vanish against the near-black
+surface and the 20px nav mark read as a blob. Lifting further (`#c01a2e`)
+flattened the segmentation detail at large sizes.
+
+Outputs are committed, so neither the build nor CI needs PIL: `landing/logo.png`
+and `components/alacran-logo.png` (600px, quantised to a 128-colour palette —
+192 KB → 33 KB) plus 128px favicons at `landing/favicon.png` and `app/icon.png`.
+
+Wiring: `AlacranMark` now renders the raster through `next/image` with a
+**static import** — the file lands in `.next/static/media`, which
+`scripts/package-macos.sh` already copies — and with **`unoptimized`**, because
+the packaged desktop build ships no `sharp` and running a 33 KB bundled PNG
+through the Image Optimization API would buy nothing. Verified: the rendered
+markup carries `data-nimg` with **zero `/_next/image` URLs**. All 7 landing
+pages dropped the inline `#alacran` SVG symbol for `<img src="logo.png">`
+(0 leftover references), and every mark is sized by width with `height:auto` —
+the art is 600x626, so the old fixed squares would have squashed it ~4%
+(measured after: rendered ratios 1.038/1.042 against a native 1.043).
+
+The Three.js hero emblem was replaced by the artwork, and the now-unreferenced
+`landing/vendor/three.min.js` (656 KB) and `landing/logo3d.js` were deleted —
+both recoverable from git history if you want the 3D version back.

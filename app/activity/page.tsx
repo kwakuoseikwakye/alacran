@@ -10,8 +10,11 @@ export default async function ActivityPage() {
   const activities = mergeAndSortActivities(results)
 
   return (
-    <main className="mx-auto max-w-6xl space-y-4 p-8">
-      <h1 className="text-2xl font-semibold">Activity</h1>
+    <main className="mx-auto max-w-6xl space-y-4 px-8 pt-2 pb-12">
+      <div className="a-rise">
+        <p className="eyebrow">Everything that happened</p>
+        <h1 className="mt-1 font-display text-3xl font-extrabold">Activity</h1>
+      </div>
       <ActivityBoard activities={activities} />
     </main>
   )
