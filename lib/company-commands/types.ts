@@ -16,5 +16,6 @@ export type CompanyCommand = {
   outputKind: CompanyCommandOutputKind
   outputPath: string
   needsPrefetch: boolean
+  bashPatterns?: string[]
   buildPrompt: (fieldValues: Record<string, string>, today: string, prefetch: string) => string
 }
