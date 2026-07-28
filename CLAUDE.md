@@ -129,7 +129,7 @@ improvising a workaround.
    available) — fresh subagent per task, task review after each, final
    whole-branch review before merge. **This session's subagent-spawn cap
    (200/session) has been hit repeatedly (v14, v16, v17, v18, v19, v20,
-   v21 — confirmed still blocking on a fresh dispatch attempt every
+   v21, v22 — confirmed still blocking on a fresh dispatch attempt every
    time)** —
    when that happens, every task is instead implemented directly
    (read-before-edit, `tsc`/`vitest` after every step, one commit per
@@ -152,7 +152,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v21** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v22** (see `README.md` for the full per-slice changelog).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
@@ -226,28 +226,56 @@ confirming. See
 spec also has the agent-agnostic design decision: the portable core is
 `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
 `.claude/*` is one Claude-Code-specific adapter on top of it, not the
-core itself).
+core itself). v22 investigated the last roadmap thread (a fresh company
+having a real integration worth connecting) and found two things prior
+slices missed: `harness-engineering` (named "core" since v17, never
+examined) is a clone of a third-party methodology-thesis repo, not
+functional infrastructure; and `plh-takeshi-agent`'s "email connection"
+is actually a call into `gog` (gogcli) — a real, already-installed,
+general-purpose Google API CLI (Gmail/Calendar/Drive/…) with its own
+OAuth store. So "connect an integration" was never missing (`gog` +
+the generic `api-connect` skill already solve it); the gap was that no
+template command *consumed* one. v22 added exactly one: `check-inbox`,
+a strictly read-only "summarize unread mail" command
+(`gog -a auto gmail search`/`get` → `notes/company/email-checks/`,
+never send/label/archive/read-body). Two machinery changes:
+`CompanyCommand` gained an optional `bashPatterns` field so a command
+can get narrowly-scoped `Bash(gog ...)` access instead of v8's blanket
+`--disallowedTools "Bash"` (the 5 existing commands omit it and spawn
+byte-identically — reusing v9's scoped-Bash approach); and the
+Skills-page "Run" tab, gated to `ai-company-starter-main` only since
+v21, now opens to any `command-set` company (running against that
+company's own repo). The `check-inbox.md` file was added to the
+`ai-company-starter-main` template (a commit in THAT repo, not the
+control-panel branch) so new companies inherit it via v17's
+whole-folder copy. **Known, disclosed limitation:** `gog`'s auth store
+is global per-machine and `check-inbox` uses `-a auto`, so only one
+company can have its own connected account active at a time — same
+shape as v20's limitation, documented not fixed. See
+`...v22-check-inbox-design.md`.
 
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
 Fleece.ai-style onboarding + operations UI built around
-`ai-company-starter-main` (+ `harness-engineering`) as the core, with
-things like `plh-takeshi-agent` as example "plugin" workflows on top of a
-company. v17–v21 shipped pieces 1–5 of that vision (create a company,
-guided company-context setup, integrations status, one hand-installed
-workflow, AI-generated ontology entities). **One thread from the
-original vision remains genuinely unscoped: a fresh company having a
-real integration worth connecting.** v21's investigation confirmed this
-again — a fresh company already has `api-connect` available as a skill,
-but no generic workflow in `ai-company-starter-main`'s template
-consumes an external integration, and building one would mean designing
-something like `plh-takeshi-agent`'s bespoke email pipeline as a generic
-feature, the same scale of "no format to build on" problem v20 declined
-to solve. There is no "v22" named yet.
+`ai-company-starter-main` (`harness-engineering` was named alongside it
+as "core" since v17, but v22's investigation found it's a third-party
+methodology-thesis repo, not functional infrastructure — drop it from
+the mental model of "the core"). v17–v22 shipped pieces 1–6 of that
+vision (create a company, guided company-context setup, integrations
+status, one hand-installed workflow, AI-generated ontology entities, and
+one real integration-consuming command). **The roadmap's original
+named threads are now all addressed.** The last one — "a fresh company
+having a real integration worth connecting" — turned out (v22) to be
+largely already-solved: `gog` + the generic `api-connect` skill already
+handle connecting; v22 added `check-inbox` as the first template command
+that actually *consumes* a connection. There is no "v23" named yet, and
+no remaining pre-named roadmap item.
 
-Not designed yet — brainstorm fresh when picked up. Given how far v19,
-v20, and v21 each narrowed from (or, in v21's case, exceeded) their
-one-line description, investigate what's actually real and buildable
-before proposing anything, the same discipline all three slices
-followed.
+Not designed yet — brainstorm fresh when picked up. A natural next
+direction (unpicked): more `gog`-based read-only commands
+(`check-calendar` was explicitly deferred from v22 in favor of keeping
+that slice to one command), or richer operations on top of what's now
+connectable. But given how far v19–v22 each diverged from their one-line
+descriptions, investigate what's actually real and buildable before
+proposing anything, the same discipline every recent slice followed.
