@@ -1,28 +1,28 @@
 ---
 name: decision
-description: Decision RFC を対話的に起票し docs/decisions/YYYY-MM-DD-{slug}.md を生成する（Phase 5: 記録）
+description: Interactively file a Decision RFC and generate docs/decisions/YYYY-MM-DD-{slug}.md (Phase 5: Record)
 ---
 
 # /decision
 
-意思決定の根拠を後から追跡できるよう、Decision RFC を `docs/decisions/` に記録します。
+Record a Decision RFC in `docs/decisions/` so the reasoning behind a decision can be traced later.
 
-## 進め方
+## How to proceed
 
-1. ユーザーに以下を対話的に質問する（1 つずつ）:
-   - **Context**: どんな状況・制約のもとでこの判断が必要になりましたか？
-   - **Decision**: 何を決めましたか？（一文で言い切れる形に）
-   - **Rationale**: なぜその決定が最善だと考えましたか？
-   - **Alternatives Considered**: 他にどんな選択肢を検討し、なぜ採用しなかったですか？
-   - **Consequences**: この決定によって何が変わりますか？（良い影響・悪い影響の両方）
-2. 決定内容から短い slug（英数字とハイフンのみ、2-4 語）を生成する。
-3. 今日の日付を `date` コマンドで取得し、ファイルパスを決定する:
+1. Ask the user the following interactively (one at a time):
+   - **Context**: under what circumstances and constraints did this decision become necessary?
+   - **Decision**: what did you decide? (in a form you can state in one sentence)
+   - **Rationale**: why did you think that decision was the best one?
+   - **Alternatives Considered**: what other options did you consider, and why didn't you adopt them?
+   - **Consequences**: what changes as a result of this decision? (both good and bad effects)
+2. Generate a short slug from the decision (alphanumerics and hyphens only, 2-4 words).
+3. Get today's date with the `date` command and determine the file path:
    ```
    docs/decisions/<YYYY-MM-DD>-<slug>.md
    ```
-4. 以下のテンプレートで Write する（frontmatter は
-   `docs/decisions/2026-07-03-obsidian-context-stock.md` §3 の L2 共通スキーマに準拠。
-   既存 `date`/`status` は後方互換のため維持したまま `type`/`created`/`updated`/`tags` を追加する）:
+4. Write using the following template (the frontmatter follows the shared L2 schema in
+   `docs/decisions/2026-07-03-obsidian-context-stock.md` §3; keep the existing `date`/`status`
+   for backward compatibility and add `type`/`created`/`updated`/`tags`):
 
    ```markdown
    ---
@@ -34,46 +34,46 @@ description: Decision RFC を対話的に起票し docs/decisions/YYYY-MM-DD-{sl
    tags: []
    ---
 
-   # <Decision のタイトル>
+   # <Title of the Decision>
 
    ## Context
 
-   <ユーザーの回答>
+   <the user's answer>
 
    ## Decision
 
-   <ユーザーの回答>
+   <the user's answer>
 
    ## Rationale
 
-   <ユーザーの回答>
+   <the user's answer>
 
    ## Alternatives Considered
 
-   <ユーザーの回答。箇条書き推奨>
+   <the user's answer. A bulleted list is recommended>
 
    ## Consequences
 
-   <ユーザーの回答>
+   <the user's answer>
    ```
 
-5. 生成後、内容を要約してユーザーに提示し、`status` を `proposed` のままにするか、この場で
-   `accepted` に確定するか確認する。
+5. After generating it, summarise the content for the user and confirm whether to leave `status` as
+   `proposed` or settle it as `accepted` right now.
 
-## status の値
+## Values for status
 
-| status | 意味 |
+| status | Meaning |
 |--------|------|
-| `proposed` | 提案段階。まだ確定していない |
-| `accepted` | 確定し、実行に移す判断 |
-| `superseded` | 後続の別 Decision に置き換えられた（元ファイルは削除せず残す） |
+| `proposed` | At the proposal stage. Not yet settled |
+| `accepted` | Settled, and a decision to act on |
+| `superseded` | Replaced by a later, different Decision (keep the original file rather than deleting it) |
 
-## 注意事項
+## Notes
 
-- 既存の Decision を上書きしない。内容が変わった場合は新しい Decision を作り、古い方の
-  frontmatter を `status: superseded` に更新して新ファイルへの参照を追記する。
-- `status` を変更する際（`proposed` → `accepted` 等）は `updated` も同じ日付に更新する。
-- 既存ファイル（`type`/`created`/`updated`/`tags` を持たないもの）は遡及的に一括改変しない。
-  新規作成分から本スキーマを適用する。
-- 金額・契約・不可逆操作に関わる Decision は `.claude/rules/hitl-gate.md` のトリガーに
-  該当しないか必ず確認する。該当する場合は Decision 記録の前に人間承認を得る。
+- Do not overwrite an existing Decision. If the content changes, create a new Decision, update the old one's
+  frontmatter to `status: superseded`, and add a reference to the new file.
+- When you change `status` (e.g. `proposed` -> `accepted`), update `updated` to the same date.
+- Do not retroactively bulk-edit existing files (those without `type`/`created`/`updated`/`tags`).
+  Apply this schema from newly created files onward.
+- For a Decision involving money, contracts, or irreversible operations, always check whether it matches a
+  trigger in `.claude/rules/hitl-gate.md`. If it does, get human approval before recording the Decision.

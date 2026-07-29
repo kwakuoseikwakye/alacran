@@ -1,66 +1,61 @@
 ---
 name: office
-description: オフィス可視化(pixel-agents同梱版)の起動・停止・撤去
+description: Start, stop and remove the office visualisation (bundled pixel-agents version)
 ---
 
-# /office - あなたの会社が動いて見えるオフィス
+# /office - an office where you can watch your company working
 
-引数: $ARGUMENTS(空 = 起動 / stop / status / uninstall)
+Arguments: $ARGUMENTS (empty = start / stop / status / uninstall)
 
-あなた(Claude)は以下の手順を実行する。各ステップの成否はコマンドの
-終了コードと標準出力で判断し、結果は日本語で報告する。技術用語を
-避け「開業/退勤/撤収」の比喩で案内する。
+You (Claude) carry out the steps below. Judge the success or failure of each step by the command's
+exit code and standard output, and report the result in the user's language. Avoid technical jargon
+and use the metaphor of "opening up / clocking off / packing up".
 
-## 引数なし(起動)
+## No arguments (start)
 
-1. `python3 tools/office/office.py doctor` を実行する。
-   失敗したら: 表示されたNG理由を伝え、Nodeのインストール方法を案内して止まる。
-   - mac: `brew install node`(Homebrew未導入なら https://brew.sh )
-   - Windows: https://nodejs.org/ からLTSをインストール
-   - インストール後にもう一度 `/office` と打つよう伝える
-2. `python3 tools/office/office.py install-hook` を実行する。
-   失敗したら: NG出力をそのまま見せて止まる。
-3. `python3 tools/office/office.py start` を実行する。
-   失敗したら: 出力(NG理由とログパス)をそのまま見せ、ログ末尾20行を
-   読んで原因を1行で要約する。
-4. 出力の `URL: http://localhost:<port>` 行のURLをブラウザで開く(macは `open <URL>`、
-   それ以外はURLを提示してクリックしてもらう)。
-5. 煙テスト: この /office を打ったセッション自身は開業前に始まっているため
-   オフィスには映らない(hooksはセッション開始時に読み込まれるため)。
-   このセッション内でサブエージェントを起動しても同じ理由で映らないので、
-   開業後の新しいセッションを裏で1つ起動して見せる。リポジトリルートで
-   次をバックグラウンドで実行し、終了を待たずに次へ進む:
-   `claude -p "Exploreサブエージェントを1体起動して、このリポジトリの README.md の見出し一覧を調べさせ、結果を1行で要約して終了して"`
-   その間「ブラウザのオフィスで、いま部下が1人出社して働いています(途中で
-   助手をもう1人連れてきます)。見えていますか?」と参加者に確認する。
-6. 見えたら:「オフィスが開業しました。ここからは普段どおりClaude Code
-   で仕事をするだけで、あなたの会社が動いて見えます」と締める。
-   見えなければ: `python3 tools/office/office.py status` を実行し、
-   その出力を添えて状況を報告する。あわせて次を案内する:
-   hooksはセッション開始時に読み込まれるため、オフィスの初回起動より
-   前から開いていたセッション(この /office を打ったセッション自身を含む)
-   の活動は映らないことがある。その場合はClaude Codeをいったん終了して
-   開き直し(または新しいターミナルで開始し)、そのセッションで部下に
-   仕事を振ると映る。
+1. Run `python3 tools/office/office.py doctor`.
+   If it fails: relay the stated reason, explain how to install Node, and stop.
+   - mac: `brew install node` (if Homebrew isn't installed, see https://brew.sh )
+   - Windows: install the LTS build from https://nodejs.org/
+   - Tell them to type `/office` again after installing
+2. Run `python3 tools/office/office.py install-hook`.
+   If it fails: show the failure output as-is and stop.
+3. Run `python3 tools/office/office.py start`.
+   If it fails: show the output (the reason and the log path) as-is, read the last 20 lines of the
+   log, and summarise the cause in one line.
+4. Open the URL from the `URL: http://localhost:<port>` line of the output in a browser
+   (`open <URL>` on mac; otherwise present the URL and have them click it).
+5. Smoke test: the very session in which you typed `/office` started before the office opened, so it
+   does not appear in the office (hooks are loaded at session start).
+   Starting a subagent within this session won't appear either, for the same reason, so start one new
+   session in the background after opening and show that. From the repository root, run the following
+   in the background and move on without waiting for it to finish:
+   `claude -p "Start one Explore subagent, have it look up the list of headings in this repository's README.md, summarise the result in one line, and finish"`
+   Meanwhile, ask the participant: "In the office in your browser, one member of staff has just come in
+   to work (and will bring an assistant along partway through). Can you see them?"
+6. If they can see it: close with "Your office is open. From here on, just work in Claude Code as usual
+   and you'll be able to watch your company working."
+   If they can't: run `python3 tools/office/office.py status` and report the situation with that output attached.
+   Also explain the following: because hooks are loaded at session start, activity from sessions that were
+   already open before the office first started (including the session in which you typed `/office`) may not
+   appear. In that case, quit Claude Code and reopen it (or start it in a new terminal), and assign work to
+   staff in that session — then it will appear.
 
 ## stop
 
-`python3 tools/office/office.py stop` を実行し、結果を報告する。
+Run `python3 tools/office/office.py stop` and report the result.
 
 ## status
 
-`python3 tools/office/office.py status` を実行し、状態出力を
-そのまま見せた上で1行で要約する。
+Run `python3 tools/office/office.py status`, show the status output as-is, and summarise it in one line.
 
 ## uninstall
 
-実行前に「オフィスを完全に撤去します(サーバ停止+設定の掃除)。
-よいですか?」と確認を取ってから
-`python3 tools/office/office.py uninstall` を実行し、結果を報告する。
+Before running, get confirmation: "This will completely remove the office (stopping the server and cleaning
+up the configuration). Is that OK?" Then run `python3 tools/office/office.py uninstall` and report the result.
 
-## 注意
+## Notes
 
-- office.py の実行はすべてリポジトリルート(このテンプレのトップ)を
-  カレントディレクトリとして行う
-- サーバはこのテンプレ配下のセッションだけを表示する(仕様)。他の
-  プロジェクトも見たい場合は画面左下 Settings の Watch All Sessions
+- All runs of office.py are performed with the repository root (the top of this template) as the current directory
+- The server only shows sessions under this template (by design). If you also want to see other projects, use
+  Watch All Sessions in Settings at the bottom left of the screen

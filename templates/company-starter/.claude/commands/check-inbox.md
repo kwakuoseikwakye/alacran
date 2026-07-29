@@ -1,34 +1,34 @@
 ---
 name: check-inbox
-description: 接続済みの Google アカウント（gog CLI）で未読メールを確認し、要約を notes/company/email-checks/ に生成する（読み取り専用 — 送信・既読化・ラベル変更・アーカイブはしない）
+description: Check unread mail with the connected Google account (gog CLI) and generate a summary in notes/company/email-checks/ (read-only — never sends, marks as read, changes labels, or archives)
 ---
 
 # /check-inbox
 
-接続済みの Google アカウント経由で受信トレイの未読メールを確認し、要約レポートを生成する。
-**読み取り専用**: メールの送信・既読化・ラベル変更・アーカイブは一切しない。
+Check unread mail in the inbox via the connected Google account and generate a summary report.
+**Read-only**: never sends mail, marks it as read, changes labels, or archives.
 
-前提: `gog` CLI が認証済みであること（未接続なら `api-connect` スキルで Google アカウントを繋ぐ）。
+Prerequisite: the `gog` CLI must be authenticated (if it isn't connected, use the `api-connect` skill to connect a Google account).
 
-## 進め方
+## How to proceed
 
-1. 未読メールを取得する:
+1. Fetch unread mail:
 
    ```
    gog -a auto gmail search "is:unread" --plain --max 20
    ```
 
-   1行目はヘッダ、2行目以降が結果（タブ区切り: ID, DATE, FROM, SUBJECT, LABELS, THREAD）。
-   結果行が無ければ「未読メールなし」と書いて終了する。
+   The first line is the header; the second line onward are the results (tab-separated: ID, DATE, FROM, SUBJECT, LABELS, THREAD).
+   If there are no result rows, write "No unread mail" and finish.
 
-2. 各メッセージの詳細をメタデータのみ取得する（ID ごとに1回、本文は取得しない）:
+2. Fetch metadata only for each message (once per ID; do not fetch the body):
 
    ```
    gog -a auto gmail get <ID> --format metadata --headers From,Subject,Date --plain
    ```
 
-3. 今日の日付で `notes/company/email-checks/<YYYY-MM-DD>-inbox-check.md` に要約を Write する
-   （`notes/company/email-checks/` が無ければ先に作成）:
+3. Write the summary to `notes/company/email-checks/<YYYY-MM-DD>-inbox-check.md` using today's date
+   (create `notes/company/email-checks/` first if it doesn't exist):
 
    ```markdown
    ---
@@ -38,19 +38,19 @@ description: 接続済みの Google アカウント（gog CLI）で未読メー�
    tags: []
    ---
 
-   > 本ファイルは受信トレイの読み取り専用スナップショットです。
+   > This file is a read-only snapshot of the inbox.
 
-   # Inbox check <YYYY-MM-DD>（未読 <件数> 件）
+   # Inbox check <YYYY-MM-DD> (<count> unread)
 
-   ## 未読メール
-   - <FROM> — <SUBJECT>（<DATE>）
+   ## Unread mail
+   - <FROM> — <SUBJECT> (<DATE>)
 
-   ## 気づき / 対応が要りそうなもの
-   - <差出人・件名から返信や対応が要りそうなものがあれば 1-2 行。無ければ「なし」>
+   ## Observations / things that may need action
+   - <1-2 lines if anything looks like it needs a reply or action, based on sender and subject. If there is nothing, write "None">
    ```
 
-## 鉄則
+## Iron rules
 
-- **読み取り専用。** `gog gmail send` / `gog gmail messages modify` は絶対に呼ばない。
-- メール本文・トークン・個人情報を要約に転記しない（差出人名・件名・日付のみ）。
-- 上記2つの gog コマンド（search と get）以外は実行しない。ファイルを1つ書いたら終了する。
+- **Read-only.** Never call `gog gmail send` or `gog gmail messages modify`.
+- Do not copy mail bodies, tokens, or personal information into the summary (sender name, subject, and date only).
+- Do not run any command other than the two gog commands above (search and get). Write one file, then finish.

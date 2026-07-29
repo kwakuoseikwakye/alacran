@@ -1,73 +1,79 @@
 ---
 name: define-company
-description: 自社オントロジーを対話的に定義し、definitions/ontology/company.yaml を生成する（Phase 1: 定義）
+description: Interactively define your company ontology and generate definitions/ontology/company.yaml (Phase 1: Definition)
 ---
 
 # /define-company
 
-あなたは今から、ユーザーの会社のオントロジー（事業構造の宣言的定義）を一緒に作ります。
-`docs/templates/ontology-starter.yaml` を出発点として、`definitions/ontology/company.yaml` を生成してください。
+You are now going to build the ontology of the user's company (a declarative definition of its business
+structure) together with them. Using `docs/templates/ontology-starter.yaml` as the starting point,
+generate `definitions/ontology/company.yaml`.
 
-## 進め方
+## How to proceed
 
-1. `docs/templates/ontology-starter.yaml` を Read で読み、構造（customer / org / product の 3 domain、entities、attributes）を把握する。
-2. `docs/templates/ontology-schema-reference.md` の「機密の扱い」（§2 entity の書き方 内）を確認する。
-   実名・実額・連絡先・認証情報は attributes に直接書かず、金額は `amount_band` のようなバンド表現にし、
-   機密そのものは `secrets/` 側に置くことを、生成前にユーザーへ一言伝える。書きぶりのイメージは
-   `examples/harukaze-ec/definitions/ontology/company.yaml`（バンド表現・役職のみ記載の記入済み完成例）を参考にしてよい。
-3. 以下の質問を **1 つずつ、順番に** ユーザーに投げる。まとめて全部聞かない。回答を踏まえて次の質問を調整してよい。
-4. 全ての回答が揃ったら、テンプレートの構造を踏襲した `definitions/ontology/company.yaml` を Write で生成する。
-5. 生成後、内容をユーザーに要約して見せ、修正したい箇所がないか確認する。
+1. Read `docs/templates/ontology-starter.yaml` and get a sense of the structure (the 3 domains customer / org / product, entities, attributes).
+2. Check "Handling confidential information" in `docs/templates/ontology-schema-reference.md` (within §2, how to write an entity).
+   Before generating, tell the user in one line that real names, real amounts, contact details and credentials
+   must not be written directly into attributes, that amounts should use band expressions such as `amount_band`,
+   and that confidential material itself belongs on the `secrets/` side. For a sense of the writing style, you may
+   refer to `examples/harukaze-ec/definitions/ontology/company.yaml` (a completed example using band expressions and job titles only).
+3. Put the following questions to the user **one at a time, in order**. Do not ask them all at once. You may adjust the next question based on the answer.
+4. Once you have all the answers, Write `definitions/ontology/company.yaml` following the structure of the template.
+5. After generating it, summarise the content for the user and check whether there is anything they want to change.
 
-## 質問リスト
+## Question list
 
-1. **事業ドメイン**: どんな問題を解決している会社ですか？（例: 「中小企業の労務手続きを代行する」「EC事業者の在庫最適化を支援する」）
-2. **主要ステークホルダー**: 顧客・従業員・パートナーのうち、誰が事業の中心にいますか？ それぞれどんな役割ですか？
-3. **コアバリューフロー**: インプット（何を受け取るか）→ 変換（何をするか）→ アウトプット（何を届けるか）を一文ずつ教えてください。
-4. **現在最大のボトルネック**: 今いちばん時間がかかっている、または属人化している業務は何ですか？
+1. **Business domain**: what problem does your company solve? (e.g. "we handle labour and HR paperwork for small businesses", "we help e-commerce businesses optimise inventory")
+2. **Key stakeholders**: among customers, employees and partners, who is at the centre of the business? What is each of their roles?
+3. **Core value flow**: tell me, one sentence each, the input (what you receive) -> transform (what you do) -> output (what you deliver).
+4. **Biggest current bottleneck**: what work takes the most time right now, or depends on one specific person?
 
-## 出力形式
+## Output format
 
-`definitions/ontology/company.yaml` は以下の構造にする（`docs/templates/ontology-starter.yaml` の customer / org / product 3 domain 構造を踏襲し、業種固有の entity を追記してよい）:
+`definitions/ontology/company.yaml` should have the following structure (follow the 3-domain customer / org / product
+structure of `docs/templates/ontology-starter.yaml`; you may add entities specific to the industry):
 
 ```yaml
 version: 1
-schema_version: "<今日の日付>-company"
+schema_version: "<today's date>-company"
 template_origin: docs/templates/ontology-starter.yaml
 status: draft
 
 company_summary:
-  name: <会社名>
-  domain: <質問1の回答を要約>
-  employee_count: <従業員数（正確な数が分からなければ概数）>
-  primary_bottleneck: <質問4の回答を要約>
+  name: <company name>
+  domain: <summary of the answer to question 1>
+  employee_count: <number of employees (an approximate figure if the exact number isn't known)>
+  primary_bottleneck: <summary of the answer to question 4>
 
 stakeholders:
-  # 質問2（主要ステークホルダー）の回答を役割ごとに列挙する
-  - role: <例: 顧客企業の労務担当者>
-    position: <依頼者 / 実務担当 / 意思決定者 など、事業内での立ち位置>
+  # list the answer to question 2 (key stakeholders) by role
+  - role: <e.g. HR officer at a client company>
+    position: <requester / hands-on owner / decision maker, etc. — their standing within the business>
 
 value_flow:
-  # 質問3（コアバリューフロー）の回答をそのまま構造化する
-  input: <何を受け取るか>
-  transform: <何をするか>
-  output: <何を届けるか>
+  # structure the answer to question 3 (core value flow) as-is
+  input: <what you receive>
+  transform: <what you do>
+  output: <what you deliver>
 
 customer:
-  # ... ontology-starter.yaml の customer domain を実データで埋める
+  # ... fill in the customer domain from ontology-starter.yaml with real data
 
 org:
-  # ... 同上 org domain
+  # ... likewise the org domain
 
 product:
-  # ... 同上 product domain
+  # ... likewise the product domain
 ```
 
-## 注意事項
+## Notes
 
-- 業種固有の entity（例: 労務なら `labor_contract`、EC なら `sku`）は歓迎するが、テンプレート本体（`docs/templates/ontology-starter.yaml`）は編集しない。コピー先の `definitions/ontology/company.yaml` にのみ追記する。
-- 外部パートナー（仕入先・広告媒体・提携先など）が事業の中心にいる業種では、customer / org / product の
-  3 domain に加えて `partner` domain を追加してよい。
-- 命名規約は `lowercase + ドット区切り`（例: `customer.account`）を踏襲する。
-- 全ての質問に完璧に答えられなくても、暫定回答で `status: draft` として出力してよい。後で埋め直せることを伝える。
-- ファイル生成後、`git add definitions/ontology/company.yaml` してよいか確認してからコミットする（コミット自体はユーザー確認後）。
+- Industry-specific entities are welcome (e.g. `labor_contract` for HR, `sku` for e-commerce), but do not edit the
+  template itself (`docs/templates/ontology-starter.yaml`). Only add to the copy at `definitions/ontology/company.yaml`.
+- In industries where external partners (suppliers, advertising media, alliance partners, etc.) are at the centre of
+  the business, you may add a `partner` domain alongside the 3 customer / org / product domains.
+- Follow the naming convention of `lowercase + dot-separated` (e.g. `customer.account`).
+- Even if not every question can be answered perfectly, it's fine to output with provisional answers as `status: draft`.
+  Tell the user it can be filled in properly later.
+- After generating the file, ask whether you may `git add definitions/ontology/company.yaml` before committing
+  (the commit itself only after the user confirms).

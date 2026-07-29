@@ -1,51 +1,51 @@
 ---
 name: stock-note
-description: L2 ノート（company-note / market / client-note / sop）を対話的に起票し、正しい棚 + 正しい frontmatter で notes/ へ保存する（随時）
+description: Interactively file an L2 note (company-note / market / client-note / sop) and save it to notes/ on the correct shelf with the correct frontmatter (any time)
 ---
 
 # /stock-note
 
-`docs/decisions/2026-07-03-obsidian-context-stock.md`（Decision RFC）で設計した L2 記述層の
-ノートを、棚と frontmatter を暗記しなくても起票できるようにする摩擦低減コマンドです。
-`.claude/rules/notes-touch.md` の共通スキーマに従います。
+A friction-reducing command that lets you file notes in the L2 description layer designed in
+`docs/decisions/2026-07-03-obsidian-context-stock.md` (Decision RFC) without having to memorise
+the shelves and frontmatter. Follows the shared schema in `.claude/rules/notes-touch.md`.
 
-`/decision`（decision）・`/retro`（retro）は既に専用コマンドがあるため、本コマンドは
-`company-note` / `market` / `client-note` / `sop` の 4 type を対象とします。
+`/decision` (decision) and `/retro` (retro) already have dedicated commands, so this command
+covers the 4 types `company-note` / `market` / `client-note` / `sop`.
 
-## 進め方
+## How to proceed
 
-1. ユーザーに **type** を質問する（1 つずつ、以下から選ばせる）:
-   - `company-note` — 自社の物語（沿革・戦略メモ・経営方針の背景）
-   - `market` — 他社情報（競合・市場・パートナー候補）。公開情報のみ
-   - `client-note` — クライアントの随時メモ（商談メモ・議事録の非機密要旨）
-   - `sop` — 業務手順（SOP）
-2. **内容**を質問する（タイトル・本文の要点）。
-3. type 別の追加質問:
+1. Ask the user for the **type** (one at a time, choosing from the following):
+   - `company-note` — your own company's story (history, strategy memos, background to management policy)
+   - `market` — information about other companies (competitors, market, potential partners). Public information only
+   - `client-note` — ad-hoc notes on a client (meeting notes, non-confidential summaries of minutes)
+   - `sop` — standard operating procedures (SOP)
+2. Ask for the **content** (title, key points of the body).
+3. Additional questions by type:
 
-   | type | 追加で聞くこと |
+   | type | What else to ask |
    |------|---------------|
-   | `market` | `source:`（URL または「口頭」等）、`observed_at:`（情報がいつ時点のものか、絶対日付） |
-   | `client-note` | 対象クライアントの slug、トピック（ファイル名に使う）。slug は `definitions/clients/<slug>/` と一致させる |
-   | `sop` | `team_id:`（`definitions/` の team_id と一致させる）、関連する skill があれば `related_skill:` |
-   | `company-note` | 追加質問なし |
+   | `market` | `source:` (URL or "verbal" etc.), `observed_at:` (the point in time the information refers to, as an absolute date) |
+   | `client-note` | The client's slug, and the topic (used in the filename). Match the slug to `definitions/clients/<slug>/` |
+   | `sop` | `team_id:` (match the team_id in `definitions/`), and `related_skill:` if there is a related skill |
+   | `company-note` | No additional questions |
 
-4. `client-note` の場合、`definitions/clients/<slug>/` が存在するか確認する:
+4. For `client-note`, check whether `definitions/clients/<slug>/` exists:
    ```bash
    ls definitions/clients/<slug>/ 2>/dev/null
    ```
-   存在しなければ「このクライアントは `definitions/` に未登録です。先に `/ingest-context` で
-   構造情報として登録しますか、それともこのまま L2 メモとして残しますか？」とユーザーに確認する。
-5. 今日の日付を取得し、type ごとの命名規則でファイルパスを決定する:
+   If it doesn't exist, ask the user: "This client isn't registered in `definitions/` yet. Would you like to
+   register it as structural information with `/ingest-context` first, or leave this as an L2 note as-is?"
+5. Get today's date and determine the file path using the naming convention for each type:
 
-   | type | パス |
+   | type | Path |
    |------|------|
    | `company-note` | `notes/company/<slug>.md` |
    | `market` | `notes/market/<slug>.md` |
    | `client-note` | `notes/clients/<client-slug>/<YYYY-MM-DD>-<topic>.md` |
    | `sop` | `notes/sops/<slug>.md` |
 
-   `<slug>` / `<topic>` は内容から英数字とハイフンの短い slug を生成し、ユーザーに確認する。
-6. 以下のテンプレートで Write する:
+   Generate a short slug of alphanumerics and hyphens for `<slug>` / `<topic>` from the content, and confirm it with the user.
+6. Write using the following template:
 
    ```markdown
    ---
@@ -54,26 +54,26 @@ description: L2 ノート（company-note / market / client-note / sop）を対�
    created: <YYYY-MM-DD>
    updated: <YYYY-MM-DD>
    tags: []
-   # --- type 別キー（該当するもののみ） ---
-   client: <slug>            # client-note のみ
-   source: <URL または口頭>   # market のみ
-   observed_at: <YYYY-MM-DD>  # market のみ
-   team_id: <id>              # sop のみ
-   related_skill: <skill名>   # sop のみ・任意
+   # --- per-type keys (only those that apply) ---
+   client: <slug>             # client-note only
+   source: <URL or verbal>    # market only
+   observed_at: <YYYY-MM-DD>  # market only
+   team_id: <id>              # sop only
+   related_skill: <skill name>  # sop only, optional
    ---
 
-   # <タイトル>
+   # <Title>
 
-   <本文>
+   <Body>
    ```
 
-7. 生成後、内容とファイルパスを要約してユーザーに提示し、`status` を `draft` のままにするか
-   `active` に確定するか確認する。
+7. After generating it, summarise the content and file path for the user and confirm whether to leave
+   `status` as `draft` or set it to `active`.
 
-## 注意事項
+## Notes
 
-- 既存の L2 ノートを上書きしない。追記・修正の依頼であれば Read してから Edit する。
-- `notes/inbox/` にあるノートを棚へ昇格させたい場合は、本コマンドではなく
-  `/ingest-context inbox`（`.claude/commands/ingest-context.md` §6）を使う
-  （検疫を経由するため、そちらが正規経路）。
-- 実名・実額・認証情報を本文に書こうとしていないか確認する（`.claude/rules/notes-touch.md` §4）。
+- Do not overwrite an existing L2 note. If the request is to append or amend, Read first, then Edit.
+- To promote a note in `notes/inbox/` onto a shelf, use `/ingest-context inbox`
+  (`.claude/commands/ingest-context.md` §6) rather than this command
+  (that is the proper route, because it goes through quarantine).
+- Check that you are not about to write real names, real amounts, or credentials into the body (`.claude/rules/notes-touch.md` §4).

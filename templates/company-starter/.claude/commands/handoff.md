@@ -1,71 +1,72 @@
 ---
 name: handoff
-description: HANDOFF.md を更新し、直近のセッション内容を棚卸ししてセッション引き継ぎ情報を残す（Phase 5: 記録）
+description: Update HANDOFF.md, take stock of the recent session, and leave session handover information (Phase 5: Record)
 ---
 
 # /handoff
 
-セッション終了時に `HANDOFF.md`（repo root）を更新し、次に着手する人（未来の自分を含む）が
-迷わないようにします。`CLAUDE.md` §2.6「セッション引き継ぎ」原則を実践するコマンドです。
+At the end of a session, update `HANDOFF.md` (repo root) so whoever picks this up next (including your
+future self) isn't left guessing. This command puts the `CLAUDE.md` §2.6 "Session handover" principle into practice.
 
-## 進め方
+## How to proceed
 
-1. `HANDOFF.md` が存在すれば Read で読み、直近セクションを把握する。存在しなければ新規作成する。
-2. 自動収集のため以下を実行する:
+1. If `HANDOFF.md` exists, Read it and get a sense of the most recent section. If it doesn't exist, create it.
+2. Run the following to gather information automatically:
    ```bash
    git log --since='24 hours ago' --oneline
    gh issue list --state open --limit 10
-   ls notes/inbox/*.md 2>/dev/null | grep -v README.md   # 未処理ノートの棚卸し（notes/ 未導入なら空）
+   ls notes/inbox/*.md 2>/dev/null | grep -v README.md   # stock-take of unprocessed notes (empty if notes/ isn't in use)
    ```
-   `notes/inbox/` に未処理ノートが残っていれば、「Next up」に
-   `/ingest-context inbox` での処理を候補として挙げる（詳細は `.claude/commands/ingest-context.md` §6）。
-   `gh` が使えない・リモート未設定の環境では、フォールバックとして以下を使う:
+   If unprocessed notes remain in `notes/inbox/`, raise processing them with `/ingest-context inbox`
+   as a candidate under "Next up" (see `.claude/commands/ingest-context.md` §6 for details).
+   In an environment where `gh` is unavailable or no remote is configured, use this fallback:
    ```bash
-   git log --since='24 hours ago' --oneline   # Done today の棚卸しはこれで代替できる
+   git log --since='24 hours ago' --oneline   # this can substitute for the Done today stock-take
    ```
-   Issue 状態の確認はスキップし、後述の「Blockers」に「gh 未接続のため Issue 状態未確認」と
-   明記する。ネットワーク回復後、次回セッションで `gh issue list` を実行して埋め合わせる。
-3. 収集結果を材料に、今日の日付でセクションを追記する（既存内容は上書きせず、末尾に追記）。
-   **同日に複数回セッションを行った場合**は見出しを重複させず、`## <YYYY-MM-DD> (2回目)` の
-   ように回数サフィックス（または `## <YYYY-MM-DD> 15:00` のような時刻併記）で区別する:
+   Skip checking Issue status and state plainly under "Blockers" below that "Issue status unchecked because
+   gh is not connected". Once the network is back, make up for it by running `gh issue list` in the next session.
+3. Using what you gathered, append a section under today's date (do not overwrite existing content; append at the end).
+   **If you ran multiple sessions on the same day**, don't duplicate the heading — distinguish them with a
+   count suffix such as `## <YYYY-MM-DD> (2nd)` (or by including the time, e.g. `## <YYYY-MM-DD> 15:00`):
 
    ```markdown
    ## <YYYY-MM-DD>
 
    ### Done today
-   - <git log の要約。コミットハッシュ + 概要>
+   - <summary of git log. Commit hash + overview>
 
    ### In flight
-   - <着手済みだが未完了の作業。Issue番号があれば併記>
+   - <work started but not finished. Include the Issue number if there is one>
 
    ### Next up
-   - <次にやるべきこと。優先度順>
+   - <what should be done next, in priority order>
 
    ### Blockers
-   - <詰まっている点。無ければ「なし」>
+   - <where things are stuck. Write "None" if there are none>
 
    ---
    ```
 
-4. **ローテーション**: 追記後、日付見出し（`## ` で始まるセッションセクション）が
-   **5 を超えたら**、古い方から超過分を `docs/handoffs/<YYYY-MM>.md`
-   （そのセッション日付の月）へ**移動**する（削除ではなく移動 — 経緯の追跡可能性を保つ）。
-   アーカイブファイルが無ければ見出し `# HANDOFF アーカイブ <YYYY-MM>` で新規作成し、
-   セクションは時系列順に追記する。移動後、`HANDOFF.md` 冒頭の説明はそのまま。
-   詳細な運用ルールは `docs/handoffs/README.md` を参照。
-5. `gh issue list --state open` の結果を突き合わせ、「Next up」に反映すべき Issue がないか確認する。
-6. 「Done today」「In flight」「Next up」は git log / issue list から自動でドラフトを作成してよいが、
-   **「Blockers」は必ずユーザーに確認する**。ここは自動収集できない情報なので、埋めずに空欄のまま
-   コミットしない。自律実行（ユーザー不在）でヒアリングできない場合は、空欄や無根拠の「なし」では
-   なく「なし（自律セッションのため未ヒアリング。相違があれば修正してください）」のように未確認で
-   あることを明記し、次セッションの人間確認を促す。
+4. **Rotation**: after appending, if the number of date headings (session sections starting with `## `)
+   **exceeds 5**, **move** the excess, oldest first, into `docs/handoffs/<YYYY-MM>.md`
+   (the month of that session's date) — move, not delete, so the history stays traceable.
+   If the archive file doesn't exist, create it with the heading `# HANDOFF archive <YYYY-MM>` and append
+   sections in chronological order. After moving, leave the explanatory text at the top of `HANDOFF.md` as-is.
+   See `docs/handoffs/README.md` for the detailed operating rules.
+5. Cross-check against the results of `gh issue list --state open` and see whether any Issue should be
+   reflected in "Next up".
+6. You may auto-draft "Done today", "In flight" and "Next up" from git log / issue list, but
+   **always confirm "Blockers" with the user**. That information can't be gathered automatically, so don't
+   commit it blank. If you are running autonomously (no user present) and can't ask, do not leave it blank
+   or write a groundless "None" — state that it is unconfirmed, e.g. "None (not asked, autonomous session —
+   please correct if this is wrong)", and prompt for human confirmation in the next session.
 
-## 最後に
+## Finally
 
-- ドラフトをユーザーに提示し、以下のチェックリストで確認を取る:
-  - [ ] Done today は今日の作業を過不足なく反映しているか
-  - [ ] In flight に未完了タスクが漏れていないか
-  - [ ] Next up の優先順位は正しいか
-  - [ ] Blockers に該当する詰まりどころが正確に書かれているか
-- 確認が取れたら `HANDOFF.md` を Write で更新する。
-- コミットするかどうかはユーザーに確認してから行う（無断でコミットしない）。
+- Present the draft to the user and get confirmation against this checklist:
+  - [ ] Does "Done today" reflect today's work completely and accurately?
+  - [ ] Is any unfinished task missing from "In flight"?
+  - [ ] Is the priority order in "Next up" right?
+  - [ ] Are the blockers written down accurately?
+- Once confirmed, update `HANDOFF.md` with Write.
+- Ask the user before committing (never commit without permission).

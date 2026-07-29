@@ -1,97 +1,97 @@
 ---
 name: create-epic
-description: Epic Issue を起票し、3-6 個の子 Issue に分解して GitHub に登録する（Phase 2: 計画）
+description: File an Epic Issue, break it into 3-6 child Issues, and register them on GitHub (Phase 2: Planning)
 ---
 
 # /create-epic
 
-Issue-First 原則（`.claude/rules/issue-first.md`）に従い、Epic Issue と子 Issue を GitHub に起票します。
+Following the Issue-First principle (`.claude/rules/issue-first.md`), file an Epic Issue and child Issues on GitHub.
 
-## 初回セットアップ（ラベル準備）
+## First-time setup (preparing labels)
 
-"Use this template" でリポジトリを作成した直後は、テンプレ元にあった `type:epic` /
-`type:child` / `phase:planning` ラベルはコピーされていない（GitHub の Template 機能は
-ラベルを複製先に引き継がない）。起票前に一度だけ、実在確認と作成を行う。
+Right after creating a repository with "Use this template", the `type:epic` / `type:child` / `phase:planning`
+labels that existed in the source template have not been copied (GitHub's Template feature does not carry
+labels over to the destination). Check they exist and create them, once, before filing.
 
 ```bash
 gh label list
 ```
 
-上記の出力に無いラベルがあれば作成する:
+Create any label missing from that output:
 
 ```bash
-gh label create "type:epic" --color 5319E7 --description "Epic Issue（親）"
-gh label create "type:child" --color 1D76DB --description "Epic 配下の子 Issue"
-gh label create "phase:planning" --color 0E8A16 --description "Phase 2（計画）で起票"
+gh label create "type:epic" --color 5319E7 --description "Epic Issue (parent)"
+gh label create "type:child" --color 1D76DB --description "Child Issue under an Epic"
+gh label create "phase:planning" --color 0E8A16 --description "Filed in Phase 2 (Planning)"
 ```
 
-> **注意**: ラベルが未存在のまま起票すると、実行手段によって挙動が異なる。
-> `gh` CLI はエラーで起票そのものが失敗するが、GitHub API 経由・MCP 経由では
-> 未存在ラベルが**色・説明なしで黙って自動生成**されてしまう。どちらの手段でも、
-> 起票前に `gh label list` でラベルの実在を確認しておくこと。
+> **Note**: if you file while a label doesn't exist, the behaviour differs by mechanism.
+> The `gh` CLI fails with an error and the filing itself fails, but via the GitHub API or via MCP a
+> non-existent label is **silently auto-created with no colour or description**. With either mechanism,
+> confirm the labels exist with `gh label list` before filing.
 
-## 進め方
+## How to proceed
 
-1. ユーザーに以下を質問する（順番に、一度に全部聞かない）:
-   - **Epic のゴールは何ですか？**（1-2 文で、完了したときに何が変わっているか）
-   - **自然に分解できるサブタスクは何がありますか？**（3-6 個を目安に。多すぎる場合はさらに分解を提案する）
-2. 既存の関連 Issue が無いか確認する:
+1. Ask the user the following (in order, not all at once):
+   - **What is the goal of the Epic?** (in 1-2 sentences: what will be different when it's done)
+   - **What subtasks does it break into naturally?** (aim for 3-6. If there are too many, suggest breaking it down further)
+2. Check whether a related Issue already exists:
    ```bash
-   gh issue list --search "<キーワード>" --state all
+   gh issue list --search "<keyword>" --state all
    ```
-   類似 Issue があれば重複起票を避け、ユーザーに確認する。
-3. Epic Issue を作成する:
+   If there is a similar Issue, avoid filing a duplicate and check with the user.
+3. Create the Epic Issue:
    ```bash
    gh issue create \
-     --title "Epic: <ゴール>" \
+     --title "Epic: <goal>" \
      --label "type:epic,phase:planning" \
      --body "$(cat <<'EOF'
-   ## ゴール
-   <ユーザーの回答>
+   ## Goal
+   <the user's answer>
 
-   ## 子 Issue
-   - [ ] #<子Issue番号1> <タイトル>
-   - [ ] #<子Issue番号2> <タイトル>
+   ## Child Issues
+   - [ ] #<child issue number 1> <title>
+   - [ ] #<child issue number 2> <title>
    ...
 
-   ## 完了条件
-   すべての子 Issue が Close されたら Epic を Close する。
+   ## Completion criteria
+   Close the Epic once all child Issues are closed.
    EOF
    )"
    ```
-4. 子 Issue を 1 つずつ作成し、本文に Epic 番号を参照させる:
+4. Create the child Issues one at a time, referencing the Epic number in the body:
    ```bash
    gh issue create \
-     --title "<子タスク名>" \
+     --title "<child task name>" \
      --label "type:child,phase:planning" \
-     --body "Epic: #<Epic番号>"
+     --body "Epic: #<Epic number>"
    ```
-   作成コマンドの出力（Issue の URL）末尾から子 Issue 番号を都度控えておく。
-5. 控えた子 Issue 番号をもとに、Epic Issue 本文をチェックリスト（実際の Issue 番号入り）に更新する:
+   Note down each child Issue number from the end of the command's output (the Issue URL) as you go.
+5. Using the child Issue numbers you noted, update the Epic Issue body to a checklist (with the real Issue numbers):
    ```bash
-   gh issue edit <Epic番号> --body "..."
+   gh issue edit <Epic number> --body "..."
    ```
-6. 作成した Issue 一覧（Epic + 子 Issue の番号とタイトル）をユーザーに提示する。
+6. Present the list of created Issues (the numbers and titles of the Epic and its children) to the user.
 
-## ラベル規約
+## Label conventions
 
-| ラベル | 用途 |
+| Label | Purpose |
 |--------|------|
-| `type:epic` | Epic Issue に付与 |
-| `type:child` | 子 Issue に付与 |
-| `phase:planning` | Phase 2（計画）で起票された Issue であることを示す |
+| `type:epic` | Applied to an Epic Issue |
+| `type:child` | Applied to a child Issue |
+| `phase:planning` | Indicates the Issue was filed in Phase 2 (Planning) |
 
-## gh CLI が使えない環境
+## Environments where the gh CLI is unavailable
 
-Claude Code on the web など `gh` CLI が使えない環境では、GitHub MCP ツールや GitHub の Web UI
-から同等の Epic Issue / 子 Issue 起票を行ってよい。その場合も上記「初回セットアップ（ラベル準備）」
-の注意はそのまま当てはまる — MCP 経由の起票は未存在ラベルを黙って自動生成するため、起票前に
-ラベル一覧（Web UI の Issues > Labels、または MCP のラベル取得系ツール）で実在確認すること。
+In environments where the `gh` CLI is unavailable, such as Claude Code on the web, you may file the equivalent
+Epic Issue / child Issues using GitHub MCP tools or the GitHub web UI. The note under "First-time setup
+(preparing labels)" above still applies — filing via MCP silently auto-creates non-existent labels, so confirm
+the labels exist beforehand via the label list (Issues > Labels in the web UI, or an MCP label-fetching tool).
 
-## Issue-First リマインダー
+## Issue-First reminders
 
-- 単純な typo・設定変更のような軽微な作業には Epic 分解は不要。通常 Issue 1 本で足りる場合は
-  Epic 化せず、ユーザーにその旨を伝える。
-- Epic のブランチ・コミット・PR には対応する子 Issue 番号を必ず含めること
-  （`fix/12-description` / `fix(scope): description (#12)` / PR に `Resolves #12`）。
-- 作業を始める前に Issue が存在することを確認する。無ければまずこのコマンドで起票する。
+- Minor work such as a simple typo or config change doesn't need Epic decomposition. If a single normal Issue
+  is enough, don't turn it into an Epic — tell the user so.
+- Always include the corresponding child Issue number in the Epic's branches, commits and PRs
+  (`fix/12-description` / `fix(scope): description (#12)` / `Resolves #12` in the PR).
+- Confirm an Issue exists before starting work. If there isn't one, file it with this command first.
