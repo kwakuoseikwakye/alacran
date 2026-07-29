@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>How to use · Alacrán</title>
-<meta name="description" content="From nothing to a running company in four moves: create, define, connect, run." />
+<meta name="description" content="The complete guide to Alacrán, written for people who have never used an AI tool before: install it, set up your first workspace, run your first job, and grow into the advanced features." />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/styles.css" />
 <script>(function(){var r=document.documentElement,s=null;try{s=localStorage.getItem('alacran-theme')}catch(e){}r.setAttribute('data-theme',s==='light'?'light':'dark');})();</script>
@@ -26,12 +26,198 @@
     <a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free</a>
   </div>
 </nav>
-<header class="page-hero"><div class="wrap r"><p class="eyebrow">How to use</p><h1>From nothing to running, in four moves.</h1><p>No terminal gymnastics. Every step is just a screen, and you can hand the thinking over to your AI at any point.</p></div></header>
-<section class="section"><div class="wrap"><div class="grid r">
-  <div class="card"><div class="dot"></div><h3>01 — Create</h3><p>One click builds a complete workspace from the built-in starter template.</p></div>
-  <div class="card"><div class="dot"></div><h3>02 — Describe</h3><p>Answer four plain questions about the business, or let your AI draft them for you.</p></div>
-  <div class="card"><div class="dot"></div><h3>03 — Connect</h3><p>Point it at your own Claude and link your tools, all guided and all local.</p></div>
-  <div class="card"><div class="dot"></div><h3>04 — Run</h3><p>Summarise the inbox, add more jobs, draft the update. You approve each change.</p></div>
+<header class="page-hero"><div class="wrap r"><p class="eyebrow">How to use</p><h1>The complete guide.</h1><p>Written for someone who has never used an AI tool in their life. Start at the top, and by the end you&rsquo;ll have your business set up, your first job running, and a sense of how far you can push it. Nothing here needs code.</p></div></header>
+<section class="section"><div class="wrap"><div class="guide">
+
+  <nav class="guide-toc r">
+    <h2>What&rsquo;s on this page</h2>
+    <ol>
+      <li><a href="#g0">First, what is this thing?</a></li>
+      <li><a href="#g1">What you need before you start</a></li>
+      <li><a href="#g2">Installing it</a></li>
+      <li><a href="#g3">Opening it for the first time</a></li>
+      <li><a href="#g4">Setting up your first workspace</a></li>
+      <li><a href="#g5">Describing your business</a></li>
+      <li><a href="#g6">Connecting your Gmail and calendar</a></li>
+      <li><a href="#g7">Running your first job</a></li>
+      <li><a href="#g8">Reading the change before you approve it</a></li>
+      <li><a href="#g9">Where your work actually lives</a></li>
+      <li><a href="#g10">The jobs you get out of the box</a></li>
+      <li><a href="#g11">Running more than one business</a></li>
+      <li><a href="#g12">Backing up and moving to a new Mac</a></li>
+      <li><a href="#g13">Going further: teaching it your own routines</a></li>
+      <li><a href="#g14">When something goes wrong</a></li>
+    </ol>
+  </nav>
+
+  <div class="gstep r" id="g0">
+    <p class="gstep-tag">Start here</p>
+    <h2>First, what is this thing?</h2>
+    <p>Alacr&aacute;n is an app that sits on your Mac and gives your AI a memory of your business.</p>
+    <p>On its own, an AI chat window is a brilliant assistant with amnesia. Every conversation starts from nothing. Alacr&aacute;n keeps the important background in one place, hands it to your AI automatically, and then lets you point that AI at the jobs you find yourself redoing every week.</p>
+    <p>Three words come up a lot in the app. Learn these and the rest is easy:</p>
+    <dl class="gterm">
+      <dt>Workspace (the app calls it a &ldquo;company&rdquo;)</dt>
+      <dd>One folder on your Mac holding everything about a single business: what it does, who it serves, and the jobs your AI runs for it. If you run two businesses, you make two.</dd>
+      <dt>Job</dt>
+      <dd>A task you can run over and over, like &ldquo;summarise my inbox&rdquo; or &ldquo;write this week&rsquo;s update&rdquo;. You run it with a button, not by typing a prompt.</dd>
+      <dt>Approve</dt>
+      <dd>Before anything is saved, the app shows you exactly what it wants to write and waits. Nothing is ever changed behind your back.</dd>
+    </dl>
+  </div>
+
+  <div class="gstep r" id="g1">
+    <p class="gstep-tag">Step 1</p>
+    <h2>What you need before you start</h2>
+    <ul>
+      <li><b>A Mac</b> running macOS 12 or later.</li>
+      <li><b>A Claude subscription.</b> Alacr&aacute;n does not sell you AI. It borrows the Claude account you already pay Anthropic for, which is why there&rsquo;s no second AI bill here.</li>
+      <li><b>Claude Code</b>, Anthropic&rsquo;s free command-line tool, installed and signed in. This is the piece that actually talks to Claude for you.</li>
+      <li><b>Node.js</b> installed. It&rsquo;s a free, standard piece of software many Mac apps rely on.</li>
+      <li><b>Optional:</b> the <code>gog</code> tool, only if you want Alacr&aacute;n to read your Gmail and calendar.</li>
+    </ul>
+    <div class="gnote"><b>Don&rsquo;t worry if you don&rsquo;t have these yet.</b> Alacr&aacute;n checks for all of them the first time you open it and tells you exactly what&rsquo;s missing, with a link for each one. You don&rsquo;t need to prepare anything in advance.</div>
+  </div>
+
+  <div class="gstep r" id="g2">
+    <p class="gstep-tag">Step 2</p>
+    <h2>Installing it</h2>
+    <ol>
+      <li>Download the <code>.dmg</code> file from the download button on this site.</li>
+      <li>Open it. A window appears with the Alacr&aacute;n icon and a shortcut to your Applications folder.</li>
+      <li>Drag the icon onto Applications. That&rsquo;s the install.</li>
+      <li>Open Alacr&aacute;n from Applications, the same way you&rsquo;d open any other app.</li>
+    </ol>
+    <div class="gnote">The first time you open any app downloaded from the internet, macOS asks you to confirm. If you see a warning, right-click the app icon and choose <b>Open</b>, then confirm. You only do this once.</div>
+  </div>
+
+  <div class="gstep r" id="g3">
+    <p class="gstep-tag">Step 3</p>
+    <h2>Opening it for the first time</h2>
+    <p>Alacr&aacute;n starts a small server on your own machine and opens in your normal web browser. It looks like a website, but there is no website. Everything you see is being served from your laptop, which is why it keeps working on a plane.</p>
+    <p>On first launch it runs a quick check for the things in Step 1 and shows you a short list of anything missing. Install whatever it flags, then reload the page.</p>
+    <p>Across the top you&rsquo;ll see four tabs. This is the whole app:</p>
+    <ul>
+      <li><b>Agents</b> &mdash; your workspaces, one card each. Your home base.</li>
+      <li><b>Activity</b> &mdash; a history of everything that has run, newest first.</li>
+      <li><b>Skills</b> &mdash; the jobs available, and the button that runs them.</li>
+      <li><b>Connect</b> &mdash; what&rsquo;s hooked up: your AI, your Google account, GitHub.</li>
+    </ul>
+  </div>
+
+  <div class="gstep r" id="g4">
+    <p class="gstep-tag">Step 4</p>
+    <h2>Setting up your first workspace</h2>
+    <p>On the <b>Agents</b> tab, choose to add a company. Give it a name, something like <i>Harbor Studio</i>, and pick where on your Mac it should live. Alacr&aacute;n builds the folder for you, already organised, with a full change history switched on from the very first second.</p>
+    <p>That history matters more than it sounds: it&rsquo;s the reason you can always undo anything the AI does, even weeks later.</p>
+    <div class="gnote">Already have a folder of business notes? You can point Alacr&aacute;n at an existing folder instead of making a new one, and it will adopt it rather than starting over.</div>
+  </div>
+
+  <div class="gstep r" id="g5">
+    <p class="gstep-tag">Step 5</p>
+    <h2>Describing your business</h2>
+    <p>This is the one part that genuinely matters, and it takes about five minutes. A short guided form asks you four plain questions:</p>
+    <ol>
+      <li><b>What does the business actually do?</b> One or two sentences, the way you&rsquo;d explain it to a friend at a barbecue.</li>
+      <li><b>Who is it for, and who else is involved?</b> Your customers, your team, your suppliers.</li>
+      <li><b>How does the work flow through?</b> What comes in, what you do to it, what goes out the other side.</li>
+      <li><b>What&rsquo;s eating your time right now?</b> Be honest here. This one shapes what the AI offers to take off your hands.</li>
+    </ol>
+    <p>Every question has a real example underneath it, so you&rsquo;re never staring at an empty box wondering what&rsquo;s wanted. There are no wrong answers and you can rewrite any of it later.</p>
+    <div class="gnote"><b>Can&rsquo;t face writing it?</b> There&rsquo;s a button that lets your AI take the first pass instead. It drafts answers based on what it already knows, shows them to you, and you correct anything it got wrong. Most people find editing a draft much easier than facing a blank page.</div>
+  </div>
+
+  <div class="gstep r" id="g6">
+    <p class="gstep-tag">Step 6 &middot; optional</p>
+    <h2>Connecting your Gmail and calendar</h2>
+    <p>Skip this if you only want writing help. Connect it if you want your inbox summarised.</p>
+    <p>Go to <b>Connect</b>. Alacr&aacute;n shows you what&rsquo;s linked and what isn&rsquo;t, and walks you through signing in to Google on your own machine. You log in with Google directly, the normal way. Alacr&aacute;n never sees your password and never stores a key.</p>
+    <div class="gnote"><b>It can only read.</b> The Gmail connection is deliberately built read-only, so it is not capable of sending, replying, labelling, archiving or deleting. Even if you asked it to, it couldn&rsquo;t. That limit is in the plumbing, not a setting someone can flip by accident.</div>
+  </div>
+
+  <div class="gstep r" id="g7">
+    <p class="gstep-tag">Step 7</p>
+    <h2>Running your first job</h2>
+    <p>Open the <b>Skills</b> tab. You&rsquo;ll see the jobs available to you, each with a short description. Pick one and open it. There are three tabs inside: <b>Content</b> shows what the job actually does, <b>History</b> shows previous runs, and <b>Run</b> is the button.</p>
+    <p>A good first one is <b>Weekly digest</b> if you just want to see the machinery work, or <b>Check inbox</b> if you connected Google in the last step.</p>
+    <p>Press Run. The button changes to <b>Running&hellip;</b> and a live log appears underneath so you can watch it think. Most jobs take well under a minute. You can leave the page; it keeps going.</p>
+  </div>
+
+  <div class="gstep r" id="g8">
+    <p class="gstep-tag">Step 8</p>
+    <h2>Reading the change before you approve it</h2>
+    <p>This is the part that makes Alacr&aacute;n different from most AI tools, so it&rsquo;s worth understanding properly.</p>
+    <p>When the job finishes, <b>nothing has been saved yet.</b> Instead you get a side-by-side view of the change it wants to make: green for what it&rsquo;s adding, red for anything it&rsquo;s removing. You read it like you&rsquo;d read a colleague&rsquo;s draft.</p>
+    <p>Then you choose. <b>Confirm &amp; commit</b> saves it and records a checkpoint. <b>Cancel</b> throws it away and nothing on your machine changes at all. If the job decided there was nothing worth changing, it says so plainly instead of inventing busywork.</p>
+    <div class="gnote"><b>You cannot break anything here.</b> Even after you approve, every change is a checkpoint in the history, so you can go back to how things were before. There is no button in this app that permanently destroys your work in one click.</div>
+  </div>
+
+  <div class="gstep r" id="g9">
+    <p class="gstep-tag">Step 9</p>
+    <h2>Where your work actually lives</h2>
+    <p>Everything the AI writes goes into ordinary files in the workspace folder you chose, in plain text you can open in any text editor for the next twenty years. No proprietary format, no database only Alacr&aacute;n can read.</p>
+    <p>That means you can open the folder in Finder any time, read it, edit it by hand, back it up to Dropbox, or walk away from Alacr&aacute;n entirely and still have everything. <b>Your work is not locked inside this app.</b></p>
+  </div>
+
+  <div class="gstep r" id="g10">
+    <p class="gstep-tag">Step 10</p>
+    <h2>The jobs you get out of the box</h2>
+    <ul>
+      <li><b>Check inbox</b> &mdash; a plain summary of what&rsquo;s unread and what looks like it needs you. Read-only.</li>
+      <li><b>Weekly digest</b> &mdash; turns a week of scattered activity into the update you were going to write on Friday.</li>
+      <li><b>Record a decision</b> &mdash; captures a decision and, more importantly, <i>why</i> you made it, so next quarter you remember the reasoning.</li>
+      <li><b>Retrospective</b> &mdash; a structured look back at what worked and what didn&rsquo;t, kept as a record rather than lost in a doc.</li>
+      <li><b>Session handoff</b> &mdash; writes down where you got to, so tomorrow&rsquo;s you (or your AI) picks up without re-reading everything.</li>
+      <li><b>Define company</b> &mdash; the one from Step 5. Re-run it any time the business changes shape.</li>
+    </ul>
+  </div>
+
+  <div class="gstep r" id="g11">
+    <p class="gstep-tag">Step 11</p>
+    <h2>Running more than one business</h2>
+    <p>Add as many workspaces as you like. A consultancy and a side project. Three clients. Each keeps its own context, its own connected tools and its own history, and they never see each other.</p>
+    <p>That separation is the point: a client&rsquo;s details can&rsquo;t wander into someone else&rsquo;s weekly report, because as far as each workspace is concerned, the others don&rsquo;t exist.</p>
+  </div>
+
+  <div class="gstep r" id="g12">
+    <p class="gstep-tag">Step 12</p>
+    <h2>Backing up and moving to a new Mac</h2>
+    <p>Because everything lives on your machine, backing up is on you, and Alacr&aacute;n makes it one click.</p>
+    <ol>
+      <li>Connect a GitHub account on the <b>Connect</b> tab. Free accounts are fine.</li>
+      <li>Hit back up on a workspace. It creates a <b>private</b> repository, visible only to you, and pushes everything into it.</li>
+      <li>On the new Mac, install Alacr&aacute;n, connect the same GitHub account, and restore. Your whole workspace comes back, history and all.</li>
+    </ol>
+    <div class="gnote">Private means private: the repository is created locked-down by default, and nobody, including us, can see inside it.</div>
+  </div>
+
+  <div class="gstep r" id="g13">
+    <p class="gstep-tag">Step 13</p>
+    <h2>Going further: teaching it your own routines</h2>
+    <p>Once the built-in jobs feel natural, the real payoff is teaching it yours. Anything you do repeatedly in roughly the same shape is a candidate.</p>
+    <p>The pattern is always the same. Do the task with your AI once, in conversation, until the result is genuinely good. Then save that way of working as a reusable job, so next time it&rsquo;s a button instead of a conversation. You can also describe what you want and let Alacr&aacute;n draft the first version for you.</p>
+    <p>People commonly end up with things like:</p>
+    <ul>
+      <li>A monthly newsletter drafted in their own voice, because the AI has read the business.</li>
+      <li>A follow-up email that actually references the last conversation with that client.</li>
+      <li>A standing Monday briefing pulling together the inbox, the calendar and last week&rsquo;s notes.</li>
+      <li>Campaign briefs and social captions written to the same format every single time.</li>
+    </ul>
+    <p>A saved job can be dropped onto another workspace in one click, which is how a routine you worked out for one client becomes standard practice across all of them.</p>
+  </div>
+
+  <div class="gstep r" id="g14">
+    <p class="gstep-tag">Step 14</p>
+    <h2>When something goes wrong</h2>
+    <ul>
+      <li><b>It says something is missing on first launch.</b> Install whatever it names and reload. That screen is a checklist, not an error.</li>
+      <li><b>A job produced something wrong.</b> Press Cancel. Nothing was saved. Nothing to undo.</li>
+      <li><b>You approved something you regret.</b> Every approval is a checkpoint, so it can be rolled back. Nothing is truly gone.</li>
+      <li><b>The inbox summary is empty.</b> Check the Google connection on the <b>Connect</b> tab; the sign-in may have expired.</li>
+      <li><b>Still stuck?</b> Email <a href="mailto:contact@alacran.ai">contact@alacran.ai</a> and a human will answer.</li>
+    </ul>
+  </div>
+
 </div></div></section>
 <section class="final">
   <div class="wrap r">
@@ -46,7 +232,7 @@
     <span>Alacr&aacute;n. Your business, remembered. On your own Mac.</span>
     <span class="foot-nav">
       <a href="/use-cases">Use cases</a><a href="/integrations">Integrations</a>
-      <a href="/docs">Docs</a><a href="/pricing">Pricing</a>
+      <a href="/docs">Docs</a><a href="/#faq">FAQ</a><a href="/pricing">Pricing</a>
       <a href="mailto:contact@alacran.ai" style="color:var(--red)">contact@alacran.ai</a>
     </span>
   </div>
