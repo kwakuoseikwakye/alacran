@@ -29,6 +29,15 @@
   /* mirrors of the app's semantic tokens, so shared chrome reads identically */
   --success: #2fd39b;
   --card-radius: 16px;
+
+  /* Official Simple Icons hex for the Google family reads too saturated on
+     a near-black surface, so dark theme uses the lightened "onDark" tint;
+     light theme should show the vendor's real, unaltered colour instead of
+     that same tint permanently (the bug: these used to be hardcoded to the
+     onDark tint in both themes, which is why they looked washed out here). */
+  --c-gmail: #ff7a6d;   /* onDark tint — dark theme default */
+  --c-google: #8ab4f8;  /* Calendar / Drive / Docs share Google's blue */
+  --c-chat: #5bd07c;    /* Chat / Sheets share Google's green */
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -36,17 +45,20 @@
     --bone: #1a1210; --dune: #7a6862; --red: #dc1f31; --red-2: #b3121f; --ember: #d1591f;
     --glow-soft: rgba(220,31,49,0.12);
     --glass: rgba(253,248,244,0.6); --glass-edge: rgba(26,18,16,0.1); --glass-sheen: rgba(255,255,255,0.6);
+    --c-gmail: #ea4335; --c-google: #4285f4; --c-chat: #34a853;
   }
 }
 :root[data-theme="dark"] {
   --void: #0c0708; --shell: #16100f; --shell-2: #1e1514; --line: #241a19;
   --bone: #f1e9e5; --dune: #a08d87; --red: #ff2e43; --red-2: #ff5566; --ember: #ff6b35;
   --glow-soft: rgba(255,46,67,0.16); --glass: rgba(22,16,15,0.55); --glass-edge: rgba(241,233,229,0.14); --glass-sheen: rgba(241,233,229,0.16);
+  --c-gmail: #ff7a6d; --c-google: #8ab4f8; --c-chat: #5bd07c;
 }
 :root[data-theme="light"] {
   --void: #f6efe9; --shell: #fdf8f4; --shell-2: #f2e8e1; --line: #ece0d8;
   --bone: #1a1210; --dune: #7a6862; --red: #dc1f31; --red-2: #b3121f; --ember: #d1591f;
   --glow-soft: rgba(220,31,49,0.12); --glass: rgba(253,248,244,0.6); --glass-edge: rgba(26,18,16,0.1); --glass-sheen: rgba(255,255,255,0.6);
+  --c-gmail: #ea4335; --c-google: #4285f4; --c-chat: #34a853;
 }
 
 * { box-sizing: border-box; }
