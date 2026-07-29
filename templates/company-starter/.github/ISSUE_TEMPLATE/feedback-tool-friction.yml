@@ -1,25 +1,25 @@
-name: 🔧 ツール摩擦の報告 (verify.py / commands / hooks)
-description: scripts/verify.py, .claude/commands/*, .claude/hooks/* で発生した予期しない挙動やエラー
+name: 🔧 Report tool friction (verify.py / commands / hooks)
+description: Unexpected behavior or errors from scripts/verify.py, .claude/commands/*, .claude/hooks/*
 title: "[feedback:tool-friction] "
 labels: ["feedback:tool-friction"]
 body:
   - type: markdown
     attributes:
       value: |
-        ツールが期待通りに動かなかったケースを教えてください。エラーメッセージや再現手順を含めると解決が早いです。
+        Tell us about a case where a tool didn't work as expected. Including the error message and reproduction steps speeds up resolution.
   - type: input
     id: tool-name
     attributes:
-      label: 対象ツール
-      placeholder: "例: scripts/verify.py、/create-epic、.claude/hooks/git-ops-validator.sh"
+      label: Target tool
+      placeholder: "e.g. scripts/verify.py, /create-epic, .claude/hooks/git-ops-validator.sh"
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: 実行環境
+      label: Execution environment
       placeholder: |
-        - OS: (例: macOS 14.5, Ubuntu 22.04, Windows 11 WSL2)
+        - OS: (e.g. macOS 14.5, Ubuntu 22.04, Windows 11 WSL2)
         - python3 --version:
         - git --version:
         - gh --version:
@@ -29,7 +29,7 @@ body:
   - type: textarea
     id: steps
     attributes:
-      label: 再現手順
+      label: Reproduction steps
       placeholder: |
         1. `git clone ...`
         2. `python3 scripts/verify.py`
@@ -39,18 +39,18 @@ body:
   - type: textarea
     id: expected-actual
     attributes:
-      label: 期待した挙動 / 実際の挙動
+      label: Expected behavior / actual behavior
       placeholder: |
-        期待: verify.py が PASS で exit 0
-        実際: `ModuleNotFoundError: No module named 'yaml'` で exit 1
+        Expected: verify.py PASSes with exit 0
+        Actual: exits 1 with `ModuleNotFoundError: No module named 'yaml'`
     validations:
       required: true
   - type: dropdown
     id: workaround
     attributes:
-      label: 回避策の有無
+      label: Is there a workaround
       options:
-        - 回避策あり (詳細を下に)
-        - 回避策なし
-        - 未検討
+        - Yes, there's a workaround (details below)
+        - No workaround
+        - Haven't looked into it
       default: 2

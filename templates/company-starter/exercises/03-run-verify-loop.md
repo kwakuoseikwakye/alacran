@@ -1,136 +1,147 @@
-# Exercise 03: verify ループを回す
+# Exercise 03: Run the verify loop
 
-**目安時間**: 20-30 分
-**前提**: Exercise 01, 02 を完了していること。`python3` が使える環境であること。
+**Time estimate**: 20-30 minutes
+**Prerequisite**: Exercises 01 and 02 are complete. An environment where `python3` works.
 
-## ゴール
+## Goal
 
-「偽緑禁止」の原則（`CLAUDE.md` §2.5）を体で理解します。`scripts/verify.py` を実行し、
-FAIL/WARN を実際に読み、直し、再実行するループを 1 周体験した上で、自分の RQT を 1 件追加します。
+Get a hands-on feel for the "no fake green" principle (`CLAUDE.md` §2.5). Run
+`scripts/verify.py`, actually read a FAIL/WARN, fix it, and re-run it once around the loop,
+then add one RQT of your own.
 
-## 手順
+## Steps
 
-### Step 1. `/verify` を実行する
+### Step 1. Run `/verify`
 
-Claude Code のセッションで:
+In your Claude Code session:
 
 ```
 /verify
 ```
 
-または直接:
+or directly:
 
 ```bash
 python3 scripts/verify.py
 ```
 
-出力はカテゴリ別（`STRUCTURE` / `HARNESS` / `HYGIENE` / `ONTOLOGY` / `HITL` / `STRUCT-DEF` /
-`STRUCT-DOC` / `EXAMPLE` / `DEFINITIONS` / `GEN` / `META` / `CONTEXT` / `PATHREF` の全 13 カテゴリ）に整理され、
-各行が `[✓|!|✗|-|i] <RQT-ID> <STATUS> <メッセージ>` の形式で表示されます。
+The output is organized by category (all 13: `STRUCTURE` / `HARNESS` / `HYGIENE` /
+`ONTOLOGY` / `HITL` / `STRUCT-DEF` / `STRUCT-DOC` / `EXAMPLE` / `DEFINITIONS` / `GEN` /
+`META` / `CONTEXT` / `PATHREF`), with each line shown as
+`[✓|!|✗|-|i] <RQT-ID> <STATUS> <message>`.
 
-### Step 2. 出力を読む
+### Step 2. Read the output
 
-以下のステータスの意味を確認してください。
+Confirm what each status means:
 
-| マーク    | ステータス  | 意味                                               |
-| --------- | ----------- | -------------------------------------------------- |
-| `✓`       | PASS        | 検証項目クリア                                     |
-| `!`       | WARN        | 動くが望ましくない状態                             |
-| `✗`       | FAIL        | 検証項目が満たされていない。**修正必須**           |
-| `-` / `i` | SKIP / INFO | 対象がまだ存在しない・任意項目。今すぐの対応は不要 |
+| Mark      | Status      | Meaning                                             |
+| --------- | ----------- | ---------------------------------------------------- |
+| `✓`       | PASS        | This check is satisfied                              |
+| `!`       | WARN        | It works, but isn't in a desirable state              |
+| `✗`       | FAIL        | This check isn't satisfied. **Must be fixed**        |
+| `-` / `i` | SKIP / INFO | The target doesn't exist yet, or is optional. No action needed right now |
 
-Exercise 01, 02 を完了していれば、`ONTOLOGY-01`（`definitions/ontology/*.yaml` の構文チェック）と
-`HITL-01`（`.claude/rules/hitl-gate.md` にトリガーテーブルがあるか）が `PASS` になっているはずです。
+If you've completed Exercises 01 and 02, `ONTOLOGY-01` (syntax-checks
+`definitions/ontology/*.yaml`) and `HITL-01` (whether `.claude/rules/hitl-gate.md` has a
+trigger table) should both show `PASS`.
 
-### Step 3. FAIL または WARN を 1 件見つけて直す
+### Step 3. Find and fix one FAIL or WARN
 
-もし `FAIL` が出ていなければ、意図的に壊してみましょう（学習目的、すぐ戻します）。
+If nothing is FAILing, let's deliberately break something (for learning purposes — we'll
+revert it right away).
 
 ```bash
-# .gitignore の `secrets/**` の行を一時的にコメントアウトしてみる（先頭に # を付ける）
+# Try temporarily commenting out the `secrets/**` line in .gitignore (add a # in front)
 ```
 
-再度 `/verify` を実行し、`STRUCTURE-02` が `FAIL` になることを確認してください。
-メッセージ（`.gitignore does not effectively block: ['secrets/']`）を読み、原因
-（`secrets/**` をコメントアウトしたことで有効な遮断行が無くなったこと）を特定してから
-元に戻します。なお `STRUCTURE-02` は否定行（`!secrets/...`）に文字列が残っていても
-「実効的に遮断できているか」を git check-ignore で判定するため、コメントアウトでは
-ごまかせません（偽緑禁止）。
+Run `/verify` again and confirm `STRUCTURE-02` becomes `FAIL`. Read the message
+(`.gitignore does not effectively block: ['secrets/']`), pin down the cause (commenting out
+`secrets/**` removed the effective block line), then revert it. Note that `STRUCTURE-02`
+judges "is it effectively blocked" via `git check-ignore`, even if a string still remains in
+a negation line (`!secrets/...`) — so commenting it out can't be faked around (no fake green).
 
-**重要**: FAIL を消すために `scripts/verify.py` 側の判定ロジックを緩めてはいけません
-（偽緑禁止）。直すのは常に検証対象（今回は `.gitignore`）の方です。
+**Important**: never loosen `scripts/verify.py`'s own judgment logic just to make a FAIL go
+away (no fake green). Always fix the thing being verified instead (in this case,
+`.gitignore`).
 
-### Step 4. 再実行して PASS を確認する
+### Step 4. Re-run and confirm PASS
 
 ```bash
 python3 scripts/verify.py
 ```
 
-先ほど `FAIL` だった `STRUCTURE-02` が `PASS` に戻っていることを確認します。
+Confirm that `STRUCTURE-02`, which just FAILed, is back to `PASS`.
 
-### Step 5. 自分の RQT を追加する
+### Step 5. Add your own RQT
 
-`scripts/verify.py` の `verify_structure()` 関数に倣い、自社固有のチェックを 1 つ追加します。
-例として「会社概要ドキュメントが存在するか」を確認する `STRUCTURE-05` を追加してみましょう。
+Following the pattern of `scripts/verify.py`'s `verify_structure()` function, add one check
+specific to your own company. As an example, let's add `STRUCTURE-05`, which confirms
+whether a company-overview document exists.
 
-まず対象ファイルを用意します（無ければ簡単な内容で作成してください）。
+First, prepare the target file (create it with simple content if it doesn't exist).
 
 ```bash
 mkdir -p docs
 cat > docs/company-overview.md <<'EOF'
-# 会社概要
+# Company Overview
 
-（Exercise 01 の definitions/ontology/company.yaml を要約したものをここに書く）
+(Write a summary of Exercise 01's definitions/ontology/company.yaml here)
 EOF
 ```
 
-次に `scripts/verify.py` の `verify_structure()` 関数末尾（`STRUCTURE-04` の直後）に以下を追加します。
+Next, add the following to the end of the `verify_structure()` function in
+`scripts/verify.py` (right after `STRUCTURE-04`).
 
 ```python
-    # STRUCTURE-05: 会社概要ドキュメント
+    # STRUCTURE-05: the company-overview document
     if (REPO_ROOT / "docs" / "company-overview.md").exists():
         r.add(cat, "STRUCTURE-05", "PASS", "docs/company-overview.md exists")
     else:
         r.add(cat, "STRUCTURE-05", "FAIL", "docs/company-overview.md not found")
 ```
 
-`verify_structure()` は既に `main()` の呼び出しリストに含まれているため、新しい RQT を
-関数内に追記するだけで自動的に実行対象になります（新しい `verify_*()` 関数を丸ごと追加する
-場合のみ、`main()` の呼び出しリストへの追記が別途必要です）。
+`verify_structure()` is already in `main()`'s call list, so just appending the new RQT inside
+the function is enough for it to run automatically (adding a whole new `verify_*()` function
+is the only case that separately needs an addition to `main()`'s call list).
 
-### Step 6. 再実行して新しい RQT を確認する
+### Step 6. Re-run and confirm the new RQT
 
 ```bash
 python3 scripts/verify.py
 ```
 
-`STRUCTURE-05` が出力に現れ、Step 5 で作成した会社概要ドキュメントの有無に応じて `PASS`/`FAIL`
-することを確認してください。
+Confirm `STRUCTURE-05` appears in the output, PASSing/FAILing depending on whether the
+company-overview document you created in Step 5 exists.
 
-### Step 7. コミットする
+### Step 7. Commit
 
 ```bash
 git add scripts/verify.py docs/company-overview.md
-git commit -m "test(verify): STRUCTURE-05 (会社概要ドキュメント存在確認) を追加"
+git commit -m "test(verify): add STRUCTURE-05 (checks the company-overview document exists)"
 ```
 
-## 期待される出力
+## Expected output
 
-- `/verify` の出力を最低 2 回読んだ（1 回目: 現状確認、2 回目: 修正後の再確認）
-- 意図的な FAIL を作り、原因を特定し、修正して PASS に戻す一連の流れを体験した
-- `scripts/verify.py` に `STRUCTURE-05` のような自作 RQT が追加されている
-- 上記変更を含む git コミットが 1 つ
+- Read `/verify`'s output at least twice (once to see the current state, once to confirm
+  after the fix)
+- Went through the full loop of deliberately creating a FAIL, pinning down the cause, fixing
+  it, and confirming it's back to PASS
+- `scripts/verify.py` now has a self-authored RQT like `STRUCTURE-05`
+- One git commit including the changes above
 
-## 振り返りの問い
+## Reflection questions
 
-- 「偽緑禁止」を破ると何が起きますか？（検証ロジックを緩めて FAIL を隠した場合、誰が困りますか）
-- 自社の運用でこの先追加したい RQT は他にありますか？（例: 特定の必須ドキュメントの存在、
-  命名規約の遵守、機密情報のパターン検出）
+- What happens if you break "no fake green"? (If you loosen the verification logic to hide a
+  FAIL, who ends up hurt by it?)
+- Are there other RQTs you'd want to add for your own company's operations going forward?
+  (e.g. the existence of a specific mandatory document, adherence to a naming convention,
+  detecting patterns of confidential information)
 
-## 次へ
+## Next
 
-3 つの演習が完了しました。ここまでで作った `definitions/ontology/company.yaml`・
-`.claude/rules/hitl-gate.md` の追加行・`scripts/verify.py` の追加 RQT は、あなたの会社に
-AI 駆動経営ハーネスを立ち上げる最初の一歩です。午前のセッションで `/create-epic` により
-Epic Issue を起票済みであれば、その続きに着手してください。まだ起票していなければ、
-`/create-epic` で実際の経営課題を Epic Issue として起票してみましょう。
+You've completed all 3 exercises. The `definitions/ontology/company.yaml` you built, the row
+you added to `.claude/rules/hitl-gate.md`, and the RQT you added to `scripts/verify.py` are
+the first step toward standing up an AI-driven management harness at your own company. If
+you already filed an Epic Issue via `/create-epic` in the morning session, pick up where that
+left off. If you haven't filed one yet, try filing a real management issue as an Epic Issue
+with `/create-epic`.

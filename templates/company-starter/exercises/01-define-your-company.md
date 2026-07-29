@@ -1,77 +1,92 @@
-# Exercise 01: 自社を定義する
+# Exercise 01: Define your own company
 
-**目安時間**: 20-30 分
-**前提**: `claude` コマンドでこのリポジトリを開けること。`CLAUDE.md` を読み込んだ状態でセッションが始まっていること。
+**Time estimate**: 20-30 minutes
+**Prerequisite**: You can open this repository with the `claude` command. The session has
+started with `CLAUDE.md` loaded.
 
-## ゴール
+## Goal
 
-このリポジトリのオントロジー（事業構造の宣言的定義）テンプレートを使って、
-**あなたの実際の会社**の customer / org / product を書き出します。
-完了すると `definitions/ontology/company.yaml` があなたの会社を表すファイルになります。
+Using this repository's ontology (declarative business-structure definition) template, write
+out **your actual company's** customer / org / product. Once done,
+`definitions/ontology/company.yaml` will be a file that represents your company.
 
-## 手順
+## Steps
 
-### Step 1. コマンドを実行する
+### Step 1. Run the command
 
-Claude Code のセッションで以下を入力します。
+In your Claude Code session, type:
 
 ```
 /define-company
 ```
 
-Claude が `docs/templates/ontology-starter.yaml` を読み込み、1 つずつ質問を投げてきます。
-急いで全部答えようとせず、1 問ずつ対話しながら進めてください。
+Claude reads `docs/templates/ontology-starter.yaml` and asks you questions one at a time.
+Don't try to answer everything at once — work through the questions one by one in dialogue.
 
-### Step 2. 質問に答える
+### Step 2. Answer the questions
 
-4 つの質問に答えます。以下は回答例です（そのまま使わず、自社に置き換えてください）。
+You'll answer 4 questions. Below are example answers (don't use them as-is — replace them
+with your own company's).
 
-1. **事業ドメイン**（どんな問題を解決しているか）
-   - 例:「中小企業の労務手続き（給与計算・社会保険手続き）を代行し、月次のミスと工数を削減する」
-   - 例:「EC 事業者向けに、需要予測に基づく自動発注を提供し、欠品と過剰在庫を同時に減らす」
+1. **Business domain** (what problem you solve)
+   - e.g. "We handle small businesses' labor administration (payroll, social-insurance
+     paperwork) on their behalf, reducing monthly errors and labor-hours"
+   - e.g. "We provide EC operators with demand-forecast-based automatic ordering, reducing
+     both stockouts and excess inventory at the same time"
 
-2. **主要ステークホルダー**（誰が事業の中心にいるか）
-   - 例:「顧客企業の労務担当者（依頼者）、社労士本人（実務担当）、顧問先の経営者（意思決定者）」
-   - 例:「EC 店長（発注判断者）、倉庫担当者（実作業者）、仕入先（外部パートナー）」
+2. **Key stakeholders** (who sits at the center of the business)
+   - e.g. "The customer company's labor-administration contact (the requester), the labor
+     consultant themselves (who does the actual work), the advisory client's executive (the
+     decision-maker)"
+   - e.g. "The EC store manager (who decides orders), warehouse staff (who do the physical
+     work), suppliers (external partners)"
 
-3. **コアバリューフロー**（インプット → 変換 → アウトプット）
-   - 例:「勤怠データ（インプット）→ 給与計算・保険料算定（変換）→ 給与明細と納付書（アウトプット）」
+3. **Core value flow** (input → transformation → output)
+   - e.g. "Attendance data (input) → payroll/insurance-premium calculation (transformation) →
+     pay slips and payment forms (output)"
 
-4. **現在最大のボトルネック**（属人化・時間がかかっている業務）
-   - 例:「月末の給与計算チェックが特定の担当者しかできず、毎月 2 日間かかっている」
+4. **The current biggest bottleneck** (work that's overly dependent on one person, or slow)
+   - e.g. "Only one specific person can do the month-end payroll check, and it takes 2 full
+     days every month"
 
-### Step 3. 生成されたファイルを確認する
+### Step 3. Review the generated file
 
-`definitions/ontology/company.yaml` が生成されたら、内容を読み、事実と違う点や
-言葉が硬すぎる点があれば Claude に修正を依頼してください。曖昧なままでよい項目は
-`status: draft` として残ります。無理に完璧を目指す必要はありません。
+Once `definitions/ontology/company.yaml` is generated, read it, and ask Claude to fix
+anything that's factually wrong or too stiffly worded. Items you're fine leaving vague stay
+as `status: draft`. There's no need to aim for perfection right away.
 
-### Step 4. コミットする
+### Step 4. Commit
 
 ```bash
 git add definitions/ontology/company.yaml
-git commit -m "docs(ontology): 自社オントロジーの初版を定義"
+git commit -m "docs(ontology): define the initial version of our company ontology"
 ```
 
-（このコミットは Issue-First の対象外 — 演習内の学習コミットとして扱ってよい）
+(This commit is exempt from Issue-First — it's fine to treat it as a learning commit within
+the exercise.)
 
-## よくある間違い
+## Common mistakes
 
-1. **業種固有の話を `docs/templates/ontology-starter.yaml`（テンプレート本体）に直接書いてしまう**
-   → テンプレート本体は編集しない。必ずコピー先の `definitions/ontology/company.yaml` に書く。
-2. **抽象度がバラバラになる**（`customer.account` に会社名を、`customer.contact` に部署名だけを書く等）
-   → `attributes` の型（string / enum / list 等）に沿って一貫性を保つ。迷ったら
-   `examples/harukaze-ec/definitions/ontology/company.yaml`（記入済みの完成例）と見比べる。
-3. **1 回で全部を完璧に埋めようとして止まってしまう**
-   → 分からない項目は `<<TODO>>` や空欄のまま `status: draft` で保存してよい。
-   後のセッションで埋め直せる。
+1. **Writing industry-specific details directly into `docs/templates/ontology-starter.yaml`
+   (the template itself)**
+   → Never edit the template itself. Always write into the copy at
+   `definitions/ontology/company.yaml`.
+2. **Inconsistent levels of abstraction** (e.g. writing a company name into
+   `customer.account` but only a department name into `customer.contact`)
+   → Keep it consistent with `attributes`' declared types (string / enum / list, etc.). If
+   unsure, compare against `examples/harukaze-ec/definitions/ontology/company.yaml` (a
+   filled-in, complete example).
+3. **Getting stuck trying to fill everything in perfectly in one pass**
+   → It's fine to leave a field you don't know as `<<TODO>>` or blank, saved with
+   `status: draft`. You can fill it in during a later session.
 
-## 期待される出力
+## Expected output
 
-- `definitions/ontology/company.yaml`（customer / org / product の 3 domain があなたの会社の
-  実データで埋まっている、または `status: draft` で暫定値が入っている）
-- 上記ファイルを含む git コミットが 1 つ
+- `definitions/ontology/company.yaml` (the 3 domains customer / org / product filled in with
+  your company's real data, or provisional values under `status: draft`)
+- One git commit including the file above
 
-## 次へ
+## Next
 
-`definitions/ontology/company.yaml` ができたら、Exercise 02（HITL Gate 体験）に進んでください。
+Once `definitions/ontology/company.yaml` exists, move on to Exercise 02 (experiencing the
+HITL Gate).

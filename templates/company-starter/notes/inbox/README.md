@@ -1,44 +1,52 @@
-# notes/inbox/ — オーナーの受信箱
+# notes/inbox/ — the owner's inbox
 
-ここは **唯一オーナーが自由に書いてよい棚** です。移動中・商談直後に、Obsidian（デスクトップ /
-モバイル）や普段のエディタから、frontmatter を気にせず自由にメモを落としてください。
+This is the **only shelf the owner may write to freely**. While on the move or right after a
+meeting, drop notes in freely from Obsidian (desktop / mobile) or your everyday editor,
+without worrying about frontmatter.
 
-- git 追跡されます（次のセッションでエージェントが読めるように）。
-- 実名・実額・認証情報など機密は書かないでください（迷ったら `secrets/`）。
-- ここに置いたメモは、エージェントが `/ingest-context` で検疫・分類し、正しい棚
-  （`notes/company/` `notes/market/` `notes/clients/` `notes/sops/`、または構造情報なら
-  `definitions/`）へ昇格させます。棚に直接書き込む必要はありません。
+- It's git-tracked (so the agent can read it in the next session).
+- Don't write confidential data here — real names, real amounts, credentials (when unsure,
+  use `secrets/`).
+- Notes left here get quarantined and classified by the agent via `/ingest-context`, then
+  promoted to the correct shelf (`notes/company/` `notes/market/` `notes/clients/`
+  `notes/sops/`, or `definitions/` if it's structural information). There's no need to write
+  directly to a shelf.
 
-ファイル名の例: `2026-07-03-memo.md`（日付を先頭につけると滞留チェックがしやすくなります）。
+Example filename: `2026-07-03-memo.md` (putting the date first makes it easier to check for
+things going stale).
 
-## モバイルキャプチャの同期手順
+## Mobile-capture sync procedure
 
-エージェントがメモを読めるのは **git に載ってから** です。同期は「いつかリポジトリに届く」
-ことが本質で、リアルタイム性は不要です。以下は同期手段の 2 パターンです。
+The agent can only read a memo **once it's landed in git**. The essence of syncing is "it
+eventually reaches the repo" — real-time delivery isn't necessary. Below are 2 patterns for
+syncing.
 
-### 最低ライン（推奨デフォルト・ツール追加ゼロ）
+### The minimum baseline (recommended default, zero extra tooling)
 
-1. 商談直後、モバイルの好きなメモ手段（純正メモアプリ・Obsidian モバイル等なんでもよい）で
-   下書きする
-2. PC でリポジトリを開いたタイミングで、下書きを `notes/inbox/` の新規ファイルに貼り付ける
-3. `git add notes/inbox/ && git commit && git push` する
+1. Right after a meeting, draft it with whatever mobile note-taking method you like (the
+   stock notes app, Obsidian mobile, anything)
+2. When you're next at your PC with the repo open, paste the draft into a new file under
+   `notes/inbox/`
+3. `git add notes/inbox/ && git commit && git push`
 
-これだけで運用として十分成立します。追加のツール・プラグインは不要です。
+That alone is a fully workable setup. No extra tool or plugin is required.
 
-### 上級構成（任意）
+### An advanced setup (optional)
 
-モバイル版 Obsidian + コミュニティプラグイン（Obsidian Git 等）で vault を直接 git 同期する
-構成も選べます。設定内容はユーザーの環境（OS・Git 認証方式等）に依存するため本 README では
-手順を固定しません。同期プラグインの動作が不安定な場合は、無理に使い続けず上記の
-「最低ライン」運用に戻ってください。
+You can also choose to sync the vault directly via git using Obsidian mobile + a community
+plugin (e.g. Obsidian Git). The configuration depends on your own environment (OS, git auth
+method, etc.), so this README doesn't pin down fixed steps. If a sync plugin behaves
+unreliably, don't force yourself to keep using it — fall back to the "minimum baseline"
+workflow above.
 
-### 注意（必須）
+### Important (mandatory)
 
-Obsidian Sync やサードパーティ同期サービスを使う場合、`secrets/` と `.env` を必ず同期対象から
-除外してください。`.gitignore` は git 経由の同期にしか効かず、Obsidian Sync 等の独自同期には
-効きません。詳細は
+If you use Obsidian Sync or a third-party sync service, always exclude `secrets/` and `.env`
+from what gets synced. `.gitignore` only affects syncing via git — it has no effect on
+Obsidian Sync or other proprietary sync mechanisms. See APP-2 in
 [`docs/decisions/2026-07-03-obsidian-context-stock.md`](../../docs/decisions/2026-07-03-obsidian-context-stock.md)
-の APP-2 を参照してください。
+for details.
 
-特定ベンダーの有料サービスの利用を前提にはしていません。本テンプレは plain Claude Code + GitHub
-だけで完結する設計を維持しています（同期は git push だけで成立します）。
+This doesn't assume you'll use any particular vendor's paid service. This template keeps its
+design of running on plain Claude Code + GitHub alone (syncing works with nothing more than
+`git push`).

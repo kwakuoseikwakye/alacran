@@ -1,62 +1,71 @@
-# notes/ — L2 記述層（Obsidian 互換コンテキストストック）
+# notes/ — the L2 description layer (an Obsidian-compatible context stock)
 
-本ディレクトリは `docs/decisions/2026-07-03-obsidian-context-stock.md`（Decision RFC, accepted）
-に基づく **L2 記述層** です。物語・観察・手順を frontmatter 付き Markdown で蓄積します。
-Obsidian（デスクトップ / モバイル）で本リポジトリを vault として開くと、GUI 閲覧・キャプチャが
-できますが、**Obsidian が無くても plain Markdown + YAML として一切劣化しません**（アプリ非依存原則）。
+This directory is the **L2 description layer** established by
+`docs/decisions/2026-07-03-obsidian-context-stock.md` (Decision RFC, accepted). It
+accumulates stories, observations, and procedures as Markdown with frontmatter. Opening this
+repo as a vault in Obsidian (desktop / mobile) gets you GUI browsing and capture, but
+**everything here degrades gracefully to plain Markdown + YAML with no Obsidian
+installed** (the app-independence principle).
 
-## 2 層構造
+## The 2-layer structure
 
-| 層 | 場所 | 役割 |
+| Layer | Location | Role |
 |----|------|------|
-| **L1 機械層（SSOT）** | `definitions/**/*.yaml` | 事業構造の宣言的定義。本ディレクトリとは無関係、変更なし |
-| **L2 記述層（本ディレクトリ）** | `notes/`・`docs/decisions/`・`docs/retros/` | 物語・観察・手順。frontmatter で L1 に id 参照 |
+| **L1 machine layer (SSOT)** | `definitions/**/*.yaml` | The declarative definition of the business structure. Unrelated to this directory, unchanged |
+| **L2 description layer (this directory)** | `notes/` / `docs/decisions/` / `docs/retros/` | Stories, observations, procedures. References L1 by id, in frontmatter |
 
-L2 → L1 の参照は frontmatter の `entities:` / `client:` / `team_id:` で行う。wikilink で L1（YAML）
-を指さない。詳細は RFC 本体を参照。
+L2 → L1 references go through frontmatter's `entities:` / `client:` / `team_id:`. Don't point
+at L1 (YAML) with a wikilink. See the RFC itself for details.
 
-## 棚（サブディレクトリ）
+## Shelves (subdirectories)
 
-| 棚 | 内容 | 命名規則 |
+| Shelf | Contents | Naming rule |
 |----|------|----------|
-| `company/` | 自社の物語（沿革・戦略メモ・経営方針の背景） | 自由 |
-| `market/` | 他社情報（競合・市場・パートナー候補）。`source:` `observed_at:` 必須 | `<slug>.md` |
-| `clients/` | クライアントの随時メモ（商談メモ・議事録の非機密要旨） | `<client-slug>/YYYY-MM-DD-<topic>.md` |
-| `sops/` | 業務手順（SOP） | `<slug>.md` |
-| `inbox/` | 未分類の生メモ。**唯一オーナーが自由に書いてよい棚** | 自由（詳細は `inbox/README.md`） |
+| `company/` | Your own company's story (history, strategy memos, the background of management policy) | Free |
+| `market/` | Information about other companies (competitors, market, potential partners). `source:` and `observed_at:` are mandatory | `<slug>.md` |
+| `clients/` | Ad-hoc notes on clients (meeting notes, non-confidential summaries of minutes) | `<client-slug>/YYYY-MM-DD-<topic>.md` |
+| `sops/` | Standard operating procedures (SOPs) | `<slug>.md` |
+| `inbox/` | Uncategorized raw memos. **The only shelf the owner may write to freely** | Free (see `inbox/README.md` for details) |
 
-## frontmatter 共通スキーマ
+## The common frontmatter schema
 
-L2 の全ノートは以下のキーを持つ（型ごとの必須キーは RFC §3 を参照）。
+Every L2 note carries the following keys (see RFC §3 for the required keys per type).
 
 ```yaml
 ---
 type: company-note | market | client-note | sop | inbox | decision | retro | digest
 status: draft | active | superseded
-created: 2026-07-03 # 絶対日付のみ
+created: 2026-07-03 # absolute dates only
 updated: 2026-07-03
 tags: []
 ---
 ```
 
-## 書き込み規約
+## Write conventions
 
-- **オーナー**は `notes/inbox/` にのみ自由記述してよい。`definitions/`（L1）や `notes/` の棚
-  （`company/` `market/` `clients/` `sops/`）への直接新規配置は行わない。
-- inbox から棚への**昇格は `/ingest-context` 経由**で行う（検疫 → 分類 → 格納）。inbox モードは
-  実装済み（Issue #73）で、`/ingest-context inbox` を実行すると未処理ノートを一括で検疫・分類・
-  格納する。
-- 実名・実額・認証情報は inbox にも書かない（迷ったら `secrets/`）。
+- The **owner** may write freely only into `notes/inbox/`. They do not place new files
+  directly onto `definitions/` (L1) or any of the `notes/` shelves (`company/` `market/`
+  `clients/` `sops/`).
+- Promotion from inbox to a shelf goes **via `/ingest-context`** (quarantine → classify →
+  file). Inbox mode is implemented (Issue #73) — running `/ingest-context inbox` quarantines,
+  classifies, and files every unprocessed note in one batch.
+- Never write real names, real amounts, or credentials into inbox either (when unsure, use
+  `secrets/`).
 
-## リンク・記法規約（抜粋）
+## Link and notation conventions (excerpt)
 
-- wikilink（`[[...]]`）は L2 内・一意解決の場合のみ。ルート相対フルパス推奨
-- embed `![[...]]`・block ref `^xxx`・Dataview / Bases クエリブロックは禁止（アプリ依存 + 偽緑リスク）
-- callout（`> [!note]`）は許可（劣化しても引用ブロックとして読める）
+- Wikilinks (`[[...]]`) only within L2, and only where they resolve uniquely. A
+  root-relative full path is preferred
+- Embeds `![[...]]`, block refs `^xxx`, and Dataview / Bases query blocks are forbidden
+  (app-dependent + fake-green risk)
+- Callouts (`> [!note]`) are allowed (they still read fine as a blockquote even if degraded)
 
-詳細な設計根拠・段階導入計画（Phase A/B/C）は
-[`docs/decisions/2026-07-03-obsidian-context-stock.md`](../docs/decisions/2026-07-03-obsidian-context-stock.md) を参照。
+See
+[`docs/decisions/2026-07-03-obsidian-context-stock.md`](../docs/decisions/2026-07-03-obsidian-context-stock.md)
+for the detailed design rationale and the staged rollout plan (Phase A/B/C).
 
-`notes/` を Edit / Write するときの規律（frontmatter 必須・書き込み規約・PII 境界）は
-[`.claude/rules/notes-touch.md`](../.claude/rules/notes-touch.md) に集約されている（path-scoped rule。
-`notes/**` を触ると自動でロードされる）。本 README との重複を避けるため、詳細はそちらを正とする。
+The discipline for Editing / Writing in `notes/` (mandatory frontmatter, write conventions,
+PII boundary) is consolidated in
+[`.claude/rules/notes-touch.md`](../.claude/rules/notes-touch.md) (a path-scoped rule,
+auto-loaded whenever `notes/**` is touched). To avoid duplicating that file, treat it as
+authoritative over this README.

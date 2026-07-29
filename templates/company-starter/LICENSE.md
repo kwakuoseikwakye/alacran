@@ -4,7 +4,7 @@
 
 This template repository ("Template") is provided to registered participants of the AI-driven management retreat program ("Retreat") for their exclusive use in their own organization or personal projects, subject to the terms below.
 
-## 1. Grant of Use (参加者利用許諾)
+## 1. Grant of Use (participant usage license)
 
 The Template is licensed — not sold — to individual Retreat participants for:
 
@@ -12,7 +12,7 @@ The Template is licensed — not sold — to individual Retreat participants for
 - Using the Template as a starting point for the participant's own private organizational or personal projects
 - Modifying and extending the Template for the participant's internal use
 
-## 2. Restrictions (禁止事項)
+## 2. Restrictions (prohibited actions)
 
 The following are **strictly prohibited**:
 
@@ -44,6 +44,9 @@ This license is governed by the terms of the AI-driven management retreat progra
 
 ---
 
-**日本語要旨（参考訳）**
+**Summary (for reference)**
 
-本テンプレートは AI 駆動経営合宿 参加者本人の自社利用に限定してライセンスされます。第三者への再配布・商用再配布・公開リポジトリでの派生物公開は禁止です。参加終了時にコピーの削除を求められる場合があります。
+This template is licensed exclusively for a Retreat participant's own use within their own
+organization. Redistribution to third parties, commercial redistribution, and publishing
+derivative works in a public repository are all prohibited. You may be required to delete all
+copies upon leaving the program.

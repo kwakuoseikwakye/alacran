@@ -1,5 +1,5 @@
-# === Secrets (絶対に commit しない) ===
-# secrets/ 配下は .gitkeep 以外すべて無視。ディレクトリ構造は保持
+# === Secrets (never commit these) ===
+# Everything under secrets/ is ignored except .gitkeep. The directory structure is kept
 secrets/**
 !secrets/**/
 !secrets/**/.gitkeep
@@ -24,8 +24,8 @@ desktop.ini
 *.swo
 *~
 
-# === Obsidian (notes/ を vault として開く場合の設定ノイズ・トークン混入防止) ===
-# APP-1: docs/decisions/2026-07-03-obsidian-context-stock.md 参照
+# === Obsidian (prevents config noise/token leakage when opening notes/ as a vault) ===
+# APP-1: see docs/decisions/2026-07-03-obsidian-context-stock.md
 .obsidian/
 
 # === Python ===
@@ -57,23 +57,24 @@ test-results/
 playwright-report/
 .test-logs/
 
-# === Context Funnel の一時置き場（検査前の生データ。相 1 → 相 2 で本棚に昇格） ===
-# /ingest-context が受領した生データを検疫するまで置く場所。中身はコミットしない。
+# === The Context Funnel's staging area (raw, pre-inspection data. Phase 1 -> Phase 2 promotes it to a shelf) ===
+# Where raw data received by /ingest-context sits until it's quarantined. Its contents are never committed.
 definitions/.staging/
 
-# === External SDK-derived artifacts (本テンプレは非依存だが誤持ち込み防止) ===
-# 外部の重量級 SDK を過去に使っていた repo からファイルを持ち込む場合の残置防止
+# === External SDK-derived artifacts (this template has no such dependency, but this guards against accidentally bringing them in) ===
+# Prevents leftovers when bringing files in from a repo that used to depend on a heavyweight external SDK
 .ccagi/
 .pil-state/
 .ai/
 
-# === Vendored tools/office (ビルド済みvendor同梱・オフライン完結) ===
-# tools/office はビルド済みvendor同梱(オフライン完結)のため丸ごと追跡する
-# (上の node_modules/ dist/ build/ より後に置くこと。gitignoreは後勝ち)
+# === Vendored tools/office (a prebuilt vendor bundle, fully self-contained offline) ===
+# tools/office is tracked in full, since it's a prebuilt vendor bundle meant to work fully offline
+# (must come after node_modules/ dist/ build/ above — gitignore rules are last-wins)
 !tools/office/
 !tools/office/**
 
-# vendor配下でも秘密ファイルとOSノイズは追跡しない(上のre-includeより後=優先)
+# Even under vendor/, secret files and OS noise are still never tracked (comes after the
+# re-include above, so it takes precedence)
 tools/office/**/.DS_Store
 tools/office/**/.env
 tools/office/**/.env.*

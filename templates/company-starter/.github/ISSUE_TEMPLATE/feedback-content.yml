@@ -1,40 +1,40 @@
-name: 📝 テンプレ内容へのフィードバック
-description: CLAUDE.md / rules / commands / docs / templates の内容についての意見・提案
+name: 📝 Feedback on the template's content
+description: Opinions/suggestions about the content of CLAUDE.md / rules / commands / docs / templates
 title: "[feedback:content] "
 labels: ["feedback:content"]
 body:
   - type: markdown
     attributes:
       value: |
-        テンプレ本体の内容に関するフィードバックをお寄せください。
-        自社機密を含む内容は書かず、抽象化してから起票してください。
+        Please send feedback about the content of the template itself.
+        Don't include your own company's confidential details — abstract them away before filing.
   - type: input
     id: file-path
     attributes:
-      label: 対象ファイル (repo-root からのパス)
-      placeholder: "例: CLAUDE.md、docs/starter-manual.md、.claude/rules/hitl-gate.md"
+      label: Target file (path from repo root)
+      placeholder: "e.g. CLAUDE.md, docs/starter-manual.md, .claude/rules/hitl-gate.md"
     validations:
       required: true
   - type: textarea
     id: current
     attributes:
-      label: 現状の記述で困った / 分かりにくかった箇所
-      placeholder: どの記述が、どういう文脈で、なぜ困ったか
+      label: Where the current text was confusing or caused trouble
+      placeholder: Which text, in what context, and why it was a problem
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: どう改善したいか (proposal)
-      placeholder: 具体的な文言差分や、追加すべきセクションの提案
+      label: How you'd like it improved (proposal)
+      placeholder: A concrete wording diff, or a proposal for a section to add
   - type: dropdown
     id: severity
     attributes:
-      label: 影響度
+      label: Impact
       options:
-        - critical (合宿進行が止まる)
-        - high (参加者の 30%以上が混乱)
-        - medium (自分だけかもしれないが困った)
+        - critical (stops the retreat from proceeding)
+        - high (confuses 30%+ of participants)
+        - medium (may just be me, but it was a problem)
         - low (nice-to-have)
       default: 2
     validations:

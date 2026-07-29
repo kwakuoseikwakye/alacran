@@ -1,38 +1,40 @@
-name: 🎉 成功事例のシェア
-description: テンプレを使ってうまくいった話 — 改善のヒントになります
+name: 🎉 Share a success story
+description: A story about something that went well with the template — useful as a hint for improvement
 title: "[feedback:success-story] "
 labels: ["feedback:success-story"]
 body:
   - type: markdown
     attributes:
       value: |
-        テンプレのどこがどう役に立ったかを教えてください。
-        **自社機密は含まないよう抽象化してください** (「顧客 A の課題」ではなく「B2B SaaS の顧客成功課題」等)。
-        許可なく公開できないケースは、事務局への直接連絡を推奨します。
+        Tell us where and how the template helped.
+        **Please abstract away your own company's confidential details** (e.g. "a B2B SaaS
+        customer-success issue" rather than "customer A's issue").
+        If you can't publish something without permission, we recommend contacting the
+        organizers directly instead.
   - type: textarea
     id: context
     attributes:
-      label: 状況 (抽象化して)
-      placeholder: 業種・規模・課題を機密なしで一般化
+      label: Situation (abstracted)
+      placeholder: Generalize the industry, scale, and issue with no confidential details
     validations:
       required: true
   - type: input
     id: which-part
     attributes:
-      label: テンプレのどの部分が役に立ちましたか
-      placeholder: "例: /define-company の 4 質問構造、HITL Gate の trigger table、verify.py の RQT 追加パターン"
+      label: Which part of the template helped
+      placeholder: "e.g. /define-company's 4-question structure, the HITL Gate trigger table, the pattern for adding an RQT to verify.py"
     validations:
       required: true
   - type: textarea
     id: outcome
     attributes:
-      label: 何が改善しましたか
-      placeholder: 定量 (時間短縮 %、Issue 処理数、etc.) or 定性 (意思決定の速度、チームの共通言語、etc.)
+      label: What improved
+      placeholder: Quantitative (% time saved, Issues processed, etc.) or qualitative (decision speed, a shared team vocabulary, etc.)
     validations:
       required: true
   - type: checkboxes
     id: consent
     attributes:
-      label: 公開同意
+      label: Consent to publish
       options:
-        - label: この事例をテンプレの CHANGELOG や事例集で紹介してよい (asked with owner)
+        - label: This story may be featured in the template's CHANGELOG or case-study collection (asked with owner)
