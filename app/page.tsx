@@ -56,8 +56,9 @@ export default async function AgentTreePage() {
             const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
               result.agent.id
             )
-            const needsCompanySetup =
-              result.agent.kind === "command-set" && !(await companyOntologyExists(result.agent.rootPath))
+            const isCommandSet = result.agent.kind === "command-set"
+            const hasOntology = isCommandSet && (await companyOntologyExists(result.agent.rootPath))
+            const needsCompanySetup = isCommandSet && !hasOntology
             const integrationStatus = await getIntegrationStatus(result.agent)
             const showInstallDailyTeamLogButton =
               Boolean(plhOpsSource) &&
@@ -76,6 +77,7 @@ export default async function AgentTreePage() {
                 removable={isRegisteredCompany}
                 avatarUrl={avatarByAgentId[result.agent.id] ?? null}
                 showSetupCompanyButton={needsCompanySetup}
+                showEditCompanyButton={hasOntology}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                 index={index}
