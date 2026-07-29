@@ -1,42 +1,42 @@
-# AI Readiness Diagnostic Skill — リファレンスガイド
+# AI Readiness Diagnostic Skill — reference guide
 
-## スクリプトの使い方
+## Using the scripts
 
-### デモ実行（サンプルデータ）
+### Demo run (sample data)
 ```bash
-python3 scripts/generate_report.py --demo --output 診断レポート.xlsx
+python3 scripts/generate_report.py --demo --output diagnostic-report.xlsx
 ```
 
-### 実データで実行
+### Run with real data
 ```bash
-python3 scripts/generate_report.py --input tasks.json --output 診断レポート.xlsx
+python3 scripts/generate_report.py --input tasks.json --output diagnostic-report.xlsx
 ```
 
 ---
 
-## 入力JSONスキーマ
+## Input JSON schema
 
 ```json
 {
-  "business_name": "対象業務名（例：月次決算業務）",
-  "company": "会社名",
-  "interviewer_notes": "ヒアリングメモ（自由記述）",
+  "business_name": "the business area (e.g. Monthly close)",
+  "company": "company name",
+  "interviewer_notes": "interview notes (free text)",
   "tasks": [
     {
-      "id": "T01",                          // タスクID（T01〜T99形式推奨）
-      "name": "タスク名",
-      "description": "タスクの詳細説明",
-      "input": "このタスクへの入力データ",
-      "output": "このタスクの成果物",
-      "owner": "担当者・部門名",
-      "duration_hours": 4,                  // 1回あたりの工数（時間）
-      "frequency": "月次",                  // 実施頻度（日次/週次/月次/四半期/年次）
-      "is_confidential": false,             // 機密情報を含むか
-      "requires_human_approval": false,     // 人間の最終承認が必要か
-      "ai_fit": "高",                       // AI適合性：高/中/低
-      "ai_fit_reason": "理由の説明",
-      "ai_role": "AIが担える具体的な役割",
-      "dependencies": ["T00"]               // 先行タスクIDのリスト（なければ空配列）
+      "id": "T01",                          // task ID (T01-T99 recommended)
+      "name": "task name",
+      "description": "detailed description of the task",
+      "input": "the data coming into this task",
+      "output": "what this task produces",
+      "owner": "the person or department responsible",
+      "duration_hours": 4,                  // effort per occurrence (hours)
+      "frequency": "Monthly",               // how often (Daily/Weekly/Monthly/Quarterly/Yearly)
+      "is_confidential": false,             // does it involve confidential information?
+      "requires_human_approval": false,     // does it need a human's final approval?
+      "ai_fit": "High",                     // AI fit: High/Medium/Low
+      "ai_fit_reason": "explanation of the reasoning",
+      "ai_role": "the concrete role AI can take on",
+      "dependencies": ["T00"]               // list of predecessor task IDs (empty array if none)
     }
   ]
 }
@@ -44,32 +44,32 @@ python3 scripts/generate_report.py --input tasks.json --output 診断レポー�
 
 ---
 
-## AI適合性の判断基準（LARAマトリクス準拠）
+## Criteria for AI fit (following the LARA matrix)
 
-| 適合性 | 条件 | 例 |
+| Fit | Conditions | Examples |
 |:---:|:---|:---|
-| **高** | デジタルデータ入力、反復的・ルールベース、人間による検証が容易 | データ転記、メール仕分け、OCR読み取り |
-| **中** | 一部非構造化データ、軽度の認知的判断が必要、AIが下書き・人間が確認 | 仕訳入力、差異分析コメント、報告書作成 |
-| **低** | 機密性が高い、最終意思決定を伴う、法的・コンプライアンス上の制約が強い | 監査対応、採用判断、契約締結 |
+| **High** | Digital data input, repetitive and rule-based, easy for a human to verify | Data transcription, sorting email, text scanning |
+| **Medium** | Partly unstructured data, needs some cognitive judgement, AI drafts and a human checks | Journal entries, variance commentary, report writing |
+| **Low** | Highly confidential, involves the final decision, strong legal or compliance constraints | Audit response, hiring decisions, signing contracts |
 
 ---
 
-## 出力Excelの構成
+## Structure of the output Excel
 
-| シート名 | 内容 |
+| Sheet name | Content |
 |:---|:---|
-| 📊 診断サマリー | 対象業務・会社情報、AI適合性の集計、工数削減見込み |
-| 📋 タスク一覧 | 全タスクの詳細（依存関係・DAGメトリクス・AI適合性含む） |
-| 🔗 依存関係DAG | タスク依存関係の可視化（AI適合性カラーマッピング） |
-| 🚀 導入ロードマップ | フェーズ別のAI導入計画（優先順位・注意事項） |
+| Summary | Business area and company details, the AI-fit tally, expected effort savings |
+| Task list | Full detail for every task (dependencies, DAG metrics, AI fit) |
+| Dependency DAG | Visualisation of the task dependencies (colour-mapped by AI fit) |
+| Adoption roadmap | The AI adoption plan by phase (priorities and things to watch) |
 
 ---
 
-## DAGメトリクスの説明
+## The DAG metrics explained
 
-| 列名 | 説明 |
+| Column | Meaning |
 |:---|:---|
-| 実行順序 | トポロジカルソート順（1が最初） |
-| 並列グループ | 同じグループ番号のタスクは並列実行が可能 |
-| クリティカル | ★マークのタスクはクリティカルパス上にあり、遅延が全体に影響する |
-| 最早開始(h) | 先行タスクが完了した後、最も早く開始できる時刻（累積工数） |
+| Order | Topological sort order (1 is first) |
+| Parallel group | Tasks sharing a group number can run in parallel |
+| Critical | Tasks marked * are on the critical path, so a delay there affects everything |
+| Earliest start (h) | The earliest a task can start once its predecessors are done (cumulative effort) |

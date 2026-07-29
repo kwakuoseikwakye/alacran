@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
 AI Readiness Diagnostic Report Enhancer
-generate_report.py で生成したExcelレポートを以下の観点で強化する：
-  1. 読者層別の表現変換（--audience executive で経営者向け平易表現に）
-  2. カスタムDAG画像への差し替え（--custom-dag-image で説明用の図に）
-  3. 業務ブロック対応表の追加（--block-mapping で図のブロックとタスクIDの紐付け）
+Enhances the Excel report produced by generate_report.py in the following ways:
+  1. Rewording by audience (--audience executive switches to plain language for executives)
+  2. Swapping in a custom DAG image (--custom-dag-image, for an explanatory diagram)
+  3. Adding a work-block mapping table (--block-mapping, linking diagram blocks to task IDs)
 
 Usage:
     python3 enhance_report.py \
-        --input "AI活用診断レポート.xlsx" \
-        --output "AI活用診断レポート_最終版.xlsx" \
+        --input "ai-readiness-report.xlsx" \
+        --output "ai-readiness-report_final.xlsx" \
         --audience executive \
         --custom-dag-image dag.png \
         --block-mapping mapping.json
@@ -27,28 +27,28 @@ from openpyxl.drawing.image import Image as XLImage
 from openpyxl.styles import PatternFill, Font, Alignment
 from openpyxl.utils import get_column_letter
 
-# スキルのreferencesディレクトリ
+# the skill's references directory
 SKILL_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_TERMINOLOGY = SKILL_DIR / "references" / "terminology_executive.json"
 
 
 # ─────────────────────────────────────────────
-# 用語辞書のロード
+# load the terminology dictionary
 # ─────────────────────────────────────────────
 def load_terminology(path: Path) -> dict:
-    """経営者向け平易表現の辞書をロード"""
+    """Load the dictionary of plain expressions for executives."""
     if not path.exists():
-        print(f"[!] 用語辞書が見つかりません: {path}", file=sys.stderr)
+        print(f"[!] Terminology dictionary not found: {path}", file=sys.stderr)
         return {}
     with open(path, encoding="utf-8") as f:
         return json.load(f)
 
 
 # ─────────────────────────────────────────────
-# Sheet 1: サマリーの平易化
+# Sheet 1: plain-language the summary
 # ─────────────────────────────────────────────
 def enhance_summary_sheet(ws, terminology: dict):
-    """サマリーシートのラベルを平易表現に置換"""
+    """Replace the summary sheet labels with plain expressions."""
     label_map = terminology.get("summary_labels", {})
     if not label_map:
         return
@@ -62,55 +62,55 @@ def enhance_summary_sheet(ws, terminology: dict):
 
 
 # ─────────────────────────────────────────────
-# Sheet 2: タスク一覧の列名・適合度ラベルを平易化
+# Sheet 2: plain-language the task list's column names and fit labels
 # ─────────────────────────────────────────────
 def enhance_task_sheet(ws, terminology: dict):
-    """タスク一覧シートの列名・適合度・クリティカルパス表記を平易化"""
+    """Plain-language the task sheet's column names, fit labels and critical-path marker."""
     header_map = terminology.get("task_sheet_headers", {})
     fit_label_map = terminology.get("ai_fit_labels", {})
     critical_label = terminology.get("critical_path_label")
 
-    # ヘッダ行の列名を書き換え
+    # rewrite the header row's column names
     for ci in range(1, ws.max_column + 1):
         cell = ws.cell(row=1, column=ci)
         if cell.value in header_map:
             cell.value = header_map[cell.value]
 
-    # AI適合性列を探す
+    # locate the AI-fit column
     fit_col = None
     critical_col = None
     for ci in range(1, ws.max_column + 1):
         h = ws.cell(row=1, column=ci).value
-        if h in ("AIの任せやすさ", "AI適合性"):
+        if h in ("How easily AI can take it on", "AI fit"):
             fit_col = ci
-        if h in ("全体への影響度", "クリティカル"):
+        if h in ("Impact on the whole", "Critical"):
             critical_col = ci
 
-    # AI適合度の「高/中/低」を平易ラベルに
+    # turn High/Medium/Low into plain labels
     if fit_col and fit_label_map:
         for ri in range(2, ws.max_row + 1):
             cell = ws.cell(row=ri, column=fit_col)
             if cell.value in fit_label_map:
                 cell.value = fit_label_map[cell.value]
 
-    # クリティカルパス表記を変更
+    # change the critical-path marker
     if critical_col and critical_label:
         for ri in range(2, ws.max_row + 1):
             cell = ws.cell(row=ri, column=critical_col)
-            if cell.value == "★ クリティカル":
+            if cell.value == "* Critical":
                 cell.value = critical_label
 
 
 # ─────────────────────────────────────────────
-# Sheet 3: DAGシートの差し替え＋対応表追加
+# Sheet 3: swap the DAG sheet + add the mapping table
 # ─────────────────────────────────────────────
 def replace_dag_image(ws, custom_dag_path: str, block_mapping: list,
                      subtitle: str = None):
-    """DAGシートの画像を差し替え、業務ブロック対応表を追加"""
-    # 既存画像を削除
+    """Swap the image on the DAG sheet and add the work-block mapping table."""
+    # remove the existing image
     ws._images = []
 
-    # サブタイトル追加（任意）
+    # add a subtitle (optional)
     if subtitle:
         ws.merge_cells("A2:N2")
         sub = ws.cell(row=2, column=1, value=subtitle)
@@ -118,7 +118,7 @@ def replace_dag_image(ws, custom_dag_path: str, block_mapping: list,
         sub.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[2].height = 24
 
-    # カスタムDAG画像の挿入（アスペクト比を保持）
+    # insert the custom DAG image (preserving aspect ratio)
     if custom_dag_path and os.path.exists(custom_dag_path):
         from PIL import Image as PILImage
         with PILImage.open(custom_dag_path) as pil_img:
@@ -129,12 +129,12 @@ def replace_dag_image(ws, custom_dag_path: str, block_mapping: list,
         img.height = int(900 / aspect)
         ws.add_image(img, "A4")
 
-    # 業務ブロック対応表の追加
+    # add the work-block mapping table
     if block_mapping:
         caption_row = 41
         ws.merge_cells(f"A{caption_row}:N{caption_row}")
         cap_title = ws.cell(row=caption_row, column=1,
-                            value="── 図の業務ブロックと、タスク一覧の作業の対応 ──")
+                            value="-- How the blocks in the diagram map to the work in the task list --")
         cap_title.font = Font(bold=True, color="1F3864", size=11, name="Meiryo UI")
         cap_title.alignment = Alignment(horizontal="center", vertical="center")
         ws.row_dimensions[caption_row].height = 28
@@ -157,7 +157,7 @@ def replace_dag_image(ws, custom_dag_path: str, block_mapping: list,
             c2.alignment = Alignment(horizontal="left", vertical="center", indent=1)
             ws.merge_cells(start_row=r, start_column=3, end_row=r, end_column=14)
 
-        # 列幅調整
+        # adjust column widths
         ws.column_dimensions["A"].width = 12
         ws.column_dimensions["B"].width = 12
         for col in range(3, 15):
@@ -165,30 +165,30 @@ def replace_dag_image(ws, custom_dag_path: str, block_mapping: list,
 
 
 # ─────────────────────────────────────────────
-# Sheet 4: ロードマップの平易化
+# Sheet 4: plain-language the roadmap
 # ─────────────────────────────────────────────
 def enhance_roadmap_sheet(ws, terminology: dict):
-    """ロードマップシートの表現を平易化"""
-    # タイトル
+    """Plain-language the wording on the roadmap sheet."""
+    # title
     roadmap_title = terminology.get("roadmap_title")
     if roadmap_title:
         ws.cell(row=1, column=1).value = roadmap_title
 
-    # 列ヘッダ
+    # column headers
     header_map = terminology.get("roadmap_headers", {})
     for ci in range(1, 6):
         cell = ws.cell(row=2, column=ci)
         if cell.value in header_map:
             cell.value = header_map[cell.value]
 
-    # フェーズ名の書き換え
+    # rewrite the phase names
     phase_label_map = terminology.get("phase_labels", {})
     for ri in range(3, 6):
         cell = ws.cell(row=ri, column=1)
         if cell.value in phase_label_map:
             cell.value = phase_label_map[cell.value]
 
-    # 注意事項列(5列目)の書き換え
+    # rewrite the 'watch out for' column (column 5)
     caution_map = terminology.get("caution_phrases", {})
     for ri in range(3, 6):
         cell = ws.cell(row=ri, column=5)
@@ -196,7 +196,7 @@ def enhance_roadmap_sheet(ws, terminology: dict):
             cell.value = caution_map[cell.value]
         cell.alignment = Alignment(wrap_text=True, vertical="center")
 
-    # 効果列(4列目)の表現置換
+    # replace the wording in the benefit column (column 4)
     effect_map = terminology.get("effect_phrases", {})
     for ri in range(3, 6):
         cell = ws.cell(row=ri, column=4)
@@ -207,7 +207,7 @@ def enhance_roadmap_sheet(ws, terminology: dict):
             cell.value = v
         cell.alignment = Alignment(wrap_text=True, vertical="center")
 
-    # 注記行（Human-in-the-loop原則）の柔らかい表現への置換
+    # soften the wording of the footnote row (the Human-in-the-loop principle)
     governance_note = terminology.get("governance_note")
     if governance_note:
         for ri in range(6, 12):
@@ -220,12 +220,12 @@ def enhance_roadmap_sheet(ws, terminology: dict):
 
 
 # ─────────────────────────────────────────────
-# 用語の自動置換（description内の専門用語）
+# automatic terminology replacement (jargon inside description fields)
 # ─────────────────────────────────────────────
 def substitute_terminology_in_cells(ws, terminology: dict):
-    """全セルの文字列に対し、専門用語を平易表現に置換する"""
+    """Replace jargon with plain expressions across every string cell."""
     substitutions = terminology.get("terminology_substitutions", {})
-    # _comment フィールドはスキップ
+    # skip the _comment field
     substitutions = {k: v for k, v in substitutions.items()
                      if not k.startswith("_")}
     if not substitutions:
@@ -245,63 +245,63 @@ def substitute_terminology_in_cells(ws, terminology: dict):
 
 
 # ─────────────────────────────────────────────
-# メイン処理
+# main
 # ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(
-        description="AI活用診断レポートの強化（読者層変換・DAG差し替え・対応表追加）"
+        description="Enhance the AI readiness report (audience rewording, DAG swap, mapping table)"
     )
     parser.add_argument("--input", required=True,
-                        help="generate_report.py が生成したExcelファイル")
+                        help="the Excel file generated by generate_report.py")
     parser.add_argument("--output", required=True,
-                        help="出力Excelファイル")
+                        help="output Excel file")
     parser.add_argument("--audience", choices=["executive", "practitioner"],
                         default="practitioner",
-                        help="読者層: executive=経営者向け平易表現 / practitioner=実務者向け")
+                        help="audience: executive=plain language for executives / practitioner=for practitioners")
     parser.add_argument("--custom-dag-image", default=None,
-                        help="差し替え用のDAG画像（PNG）。Step 3で描いたSVGのエクスポート画像")
+                        help="replacement DAG image (PNG). The exported SVG drawn in Step 3")
     parser.add_argument("--block-mapping", default=None,
-                        help="業務ブロック対応表のJSONファイル")
+                        help="JSON file for the work-block mapping table")
     parser.add_argument("--terminology", default=str(DEFAULT_TERMINOLOGY),
-                        help=f"用語辞書JSON（デフォルト: {DEFAULT_TERMINOLOGY}）")
+                        help=f"terminology JSON (default: {DEFAULT_TERMINOLOGY})")
     args = parser.parse_args()
 
-    # 入力チェック
+    # validate input
     if not os.path.exists(args.input):
-        print(f"[エラー] 入力ファイルが見つかりません: {args.input}", file=sys.stderr)
+        print(f"[error] Input file not found: {args.input}", file=sys.stderr)
         sys.exit(1)
 
-    # コピーして編集
+    # copy, then edit
     shutil.copy(args.input, args.output)
     wb = openpyxl.load_workbook(args.output)
 
-    # 用語辞書ロード（executive モード時のみ適用）
+    # load the terminology dictionary (applied only in executive mode)
     terminology = {}
     if args.audience == "executive":
         terminology = load_terminology(Path(args.terminology))
-        print(f"[1/4] 用語辞書ロード: {args.terminology}")
+        print(f"[1/4] Loaded terminology: {args.terminology}")
 
-    # ブロック対応表ロード
+    # load the block mapping table
     block_mapping = []
     if args.block_mapping and os.path.exists(args.block_mapping):
         with open(args.block_mapping, encoding="utf-8") as f:
             block_mapping = json.load(f)
-        print(f"[2/4] ブロック対応表ロード: {args.block_mapping}（{len(block_mapping)}項目）")
+        print(f"[2/4] Loaded block mapping: {args.block_mapping} ({len(block_mapping)} entries)")
     else:
-        print("[2/4] ブロック対応表: なし（スキップ）")
+        print("[2/4] Block mapping: none (skipped)")
 
-    # シート別の処理
+    # per-sheet processing
     sheet_names = wb.sheetnames
 
-    # Sheet 1: サマリー
+    # Sheet 1: summary
     if sheet_names:
         ws1 = wb.worksheets[0]
         if terminology:
             enhance_summary_sheet(ws1, terminology)
             substitute_terminology_in_cells(ws1, terminology)
 
-    # Sheet 2: タスク一覧
-    task_sheet_candidates = [s for s in sheet_names if "タスク" in s]
+    # Sheet 2: task list
+    task_sheet_candidates = [s for s in sheet_names if "Task" in s]
     if task_sheet_candidates:
         ws2 = wb[task_sheet_candidates[0]]
         if terminology:
@@ -309,18 +309,18 @@ def main():
             substitute_terminology_in_cells(ws2, terminology)
 
     # Sheet 3: DAG
-    dag_sheet_candidates = [s for s in sheet_names if "DAG" in s or "依存" in s]
+    dag_sheet_candidates = [s for s in sheet_names if "DAG" in s or "Dependency" in s]
     if dag_sheet_candidates:
         ws3 = wb[dag_sheet_candidates[0]]
         subtitle = terminology.get("dag_subtitle") if terminology else None
         if args.custom_dag_image or block_mapping:
             replace_dag_image(ws3, args.custom_dag_image, block_mapping, subtitle)
-            print(f"[3/4] DAGシート更新: 画像差し替え={bool(args.custom_dag_image)}, "
-                  f"対応表追加={bool(block_mapping)}")
+            print(f"[3/4] DAG sheet updated: image swapped={bool(args.custom_dag_image)}, "
+                  f"mapping table added={bool(block_mapping)}")
 
-    # Sheet 4: ロードマップ
+    # Sheet 4: roadmap
     roadmap_sheet_candidates = [s for s in sheet_names
-                                if "ロードマップ" in s or "導入" in s]
+                                if "Roadmap" in s or "roadmap" in s]
     if roadmap_sheet_candidates:
         ws4 = wb[roadmap_sheet_candidates[0]]
         if terminology:
@@ -328,8 +328,8 @@ def main():
             substitute_terminology_in_cells(ws4, terminology)
 
     wb.save(args.output)
-    print(f"[4/4] 保存完了: {args.output}")
-    print(f"\n完了！ 読者層={args.audience}")
+    print(f"[4/4] Saved: {args.output}")
+    print(f"\nDone. audience={args.audience}")
 
 
 if __name__ == "__main__":

@@ -1,12 +1,42 @@
 [
-  {"block": "A 受領",        "tasks": "T01 顧客から情報を受け取る"},
-  {"block": "B 前処理",      "tasks": "T02 データ入力・前処理"},
-  {"block": "C 計算",        "tasks": "T03 給与計算（通常分） / T04 例外対応（差押え・等級変更など）"},
-  {"block": "F 検算",        "tasks": "T09 計算結果のダブルチェック / T10 所長による最終承認"},
-  {"block": "G 出力",        "tasks": "T11 給与明細・振込データの生成 / T12 振込データ送信前の最終承認 / T13 配信・顧客報告"},
-  {"block": "D 社保届",      "tasks": "T05 社会保険・労働保険の書類作成"},
-  {"block": "E 電子申請",    "tasks": "T06 電子申請の書類準備 / T07 送信 / T08 行政からの補正要求対応"},
-  {"block": "H 顧客対応",    "tasks": "T14 顧客対応・問合せフォロー"},
-  {"block": "I 記録・連携",  "tasks": "T15 記録・保管・税理士への連携"},
-  {"block": "J 事務所運営",  "tasks": "T16 担当割当・進捗管理 / T17 引継ぎ・もしもの時の備え（新規切り出し）"}
+  {
+    "block": "A Intake",
+    "tasks": "T01 Receive information from the customer"
+  },
+  {
+    "block": "B Pre-processing",
+    "tasks": "T02 Data entry and pre-processing"
+  },
+  {
+    "block": "C Calculation",
+    "tasks": "T03 Payroll calculation (normal) / T04 Exception handling (garnishment, grade change, etc.)"
+  },
+  {
+    "block": "F Reconciliation",
+    "tasks": "T09 Double-check the results / T10 Final sign-off by the director"
+  },
+  {
+    "block": "G Output",
+    "tasks": "T11 Generate payslips and transfer data / T12 Final approval before sending transfer data / T13 Distribution and reporting to the customer"
+  },
+  {
+    "block": "D Social insurance",
+    "tasks": "T05 Prepare social and labour insurance paperwork"
+  },
+  {
+    "block": "E Electronic filing",
+    "tasks": "T06 Prepare the electronic filing / T07 Submit / T08 Respond to correction requests from the authorities"
+  },
+  {
+    "block": "H Customer contact",
+    "tasks": "T14 Customer contact and follow-up on enquiries"
+  },
+  {
+    "block": "I Records and hand-off",
+    "tasks": "T15 Record, archive, and hand off to the accountant"
+  },
+  {
+    "block": "J Office running",
+    "tasks": "T16 Assigning owners and tracking progress / T17 Handover and readiness for the unexpected (newly split out)"
+  }
 ]

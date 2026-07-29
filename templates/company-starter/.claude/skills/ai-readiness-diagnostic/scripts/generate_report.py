@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
 AI Readiness Diagnostic Report Generator
-ヒアリング結果からタスクDAGを構築し、Excel診断レポートを生成するスクリプト。
+Builds a task DAG from interview results and generates an Excel diagnostic report.
 
 Usage:
     python3 generate_report.py --input tasks.json --output report.xlsx
-    python3 generate_report.py --demo  # サンプルデータで動作確認
+    python3 generate_report.py --demo  # smoke-test with sample data
 """
 
 import argparse
@@ -28,10 +28,10 @@ from openpyxl.utils import get_column_letter
 from openpyxl.drawing.image import Image as XLImage
 
 # ─────────────────────────────────────────────
-# 日本語フォントの設定
+# Font setup (CJK-capable, so non-Latin task names still render)
 # ─────────────────────────────────────────────
 def setup_japanese_font():
-    """利用可能な日本語フォントを探して設定する"""
+    """Find and configure an available CJK-capable font."""
     candidates = [
         "Noto Sans CJK JP", "Noto Sans JP", "IPAGothic", "IPAPGothic",
         "VL Gothic", "TakaoGothic", "DejaVu Sans"
@@ -45,161 +45,161 @@ def setup_japanese_font():
     return "DejaVu Sans"
 
 # ─────────────────────────────────────────────
-# データ構造
+# Data structures
 # ─────────────────────────────────────────────
-# タスクのJSONスキーマ:
+# Task JSON schema:
 # {
-#   "business_name": "月次決算業務",
-#   "company": "株式会社サンプル",
+#   "business_name": "Monthly close",
+#   "company": "Sample Corp",
 #   "interviewer_notes": "...",
 #   "tasks": [
 #     {
 #       "id": "T01",
-#       "name": "売上データの収集",
-#       "description": "各部門から売上データをExcelで収集する",
-#       "input": "各部門のExcelファイル",
-#       "output": "統合売上データ",
-#       "owner": "経理部",
+#       "name": "Collect sales data",
+#       "description": "Collect sales data from each department in Excel",
+#       "input": "Each department's Excel file",
+#       "output": "Consolidated sales data",
+#       "owner": "Finance",
 #       "duration_hours": 4,
-#       "frequency": "月次",
+#       "frequency": "Monthly",
 #       "is_confidential": false,
 #       "requires_human_approval": false,
-#       "ai_fit": "高",           # 高/中/低
-#       "ai_fit_reason": "反復的なデータ集計作業",
-#       "ai_role": "自動集計・フォーマット統一",
-#       "dependencies": []        # 先行タスクのIDリスト
+#       "ai_fit": "High",           # High/Medium/Low
+#       "ai_fit_reason": "Repetitive data aggregation",
+#       "ai_role": "Automatic aggregation and format normalisation",
+#       "dependencies": []        # list of predecessor task IDs
 #     },
 #     ...
 #   ]
 # }
 
 DEMO_DATA = {
-    "business_name": "月次決算業務",
-    "company": "株式会社サンプル",
-    "interviewer_notes": "毎月末に4〜5日かかる。データ収集と転記作業が最大のボトルネック。",
+    "business_name": "Monthly close",
+    "company": "Sample Corp",
+    "interviewer_notes": "Takes 4-5 days at each month end. Data collection and re-keying are the biggest bottleneck.",
     "tasks": [
         {
             "id": "T01",
-            "name": "売上データ収集",
-            "description": "各部門から売上データをExcelで収集する",
-            "input": "各部門のExcelファイル（メール添付）",
-            "output": "統合前の売上データ群",
-            "owner": "経理部",
+            "name": "Collect sales data",
+            "description": "Collect sales data from each department in Excel",
+            "input": "Each department's Excel file (email attachment)",
+            "output": "Pre-consolidation sales data",
+            "owner": "Finance",
             "duration_hours": 4,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": False,
             "requires_human_approval": False,
-            "ai_fit": "高",
-            "ai_fit_reason": "定型フォーマットの反復収集作業。メール添付ファイルの自動取り込みが可能",
-            "ai_role": "メール自動仕分け・ファイル収集・フォーマット統一",
+            "ai_fit": "High",
+            "ai_fit_reason": "Repetitive collection in a fixed format. Email attachments can be ingested automatically",
+            "ai_role": "Auto-sorting email, collecting files, normalising formats",
             "dependencies": []
         },
         {
             "id": "T02",
-            "name": "データ転記・統合",
-            "description": "収集したExcelを1つのマスターシートに転記・統合する",
-            "input": "各部門のExcelファイル",
-            "output": "統合売上マスターシート",
-            "owner": "経理部",
+            "name": "Transcribe and consolidate data",
+            "description": "Transcribe and consolidate the collected Excel files into one master sheet",
+            "input": "Each department's Excel file",
+            "output": "Consolidated sales master sheet",
+            "owner": "Finance",
             "duration_hours": 6,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": False,
             "requires_human_approval": False,
-            "ai_fit": "高",
-            "ai_fit_reason": "ルールベースの転記作業。エラー検知も自動化可能",
-            "ai_role": "自動転記・重複チェック・集計",
+            "ai_fit": "High",
+            "ai_fit_reason": "Rule-based transcription. Error detection can be automated too",
+            "ai_role": "Auto-transcription, duplicate checking, aggregation",
             "dependencies": ["T01"]
         },
         {
             "id": "T03",
-            "name": "仕訳入力",
-            "description": "統合データをもとに会計システムへ仕訳を入力する",
-            "input": "統合売上マスターシート",
-            "output": "会計システムへの入力済み仕訳",
-            "owner": "経理部",
+            "name": "Enter journal entries",
+            "description": "Enter journal entries into the accounting system from the consolidated data",
+            "input": "Consolidated sales master sheet",
+            "output": "Journal entries recorded in the accounting system",
+            "owner": "Finance",
             "duration_hours": 5,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": True,
             "requires_human_approval": True,
-            "ai_fit": "中",
-            "ai_fit_reason": "仕訳パターンはルール化できるが、例外処理と最終確認は人間が必要",
-            "ai_role": "仕訳下書き作成・パターンマッチング（最終承認は人間）",
+            "ai_fit": "Medium",
+            "ai_fit_reason": "Entry patterns can be turned into rules, but exceptions and the final check need a human",
+            "ai_role": "Drafting entries and pattern matching (final approval by a human)",
             "dependencies": ["T02"]
         },
         {
             "id": "T04",
-            "name": "差異分析",
-            "description": "前月比・予算比の差異を分析し、コメントを作成する",
-            "input": "会計システムの試算表",
-            "output": "差異分析コメント",
-            "owner": "CFO・経理部長",
+            "name": "Variance analysis",
+            "description": "Analyse variances against last month and budget, and write commentary",
+            "input": "Trial balance from the accounting system",
+            "output": "Variance commentary",
+            "owner": "CFO / Head of Finance",
             "duration_hours": 3,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": True,
             "requires_human_approval": False,
-            "ai_fit": "中",
-            "ai_fit_reason": "数値の比較・コメント下書きはAI可能。経営判断を伴う解釈は人間が担う",
-            "ai_role": "差異計算・コメント下書き生成",
+            "ai_fit": "Medium",
+            "ai_fit_reason": "AI can compare figures and draft commentary. Interpretation involving management judgement stays with a human",
+            "ai_role": "Calculating variances and drafting commentary",
             "dependencies": ["T03"]
         },
         {
             "id": "T05",
-            "name": "経営報告書作成",
-            "description": "取締役会向けの月次経営報告書を作成する",
-            "input": "差異分析コメント・試算表",
-            "output": "月次経営報告書（PowerPoint）",
+            "name": "Prepare the management report",
+            "description": "Prepare the monthly management report for the board",
+            "input": "Variance commentary and trial balance",
+            "output": "Monthly management report (PowerPoint)",
             "owner": "CFO",
             "duration_hours": 4,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": True,
             "requires_human_approval": True,
-            "ai_fit": "中",
-            "ai_fit_reason": "スライド構成・数値の自動挿入はAI可能。経営メッセージは人間が執筆",
-            "ai_role": "テンプレートへの数値自動挿入・スライド構成案の作成",
+            "ai_fit": "Medium",
+            "ai_fit_reason": "AI can structure slides and insert figures. The management message is written by a human",
+            "ai_role": "Auto-inserting figures into the template and proposing a slide structure",
             "dependencies": ["T04"]
         },
         {
             "id": "T06",
-            "name": "監査対応資料準備",
-            "description": "外部監査法人への証憑資料を整理・提出する",
-            "input": "会計データ・証憑書類",
-            "output": "監査対応ファイル一式",
-            "owner": "経理部",
+            "name": "Prepare audit materials",
+            "description": "Organise and submit supporting documents to the external auditor",
+            "input": "Accounting data and supporting documents",
+            "output": "A complete set of audit files",
+            "owner": "Finance",
             "duration_hours": 8,
-            "frequency": "四半期",
+            "frequency": "Quarterly",
             "is_confidential": True,
             "requires_human_approval": True,
-            "ai_fit": "低",
-            "ai_fit_reason": "法的・コンプライアンス上の重要性が高く、最終判断は必ず人間が行う必要がある",
-            "ai_role": "書類チェックリスト作成・ファイル整理補助のみ",
+            "ai_fit": "Low",
+            "ai_fit_reason": "High legal and compliance significance; the final decision must always be made by a human",
+            "ai_role": "Only building a document checklist and helping organise files",
             "dependencies": ["T03"]
         },
         {
             "id": "T07",
-            "name": "請求書処理",
-            "description": "仕入先からの請求書を受領・照合・支払い登録する",
-            "input": "請求書（PDF・紙）",
-            "output": "支払い登録済みデータ",
-            "owner": "経理部",
+            "name": "Process invoices",
+            "description": "Receive supplier invoices, reconcile them, and register payment",
+            "input": "Invoices (PDF and paper)",
+            "output": "Payment-registered data",
+            "owner": "Finance",
             "duration_hours": 5,
-            "frequency": "月次",
+            "frequency": "Monthly",
             "is_confidential": False,
             "requires_human_approval": True,
-            "ai_fit": "高",
-            "ai_fit_reason": "OCRによるデータ抽出・照合は自動化の親和性が高い",
-            "ai_role": "OCR読み取り・発注データとの自動照合・支払い登録下書き",
+            "ai_fit": "High",
+            "ai_fit_reason": "Extraction by OCR and reconciliation lend themselves well to automation",
+            "ai_role": "Reading by OCR, automatic reconciliation against purchase orders, drafting the payment record",
             "dependencies": []
         }
     ]
 }
 
 # ─────────────────────────────────────────────
-# カラーパレット
+# Colour palette
 # ─────────────────────────────────────────────
 COLOR = {
-    "high":     {"hex": "C6EFCE", "font": "276221", "label": "高"},
-    "medium":   {"hex": "FFEB9C", "font": "9C5700", "label": "中"},
-    "low":      {"hex": "FFC7CE", "font": "9C0006", "label": "低"},
+    "high":     {"hex": "C6EFCE", "font": "276221", "label": "High"},
+    "medium":   {"hex": "FFEB9C", "font": "9C5700", "label": "Medium"},
+    "low":      {"hex": "FFC7CE", "font": "9C0006", "label": "Low"},
     "header":   {"hex": "1F3864", "font": "FFFFFF"},
     "subheader":{"hex": "2F5496", "font": "FFFFFF"},
     "section":  {"hex": "D6E4F0", "font": "1F3864"},
@@ -212,11 +212,11 @@ COLOR = {
 }
 
 def fit_color(ai_fit: str) -> dict:
-    mapping = {"高": COLOR["high"], "中": COLOR["medium"], "低": COLOR["low"]}
+    mapping = {"High": COLOR["high"], "Medium": COLOR["medium"], "Low": COLOR["low"]}
     return mapping.get(ai_fit, COLOR["medium"])
 
 # ─────────────────────────────────────────────
-# DAG構築
+# DAG construction
 # ─────────────────────────────────────────────
 def build_dag(tasks: list) -> nx.DiGraph:
     G = nx.DiGraph()
@@ -226,17 +226,17 @@ def build_dag(tasks: list) -> nx.DiGraph:
         for dep in t.get("dependencies", []):
             G.add_edge(dep, t["id"])
     if not nx.is_directed_acyclic_graph(G):
-        raise ValueError("タスク依存関係にサイクルが検出されました。依存関係を見直してください。")
+        raise ValueError("A cycle was detected in the task dependencies. Please review them.")
     return G
 
 def compute_dag_metrics(G: nx.DiGraph, tasks: list) -> list:
-    """各タスクにDAGメトリクス（トポロジカル順序・並列グループ・クリティカルパス）を付与"""
+    """Attach DAG metrics to each task (topological order, parallel group, critical path)."""
     task_map = {t["id"]: t for t in tasks}
 
-    # トポロジカルソート
+    # topological sort
     topo_order = list(nx.topological_sort(G))
 
-    # 最早開始時刻（EST）の計算
+    # compute the earliest start time (EST)
     est = {}
     for node in topo_order:
         preds = list(G.predecessors(node))
@@ -247,7 +247,7 @@ def compute_dag_metrics(G: nx.DiGraph, tasks: list) -> list:
                 est[p] + task_map[p]["duration_hours"] for p in preds
             )
 
-    # 並列グループ（同じESTを持つタスクは並列実行可能）
+    # parallel groups (tasks sharing an EST can run in parallel)
     groups = {}
     for node in topo_order:
         g = est[node]
@@ -258,10 +258,10 @@ def compute_dag_metrics(G: nx.DiGraph, tasks: list) -> list:
         for node in nodes:
             parallel_group[node] = g_idx
 
-    # クリティカルパスの特定
+    # identify the critical path
     critical_path = set(nx.dag_longest_path(G))
 
-    # 各タスクにメトリクスを付与
+    # attach the metrics to each task
     enriched = []
     for t in tasks:
         tid = t["id"]
@@ -275,18 +275,18 @@ def compute_dag_metrics(G: nx.DiGraph, tasks: list) -> list:
     return enriched
 
 # ─────────────────────────────────────────────
-# DAG可視化（PNG出力）
+# DAG visualisation (PNG output)
 # ─────────────────────────────────────────────
 def hierarchical_layout(G: nx.DiGraph) -> dict:
-    """トポロジカル順序に基づく左→右の階層レイアウトを手動計算する"""
+    """Manually compute a left-to-right layered layout from the topological order."""
     topo = list(nx.topological_sort(G))
-    # 各ノードの「層」を最長パスで決定
+    # decide each node's layer by longest path
     layer = {}
     for node in topo:
         preds = list(G.predecessors(node))
         layer[node] = max((layer[p] + 1 for p in preds), default=0)
 
-    # 同一層のノードをy方向に並べる
+    # lay out nodes in the same layer along y
     from collections import defaultdict
     layer_nodes = defaultdict(list)
     for node, l in layer.items():
@@ -300,7 +300,7 @@ def hierarchical_layout(G: nx.DiGraph) -> dict:
         for i, node in enumerate(nodes):
             x = l * x_gap
             y = (i - (n - 1) / 2.0) * y_gap
-            pos[node] = (x, -y)  # y反転で上から下へ
+            pos[node] = (x, -y)  # flip y so it reads top to bottom
     return pos
 
 def render_dag(G: nx.DiGraph, tasks: list, output_path: str, font_name: str):
@@ -309,21 +309,21 @@ def render_dag(G: nx.DiGraph, tasks: list, output_path: str, font_name: str):
     ax.set_facecolor("#F8FBFF")
     fig.patch.set_facecolor("#F8FBFF")
 
-    # レイアウト：階層的に配置（左→右）
+    # layout: layered, left to right
     pos = hierarchical_layout(G)
 
-    # ノードの色設定
+    # node colours
     node_colors = []
     for node in G.nodes():
         fit = task_map[node]["ai_fit"]
-        if fit == "高":
+        if fit == "High":
             node_colors.append(COLOR["dag_high"])
-        elif fit == "中":
+        elif fit == "Medium":
             node_colors.append(COLOR["dag_med"])
         else:
             node_colors.append(COLOR["dag_low"])
 
-    # クリティカルパスのエッジを強調
+    # emphasise critical-path edges
     critical_path_nodes = set(nx.dag_longest_path(G))
     edge_colors = []
     edge_widths = []
@@ -347,7 +347,7 @@ def render_dag(G: nx.DiGraph, tasks: list, output_path: str, font_name: str):
         alpha=0.95, linewidths=2.5, edgecolors="#2C3E50"
     )
 
-    # ラベル（ID + 名前）
+    # labels (ID + name)
     labels = {}
     for node in G.nodes():
         name = task_map[node]["name"]
@@ -358,17 +358,17 @@ def render_dag(G: nx.DiGraph, tasks: list, output_path: str, font_name: str):
         font_size=10, font_family=font_name, font_color="white", font_weight="bold"
     )
 
-    # 凡例
+    # legend
     legend_handles = [
-        mpatches.Patch(color=COLOR["dag_high"], label="AI適合性：高"),
-        mpatches.Patch(color=COLOR["dag_med"],  label="AI適合性：中"),
-        mpatches.Patch(color=COLOR["dag_low"],  label="AI適合性：低"),
-        mpatches.Patch(color="#C0392B",         label="クリティカルパス"),
+        mpatches.Patch(color=COLOR["dag_high"], label="AI fit: High"),
+        mpatches.Patch(color=COLOR["dag_med"],  label="AI fit: Medium"),
+        mpatches.Patch(color=COLOR["dag_low"],  label="AI fit: Low"),
+        mpatches.Patch(color="#C0392B",         label="Critical path"),
     ]
     ax.legend(handles=legend_handles, loc="upper left", fontsize=10,
               prop={"family": font_name, "size": 10})
 
-    ax.set_title("タスク依存関係 DAG（AI適合性マッピング）",
+    ax.set_title("Task dependency DAG (AI fit mapping)",
                  fontsize=14, fontfamily=font_name, pad=15, fontweight="bold")
     ax.axis("off")
     plt.tight_layout()
@@ -376,7 +376,7 @@ def render_dag(G: nx.DiGraph, tasks: list, output_path: str, font_name: str):
     plt.close()
 
 # ─────────────────────────────────────────────
-# Excelレポート生成
+# Excel report generation
 # ─────────────────────────────────────────────
 def thin_border():
     s = Side(style="thin", color=COLOR["border"])
@@ -404,82 +404,82 @@ def data_cell(ws, row, col, value, bg=None, bold=False, align="left", wrap=True)
 def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output_path: str):
     wb = openpyxl.Workbook()
 
-    # ─── Sheet 1: サマリー ───────────────────────────
+    # --- Sheet 1: Summary ---
     ws1 = wb.active
-    ws1.title = "📊 診断サマリー"
+    ws1.title = "Summary"
     ws1.sheet_view.showGridLines = False
     ws1.column_dimensions["A"].width = 22
     ws1.column_dimensions["B"].width = 55
 
-    # タイトルブロック
+    # title block
     ws1.merge_cells("A1:B1")
-    c = ws1.cell(row=1, column=1, value="AI活用可能性 診断レポート")
+    c = ws1.cell(row=1, column=1, value="AI readiness diagnostic report")
     c.fill = PatternFill("solid", fgColor=COLOR["header"]["hex"])
     c.font = Font(bold=True, color=COLOR["header"]["font"], size=16, name="Meiryo UI")
     c.alignment = Alignment(horizontal="center", vertical="center")
     ws1.row_dimensions[1].height = 40
 
     meta = [
-        ("対象業務",   data.get("business_name", "")),
-        ("会社名",     data.get("company", "")),
-        ("診断日",     datetime.now().strftime("%Y年%m月%d日")),
-        ("ヒアリングメモ", data.get("interviewer_notes", "")),
+        ("Business area",   data.get("business_name", "")),
+        ("Company",     data.get("company", "")),
+        ("Date",     datetime.now().strftime("%Y-%m-%d")),
+        ("Interview notes", data.get("interviewer_notes", "")),
     ]
     for i, (k, v) in enumerate(meta, start=2):
         ws1.row_dimensions[i].height = 28
         data_cell(ws1, i, 1, k, bg=COLOR["section"]["hex"], bold=True, align="center")
         data_cell(ws1, i, 2, v)
 
-    # 集計
+    # totals
     total = len(enriched_tasks)
-    high  = sum(1 for t in enriched_tasks if t["ai_fit"] == "高")
-    med   = sum(1 for t in enriched_tasks if t["ai_fit"] == "中")
-    low   = sum(1 for t in enriched_tasks if t["ai_fit"] == "低")
+    high  = sum(1 for t in enriched_tasks if t["ai_fit"] == "High")
+    med   = sum(1 for t in enriched_tasks if t["ai_fit"] == "Medium")
+    low   = sum(1 for t in enriched_tasks if t["ai_fit"] == "Low")
     total_h = sum(t["duration_hours"] for t in enriched_tasks)
-    auto_h  = sum(t["duration_hours"] for t in enriched_tasks if t["ai_fit"] == "高")
-    assist_h= sum(t["duration_hours"] for t in enriched_tasks if t["ai_fit"] == "中")
+    auto_h  = sum(t["duration_hours"] for t in enriched_tasks if t["ai_fit"] == "High")
+    assist_h= sum(t["duration_hours"] for t in enriched_tasks if t["ai_fit"] == "Medium")
 
     ws1.row_dimensions[7].height = 30
     ws1.merge_cells("A7:B7")
-    header_style(ws1, 7, 1, "■ 集計結果", bg=COLOR["subheader"]["hex"], size=12)
+    header_style(ws1, 7, 1, "Totals", bg=COLOR["subheader"]["hex"], size=12)
 
     summary_rows = [
-        ("総タスク数",          f"{total} タスク"),
-        ("AI適合性：高",        f"{high} タスク（自動化・大幅効率化が見込める）"),
-        ("AI適合性：中",        f"{med} タスク（AIによる補助・下書き生成が有効）"),
-        ("AI適合性：低",        f"{low} タスク（人間の判断・監督が必要）"),
-        ("月次総工数",          f"{total_h:.1f} 時間"),
-        ("AI自動化見込み工数",  f"{auto_h:.1f} 時間（{auto_h/total_h*100:.0f}%）"),
-        ("AI補助見込み工数",    f"{assist_h:.1f} 時間（{assist_h/total_h*100:.0f}%）"),
+        ("Total tasks",          f"{total} tasks"),
+        ("AI fit: High",        f"{high} tasks (automation or a large efficiency gain is realistic)"),
+        ("AI fit: Medium",        f"{med} tasks (AI assistance and draft generation are effective)"),
+        ("AI fit: Low",        f"{low} tasks (human judgement and oversight required)"),
+        ("Total monthly effort",          f"{total_h:.1f} hours"),
+        ("Effort AI could automate",  f"{auto_h:.1f} hours ({auto_h/total_h*100:.0f}%）"),
+        ("Effort AI could assist",    f"{assist_h:.1f} hours ({assist_h/total_h*100:.0f}%）"),
     ]
     for i, (k, v) in enumerate(summary_rows, start=8):
         ws1.row_dimensions[i].height = 24
         data_cell(ws1, i, 1, k, bg=COLOR["alt_row"]["hex"], bold=True, align="center")
         data_cell(ws1, i, 2, v)
 
-    # ─── Sheet 2: タスク一覧 ─────────────────────────
-    ws2 = wb.create_sheet("📋 タスク一覧")
+    # --- Sheet 2: Task list ---
+    ws2 = wb.create_sheet("Task list")
     ws2.sheet_view.showGridLines = False
 
     col_defs = [
         ("ID",           8),
-        ("タスク名",     22),
-        ("説明",         38),
-        ("入力",         22),
-        ("出力",         22),
-        ("担当者",       14),
-        ("工数(h)",       9),
-        ("頻度",          9),
-        ("機密情報",      9),
-        ("要承認",        9),
-        ("AI適合性",     10),
-        ("AI活用理由",   38),
-        ("AIの役割",     38),
-        ("先行タスク",   14),
-        ("実行順序",      9),
-        ("並列グループ", 12),
-        ("クリティカル", 12),
-        ("最早開始(h)",  12),
+        ("Task name",     22),
+        ("Description",         38),
+        ("Input",         22),
+        ("Output",         22),
+        ("Owner",       14),
+        ("Effort (h)",       9),
+        ("Frequency",          9),
+        ("Confidential",      9),
+        ("Approval needed",        9),
+        ("AI fit",     10),
+        ("Why",   38),
+        ("What AI can do",     38),
+        ("Depends on",   14),
+        ("Order",      9),
+        ("Parallel group", 12),
+        ("Critical", 12),
+        ("Earliest start (h)",  12),
     ]
     for ci, (title, width) in enumerate(col_defs, start=1):
         ws2.column_dimensions[get_column_letter(ci)].width = width
@@ -507,7 +507,7 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
                   bg=row_bg, align="center",
                   bold=t["requires_human_approval"])
 
-        # AI適合性セル（色付き）
+        # AI-fit cell (colour coded)
         fit_cell = ws2.cell(row=ri, column=11, value=t["ai_fit"])
         fit_cell.fill = PatternFill("solid", fgColor=fc["hex"])
         fit_cell.font = Font(bold=True, color=fc["font"], size=11, name="Meiryo UI")
@@ -516,13 +516,13 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
 
         data_cell(ws2, ri, 12, t["ai_fit_reason"],    bg=row_bg)
         data_cell(ws2, ri, 13, t["ai_role"],          bg=row_bg)
-        deps = ", ".join(t.get("dependencies", [])) or "なし"
+        deps = ", ".join(t.get("dependencies", [])) or "None"
         data_cell(ws2, ri, 14, deps,                  bg=row_bg, align="center")
         data_cell(ws2, ri, 15, t["topo_order"],       bg=row_bg, align="center")
         data_cell(ws2, ri, 16, t["parallel_group"],   bg=row_bg, align="center")
 
         cp_cell = ws2.cell(row=ri, column=17,
-                           value="★ クリティカル" if t["is_critical_path"] else "")
+                           value="* Critical" if t["is_critical_path"] else "")
         cp_bg = "FFE0E0" if t["is_critical_path"] else (row_bg or "FFFFFF")
         cp_cell.fill = PatternFill("solid", fgColor=cp_bg)
         cp_cell.font = Font(bold=t["is_critical_path"], color="C00000" if t["is_critical_path"] else "000000",
@@ -532,11 +532,11 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
 
         data_cell(ws2, ri, 18, t["est_hours"],        bg=row_bg, align="center")
 
-    # ─── Sheet 3: DAGビジュアル ───────────────────────
-    ws3 = wb.create_sheet("🔗 依存関係DAG")
+    # --- Sheet 3: DAG visual ---
+    ws3 = wb.create_sheet("Dependency DAG")
     ws3.sheet_view.showGridLines = False
     ws3.merge_cells("A1:N1")
-    c = ws3.cell(row=1, column=1, value="タスク依存関係 DAG（AI適合性マッピング）")
+    c = ws3.cell(row=1, column=1, value="Task dependency DAG (AI fit mapping)")
     c.fill = PatternFill("solid", fgColor=COLOR["header"]["hex"])
     c.font = Font(bold=True, color=COLOR["header"]["font"], size=14, name="Meiryo UI")
     c.alignment = Alignment(horizontal="center", vertical="center")
@@ -550,8 +550,8 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
         for r in range(3, 40):
             ws3.row_dimensions[r].height = 15
 
-    # ─── Sheet 4: ロードマップ ────────────────────────
-    ws4 = wb.create_sheet("🚀 導入ロードマップ")
+    # --- Sheet 4: Roadmap ---
+    ws4 = wb.create_sheet("Adoption roadmap")
     ws4.sheet_view.showGridLines = False
     ws4.column_dimensions["A"].width = 16
     ws4.column_dimensions["B"].width = 24
@@ -560,45 +560,45 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
     ws4.column_dimensions["E"].width = 30
 
     ws4.merge_cells("A1:E1")
-    c = ws4.cell(row=1, column=1, value="AI導入ロードマップ（推奨フェーズ）")
+    c = ws4.cell(row=1, column=1, value="AI adoption roadmap (recommended phases)")
     c.fill = PatternFill("solid", fgColor=COLOR["header"]["hex"])
     c.font = Font(bold=True, color=COLOR["header"]["font"], size=14, name="Meiryo UI")
     c.alignment = Alignment(horizontal="center", vertical="center")
     ws4.row_dimensions[1].height = 36
 
     for ci, (title, _) in enumerate([
-        ("フェーズ", 16), ("対象タスク", 24), ("AIの役割", 45),
-        ("期待効果", 30), ("注意事項", 30)
+        ("Phase", 16), ("Tasks", 24), ("What AI can do", 45),
+        ("Expected benefit", 30), ("Watch out for", 30)
     ], start=1):
         header_style(ws4, 2, ci, title, bg=COLOR["subheader"]["hex"])
     ws4.row_dimensions[2].height = 28
 
-    # フェーズ1: AI適合性「高」のタスクを優先
-    high_tasks = [t for t in enriched_tasks if t["ai_fit"] == "高"]
-    med_tasks  = [t for t in enriched_tasks if t["ai_fit"] == "中"]
-    low_tasks  = [t for t in enriched_tasks if t["ai_fit"] == "低"]
+    # Phase 1: prioritise tasks with AI fit 'High'
+    high_tasks = [t for t in enriched_tasks if t["ai_fit"] == "High"]
+    med_tasks  = [t for t in enriched_tasks if t["ai_fit"] == "Medium"]
+    low_tasks  = [t for t in enriched_tasks if t["ai_fit"] == "Low"]
 
     phases = [
         (
-            "フェーズ1\n（〜3ヶ月）",
+            "Phase 1\n(0-3 months)",
             "\n".join(f"{t['id']}: {t['name']}" for t in high_tasks) or "—",
             "\n".join(t["ai_role"] for t in high_tasks) or "—",
-            f"月次工数を最大 {sum(t['duration_hours'] for t in high_tasks):.0f}h 削減見込み",
-            "フォーマット標準化が前提条件。まず1タスクで試験運用を推奨"
+            f"Cuts up to {sum(t['duration_hours'] for t in high_tasks):.0f}h of monthly workload",
+            "Standardising the format is a precondition. Pilot with one task first"
         ),
         (
-            "フェーズ2\n（3〜6ヶ月）",
+            "Phase 2\n(3-6 months)",
             "\n".join(f"{t['id']}: {t['name']}" for t in med_tasks) or "—",
             "\n".join(t["ai_role"] for t in med_tasks) or "—",
-            f"AI補助により品質向上・{sum(t['duration_hours'] for t in med_tasks):.0f}h相当の工数削減見込み",
-            "最終承認は必ず人間が実施。AI出力のレビュープロセスを設計すること"
+            f"Better quality via AI assistance; around {sum(t['duration_hours'] for t in med_tasks):.0f}h of workload saved",
+            "A human must give final approval. Design a review process for AI output"
         ),
         (
-            "フェーズ3\n（6ヶ月〜）",
+            "Phase 3\n(6 months+)",
             "\n".join(f"{t['id']}: {t['name']}" for t in low_tasks) or "—",
             "\n".join(t["ai_role"] for t in low_tasks) or "—",
-            "補助的な活用に留め、人間の監督コストを最小化",
-            "機密情報・法的判断を含むため、AIは補助ツールに限定。外部送信禁止"
+            "Keep AI to a supporting role and minimise the cost of human oversight",
+            "Involves confidential information and legal judgement, so AI is limited to a supporting tool. No external transmission"
         ),
     ]
 
@@ -611,25 +611,25 @@ def generate_excel(data: dict, enriched_tasks: list, dag_image_path: str, output
         data_cell(ws4, ri, 4, effect,    bg=bg)
         data_cell(ws4, ri, 5, caution,   bg=bg)
 
-    # 注記行
+    # footnote row
     ws4.row_dimensions[6].height = 20
     ws4.merge_cells("A7:E7")
     note = ws4.cell(row=7, column=1,
-                    value="※ 機密情報・個人情報を含む業務では、必ずアクセス制限を設け、最終判断は人間が行うことを徹底してください（Human-in-the-loop原則）")
+                    value="Note: for work involving confidential or personal information, always put access restrictions in place and ensure the final decision is made by a human (the Human-in-the-loop principle)")
     note.font = Font(italic=True, color="C00000", size=9, name="Meiryo UI")
     note.alignment = Alignment(horizontal="left", vertical="center")
 
     wb.save(output_path)
-    print(f"[✓] Excelレポートを生成しました: {output_path}")
+    print(f"[OK] Excel report generated: {output_path}")
 
 # ─────────────────────────────────────────────
-# メインエントリポイント
+# main entry point
 # ─────────────────────────────────────────────
 def main():
     parser = argparse.ArgumentParser(description="AI Readiness Diagnostic Report Generator")
-    parser.add_argument("--input",  help="タスクJSONファイルのパス")
-    parser.add_argument("--output", default="AI活用診断レポート.xlsx", help="出力Excelファイル名")
-    parser.add_argument("--demo",   action="store_true", help="サンプルデータで実行")
+    parser.add_argument("--input",  help="path to the task JSON file")
+    parser.add_argument("--output", default="ai-readiness-report.xlsx", help="output Excel filename")
+    parser.add_argument("--demo",   action="store_true", help="run with sample data")
     args = parser.parse_args()
 
     if args.demo:
@@ -638,27 +638,27 @@ def main():
         with open(args.input, encoding="utf-8") as f:
             data = json.load(f)
     else:
-        print("--input または --demo を指定してください。")
+        print("Please specify --input or --demo.")
         sys.exit(1)
 
-    print("[1/4] 日本語フォントを設定中...")
+    print("[1/4] Configuring font...")
     font_name = setup_japanese_font()
-    print(f"      使用フォント: {font_name}")
+    print(f"      Font: {font_name}")
 
-    print("[2/4] DAGを構築中...")
+    print("[2/4] Building the DAG...")
     G = build_dag(data["tasks"])
     enriched = compute_dag_metrics(G, data["tasks"])
-    print(f"      タスク数: {len(enriched)}, エッジ数: {G.number_of_edges()}")
+    print(f"      Tasks: {len(enriched)}, edges: {G.number_of_edges()}")
 
-    print("[3/4] DAGを可視化中...")
+    print("[3/4] Rendering the DAG...")
     dag_img = args.output.replace(".xlsx", "_dag.png")
     render_dag(G, data["tasks"], dag_img, font_name)
-    print(f"      DAG画像: {dag_img}")
+    print(f"      DAG image: {dag_img}")
 
-    print("[4/4] Excelレポートを生成中...")
+    print("[4/4] Generating the Excel report...")
     generate_excel(data, enriched, dag_img, args.output)
 
-    print("\n完了！")
+    print("\nDone.")
     print(f"  Excel: {args.output}")
     print(f"  DAG:   {dag_img}")
 
