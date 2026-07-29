@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs"
 import path from "node:path"
+import { dataPath } from "../data-dir"
 
 export type StoredLicense = {
   key: string
@@ -7,7 +8,7 @@ export type StoredLicense = {
   lastResult: "valid" | "invalid"
 }
 
-const DEFAULT_PATH = path.join(process.cwd(), ".data", "license.json")
+const DEFAULT_PATH = dataPath("license.json")
 
 export function readLicense(filePath: string = DEFAULT_PATH): StoredLicense | null {
   try {

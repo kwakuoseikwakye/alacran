@@ -1,3 +1,3 @@
-import path from "node:path"
+import { dataPath } from "../data-dir"
 
-export const COMPANY_COMMANDS_DATA_DIR = path.join(process.cwd(), ".data", "company-runs")
+export const COMPANY_COMMANDS_DATA_DIR = dataPath("company-runs")

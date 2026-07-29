@@ -1,10 +1,11 @@
 import { readFile, writeFile, mkdir } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
+import { dataPath } from "./data-dir"
 
 export type AvatarEntry = { agentId: string; imageUrl: string }
 
-const DEFAULT_REGISTRY_PATH = path.join(process.cwd(), ".data", "avatars.json")
+const DEFAULT_REGISTRY_PATH = dataPath("avatars.json")
 
 export async function getAvatars(registryPath: string = DEFAULT_REGISTRY_PATH): Promise<AvatarEntry[]> {
   let raw: string

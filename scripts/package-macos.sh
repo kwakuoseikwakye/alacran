@@ -76,6 +76,12 @@ PORT="\${PORT:-$DEFAULT_PORT}"
 export PORT
 export HOSTNAME="127.0.0.1"
 
+# Pinned explicitly (not just inherited from the standalone server) because
+# lib/data-dir.ts keys off it to store the company registry and license in
+# ~/Library/Application Support instead of inside this bundle — which every
+# app update replaces wholesale.
+export NODE_ENV="production"
+
 cd "\$APP_DIR"
 "\$NODE_BIN" server.js &
 SERVER_PID=\$!

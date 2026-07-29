@@ -1,10 +1,11 @@
 import { readFile, writeFile, mkdir, stat } from "node:fs/promises"
 import path from "node:path"
 import crypto from "node:crypto"
+import { dataPath } from "./data-dir"
 
 export type RegisteredCompany = { id: string; name: string; rootPath: string }
 
-const DEFAULT_REGISTRY_PATH = path.join(process.cwd(), ".data", "companies.json")
+const DEFAULT_REGISTRY_PATH = dataPath("companies.json")
 
 export async function getRegisteredCompanies(
   registryPath: string = DEFAULT_REGISTRY_PATH
