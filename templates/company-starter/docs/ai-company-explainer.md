@@ -1,359 +1,399 @@
-# AIカンパニーの視点で読む ai-retreat-starter — 非エンジニア向け解説
+# Reading ai-retreat-starter through the "AI company" lens — an explainer for non-engineers
 
-> 「Claude Code で AIカンパニーをつくる — 概念編」（合宿予習資料）を読んだ人が、
-> **本テンプレのどのファイルが、概念編のどの話に対応しているのか**を一望できるようにするドキュメントです。
-> エンジニアでなくても読めるように、コードではなく「フォルダの意味」で説明します。
+> A document for anyone who's read "Building an AI Company with Claude Code — the concepts
+> edition" (the retreat's pre-reading material), letting you see at a glance **which file in
+> this template corresponds to which idea from the concepts edition**.
+> Written so it's readable even if you're not an engineer — explained through "what the
+> folders mean," not through code.
 
 ---
 
-## 0. 読む前提
+## 0. Assumed background
 
-概念編のレッスン（L1〜L9）を軽くでも読んでいる想定です。読んでいなくても本ドキュメントは動きますが、
-「なぜこの構造なのか」の腹落ちは薄くなります。特に **L2（コンテキスト設計）** は本テンプレの背骨です。
+This assumes you've at least skimmed the concepts edition's lessons (L1-L9). This document
+still works if you haven't, but "why this structure" will land less. In particular,
+**L2 (context design)** is this template's backbone.
 
-### 概念編のひとことまとめ（再掲）
+### The concepts edition, one line each (recap)
 
-| L | ひとこと |
+| L | One line |
 |---|---|
-| L1 | Claude Code は「答える」ではなく「動く」AI |
-| L2 | **全部を机に広げない。引き出しに仕舞い、要る時だけ開ける** |
-| L3 | 外部アプリの繋ぎ方は 4 種（CLI / API / MCP / ブラウザ操作） |
-| L4 | スキル＝1 フォルダ。中身は `SKILL.md`。呼べば毎回同じに動く |
-| L5 | 頭を使う所は AI、足し算はスクリプト |
-| L6 | 会話は使い捨て、ルールは地図に書く |
-| L7 | 役職エージェント＝各部署。別の机で働き、要約だけ上げてくる |
-| L8 | トークンは人件費 |
-| L9 | 道具は揃った。勝負はコンテキストを入れる所だけ |
+| L1 | Claude Code is an AI that "acts," not one that just "answers" |
+| L2 | **Don't spread everything out on the desk. Put it in a drawer, and only open it when needed** |
+| L3 | There are 4 ways to connect to an external app (CLI / API / MCP / browser operation) |
+| L4 | A skill = 1 folder. Its contents are `SKILL.md`. Call it and it behaves the same every time |
+| L5 | The AI handles the thinking, a script handles the arithmetic |
+| L6 | Conversations are disposable, rules go on the map |
+| L7 | A role agent = a department. It works at a different desk and only reports back a summary |
+| L8 | Tokens are labor cost |
+| L9 | The tools are all here. The only thing left to fight over is putting context in |
 
 ---
 
-## 1. 全体マップ — 概念編 と 本テンプレ の対応表
+## 1. The full map — correspondence between the concepts edition and this template
 
-| 概念編 | 本テンプレの実体 | 場所 |
+| Concepts edition | This template's actual counterpart | Location |
 |---|---|---|
-| 会社の地図（核） | `CLAUDE.md` | リポジトリ直下 |
-| 引き出し（領域別ルール） | `.claude/rules/*.md` | 3 本（issue-first / scope-contract / hitl-gate） |
-| 引き出し（領域別ドキュメント） | `docs/*.md` | starter-manual / participant-guide / retreat-day-flow ほか |
-| 雛形（フォルダ構成の型） | `docs/templates/*.yaml` | ontology-starter / kpi / cycle-plan / retrospective |
-| 会社の実データ | `definitions/*` | ontology / hitl-triggers（`/define-company` で埋める） |
-| スキル相当（呼び出し可能な手順） | `.claude/commands/*.md` | 6 本（define-company / create-epic / verify / handoff / decision / retro） |
-| スクリプト（決定的処理） | `scripts/verify.py`, `scripts/cycle/` | 検証・サイクル運用 |
-| セッション引き継ぎ | `HANDOFF.md`, `docs/decisions/` | Phase 5 の記録 |
-| 演習（合宿当日にやること） | `exercises/*.md` | 3 本 |
-| 秘密情報の置き場（絶対に外に出さない箱） | `secrets/` | `.gitignore` 対象 |
+| The company's map (the core) | `CLAUDE.md` | repo root |
+| A drawer (per-area rules) | `.claude/rules/*.md` | 3 files (issue-first / scope-contract / hitl-gate) |
+| A drawer (per-area documents) | `docs/*.md` | starter-manual / participant-guide / retreat-day-flow etc. |
+| A template (the shape of a folder layout) | `docs/templates/*.yaml` | ontology-starter / kpi / cycle-plan / retrospective |
+| The company's real data | `definitions/*` | ontology / hitl-triggers (filled in via `/define-company`) |
+| The skill equivalent (a callable procedure) | `.claude/commands/*.md` | 6 files (define-company / create-epic / verify / handoff / decision / retro) |
+| A script (deterministic processing) | `scripts/verify.py`, `scripts/cycle/` | verification and cycle operations |
+| Session handover | `HANDOFF.md`, `docs/decisions/` | Phase 5's record |
+| Exercises (what you do on retreat day) | `exercises/*.md` | 3 files |
+| Where confidential data lives (a box that must never leave) | `secrets/` | gitignored |
 
-**このテンプレは、概念編でいう「地図＋引き出し＋雛形」を作り込んだところまで**です。
-L7 のサブエージェント（役職エージェント）は同梱していません。まず地図と引き出しを整え、
-必要になった段階で足していく設計です。
+**This template goes as far as building out what the concepts edition calls "the map + the
+drawers + the templates."** L7's subagents (role agents) aren't bundled. The design is to
+first get the map and drawers in order, and add agents once you actually need them.
 
 ---
 
-## 2. L1 の視点: 「動く AI」を前提にしている
+## 2. Through the L1 lens: assumes a "working" AI
 
-概念編 L1 の要点は「Claude Code はチャットではなく、実ファイル・実ツールを動かす AI」でした。
-本テンプレはこの前提の上に成り立っています。
+The point of L1 in the concepts edition was "Claude Code isn't a chat — it's an AI that
+operates real files and real tools." This template is built on that assumption.
 
-- `CLAUDE.md` を読むだけでなく、`.claude/commands/` を呼び出したり、
-  `scripts/verify.py` を実行したり、`git` に触ったりします。
-- 既定では**全部あなたの PC の中で動きます**（クラウドに勝手にデータは出ない）。
-- 外部連携は「自分で配線したときだけ」。本テンプレは外部連携を含んでいません（後述 L3）。
+- It doesn't just read `CLAUDE.md` — it calls `.claude/commands/`, runs
+  `scripts/verify.py`, and touches `git`.
+- By default, **everything runs inside your own PC** (no data goes to the cloud on its own).
+- External integrations only happen "when you wire them up yourself." This template doesn't
+  include any external integration (more on this at L3 below).
 
-このため、本テンプレの中身は「AI に指示するチャット文」ではなく、
-**AI が読み解いて動くための地図・引き出し・雛形**という位置づけです。
+Because of this, the content of this template isn't "chat text that instructs the AI" — it's
+positioned as **a map, drawers, and templates for the AI to read and act on**.
 
 ---
 
-## 3. 【重点】L2 の視点: コンテキスト設計 — 段階的開示
+## 3. [Key point] Through the L2 lens: context design — staged disclosure
 
-> 概念編 L2 のひとこと: **「全部を机に広げない。引き出しに仕舞い、要る時だけ開ける。」**
+> The concepts edition's L2, in one line: **"Don't spread everything out on the desk. Put it
+> in a drawer, and only open it when needed."**
 
-本テンプレの設計はここに全振りしています。順を追って見ていきます。
+This template's design commits fully to this. Let's walk through it in order.
 
-### 3.1 核 = `CLAUDE.md`（会社の地図）
+### 3.1 The core = `CLAUDE.md` (the company's map)
 
-セッション開始時に **必ず読み込まれる 1 枚**。ここには「全部」を書きません。書いてあるのは:
+The **one sheet always loaded** at session start. It doesn't write down "everything." What's
+written there is:
 
-- 会社（このテンプレを使う組織）の**運用憲法**（5 フェーズ / 6 原則）
-- どこに何があるかの**地図**（4. ディレクトリ構成の節）
-- セッション開始・作業中・終了時に何をやるかの**プロトコル**
+- The **operating constitution** of the company (the organization using this template) — the
+  5 phases / 6 principles
+- **A map** of what's where (the "4. Directory structure" section)
+- The **protocol** for what to do at session start, during work, and at session end
 
-ここに詳細を書き足したくなったら、**引き出し（別ファイル）に逃がす**のが原則です。
-`CLAUDE.md` は「机の上に常に開いておくメモ」なので、厚くなるほど作業の集中が薄まります。
+If you find yourself wanting to add detail here, the rule is to **escape it into a drawer (a
+separate file)**. `CLAUDE.md` is "the memo always kept open on the desk," so the thicker it
+gets, the more it dilutes your focus while working.
 
-### 3.2 引き出し = `.claude/rules/*.md`（領域別ルール）
+### 3.2 The drawers = `.claude/rules/*.md` (per-area rules)
 
-本テンプレには 3 本のルールファイルがあります。
+This template has 3 rule files.
 
-| ファイル | 何が書いてあるか | いつ効くか |
+| File | What's written | When it applies |
 |---|---|---|
-| `.claude/rules/issue-first.md` | Issue 起票・ブランチ命名・コミット規約 | 実装作業を始める前 |
-| `.claude/rules/scope-contract.md` | 「何を変えて、何を触らないか」を宣言してから編集する規律 | Edit / Write する前 |
-| `.claude/rules/hitl-gate.md` | 金額・契約・不可逆操作は人間承認必須 | お金・契約・削除など後戻りしにくい判断の前 |
+| `.claude/rules/issue-first.md` | Filing Issues, branch naming, commit conventions | Before starting implementation work |
+| `.claude/rules/scope-contract.md` | The discipline of declaring "what you're changing and what you're not touching" before editing | Before Editing / Writing |
+| `.claude/rules/hitl-gate.md` | Money, contracts, and irreversible operations require human approval | Before a hard-to-reverse decision involving money, contracts, deletion, etc. |
 
-概念編でいう「引き出し」に対応します。1 本 1 本は独立していて、関係する作業のときだけ開けば済みます。
+These correspond to what the concepts edition calls "a drawer." Each one stands alone, and
+you only need to open it for the work it's relevant to.
 
-### 3.3 引き出しの開け方 — 「常時展開」 vs 「必要時だけ」
+### 3.3 How to open a drawer — "always expanded" vs "only when needed"
 
-概念編 L2 は、引き出しの開け方に 2 つあると説明していました。
+The concepts edition's L2 explained there are 2 ways to open a drawer.
 
-| 方式 | 概念編での説明 | 本テンプレでの使い方 |
+| Method | Explanation in the concepts edition | How this template uses it |
 |---|---|---|
-| **`@ 取り込み`（常時展開）** | 開始時にまとめて開く | `CLAUDE.md` 末尾で `@import .claude/rules/*.md` している 3 本（issue-first / scope-contract / hitl-gate） |
-| **`paths:` 指定（必要時だけ）** | 対象ファイルを触るときだけ開く | `.claude/rules/definitions-touch.md` — `definitions/**` を Read すると発火する SSOT 取扱ルール（新規 Write の穴は hook が補完） |
+| **`@ import` (always expanded)** | Opened all together at the start | The 3 files (issue-first / scope-contract / hitl-gate) that `CLAUDE.md` does `@import .claude/rules/*.md` on, at its end |
+| **`paths:` targeting (only when needed)** | Only opened when touching the target file | `.claude/rules/definitions-touch.md` — the SSOT-handling rule that fires when you Read `definitions/**` (the gap for a brand-new Write is filled in by a hook) |
 
-**なぜ 3 本のルールを「常時展開」にしているのか。**
+**Why are these 3 rules "always expanded"?**
 
-- Issue-First / Scope Contract / HITL Gate は「毎回のセッションで最初に効かせたい規律」だから。
-- 3 本合わせても軽い（数百行）ので、常時開いていてもコンテキストを圧迫しない。
-- 逆に、`docs/templates/` の雛形（オントロジー等）は**必要な時だけ**開けばよいので、`CLAUDE.md` に埋め込まず、`docs/templates/` フォルダに分離しています。
+- Issue-First / Scope Contract / HITL Gate are disciplines you want in effect from the very
+  first moment of every session.
+- Even combined, all 3 are light (a few hundred lines), so keeping them always open doesn't
+  crowd out context.
+- Conversely, templates under `docs/templates/` (ontology, etc.) only need opening **when
+  needed**, so instead of embedding them in `CLAUDE.md`, they're kept separate in the
+  `docs/templates/` folder.
 
-**`paths:` の実例を 1 本だけ同梱しています。** `.claude/rules/definitions-touch.md` は
-`definitions/**` 配下（自社の実データ）を Read すると Claude Code に読み込まれます（Edit は直前の
-Read 経由で間接カバー。新規 Write の穴は `.claude/hooks/definitions-touch-context.sh` が補完）。
-`CLAUDE.md` からは `@import` されておらず、パス一致で自動発火するのが本質です。
-オントロジーを普段触らない作業では**存在自体がコンテキストを食わない**、
-というのが概念編 L2 の実装例です。
+**We bundle exactly one real example of `paths:`.** `.claude/rules/definitions-touch.md` is
+loaded into Claude Code when you Read anything under `definitions/**` (your own company's
+real data). (Edit is covered indirectly via the Read that precedes it. The gap for a new
+Write is filled in by `.claude/hooks/definitions-touch-context.sh`.) It's not `@import`ed
+from `CLAUDE.md` — firing automatically on a path match is the whole point. For work that
+never touches the ontology, **its mere existence costs no context at all** — this is a
+worked example of the concepts edition's L2.
 
-**将来やること（＝あなたが会社ごとにカスタマイズする所）。**
+**What to do in the future (i.e. what you customize per company).**
 
-- ルールが 10 本、20 本と増えてきたら、業務領域別（営業 / 経理 / 労務 / 顧客サポート等）に分けて、
-  `.claude/rules/sales/*.md` のようにフォルダで分けます。
-- そのうえで、`definitions-touch.md` と同じパターンで「営業関連のファイルを触るときだけ営業ルールを開く」のように、
-  `paths:` で開く条件を絞ります。
-- こうすると、本テンプレを「AIカンパニー」に育てても、コンテキストが薄まりません。
+- Once rules grow to 10, 20 files, split them by business area (sales / finance / labor /
+  customer support, etc.) into folders, like `.claude/rules/sales/*.md`.
+- On top of that, following the same pattern as `definitions-touch.md`, narrow the condition
+  for opening with `paths:`, e.g. "only open sales rules when touching a sales-related file."
+- This way, even as you grow this template into an "AI company," context doesn't get
+  diluted.
 
-### 3.4 フォルダ構成こそ雛形
+### 3.4 The folder layout itself is the template
 
-概念編 L2 は「フォルダ構成 = 雛形」と言い切っていました。会社の実体（法人・人物・業務プロセス）を
-そのままフォルダに写し取れ、という話です。
+The concepts edition's L2 stated flatly: "folder layout = template." The idea is to map the
+company's real substance (the legal entity, people, business processes) directly onto
+folders.
 
-本テンプレのフォルダ構成は、その考え方を**汎用テンプレとして事前配線**したものです。
-実際に自社の中身を入れるのは以下の場所です。
+This template's folder layout is that idea **pre-wired as a generic template**. The places
+you actually put your own company's content are:
 
 ```
-definitions/                    ← 自社の実データを入れる場所
-├── ontology/                   ← 事業構造の宣言的定義（顧客・組織・プロダクト）
-│   └── company.yaml            ← /define-company コマンドで生成される
-└── hitl-triggers/              ← 自社固有の「人間承認が必要な操作」の定義
+definitions/                    <- where your company's real data goes
+├── ontology/                   <- the declarative definition of the business structure (customer, org, product)
+│   └── company.yaml            <- generated by the /define-company command
+└── hitl-triggers/              <- your own company's definitions of "operations needing human approval"
 ```
 
-そして `docs/templates/` に「入れ方の雛形」が置いてあります。
+And `docs/templates/` holds "templates for how to fill it in."
 
 ```
 docs/templates/
-├── ontology-starter.yaml       ← 事業構造の書き出発点
+├── ontology-starter.yaml       <- the starting point for writing the business structure
 ├── kpi-measurement-template.yaml
-├── cycle-plan-template.yaml    ← 3 ヶ月サイクルの計画雛形
-├── retrospective-template.yaml ← 振り返りの雛形
-├── AGENTS-template.md          ← 役職エージェント（L7）を将来足すときの雛形
+├── cycle-plan-template.yaml    <- a template for planning a 3-month cycle
+├── retrospective-template.yaml <- a retrospective template
+├── AGENTS-template.md          <- a template for adding role agents (L7) later
 ├── README-template.md
 └── path-selector.md
 ```
 
-**このフォルダ分けそのものが、L2 の実装です。**
+**This folder split itself is L2's implementation.**
 
-- 「机の上（`CLAUDE.md`）」には**地図しか置かない**。
-- 「引き出し（`.claude/rules/`）」には**規律だけ置く**。
-- 「金庫（`definitions/`）」には**自社の実データを置く**。
-- 「工具箱（`docs/templates/`）」には**雛形を置く**。
-- 「秘密の箱（`secrets/`）」には**認証情報を置く（絶対に外に出さない）**。
+- On "the desk" (`CLAUDE.md`), **only the map goes there**.
+- In "the drawer" (`.claude/rules/`), **only discipline goes there**.
+- In "the safe" (`definitions/`), **your company's real data goes there**.
+- In "the toolbox" (`docs/templates/`), **templates go there**.
+- In "the secret box" (`secrets/`), **credentials go there (never let them out)**.
 
-### 3.5 非エンジニア向けの「最初の一手」
+### 3.5 The "first move" for non-engineers
 
-「コンテキストを入れる」と言われても、どこから始めるかで詰まりがちです。順序はこれです。
+Being told to "put context in" often leaves you stuck on where to start. Here's the order:
 
-1. **`CLAUDE.md` は触らない**（運用憲法。まず読むだけ）
-2. **`/define-company` コマンドを Claude Code で実行する**
-   → 4 つの質問に答えるだけで、`definitions/ontology/company.yaml` が自動生成されます。
-3. **生成された `company.yaml` を眺めて、違和感があれば手で直す**
-4. 次のサイクルから、Claude Code は `company.yaml` を読んで動きます
+1. **Don't touch `CLAUDE.md`** (the operating constitution — just read it first)
+2. **Run the `/define-company` command in Claude Code**
+   -> Just by answering 4 questions, `definitions/ontology/company.yaml` is auto-generated.
+3. **Look over the generated `company.yaml`, and fix by hand anything that feels off**
+4. From the next cycle on, Claude Code reads `company.yaml` and acts accordingly
 
-これが「AI に自社を教える最初の 30 分」です。
-
----
-
-## 4. L3 の視点: 外部アプリとの繋ぎ方
-
-概念編 L3 では 4 つの繋ぎ方（CLI / API / MCP / ブラウザ操作）を紹介していました。
-
-**本テンプレは、外部連携を意図的に含んでいません。**
-
-`CLAUDE.md` 冒頭にも明記されている通り、必要なのは **GitHub アカウント / Claude Code / git / python3 だけ**。
-理由は 2 つあります。
-
-- 合宿初日は「概念でつまずかず、自社のコンテキストを入れる」ことに専念してほしい。
-- 外部連携（Gmail / カレンダー / Slack 等）は、会社ごとに設定が違いすぎるので、テンプレ側で決め打ちできない。
-
-そのため、本テンプレでの外部連携は「配布物にはない、あなたが後から足す部分」です。
-足すときは概念編 L3 の順序（CLI → MCP → API → ブラウザ操作）で検討すると詰まりません。
+This is "the first 30 minutes of teaching the AI about your company."
 
 ---
 
-## 5. L4 の視点: スキルとコマンド
+## 4. Through the L3 lens: how to connect to external apps
 
-概念編 L4 は「スキル＝1 フォルダ＋`SKILL.md`」と説明していました。
-本テンプレには**スキルは同梱していません**が、それに近い役割の**コマンド**が 6 本入っています。
+The concepts edition's L3 introduced 4 ways to connect (CLI / API / MCP / browser
+operation).
+
+**This template deliberately does not include any external integration.**
+
+As stated right at the top of `CLAUDE.md`, all you need is **a GitHub account / Claude Code /
+git / python3**. There are 2 reasons:
+
+- We want day one of the retreat spent entirely on "getting past the concepts and putting
+  your own company's context in," without distraction.
+- External integrations (Gmail / calendar / Slack, etc.) vary too much company to company to
+  be pinned down on the template side.
+
+So in this template, external integration is "not in the distributed package — something you
+add later yourself." When you do add one, following the concepts edition's L3 order (CLI ->
+MCP -> API -> browser operation) keeps you from getting stuck.
+
+---
+
+## 5. Through the L4 lens: skills and commands
+
+The concepts edition's L4 explained "a skill = 1 folder + `SKILL.md`." This template
+**doesn't bundle any skills**, but it does include 6 **commands** that play a similar role.
 
 ```
 .claude/commands/
-├── define-company.md   ← Phase 1: 自社定義
-├── create-epic.md      ← Phase 2: Epic Issue + 子 Issue 起票
-├── verify.md           ← Phase 4: verify.py 実行と結果解釈
-├── handoff.md          ← Phase 5: HANDOFF.md 更新
-├── decision.md         ← Phase 5: Decision RFC 起票
-└── retro.md            ← Phase 5: 振り返り
+├── define-company.md   <- Phase 1: define your own company
+├── create-epic.md      <- Phase 2: file an Epic Issue + child Issues
+├── verify.md           <- Phase 4: run verify.py and interpret the results
+├── handoff.md          <- Phase 5: update HANDOFF.md
+├── decision.md         <- Phase 5: file a Decision RFC
+└── retro.md            <- Phase 5: retrospective
 ```
 
-### スキル と コマンド の違い（超要約）
+### The difference between a skill and a command (a very short summary)
 
-| | スキル | コマンド |
+| | Skill | Command |
 |---|---|---|
-| 発火方式 | `description` の意味一致で自動 or `/名前` | 常に `/名前` で手動 |
-| 置き場所 | `.claude/skills/` または `~/.claude/skills/` | `.claude/commands/` |
-| 中身 | フロントマター＋手順＋スクリプト等 | フロントマター＋手順 |
+| How it fires | Automatically via a semantic match on `description`, or `/name` | Always manually, via `/name` |
+| Where it lives | `.claude/skills/` or `~/.claude/skills/` | `.claude/commands/` |
+| Contents | Frontmatter + procedure + scripts, etc. | Frontmatter + procedure |
 
-本テンプレは「まず 5 フェーズを回せる最小構成」なので、意味発火のスキルは載せず、
-明示的に `/名前` で呼ぶコマンドだけを配線しています。
+Since this template is "the minimal setup that can run the 5 phases," it doesn't include any
+semantically-firing skills — it only wires up commands called explicitly with `/name`.
 
-**将来やること。**「毎朝メール要約」「週次で KPI 集計」など、**同じ手順を数回やった作業**が出てきたら、
-それが**スキル化のタイミング**です。概念編 L4 の目安「同じことを数回やったら」を守れば、
-スキル爆発（数だけ増えて使われない）は防げます。
+**What to do in the future.** Once you notice **the same procedure being done several times**
+— "summarize email every morning," "aggregate KPIs weekly" — that's **the moment to turn it
+into a skill**. Sticking to the concepts edition's L4 rule of thumb — "once you've done the
+same thing a few times" — prevents skill explosion (a count that grows but never gets used).
 
 ---
 
-## 6. L5 の視点: スクリプト
+## 6. Through the L5 lens: scripts
 
-概念編 L5 の要点は「頭を使う所は AI、足し算はスクリプト」でした。
+The point of the concepts edition's L5 was "the AI handles the thinking, a script handles the
+arithmetic."
 
-本テンプレのスクリプトはこれです。
+This template's scripts are:
 
 ```
 scripts/
-├── verify.py       ← RQT（Required-Quality-Test）を機械的に走らせる検証ランナー
-└── cycle/          ← 業務サイクル運用の補助スクリプト群（advanced・合宿演習の範囲外）
+├── verify.py       <- the verification runner that mechanically runs RQTs (Required-Quality-Tests)
+└── cycle/          <- helper scripts for business-cycle operations (advanced, outside the retreat exercises' scope)
 ```
 
-### なぜ `verify.py` はスクリプトなのか
+### Why `verify.py` is a script
 
-「オントロジーが埋まっているか」「HITL トリガー表が空でないか」といったチェックは、
-**判断のブレがあってはいけない**箇所です。AI に毎回判定させると、答えが揺れる。
-スクリプトに書けば、**同じ入力なら必ず同じ結果**（決定的）になります。
+Checks like "is the ontology filled in" or "is the HITL trigger table non-empty" are places
+**where the judgment must never waver**. Having the AI decide it every time lets the answer
+drift. Written as a script, **the same input always gives the same result** (deterministic).
 
-これが概念編 L5 の「変わる所は AI に、変わらない所はスクリプトに」の実装です。
+This is the implementation of the concepts edition's L5: "what changes goes to the AI, what
+doesn't goes to a script."
 
-Phase 4（検証）で `/verify` を呼ぶと、内部で `scripts/verify.py` が走り、AI がその結果を解釈してあなたに報告します。
+When you call `/verify` in Phase 4 (Verification), `scripts/verify.py` runs internally, and
+the AI interprets the result and reports it to you.
 
 ---
 
-## 7. L6 の視点: セッションとの付き合い方
+## 7. Through the L6 lens: how to treat sessions
 
-概念編 L6 は「会話は使い捨て、ルールは地図に書く」と教えていました。
-本テンプレはこの前提で組んであります。
+The concepts edition's L6 taught "conversations are disposable, rules go on the map." This
+template is built on that premise.
 
-| L6 の教え | 本テンプレの実装 |
+| L6's teaching | This template's implementation |
 |---|---|
-| 重要なルールは会話でなく `CLAUDE.md` に書く | 6 原則・5 フェーズ・ディレクトリ構成が `CLAUDE.md` に固定 |
-| 終わりは「引き継ぎを作って」と頼む | `/handoff` コマンドで `HANDOFF.md` を更新 |
-| 意思決定はその場で消えないよう記録する | `/decision` コマンドで `docs/decisions/*.md` を起票 |
-| 振り返りをする | `/retro` コマンドで `retrospective-template.yaml` に沿って回す |
+| Write important rules into `CLAUDE.md`, not into the conversation | The 6 principles, 5 phases, and directory structure are fixed in `CLAUDE.md` |
+| At the end, ask it to "leave a handover" | The `/handoff` command updates `HANDOFF.md` |
+| Record decisions so they don't vanish on the spot | The `/decision` command files `docs/decisions/*.md` |
+| Do a retrospective | The `/retro` command runs through `retrospective-template.yaml` |
 
-**セッションが長くなってきたら実行するコマンド。**
+**Commands to run once a session gets long.**
 
-- `/handoff` — 次のセッションで迷わないように棚卸し
-- `/decision` — 意思決定を Decision RFC として残す
+- `/handoff` — take stock so the next session isn't left guessing
+- `/decision` — leave a decision as a Decision RFC
 
-これらを回している限り、会話が途中で切れても次のセッションが困りません。
-
----
-
-## 8. L7 の視点: サブエージェント（役職エージェント）
-
-概念編 L7 は本テンプレで**あえて実装していない領域**です。
-
-- 「会社＝役職エージェントの集まり」（CEO / CFO / CSO / CHRO...）という発想は強力ですが、
-  地図と引き出しを整える前にエージェントを増やすと、**役割が重なって混乱**します。
-- 本テンプレでは、まず `CLAUDE.md`（地図） と `.claude/rules/`（引き出し）と
-  `definitions/`（実データ）を整えることを優先しています。
-
-**将来、役職エージェントを足すときの拡張ポイント。**
-
-- `docs/templates/AGENTS-template.md` に、エージェント定義ファイルの雛形があります。
-- 「営業担当エージェント」「経理担当エージェント」のように、自社の役職ごとに `.claude/agents/<名前>.md` を追加していく想定です。
-- L7 の要点は「サブエージェントはメインの作業記憶を食わない」こと。**別の机で働かせて、要約だけ返させる**設計にします。
+As long as you keep running these, the next session isn't left in trouble even if the
+conversation cuts off partway.
 
 ---
 
-## 9. L8 の視点: コスト
+## 8. Through the L7 lens: subagents (role agents)
 
-概念編 L8 は「トークンは人件費」でした。
+The concepts edition's L7 is an area this template **deliberately doesn't implement**.
 
-本テンプレはコスト設計の観点で見ると、以下の工夫が入っています。
+- The idea of "a company = a collection of role agents" (CEO / CFO / CSO / CHRO...) is
+  powerful, but adding more agents before the map and drawers are in order causes
+  **overlapping roles and confusion**.
+- This template prioritizes first getting `CLAUDE.md` (the map), `.claude/rules/` (the
+  drawers), and `definitions/` (real data) in order.
 
-- **`CLAUDE.md` を薄く保つ**（概念編 L2 の設計と裏表）。長い地図は毎セッション分のトークンを食い続ける。
-- **引き出し（rules）を必要最小限（3 本）に絞る**。10 本 20 本と増やしたくなったら、
-  `paths:` で開く条件を絞る（3.3 節参照）。
-- **スクリプト（`scripts/verify.py`）に判断のない処理を逃がす**（L5 の実装）。AI にやらせない = トークン不要。
-- **サブエージェント（L7）は必要になってから足す**。地図が薄いうちに部署だけ増やすと、
-  各部署でも別途 `CLAUDE.md` 読み込みが走ってコストが跳ねます。
+**The extension point for adding role agents in the future.**
 
-概念編 L8 の「1000 人の仕事を 10 人で回す」ためには、まず**地図を薄く、引き出しを整理する**のが先です。
+- `docs/templates/AGENTS-template.md` has a template for an agent-definition file.
+- The idea is to add a `.claude/agents/<name>.md` for each of your own company's roles, like
+  "sales-rep agent" or "accounting agent."
+- L7's key point is that "a subagent doesn't eat into the main working memory." Design it so
+  **it works at a different desk and only reports back a summary**.
 
 ---
 
-## 10. L9 の視点: 全体像 — 4 フェーズ ↔ 本テンプレの 5-Phase
+## 9. Through the L8 lens: cost
 
-概念編 L9 は AIカンパニーを **4 段階** で育てると言っていました。
+The concepts edition's L8 was "tokens are labor cost."
 
-| 概念編の 4 段階 | 本テンプレでの現在地 |
+Looking at this template from a cost-design angle, the following measures are baked in:
+
+- **Keeping `CLAUDE.md` thin** (the flip side of the concepts edition's L2 design). A long
+  map keeps eating tokens every single session.
+- **Keeping the drawers (rules) to a bare minimum (3)**. If you want to grow to 10 or 20,
+  narrow the condition for opening with `paths:` (see §3.3).
+- **Escaping judgment-free processing into a script (`scripts/verify.py`)** (L5's
+  implementation). Not having the AI do it = no tokens needed.
+- **Add subagents (L7) only once you actually need them.** Adding departments while the map
+  is still thin makes each department separately load its own `CLAUDE.md`, spiking cost.
+
+To achieve the concepts edition's L8 goal of "running 1,000 people's worth of work with 10
+people," the first move is to **keep the map thin and the drawers organized**.
+
+---
+
+## 10. Through the L9 lens: the big picture — the 4 stages vs. this template's 5-Phase
+
+The concepts edition's L9 said an AI company grows through **4 stages**.
+
+| The concepts edition's 4 stages | This template's current position |
 |---|---|
-| ① AI 秘書（各人が自分専用の AI） | 個人が Claude Code を使う段階 |
-| ② AI 社員（役職を持った AI スタッフ） | **本テンプレはここに入る準備** |
-| ③ AI カンパニー（AI 社員の群を人が統括） | 役職エージェント（L7）を足した先 |
-| ④ AI ネイティブ（意思決定の大半が自動化、人は「顔」に集中） | さらに先 |
+| ① AI secretary (each person has their own personal AI) | The stage of an individual using Claude Code |
+| ② AI staff (AI staff members holding a role) | **This template is preparation to enter this stage** |
+| ③ AI company (a person oversees a group of AI staff) | Beyond adding role agents (L7) |
+| ④ AI-native (most decisions automated, humans focus on being "the face") | Further beyond that |
 
-一方、本テンプレの **5-Phase**（定義 → 計画 → 実行 → 検証 → 記録）は、
-上の 4 段階のどのステージにいても回す**サイクル**です。段階と混同しないでください。
+Meanwhile, this template's **5-Phase** (Definition -> Planning -> Execution -> Verification ->
+Record) is a **cycle** you run regardless of which of the 4 stages above you're at. Don't
+confuse the stage with the cycle.
 
-- **段階（① → ④）**: 会社が育つスパン。年単位の話。
-- **5-Phase**: 1 施策・1 タスクを完結させるサイクル。数時間〜数日の話。
+- **Stage (① -> ④)**: the span over which the company grows. A matter of years.
+- **5-Phase**: the cycle that completes 1 initiative/1 task. A matter of hours to days.
 
-本テンプレは、**「② AI 社員」を作るための地図・引き出し・雛形**を配布した状態です。
-ここから、以下の順で育てていく想定です。
+This template is a distributed state of **the map, drawers, and templates for building "②
+AI staff."** From here, the intended growth path is:
 
-1. `/define-company` で自社定義（Phase 1）
-2. `/create-epic` で最初の Epic を起票（Phase 2）
-3. Claude Code で実装／文書化（Phase 3）
-4. `/verify` で検証（Phase 4）
-5. `/handoff` + `/decision` で記録（Phase 5）
-6. サイクルを 3 回ほど回して型を掴んだら、`docs/templates/AGENTS-template.md` を使って
-   最初の役職エージェントを 1 体だけ足す（③ AI カンパニーへの一歩）
+1. Define your own company with `/define-company` (Phase 1)
+2. File your first Epic with `/create-epic` (Phase 2)
+3. Implement/document with Claude Code (Phase 3)
+4. Verify with `/verify` (Phase 4)
+5. Record with `/handoff` + `/decision` (Phase 5)
+6. Once you've run the cycle about 3 times and gotten a feel for the shape, use
+   `docs/templates/AGENTS-template.md` to add just one first role agent (a step toward ③ AI
+   company)
 
 ---
 
-## 11. まとめ — このテンプレの位置づけ
+## 11. Summary — this template's place in the picture
 
-- **概念編で学ぶ「道具の名前」を、実際のフォルダ・ファイルに落とし込んだ配布物**が本テンプレ。
-- **L2（コンテキスト設計）の実装が本テンプレの背骨**。地図 = `CLAUDE.md` / 引き出し = `.claude/rules/` / 雛形 = `docs/templates/` / 実データ = `definitions/`。
-- 外部連携（L3）とサブエージェント（L7）は**あえて同梱していない**。まず地図と引き出しを整えるのが先。
-- **非エンジニアが最初にやることは 1 つだけ**: Claude Code で `/define-company` を実行し、質問に答える。
-- 5 フェーズを 3 回ほど回して型を掴んだら、次のステップ（外部連携 / 役職エージェント）へ。
+- This template is **a distributed package that translates the "tool names" learned in the
+  concepts edition into actual folders and files**.
+- **The implementation of L2 (context design) is this template's backbone.** Map =
+  `CLAUDE.md` / drawers = `.claude/rules/` / templates = `docs/templates/` / real data =
+  `definitions/`.
+- External integration (L3) and subagents (L7) are **deliberately not bundled**. Getting the
+  map and drawers in order comes first.
+- **The one thing a non-engineer does first**: run `/define-company` in Claude Code and
+  answer the questions.
+- Once you've run the 5 phases about 3 times and gotten a feel for the shape, move to the
+  next step (external integration / role agents).
 
-> **概念編のひとこと（L9）** :
-> 「道具は揃った。勝負はコンテキストを入れる所だけ。」
+> **The concepts edition's one-liner (L9)**:
+> "The tools are all here. The only thing left to fight over is putting context in."
 >
-> 本テンプレは、その「入れる所」を**あなたが今日から書ける形**にしたものです。
+> This template turns that "place to put it in" into **a form you can start writing into
+> today**.
 
 ---
 
-## 12. さらに読むもの
+## 12. Further reading
 
-- [README.md](../README.md) — セットアップ手順
-- [CLAUDE.md](../CLAUDE.md) — 運用憲法（本テンプレの背骨）
-- [docs/starter-manual.md](./starter-manual.md) — ハーネスの使い方
-- [docs/participant-guide.md](./participant-guide.md) — 合宿参加者向けガイド
-- [docs/retreat-day-flow.md](./retreat-day-flow.md) — 合宿当日の流れ
-- [exercises/](../exercises/) — 合宿当日の演習 3 本
+- [README.md](../README.md) — setup instructions
+- [CLAUDE.md](../CLAUDE.md) — the operating constitution (this template's backbone)
+- [docs/starter-manual.md](./starter-manual.md) — how to use the harness
+- [docs/participant-guide.md](./participant-guide.md) — guidance for retreat participants
+- [docs/retreat-day-flow.md](./retreat-day-flow.md) — the retreat day's flow
+- [exercises/](../exercises/) — the 3 exercises for the day of the retreat
 
 ---
 
-*ai-retreat-starter — AIカンパニー視点の解説 (非エンジニア向け)*
+*ai-retreat-starter — an "AI company" lens explainer (for non-engineers)*
