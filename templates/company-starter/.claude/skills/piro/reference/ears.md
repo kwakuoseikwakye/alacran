@@ -1,41 +1,42 @@
-# EARS形式リファレンス(Kiro実物準拠)
+# EARS format reference (as Kiro actually uses it)
 
-EARS(Easy Approach to Requirements Syntax)は受入基準を書くための制約付き構文。
-Kiroの requirements.md は受入基準をこの形式で書く。
+EARS (Easy Approach to Requirements Syntax) is a constrained syntax for writing acceptance criteria.
+Kiro's requirements.md writes acceptance criteria in this format.
 
-## パターン一覧
+## The patterns
 
-| # | パターン | 書式 | 使いどころ |
+| # | Pattern | Form | When to use it |
 |---|---|---|---|
-| 1 | Ubiquitous(常時) | THE <エンティティ> SHALL <動作> | 常に成り立つ性質・制約 |
-| 2 | Event-driven | WHEN <イベント>, THE <エンティティ> SHALL <動作> | トリガーへの応答 |
-| 3 | Unwanted behavior | IF <望ましくない条件>, THEN THE <エンティティ> SHALL <動作> | エラー・異常系 |
-| 4 | State-driven | WHILE <状態>, THE <エンティティ> SHALL <動作> | 状態が続く間の動作 |
-| 5 | Optional feature | WHERE <機能が有効>, THE <エンティティ> SHALL <動作> | 設定・オプション依存 |
-| 6 | Iteration | FOR EACH <対象>, THE <エンティティ> SHALL <動作> | 対象ごとの繰り返し |
-| 7 | 回帰防止 | WHEN <条件>, THE <エンティティ> SHALL CONTINUE TO <既存動作> | 既存動作を壊さない保証 |
+| 1 | Ubiquitous (always) | THE <entity> SHALL <behaviour> | Properties and constraints that always hold |
+| 2 | Event-driven | WHEN <event>, THE <entity> SHALL <behaviour> | Responses to a trigger |
+| 3 | Unwanted behavior | IF <undesirable condition>, THEN THE <entity> SHALL <behaviour> | Errors and abnormal cases |
+| 4 | State-driven | WHILE <state>, THE <entity> SHALL <behaviour> | Behaviour for as long as a state persists |
+| 5 | Optional feature | WHERE <feature is enabled>, THE <entity> SHALL <behaviour> | Dependent on configuration or an option |
+| 6 | Iteration | FOR EACH <target>, THE <entity> SHALL <behaviour> | Repetition per target |
+| 7 | Regression prevention | WHEN <condition>, THE <entity> SHALL CONTINUE TO <existing behaviour> | A guarantee that existing behaviour isn't broken |
 
-## 書式規約
+## Formatting conventions
 
-- キーワード(WHEN / IF / THEN / WHILE / WHERE / FOR EACH / THE / SHALL / SHALL CONTINUE TO)は
-  **英語大文字のまま**。日本語化禁止(Kiro側のパーサ・エージェント互換が壊れる)
-- <エンティティ> には Glossary で定義した固有名を使う(例: THE CLI_Parser SHALL ...)。
-  適切な粒度のエンティティが無い場合のみ「THE システム」を使う
-- 1文 = 1検証項目。「かつ」「または」で複数の検証を1文に詰めない
-- 各受入基準は番号付きリスト(1. 2. 3.)。この番号が tasks.md の `_Requirements: N.M_` の M になる
+- Keywords (WHEN / IF / THEN / WHILE / WHERE / FOR EACH / THE / SHALL / SHALL CONTINUE TO) stay in
+  **English capitals**. Translating them is forbidden (it breaks Kiro's parser and agent compatibility)
+- Use a proper noun defined in the Glossary for <entity> (e.g. THE CLI_Parser SHALL ...).
+  Only use "THE system" when there is no entity at an appropriate granularity
+- One sentence = one verifiable item. Don't cram several checks into one sentence with "and" or "or"
+- Each acceptance criterion is a numbered list item (1. 2. 3.). That number becomes the M in
+  `_Requirements: N.M_` in tasks.md
 
-## 日本語ミックスの例
+## Examples
 
-1. THE エクスポート機能 SHALL 出力ファイルをUTF-8で書き出す
-2. WHEN ユーザーが `--csv` フラグを指定した時、THE CLI_Parser SHALL 出力形式をCSVに切り替える
-3. IF 出力先ディレクトリが存在しない場合、THEN THE エクスポート機能 SHALL エラーメッセージを表示して終了コード1で終了する
-4. WHILE エクスポートが実行中の間、THE 進捗表示 SHALL 処理済み行数を表示する
-5. WHERE 圧縮オプションが有効な場合、THE エクスポート機能 SHALL 出力をgzip圧縮する
-6. FOR EACH 入力ファイル、THE エクスポート機能 SHALL 1つの出力ファイルを生成する
-7. WHEN 既存の `--json` フラグが指定された時、THE CLI_Parser SHALL CONTINUE TO JSON形式で出力する
+1. THE export function SHALL write the output file in UTF-8
+2. WHEN the user specifies the `--csv` flag, THE CLI_Parser SHALL switch the output format to CSV
+3. IF the output directory does not exist, THEN THE export function SHALL display an error message and exit with code 1
+4. WHILE an export is running, THE progress display SHALL show the number of rows processed
+5. WHERE the compression option is enabled, THE export function SHALL gzip-compress the output
+6. FOR EACH input file, THE export function SHALL produce one output file
+7. WHEN the existing `--json` flag is specified, THE CLI_Parser SHALL CONTINUE TO output in JSON format
 
-## 悪い例と直し方
+## Bad examples and how to fix them
 
-- ×「システムは速くあるべき」→ ○「THE 検索機能 SHALL 1秒以内に結果を返す」(検証可能にする)
-- ×「WHEN 保存時、入力を検証してエラーなら中断する」→ Event-driven と Unwanted behavior の2文に分ける
-- ×「もし○○なら○○する」→ キーワードを日本語にしない。「IF ○○の場合、THEN THE ○○ SHALL ○○する」
+- ✗ "The system should be fast" -> ✓ "THE search function SHALL return results within 1 second" (make it verifiable)
+- ✗ "WHEN saving, validate the input and abort on an error" -> split into two sentences, Event-driven and Unwanted behavior
+- ✗ Writing the keywords in your own language -> keep them in English: "IF <condition>, THEN THE <entity> SHALL <behaviour>"

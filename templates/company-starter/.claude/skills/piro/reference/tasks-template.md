@@ -1,46 +1,46 @@
-# tasks.md テンプレート(Kiro実物準拠)
+# tasks.md template (as Kiro actually uses it)
 
-## 構造
+## Structure
 
 ```markdown
-# Implementation Plan: <機能名>
+# Implementation Plan: <feature name>
 
 ## Overview
 
-[実装アプローチの要約を1段落]
+[One paragraph summarising the implementation approach]
 
 ## Tasks
 
-- [ ] 1. <大タスク名>
-  - [ ] 1.1 <サブタスク名>
-    - <実装メモ(どのファイルに何をするか)>
-    - <実装メモ>
+- [ ] 1. <major task name>
+  - [ ] 1.1 <subtask name>
+    - <implementation note (what to do in which file)>
+    - <implementation note>
     - _Requirements: 1.1, 1.2_
 
-  - [ ]* 1.2 <任意タスク(テスト等)>
-    - <メモ>
+  - [ ]* 1.2 <optional task (tests, etc.)>
+    - <note>
     - _Requirements: 1.3_
 
-- [ ] 2. <大タスク名>
-  - [ ] 2.1 <サブタスク名>
-    - <メモ>
+- [ ] 2. <major task name>
+  - [ ] 2.1 <subtask name>
+    - <note>
     - _Requirements: 2.1_
 
-- [ ] 3. Checkpoint - <節目の検証内容(ビルドが通る、テストが通る等)>
+- [ ] 3. Checkpoint - <what to verify at this milestone (the build passes, the tests pass, etc.)>
 
 ## Notes
 
-- [実装言語・前提・スキップ可能なタスクの説明]
+[Implementation language, prerequisites, and an explanation of which tasks can be skipped]
 ```
 
-## 規約
+## Conventions
 
-- 番号は `1.` / `1.1` の2階層のみ。3階層は作らない
-- 状態マーカーは初期状態で全部 `[ ]`。`[x]` `[-]` `[~]` を初期生成で使わない
-  (実行後の状態管理はKiroの仕事)
-- optional タスクは `- [ ]*`(`*` は `]` の直後、番号の前)。テスト系タスクに使うのがKiro流
-- 実装を伴うサブタスクは末尾に `- _Requirements: N.M[, N.M...]_`(アンダースコアで囲む
-  イタリック、カンマ区切り)。参照先は requirements.md に実在する番号のみ
-- 全 Requirement(N)が少なくとも1つのタスクから参照されるようにする
-- 数タスクごとに「Checkpoint」タスクを挟む(コンパイル/テスト/動作確認)
-- **tasks.meta.json は絶対に作らない**(Kiroが初回タスク実行時に自動生成する)
+- Numbering is only 2 levels, `1.` / `1.1`. Don't create a third level
+- All state markers start as `[ ]`. Don't use `[x]`, `[-]` or `[~]` in the initial generation
+  (managing post-execution state is Kiro's job)
+- Optional tasks are `- [ ]*` (the `*` goes immediately after the `]`, before the number). Kiro's convention is to use this for test tasks
+- Subtasks involving implementation end with `- _Requirements: N.M[, N.M...]_` (italics wrapped in
+  underscores, comma-separated). Only reference numbers that actually exist in requirements.md
+- Make sure every Requirement (N) is referenced by at least one task
+- Insert a "Checkpoint" task every few tasks (compile / test / behaviour check)
+- **Never create tasks.meta.json** (Kiro auto-generates it the first time a task is run)

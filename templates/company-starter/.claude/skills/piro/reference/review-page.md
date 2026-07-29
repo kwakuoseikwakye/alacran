@@ -1,41 +1,43 @@
-# requirements.html レビューページ生成指示
+# Instructions for generating the requirements.html review page
 
-requirements.md を人間レビュー用の単一HTMLに変換する。正は常に md。md を更新したら必ず再生成する。
-置き場所は spec フォルダ内(`.kiro/specs/<slug>/requirements.html`)。Kiro は読まない。
+Convert requirements.md into a single HTML file for human review. The md is always the source of truth;
+regenerate whenever you update the md.
+It lives inside the spec folder (`.kiro/specs/<slug>/requirements.html`). Kiro doesn't read it.
 
-## 技術要件
+## Technical requirements
 
-- 完全自己完結: 外部CDN・外部フォント・外部画像・fetch なし。CSSは `<style>` にインライン
-- `<html lang="ja">`、UTF-8
-- フォント: `font-family: "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif`
-- **blur付き box-shadow 禁止**(印刷/PDF化でグレー帯に崩れる)。影はベタ影か border のみ
-- em dash 不使用
-- 幅の広い要素(テーブル等)は `overflow-x: auto` のコンテナに入れる
+- Fully self-contained: no external CDN, external fonts, external images or fetch. CSS inline in `<style>`
+- `<html lang="en">`, UTF-8
+- Font: `font-family: system-ui, "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif`
+  (the CJK fallbacks are kept so requirement text in Japanese still renders)
+- **No box-shadow with blur** (it degrades into grey bands when printed or turned into a PDF). Shadows should be flat, or use a border only
+- No em dashes
+- Put wide elements (tables etc.) inside a container with `overflow-x: auto`
 
-## 構成(上から順)
+## Structure (top to bottom)
 
-1. **ヘッダ**: spec名(slug)/ 生成日 / 対象プロジェクトパス
-2. **Introduction**: requirements.md の散文をそのまま
-3. **Glossary**: 2列テーブル(用語 / 定義)
-4. **Requirement カード**(Requirement ごとに1枚):
-   - 見出し「Requirement N: 題名」
-   - User Story(As a / I want / so that を視覚化)
-   - Acceptance Criteria: 番号付きリスト。EARSキーワード(WHEN / IF / THEN / WHILE / WHERE /
-     FOR EACH / THE / SHALL / SHALL CONTINUE TO)を `<span class="kw">` で包んでバッジ表示。
-     各行の右肩に適用パターン名ラベル(event-driven / unwanted / state / optional /
-     iteration / ubiquitous / regression)
-5. **フッタ: レビュー観点チェックリスト**
-   - 漏れ: 依頼内容で拾えていない要望はないか
-   - 過剰: 頼んでいないのに入っている要件はないか
-   - 曖昧: 2通りに読める受入基準はないか
-   - 検証可能性: テストで判定できない受入基準はないか
-   - 前提: piroが埋めた前提の列挙(チャット報告と同じもの)
+1. **Header**: spec name (slug) / generation date / target project path
+2. **Introduction**: the prose from requirements.md, as-is
+3. **Glossary**: a 2-column table (term / definition)
+4. **Requirement cards** (one per Requirement):
+   - Heading "Requirement N: title"
+   - User Story (As a / I want / so that, laid out visually)
+   - Acceptance Criteria: a numbered list. Wrap the EARS keywords (WHEN / IF / THEN / WHILE / WHERE /
+     FOR EACH / THE / SHALL / SHALL CONTINUE TO) in `<span class="kw">` to display them as badges.
+     Put a label for the applicable pattern in the top right of each line (event-driven / unwanted / state /
+     optional / iteration / ubiquitous / regression)
+5. **Footer: review checklist**
+   - Gaps: is anything in the request not captured?
+   - Excess: are there requirements nobody asked for?
+   - Ambiguity: is any acceptance criterion open to two readings?
+   - Verifiability: is any acceptance criterion impossible to judge with a test?
+   - Assumptions: the list of assumptions piro filled in (the same as reported in the chat)
 
-## スケルトン
+## Skeleton
 
 ```html
 <!doctype html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -44,7 +46,7 @@ requirements.md を人間レビュー用の単一HTMLに変換する。正は常
   :root { --ink:#1a2333; --paper:#f7f8fa; --card:#ffffff; --accent:#2a5db0; --line:#d8dde6; }
   * { box-sizing:border-box; }
   body { margin:0; padding:2rem 1rem; background:var(--paper); color:var(--ink);
-         font-family:"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif; line-height:1.8; }
+         font-family:system-ui,"Hiragino Sans","Noto Sans JP","Yu Gothic",sans-serif; line-height:1.8; }
   main { max-width:860px; margin:0 auto; }
   header { border-bottom:3px solid var(--accent); padding-bottom:1rem; margin-bottom:2rem; }
   header h1 { margin:0 0 .25rem; font-size:1.5rem; }
@@ -76,35 +78,35 @@ requirements.md を人間レビュー用の単一HTMLに変換する。正は常
 <body>
 <main>
   <header>
-    <h1>Requirements Review: {機能名}</h1>
-    <div class="meta">spec: {slug} ・ 生成日: {YYYY-MM-DD} ・ 対象: {プロジェクトパス}</div>
+    <h1>Requirements Review: {feature name}</h1>
+    <div class="meta">spec: {slug} · generated: {YYYY-MM-DD} · target: {project path}</div>
   </header>
-  <section><h2>Introduction</h2><p>{散文}</p></section>
+  <section><h2>Introduction</h2><p>{prose}</p></section>
   <section><h2>Glossary</h2>
-    <div class="tablewrap"><table><tr><th>用語</th><th>定義</th></tr>{行}</table></div>
+    <div class="tablewrap"><table><tr><th>Term</th><th>Definition</th></tr>{rows}</table></div>
   </section>
   <section>
     <h2>Requirements</h2>
     <div class="req-card">
-      <h3>Requirement 1: {題名}</h3>
-      <div class="story">As a {役割}, I want {機能}, so that {便益}.</div>
+      <h3>Requirement 1: {title}</h3>
+      <div class="story">As a {role}, I want {feature}, so that {benefit}.</div>
       <ol class="ac">
         <li><span class="pattern">event-driven</span>
-          <span class="kw">WHEN</span> ユーザーが○○した時、<span class="kw">THE</span> ○○
-          <span class="kw">SHALL</span> ○○する</li>
+          <span class="kw">WHEN</span> the user does X, <span class="kw">THE</span> Y
+          <span class="kw">SHALL</span> do Z</li>
       </ol>
     </div>
   </section>
   <section class="checklist">
-    <h2>レビュー観点</h2>
+    <h2>Review checklist</h2>
     <ul>
-      <li>漏れ: 依頼内容で拾えていない要望はないか</li>
-      <li>過剰: 頼んでいないのに入っている要件はないか</li>
-      <li>曖昧: 2通りに読める受入基準はないか</li>
-      <li>検証可能性: テストで判定できない受入基準はないか</li>
+      <li>Gaps: is anything in the request not captured?</li>
+      <li>Excess: are there requirements nobody asked for?</li>
+      <li>Ambiguity: is any acceptance criterion open to two readings?</li>
+      <li>Verifiability: is any acceptance criterion impossible to judge with a test?</li>
     </ul>
-    <h2>piroが埋めた前提</h2>
-    <ul>{前提の列挙}</ul>
+    <h2>Assumptions piro filled in</h2>
+    <ul>{list of assumptions}</ul>
   </section>
 </main>
 </body>

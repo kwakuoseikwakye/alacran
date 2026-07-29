@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""piro自己チェック: 生成したKiro互換specの機械検証。
+"""piro self-check: machine verification of a generated Kiro-compatible spec.
 
-使い方: python3 validate.py <specディレクトリ>
-合格で exit 0、不合格で exit 1(エラーを列挙)。
+Usage: python3 validate.py <spec directory>
+Exits 0 on pass, 1 on failure (listing the errors).
 """
 import json
 import re
@@ -27,7 +27,7 @@ def check(spec_dir: Path) -> list:
     def need(name):
         p = spec_dir / name
         if not p.exists():
-            errors.append(f"{name} が無い")
+            errors.append(f"{name} is missing")
             return None
         return p
 
@@ -39,32 +39,32 @@ def check(spec_dir: Path) -> list:
         return errors
 
     if (spec_dir / "tasks.meta.json").exists():
-        errors.append("tasks.meta.json を生成している(禁止。Kiroに作らせる)")
+        errors.append("tasks.meta.json has been generated (forbidden. Let Kiro create it)")
 
     # --- .config.kiro ---
     raw = cfg_p.read_text(encoding="utf-8")
     if "\n" in raw.strip():
-        errors.append(".config.kiro が複数行(1行JSONにする)")
+        errors.append(".config.kiro spans multiple lines (make it single-line JSON)")
     try:
         cfg = json.loads(raw)
         if set(cfg) != {"specId", "workflowType", "specType"}:
-            errors.append(f".config.kiro のフィールドが規定外: {sorted(cfg)}")
+            errors.append(f".config.kiro has non-standard fields: {sorted(cfg)}")
         if not UUID_RE.match(str(cfg.get("specId", ""))):
-            errors.append(".config.kiro の specId が小文字UUIDv4形式でない")
+            errors.append(".config.kiro specId is not a lowercase UUIDv4")
         if cfg.get("workflowType") not in ("requirements-first", "design-first"):
-            errors.append(f"workflowType が不正: {cfg.get('workflowType')}")
+            errors.append(f"invalid workflowType: {cfg.get('workflowType')}")
         if cfg.get("specType") not in ("feature", "bugfix"):
-            errors.append(f"specType が不正: {cfg.get('specType')}")
+            errors.append(f"invalid specType: {cfg.get('specType')}")
     except json.JSONDecodeError as e:
-        errors.append(f".config.kiro がJSONとして読めない: {e}")
+        errors.append(f".config.kiro is not readable as JSON: {e}")
 
     # --- requirements.md ---
     req = req_p.read_text(encoding="utf-8")
     if not req.startswith("# Requirements Document"):
-        errors.append("requirements.md が '# Requirements Document' で始まっていない")
+        errors.append("requirements.md does not start with '# Requirements Document'")
     for h in ("## Introduction", "## Requirements"):
         if h not in req:
-            errors.append(f"requirements.md に '{h}' が無い")
+            errors.append(f"requirements.md is missing '{h}'")
 
     req_ids = set()   # {"1.1", "1.2", ...}
     req_nums = set()  # {"1", "2", ...}
@@ -89,67 +89,67 @@ def check(spec_dir: Path) -> list:
             body = m.group(2)
             if not EARS_START.match(body):
                 errors.append(
-                    f"受入基準 {cur}.{m.group(1)} がEARSキーワードで始まっていない: {body[:40]}"
+                    f"acceptance criterion {cur}.{m.group(1)} does not start with an EARS keyword: {body[:40]}"
                 )
             elif " SHALL " not in f" {body} ":
-                errors.append(f"受入基準 {cur}.{m.group(1)} に SHALL が無い")
+                errors.append(f"acceptance criterion {cur}.{m.group(1)} has no SHALL")
     if not req_ids:
-        errors.append("requirements.md に受入基準(番号付きEARS文)が1つも無い")
+        errors.append("requirements.md has no acceptance criteria (numbered EARS statements) at all")
 
     # --- design.md ---
     des = des_p.read_text(encoding="utf-8")
     if not des.startswith("# Design Document"):
-        errors.append("design.md が '# Design Document' で始まっていない")
+        errors.append("design.md does not start with '# Design Document'")
     pos = -1
     for h in DESIGN_HEADINGS:
         idx = des.find(f"\n{h}\n")
         if idx < 0:
-            errors.append(f"design.md に '{h}' が無い")
+            errors.append(f"design.md is missing '{h}'")
         elif idx < pos:
-            errors.append(f"design.md の '{h}' の順序が公式順と違う")
+            errors.append(f"design.md heading '{h}' is out of the official order")
         else:
             pos = idx
 
     # --- tasks.md ---
     tsk = tsk_p.read_text(encoding="utf-8")
     if not tsk.startswith("# Implementation Plan"):
-        errors.append("tasks.md が '# Implementation Plan' で始まっていない")
+        errors.append("tasks.md does not start with '# Implementation Plan'")
     bad_markers = re.findall(r"- \[(x|-|~)\]", tsk)
     if bad_markers:
-        errors.append(f"tasks.md に初期状態でない状態マーカーがある: {sorted(set(bad_markers))}")
+        errors.append(f"tasks.md has state markers that are not the initial state: {sorted(set(bad_markers))}")
 
     refs = set()
     for m in re.finditer(r"_Requirements:\s*([0-9.,\s]+)_", tsk):
         refs |= {t.strip() for t in m.group(1).split(",") if t.strip()}
     dangling = sorted(r for r in refs if r not in req_ids)
     if dangling:
-        errors.append(f"tasks.md の _Requirements: 参照が実在しない: {dangling}")
+        errors.append(f"tasks.md _Requirements: references that do not exist: {dangling}")
     referenced_nums = {r.split(".")[0] for r in refs}
     orphans = sorted(req_nums - referenced_nums, key=int)
     if orphans:
-        errors.append(f"どのタスクからも参照されていない Requirement: {orphans}")
+        errors.append(f"Requirements not referenced by any task: {orphans}")
     if not refs:
-        errors.append("tasks.md に _Requirements: 参照が1つも無い")
+        errors.append("tasks.md has no _Requirements: references at all")
 
-    # --- 共通 ---
+    # --- shared ---
     for name, text in (("requirements.md", req), ("design.md", des), ("tasks.md", tsk)):
         if "—" in text:
-            errors.append(f"{name} に em dash が含まれている")
+            errors.append(f"{name} contains an em dash")
 
     return errors
 
 
 def main():
     if len(sys.argv) != 2:
-        print("使い方: python3 validate.py <specディレクトリ>")
+        print("Usage: python3 validate.py <spec directory>")
         return 2
     errors = check(Path(sys.argv[1]))
     if errors:
-        print(f"NG: {len(errors)}件")
+        print(f"FAIL: {len(errors)} error(s)")
         for e in errors:
             print(f"  - {e}")
         return 1
-    print("OK: 全チェック合格")
+    print("OK: all checks passed")
     return 0
 
 

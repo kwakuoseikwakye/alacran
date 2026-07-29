@@ -1,47 +1,48 @@
-# design.md テンプレート(Kiro公式6見出し)
+# design.md template (Kiro's official 6 headings)
 
-トップレベル見出しは以下の6つを英語のまま、この順で必ず含める。増減・改名しない。
+The top-level headings must be exactly these 6, in English, in this order. Don't add, remove or rename them.
 
-## 構造
+## Structure
 
 ````markdown
 # Design Document
 
 ## Overview
 
-[何を作るかの要約 + 主要な設計判断(箇条書き3〜5点)。
- requirements.md のどの要件に応える設計かが分かるように書く]
+[A summary of what you're building + the main design decisions (3-5 bullets).
+ Write it so it's clear which requirements in requirements.md the design answers]
 
 ## Architecture
 
-[システム構成の説明 + mermaid図]
+[An explanation of the system structure + a mermaid diagram]
 
 ```mermaid
 graph TB
-    A[コンポーネントA] --> B[コンポーネントB]
+    A[Component A] --> B[Component B]
 ```
 
 ## Components and Interfaces
 
-[コンポーネントごとに: 責務 / 入出力インターフェース(シグネチャ・データ形) / 依存。
- 具体的なコード断片やコマンド、スキーマを書いてよい]
+[Per component: responsibilities / input-output interfaces (signatures, data shapes) / dependencies.
+ Concrete code fragments, commands and schemas are welcome]
 
 ## Data Models
 
-[扱うデータ構造。ファイルフォーマット、スキーマ、状態の形をJSON例やテーブルで具体的に]
+[The data structures involved. File formats, schemas and the shape of state, made concrete with JSON examples or tables]
 
 ## Error Handling
 
-[異常系の一覧と対処。requirements.md の IF ... THEN 文と対応させる]
+[A list of abnormal cases and how they're handled. Make them correspond to the IF ... THEN statements in requirements.md]
 
 ## Testing Strategy
 
-[何をどうテストするか。単体/結合/e2eの区分と、受入基準との対応]
+[What is tested and how. The split between unit/integration/e2e, and how it maps to the acceptance criteria]
 ````
 
-## 規約
+## Conventions
 
-- 見出しの追加は各節の配下(### 以下)でのみ行う
-- mermaid ブロックは構文validに(自己チェックの目視項目)
-- requirements に無い機能を設計に足さない。逆に全 Requirement が設計のどこかに反映されていること
-- コード断片は実装者がそのまま使える具体度で書く(擬似コードより実コード寄り)
+- Only add headings beneath each section (### and below)
+- Keep mermaid blocks syntactically valid (a by-eye item in the self-check)
+- Don't add features to the design that aren't in the requirements. Conversely, every Requirement must be
+  reflected somewhere in the design
+- Write code fragments concrete enough for an implementer to use as-is (closer to real code than pseudocode)
