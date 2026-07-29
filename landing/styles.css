@@ -115,6 +115,9 @@ p { margin: 0; }
 .sec-head { max-width: 640px; margin-bottom: 46px; }
 .sec-head h2 { font-size: clamp(1.9rem, 4vw, 2.9rem); line-height: 1.06; margin-top: 14px; }
 .sec-head p { margin-top: 16px; color: var(--dune); font-size: 1.08rem; }
+/* Forces a clause onto its own line without a <br>, which would strand a
+   lone word mid-sentence once the paragraph reflows on a narrow screen. */
+.lede-break { display: block; }
 .center { text-align: center; margin-left: auto; margin-right: auto; }
 
 /* ---------- hero (home) ---------- */
