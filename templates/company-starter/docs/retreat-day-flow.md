@@ -1,271 +1,306 @@
-# 合宿当日フロー — 講師・ファシリテータ向け
+# Retreat day-of flow — for instructors/facilitators
 
-> 対象読者: 合宿当日の進行を担当する講師・ファシリテータ。
-> 前提: 参加者は `docs/participant-guide.md` に沿って事前準備（15分セットアップ）を完了済み。
+> Audience: instructors/facilitators running the day of the retreat.
+> Prerequisite: participants have finished pre-retreat prep (the 15-minute setup) following
+> `docs/participant-guide.md`.
 
 ---
 
-## 想定タイムライン
+## Expected timeline
 
-合宿の実施時間に応じて、Half-day（4時間）と Full-day（8時間）の2パターンを用意しています。
-いずれも `exercises/01〜03` を軸に、参加者自身の実業務課題への適用時間を確保する構成です。
+Depending on how long the retreat runs, we provide 2 patterns: Half-day (4 hours) and
+Full-day (8 hours). Both are built around `exercises/01-03`, with time set aside for
+participants to apply the material to their own real work.
 
-### Half-day パターン（4時間）
+### Half-day pattern (4 hours)
 
-| # | 所要 | セッション | 対応ファイル |
+| # | Duration | Session | Corresponding file |
 |---|---|---|---|
-| 1 | 15分 | セットアップ確認（事前準備の動作確認、詰まっている人のフォロー） | `docs/setup-walkthrough.md` |
-| 2 | 30分 | `/define-company` — 自社オントロジーの定義 | `exercises/01-define-your-company.md` |
-| 3 | 30分 | 最初のEpic Issue起票（`/create-epic`） | `docs/starter-manual.md` §4 |
-| 4 | 30分 | HITL Gate体験 | `exercises/02-first-hitl-gate.md` |
-| 5 | 30分 | `/verify` ループ体験 | `exercises/03-run-verify-loop.md` |
-| 6 | 60分 | 各自の実業務Epicの起票・実装着手（講師巡回） | — |
-| 7 | 15分 | 振り返り | 本ファイル §振り返りの進め方 |
+| 1 | 15 min | Setup check (confirm pre-retreat prep works, help anyone stuck) | `docs/setup-walkthrough.md` |
+| 2 | 30 min | `/define-company` — define your company ontology | `exercises/01-define-your-company.md` |
+| 3 | 30 min | File your first Epic Issue (`/create-epic`) | `docs/starter-manual.md` §4 |
+| 4 | 30 min | Experience the HITL Gate | `exercises/02-first-hitl-gate.md` |
+| 5 | 30 min | Experience the `/verify` loop | `exercises/03-run-verify-loop.md` |
+| 6 | 60 min | Each participant files and starts implementing their own real-work Epic (instructor circulates) | — |
+| 7 | 15 min | Retrospective | This file, §How to run the retrospective |
 
-合計: 3時間30分 + 予備30分（機材トラブル・質疑延長用のバッファ）
+Total: 3 hours 30 minutes + 30 minutes of buffer (for equipment trouble/extended Q&A)
 
-### Full-day パターン（8時間）
+### Full-day pattern (8 hours)
 
-Half-dayの内容に加え、以下を追加します。昼休みを挟んで午前・午後に分けて実施してください。
+Adds the following on top of the Half-day content. Run it split across morning and
+afternoon, with a lunch break in between.
 
-| # | 所要 | セッション | 対応ファイル |
+| # | Duration | Session | Corresponding file |
 |---|---|---|---|
-| 1 | 15分 | セットアップ確認 | `docs/setup-walkthrough.md` |
-| 2 | 30分 | `/define-company` | `exercises/01-define-your-company.md` |
-| 3 | 30分 | 最初のEpic Issue起票 | `docs/starter-manual.md` §4 |
-| 4 | 30分 | HITL Gate体験 | `exercises/02-first-hitl-gate.md` |
-| 5 | 30分 | `/verify` ループ体験 | `exercises/03-run-verify-loop.md` |
-| — | 60分 | 昼休み | — |
-| 6 | 45分 | Decision RFC 作成体験（`/decision`） | `.claude/commands/decision.md`（テンプレートはコマンド内蔵） |
-| 7 | 45分 | KPI定義体験（`docs/templates/kpi-measurement-template.yaml`） | `docs/templates/kpi-measurement-template.yaml` |
-| 8 | 120分 | 各自の実業務Epicの起票・実装着手（講師巡回） | — |
-| 9 | 45分 | 講師相談タイム（1人5〜10分の個別質疑） | — |
-| 10 | 30分 | 振り返り | 本ファイル §振り返りの進め方 |
+| 1 | 15 min | Setup check | `docs/setup-walkthrough.md` |
+| 2 | 30 min | `/define-company` | `exercises/01-define-your-company.md` |
+| 3 | 30 min | File your first Epic Issue | `docs/starter-manual.md` §4 |
+| 4 | 30 min | Experience the HITL Gate | `exercises/02-first-hitl-gate.md` |
+| 5 | 30 min | Experience the `/verify` loop | `exercises/03-run-verify-loop.md` |
+| — | 60 min | Lunch break | — |
+| 6 | 45 min | Experience creating a Decision RFC (`/decision`) | `.claude/commands/decision.md` (the template is built into the command) |
+| 7 | 45 min | Experience defining a KPI (`docs/templates/kpi-measurement-template.yaml`) | `docs/templates/kpi-measurement-template.yaml` |
+| 8 | 120 min | Each participant files and starts implementing their own real-work Epic (instructor circulates) | — |
+| 9 | 45 min | Instructor office hours (5-10 min of individual Q&A per person) | — |
+| 10 | 30 min | Retrospective | This file, §How to run the retrospective |
 
-合計: 7時間 + 昼休み1時間 = 8時間
+Total: 7 hours + 1 hour lunch = 8 hours
 
-いずれのパターンも、セッション6（Half-day）/ セッション8（Full-day）の実業務適用時間が
-最も重要です。前段の演習で時間を使いすぎないよう、講師は時間管理を優先してください。
-
----
-
-## セッションごとの講師 tips
-
-### セットアップ確認（15分）
-
-- 事前準備を完了していない参加者が一定数出ることを前提に進行する。`claude --version` /
-  `gh auth status` / `python3 scripts/verify.py` の3コマンドだけをスクリーン共有で一斉確認させる。
-- `gh auth login` が未完了の参加者は、ブラウザ認証のポップアップがブロックされているケースが多い。
-  ポップアップブロック解除を案内する。
-- このセッションで解決しない場合は「隣の参加者のPCで一時的にペア作業」を許可し、時間内には
-  必ず次に進める。
-
-### `/define-company`（30分）
-
-- Claude Codeが4つの質問（事業ドメイン・ステークホルダー・コアバリューフロー・ボトルネック）を
-  順番に投げてくる。まとめて質問された場合はCLAUDE.mdの読み込みに失敗している可能性があるため、
-  `claude` を再起動させる。
-- 「正解を出そうとして固まる」参加者が多いセッション。`status: draft` のまま残してよいことを
-  事前に伝えておく。完璧な定義より、後で直せる状態を作ることが目的。
-- 参加者ガイド（§合宿までに考えておくこと）の事前検討内容をこのセッションで使わせる。
-  何も考えていない参加者には、隣の参加者との簡単な壁打ちを促す。
-
-### 最初のEpic Issue起票（30分）
-
-- `gh issue create` のタイトル・本文フォーマットは `docs/starter-manual.md` §4 の例をそのまま
-  使わせてよい。凝った文章を書かせる必要はない。
-- 複合タスクは子Issueに分解する、という原則を口頭で強調する。1つのEpicに全部書き込んで
-  終わらせようとする参加者が一定数出る。
-- ブランチ名・コミットメッセージへのIssue番号記載は、このタイミングで一度手を動かして
-  体で覚えさせるのが効果的。
-
-### HITL Gate体験（30分、ex02）
-
-- 「AIに何を任せて、何を人間が握るか」という設計は、参加者の業種によって答えが大きく異なる。
-  金融・医療系の参加者は厳しめに、それ以外は緩めに倒れがちだが、どちらも正解がある前提で進める。
-- `.claude/rules/hitl-gate.md` のトリガー表を読ませたうえで、自社に合わせて1〜2行追記させる
-  演習がゴール。表を丸ごと書き換えさせる必要はない。
-
-### `/verify` ループ体験（30分、ex03）
-
-- 自社独自のRQT（検証項目）を1つ追加する演習。`scripts/verify.py` 本体を編集させるのではなく、
-  「何を検証したいか」を言語化させることが目的だと伝える。
-- 「検証ロジック側を弱めて通す」ことは偽緑禁止の原則違反であることを、このセッションで
-  明確に伝える。FAILが出たら直すのは実装側、という原則の体験セッション。
-
-### Decision RFC 作成体験（45分、Full-dayのみ）
-
-- 午前の`/define-company`や Epic起票で出てきた「迷った判断」を1つ選ばせ、`/decision` で
-  Decision RFCとして記録させる。ゼロから考えさせるより、午前の作業から題材を拾わせる方が早い。
-- 「なぜその判断をしたか」を書かせることが目的で、「何を決めたか」だけを書いて終わる参加者が
-  多い。Whyの欄を埋めているか机間巡視で確認する。
-
-### KPI定義体験（45分、Full-dayのみ）
-
-- `docs/templates/kpi-measurement-template.yaml` を自社のボトルネック（事前検討で考えた業務）に
-  当てはめて1〜2個のKPIを定義させる。指標を作ることが目的ではなく、
-  「何をもって改善と呼ぶか」を先に決める練習であることを強調する。
-- 数値目標にこだわりすぎて時間を使い切る参加者が出やすい。ラフな仮置きでよいと早めに伝える。
-
-### 各自の実業務Epic起票・実装着手（60〜120分）
-
-- 最も時間配分が重要なセッション。講師は巡回型で、質問が出るまで待つのではなく、
-  進捗が止まっていそうな参加者に自分から声をかける。
-- 「実装まで終わらせる」ことをゴールにしない。Epic Issueが起票され、`/verify` が
-  FAILしていない状態まで到達すれば十分という基準を事前に共有しておく。
+In either pattern, session 6 (Half-day) / session 8 (Full-day) — applying it to real work —
+is the most important. Instructors should prioritize time management so the earlier
+exercises don't eat into it.
 
 ---
 
-## ファシリテータ準備物
+## Per-session instructor tips
 
-### 事前配布資料
+### Setup check (15 min)
 
-- `docs/participant-guide.md`（合宿1〜2週間前に配布済みであることを確認）
-- 当日タイムライン（本ファイルの想定タイムライン表を印刷 or 画面共有用に整形したもの）
-- 会場のWi-Fi情報・電源の有無
+- Proceed assuming a certain number of participants haven't finished pre-retreat prep.
+  Have everyone confirm together via screen share just the 3 commands: `claude --version` /
+  `gh auth status` / `python3 scripts/verify.py`.
+- For participants where `gh auth login` isn't complete, it's often because the browser
+  authentication popup is being blocked. Guide them to unblock popups.
+- If it's not resolved within this session, allow "pairing temporarily on a neighboring
+  participant's PC" and be sure to move on within the time allotted.
 
-### 講師PCで表示するダッシュボード
+### `/define-company` (30 min)
 
-- `python3 scripts/verify.py` の出力を、進捗確認したい参加者のリポジトリで随時実行できるよう、
-  参加者リポジトリのURL一覧を手元に用意しておく（GitHub Organizationがあれば一覧しやすい）
-- 参加者リポジトリ一覧（GitHubのユーザー名 or リポジトリURLのスプレッドシート）
-- タイムキーパー用のタイマー（各セッションの残り時間をスクリーンに表示できると進行しやすい）
+- Claude Code asks 4 questions in order (business domain, stakeholders, core value flow,
+  bottleneck). If they're asked all at once, `CLAUDE.md` may have failed to load — have them
+  restart `claude`.
+- This is a session where many participants freeze up trying to give "the correct answer."
+  Tell them ahead of time it's fine to leave things as `status: draft`. The goal isn't a
+  perfect definition — it's getting to a state that can be fixed later.
+- Have them use what they thought through ahead of time (the participant guide's §Things to
+  think about before the retreat) in this session. For anyone who hasn't thought about it at
+  all, encourage a quick back-and-forth with a neighboring participant.
+
+### Filing your first Epic Issue (30 min)
+
+- It's fine to have them use the title/body format from `docs/starter-manual.md` §4's example
+  for `gh issue create` as-is. There's no need for elaborate writing.
+- Verbally emphasize the principle that a composite task gets broken into child Issues. A
+  certain number of participants try to cram everything into one Epic and call it done.
+- Having them actually type the Issue number into a branch name/commit message at this point
+  is effective for making it stick.
+
+### Experiencing the HITL Gate (30 min, ex02)
+
+- The design question of "what to delegate to the AI, and what a human holds onto" varies a
+  lot by the participant's industry. Finance/healthcare participants tend to lean strict, and
+  others tend to lean loose — proceed on the assumption both are valid answers.
+- The goal is the exercise of having them read the trigger table in
+  `.claude/rules/hitl-gate.md` and then add 1-2 lines matching their own company. There's no
+  need to have them rewrite the whole table.
+
+### Experiencing the `/verify` loop (30 min, ex03)
+
+- An exercise to add one company-specific RQT (verification item). Tell them the goal isn't
+  to have them edit `scripts/verify.py` itself, but to put "what do I want to verify" into
+  words.
+- Make it clear in this session that "loosening the verification logic to force a pass" is a
+  violation of the no-fake-green principle. This is a hands-on session for the principle that
+  when a FAIL appears, you fix the implementation, not the check.
+
+### Experiencing creating a Decision RFC (45 min, Full-day only)
+
+- Have them pick one "judgment call they were unsure about" that came up during the morning's
+  `/define-company` or Epic filing, and record it as a Decision RFC with `/decision`. Pulling
+  material from the morning's work is faster than having them think of something from
+  scratch.
+- The goal is having them write "why they made that decision" — many participants stop at
+  just writing "what was decided." Check by circulating whether the Why section is filled in.
+
+### Experiencing KPI definition (45 min, Full-day only)
+
+- Have them apply `docs/templates/kpi-measurement-template.yaml` to their own bottleneck (the
+  task they thought about ahead of time) and define 1-2 KPIs. Emphasize that the goal isn't
+  building metrics for their own sake — it's practicing deciding, up front, "what counts as
+  improvement."
+- Participants who get too caught up in the exact numeric targets tend to run out the clock.
+  Tell them early that a rough placeholder value is fine.
+
+### Each participant files and starts implementing their own real-work Epic (60-120 min)
+
+- The session where time allocation matters most. Instructors should circulate proactively —
+  rather than waiting for a question, approach any participant whose progress looks stalled.
+- Don't make "finishing the implementation" the goal. Share ahead of time that reaching the
+  state where an Epic Issue is filed and `/verify` isn't FAILing is a sufficient bar.
 
 ---
 
-## 参加者のつまづきパターン集
+## What facilitators should prepare
 
-| # | パターン | 症状 | 対応 |
+### Materials distributed ahead of time
+
+- `docs/participant-guide.md` (confirm it was distributed 1-2 weeks before the retreat)
+- The day's timeline (this file's expected-timeline table, printed or formatted for screen
+  sharing)
+- The venue's Wi-Fi information and power-outlet availability
+
+### A dashboard to display on the instructor's PC
+
+- Have a list of participant repository URLs on hand, so you can run
+  `python3 scripts/verify.py`'s output against any participant's repo whose progress you want
+  to check (easier to enumerate if you have a GitHub Organization)
+- A list of participant repositories (a spreadsheet of GitHub usernames or repository URLs)
+- A timer for time-keeping (being able to show each session's remaining time on screen makes
+  running things easier)
+
+---
+
+## A collection of common participant sticking points
+
+| # | Pattern | Symptom | Response |
 |---|---|---|---|
-| 1 | `verify.py` が `ModuleNotFoundError` | `pip install pyyaml` 未実施 | `pip3 install pyyaml` を実行させる |
-| 2 | `gh auth` 未完了のまま進行 | `/create-epic` 実行時にAPI呼び出しでエラー | `gh auth login` に一度戻す。ブラウザ認証のポップアップブロックを疑う |
-| 3 | `secrets/` に `.env` をcommitしかける | `git status` に `secrets/*.env` が見えて焦る | `.gitignore` で保護されているため実際にはcommitされない旨を説明し、`git status` の見方を確認する |
-| 4 | `ontology-starter.yaml` の事業ドメイン選定で固まる | 30分経っても`/define-company`が終わらない | 「完璧を目指さない、`status: draft`のまま進めてよい」と伝え、次のセッションに進ませる。休憩時間に個別フォロー |
-| 5 | Claude CodeのPlan Modeを使わずに大きな変更に突入 | 実装が発散し、Scope Contractを逸脱する | `.claude/rules/scope-contract.md` の「着手前5秒チェック」を一緒に読み、CHANGE/NOT CHANGEを言語化させる |
-| 6 | Issueを起票せずに実装を始めてしまう | Issue-First原則の見落とし | 事後でもよいのでIssueを起票させ、コミットメッセージに参照を残す運用に切り替えさせる |
-| 7 | `/verify` のFAILを無視して次に進もうとする | 偽緑禁止の原則違反 | FAILの内容を一緒に読み、検証ロジック側ではなく実装側を直す原則を再確認する |
+| 1 | `verify.py` gives a `ModuleNotFoundError` | `pip install pyyaml` wasn't run | Have them run `pip3 install pyyaml` |
+| 2 | Proceeding without `gh auth` complete | An API call errors out when running `/create-epic` | Send them back to `gh auth login` once. Suspect a blocked browser-authentication popup |
+| 3 | About to commit `.env` into `secrets/` | Seeing `secrets/*.env` in `git status` causes panic | Explain it's protected by `.gitignore` and won't actually be committed, and walk through how to read `git status` |
+| 4 | Freezes up choosing a business domain in `ontology-starter.yaml` | 30 minutes pass and `/define-company` still isn't done | Tell them "don't aim for perfection, it's fine to leave it as `status: draft`" and move them to the next session. Follow up individually during a break |
+| 5 | Dives into a large change without using Claude Code's Plan Mode | The implementation sprawls and departs from the Scope Contract | Read `.claude/rules/scope-contract.md`'s "5-second check before starting" together, and have them put CHANGE/NOT CHANGE into words |
+| 6 | Starts implementing without filing an Issue | Overlooked the Issue-First principle | Have them file an Issue even after the fact — that's fine — and switch to leaving a reference to it in the commit message |
+| 7 | Tries to move on while ignoring a `/verify` FAIL | A violation of the no-fake-green principle | Read the FAIL's content together, and reconfirm the principle of fixing the implementation, not the verification logic |
 
 ---
 
-## 振り返りの進め方
+## How to run the retrospective
 
-セッション終了時刻の少し前（Half-dayは15分前、Full-dayは30分前を目安）になったら、
-全員に画面共有をやめてもらい、以下の3つを順番に共有する形式で進行する。
-1人あたり1〜2分を目安に、時間が余れば深掘りの質問をする。
+A little before the session's end time (about 15 minutes before for Half-day, 30 minutes
+before for Full-day), have everyone stop screen-sharing and run through sharing the following
+3 things in order. About 1-2 minutes per person, with follow-up questions if time allows.
 
-1. **今日 `/verify` に何回PASSしたか** — 回数そのものより、FAILからPASSに変えた経験があるかを確認する
-2. **Epicを何本起票したか** — 起票数と、そのうち着手できたものの割合を確認する
-3. **Ah-haモーメントを1つずつシェア** — 「AIエージェントとの協働で一番驚いたこと」を1人1つ発表してもらう
+1. **How many times did `/verify` PASS today** — check whether they experienced turning a
+   FAIL into a PASS, more than the raw count itself
+2. **How many Epics did they file** — check the count filed and what fraction they managed to
+   start
+3. **Share one Ah-ha moment each** — have each person share "the thing that surprised them
+   most about working alongside an AI agent"
 
-講師は各参加者の発言を簡単にメモしておく。合宿後のフォローアップメール（下記）で
-個別に触れられると、参加者の満足度が上がりやすい。
+Instructors should jot a brief note on each participant's remarks. Referencing these
+individually in the post-retreat follow-up email (below) tends to raise participant
+satisfaction.
 
 ---
 
-## 合宿後のフォローアップ
+## Post-retreat follow-up
 
-合宿終了から1週間後を目安に、参加者へ以下のようなフォローアップメールを送付してください。
+About 1 week after the retreat ends, send participants a follow-up email like the following.
 
 ```
-件名: 【合宿から1週間】その後のリポジトリの様子はいかがですか
+Subject: [1 week since the retreat] How's your repository doing since then?
 
-○○様
+Dear {{ name }},
 
-先日はAI駆動経営合宿にご参加いただき、ありがとうございました。
-合宿から1週間が経ちましたが、その後リポジトリはいかがでしょうか。
+Thank you for participating in the AI-driven management retreat.
+It's been a week since the retreat — how has your repository been since then?
 
-振り返りで共有いただいた「{{ 振り返りメモから該当者の発言を引用 }}」について、
-その後の進捗があればぜひ教えてください。
+Regarding "{{ quote the relevant participant's remark from the retrospective notes }}"
+that you shared in the retrospective — please let us know if there's been any progress.
 
-もし `/verify` がFAILしたまま止まっている、Epic Issueの続きに着手できていない、
-といった状況でしたら、遠慮なくご連絡ください。個別に30分ほどオンラインで
-状況を伺うことも可能です。
+If `/verify` is stuck FAILing, or you haven't been able to pick up where your Epic Issue
+left off, please don't hesitate to reach out. We can also arrange a roughly 30-minute
+online session to hear about your situation individually.
 
-またテンプレートについて改善のご意見があれば、
-docs/feedback-collection.md の手順でIssueとして起票いただけると助かります。
+If you have any suggestions for improving the template, we'd appreciate it if you could
+file them as an Issue following the process in docs/feedback-collection.md.
 
-引き続きよろしくお願いいたします。
+Looking forward to staying in touch.
 ```
 
-個別の振り返り発言を引用することで、単なる定型メールではなく「見てもらえていた」体験になり、
-その後のフィードバック提供率が上がる傾向がある。事務局はこのメール送付を運用フローに組み込むこと。
+Quoting an individual retrospective remark, rather than sending a purely generic email, tends
+to create a "someone was actually paying attention" experience, and tends to raise the rate of
+feedback given afterward. Organizers should build sending this email into their standard
+process.
 
-フォローアップメールの最後には、`docs/feedback-collection.md` に沿ったフィードバックの
-出し方（テンプレート本体リポジトリへのIssue起票）への導線を必ず含める。合宿直後よりも
-1週間後の方が、実際に使ってみた上での具体的な摩擦点が出やすい。
+Always include, at the end of the follow-up email, a path to giving feedback per
+`docs/feedback-collection.md` (filing an Issue against the template's own repository). A
+week after, rather than right after the retreat, tends to surface more concrete friction
+points from actually having used it.
 
 ---
 
-## 当日の役割分担
+## Division of roles on the day
 
-参加者数が多い回（10名以上）では、講師1名だけでの巡回対応は難しくなります。
-以下の役割分担を目安にしてください。
+For a session with a large number of participants (10+), one instructor alone won't be able
+to keep up with circulating. Use the following as a rough division of roles.
 
-| 役割 | 人数目安 | 主な仕事 |
+| Role | Approximate headcount | Main job |
 |---|---|---|
-| メイン講師 | 1名 | 全体進行、タイムキープ、セッション冒頭の説明 |
-| サブ講師 / TA | 参加者5〜6名につき1名 | 机間巡視、個別のつまづき対応、振り返りメモ取り |
-| 事務局 | 1名 | 会場運営、事前配布資料の確認、当日の欠席・遅刻対応 |
+| Lead instructor | 1 | Overall facilitation, time-keeping, session intros |
+| Assistant instructor / TA | 1 per 5-6 participants | Circulating, individual troubleshooting, taking retrospective notes |
+| Organizer | 1 | Venue operations, confirming pre-distributed materials, handling day-of absences/lateness |
 
-サブ講師がいない少人数回（5名以下）では、メイン講師が両方を兼務してもタイムラインは
-成立します。ただし振り返りセッションのメモ取りは省略しないでください。合宿後の
-フォローアップメールの質に直結します。
-
----
-
-## 想定される質疑と回答例
-
-当日、参加者からよく出る質問とその回答例をまとめます。事前に目を通しておくと、
-セッション中の対応がスムーズになります。
-
-**Q. `/define-company` で答えた内容は後から変更できますか？**
-A. できます。`definitions/ontology/company.yaml` を直接編集するか、再度
-`/define-company` を実行して上書きしてください。SSOT原則により、この1ファイルが
-自社定義の唯一の正であることを説明する。
-
-**Q. Epic Issueは何本くらい起票するのが適切ですか？**
-A. 合宿1日で無理に多く起票する必要はない。実業務セッションの時間内に着手できる規模、
-目安として1〜2本を丁寧に進める方が、合宿後の継続利用につながりやすいと伝える。
-
-**Q. 社内の他のメンバーにもこのリポジトリを見せていいですか？**
-A. private リポジトリの範囲内であれば、社内の他メンバーをコラボレーターとして招待すること自体は
-問題ない。ただしテンプレート自体の再配布（他社・第三者への提供）はライセンス上禁止されている旨を
-伝える（`LICENSE.md` 参照）。
-
-**Q. 合宿で使ったコマンド（`/define-company` 等）は自社の別のリポジトリでも使えますか？**
-A. `.claude/commands/` ごと別のリポジトリにコピーすれば動作する。ただしテンプレート全体の
-再配布ではなく、あくまで参加者自身のプロジェクトへの組み込みである範囲に留める必要がある。
+For a small session with no assistant instructor (5 or fewer), the timeline still works with
+the lead instructor covering both roles. However, don't skip taking notes during the
+retrospective session — it directly affects the quality of the post-retreat follow-up email.
 
 ---
 
-## 会場・機材チェックリスト（開始1時間前）
+## Anticipated Q&A and example answers
 
-当日の進行を止めないために、開始1時間前を目安に以下を確認してください。
+A collection of questions participants commonly ask on the day, with example answers. Reading
+through these ahead of time makes handling them during sessions smoother.
 
-- [ ] 会場Wi-Fiが安定して繋がるか（`gh` 認証・Claude Code CLIの利用にネットワークが必須）
-- [ ] スクリーン投影がメイン講師のPCから問題なく行えるか
-- [ ] 電源タップの数が参加者数に対して十分か（ノートPC作業が数時間続く）
-- [ ] タイムキーパー用のタイマーが投影画面から見える位置にあるか
-- [ ] 参加者リポジトリ一覧のスプレッドシートが最新化されているか
-- [ ] 事務局の緊急連絡先（会場設備トラブル用）を講師陣で共有済みか
+**Q. Can what I answered in `/define-company` be changed later?**
+A. Yes. Either edit `definitions/ontology/company.yaml` directly, or re-run
+`/define-company` to overwrite it. Explain that, per the SSOT principle, this one file is
+the sole authority on your company's definition.
 
-Full-dayパターンの場合は、昼休み後の再開時にも簡易的な動作確認（`claude --version` 等）を
-一言促すと、休憩中のOSアップデート等による環境変化を早期に検知できます。
+**Q. About how many Epic Issues is it appropriate to file?**
+A. There's no need to force filing a lot in one day of the retreat. Tell them that carefully
+working through a scale that fits within the real-work session's time — roughly 1-2 — tends
+to lead to better continued use after the retreat.
+
+**Q. Is it OK to show this repository to other people at my company?**
+A. As long as it stays within the private repository, inviting other in-house members as
+collaborators is fine by itself. However, explain that redistributing the template itself
+(providing it to another company or a third party) is prohibited under the license (see
+`LICENSE.md`).
+
+**Q. Can the commands used at the retreat (`/define-company` etc.) be used in another
+repository at my company?**
+A. Yes, copying the whole `.claude/commands/` directory into another repository will work.
+However, this should stay within incorporating it into the participant's own project, not
+redistributing the template as a whole.
 
 ---
 
-## 合宿形式のバリエーション
+## Venue/equipment checklist (1 hour before start)
 
-本ファイルはHalf-day / Full-dayの対面開催を主な想定としていますが、オンライン開催や
-複数日にまたがる開催でも骨格は流用できます。
+To keep the day from stalling, confirm the following about 1 hour before start.
 
-- **オンライン開催**: 机間巡視の代わりに、ブレイクアウトルームを使った少人数グループでの
-  進行を推奨。`gh auth login` のブラウザ認証まわりは特に画面共有での確認が必須になる
-- **複数日開催**: 1日目終了時に必ず `/handoff` を実行させ、`HANDOFF.md` を更新した状態で
-  終わらせる。2日目冒頭は `HANDOFF.md` の読み合わせから再開する
-- **少人数のオンサイト伴走型**: タイムラインをそのまま使うのではなく、実業務セッションの比重を
-  さらに増やし、演習セッションは口頭説明のみで省略してもよい
+- [ ] Does the venue's Wi-Fi connect reliably? (network access is required for `gh`
+      authentication and using the Claude Code CLI)
+- [ ] Can screen projection be done without issue from the lead instructor's PC?
+- [ ] Are there enough power strips for the number of participants? (laptop work continues
+      for several hours)
+- [ ] Is the time-keeping timer positioned where it's visible on the projected screen?
+- [ ] Is the spreadsheet of participant repositories up to date?
+- [ ] Have the instructors shared the organizers' emergency contact info (for venue/equipment
+      trouble)?
+
+For the Full-day pattern, prompting a quick sanity check (`claude --version` etc.) when
+resuming after lunch also helps catch environment changes early — e.g. from an OS update
+during the break.
 
 ---
 
-*ai-retreat-starter — 合宿当日フロー*
+## Variations on the retreat format
+
+This file mainly assumes an in-person Half-day / Full-day session, but the same skeleton can
+be reused for an online session or one spanning multiple days.
+
+- **Online**: instead of circulating in person, we recommend running small groups in
+  breakout rooms. Confirming the browser-authentication part of `gh auth login` in particular
+  requires screen sharing
+- **Multi-day**: always have participants run `/handoff` at the end of day 1, ending with
+  `HANDOFF.md` updated. Start day 2 by reading through `HANDOFF.md` together
+- **Small-group, on-site, hands-on style**: rather than using the timeline as-is, further
+  increase the weight given to the real-work session, and it's fine to cover the exercise
+  sessions with verbal explanation only, skipping the hands-on part
+
+---
+
+*ai-retreat-starter — retreat day-of flow*
