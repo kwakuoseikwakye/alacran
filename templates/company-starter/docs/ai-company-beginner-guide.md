@@ -1,259 +1,272 @@
-# AIカンパニー はじめてガイド — 中学生でもわかるステップバイステップ
+# The Beginner's Guide to an AI Company — a step-by-step walkthrough anyone can follow
 
-> このドキュメントは、プログラミングをまったくやったことがない人でも読めるように、
-> 「AIカンパニーって何？」「どうやって始めるの？」をやさしい言葉でまとめたものです。
-> むずかしい用語はできるだけ出さず、出てくるときは必ず日本語で説明します。
-
----
-
-## この本の読み方
-
-- 上から順番に読んでください。とちゅうで飛ばさないでください。
-- コマンド（黒い枠のなかの文字）は、あとで実際に打ち込むおまじないです。今は読むだけでOK。
-- 「なるほど」と思ったら次に進む。「よくわからない」なら、その節をもう一度読み直してください。
+> This document is written so that even someone who has never programmed can read it — a
+> plain-language explanation of "what is an AI company?" and "how do I get started?"
+> Difficult terms are kept to a minimum, and whenever one does show up, it's always explained
+> in plain language.
 
 ---
 
-## 1. これは何？（30秒でわかる説明）
+## How to read this book
 
-**AIカンパニー**とは、AI（人工知能）を「社員」のように働かせる、小さな会社のしくみです。
-
-- **あなた（社長）**が、AIに「これをやって」と指示を出します。
-- AIは指示のとおりに、資料を作ったり、計算したり、記録をつけたりします。
-- 大事な判断（お金を使う、契約する）だけは、必ずあなたが最後にOKを出します。
-
-このリポジトリ（=フォルダのかたまり）は、その **会社のしくみのひな形（テンプレート）** です。
-たとえるなら「マンガ雑誌の投稿用原稿用紙」みたいなもの。枠だけ用意してあって、
-中身（あなたの会社の情報）は、これから一緒に書きこんでいきます。
+- Read it in order, from the top. Don't skip ahead partway through.
+- The commands (the text inside the black boxes) are the magic words you'll actually type
+  later. For now, it's fine to just read them.
+- If you think "ah, I get it," move on. If something's unclear, re-read that section.
 
 ---
 
-## 2. 登場人物は3人だけ
+## 1. What is this? (a 30-second explanation)
 
-覚えるのはこの3人だけです。
+An **AI company** is a small company-shaped setup where you have an AI (artificial
+intelligence) work like an "employee."
 
-| 登場人物 | 役わり | たとえるなら |
+- **You (the boss)** give the AI instructions: "do this."
+- The AI follows the instructions: it drafts documents, does calculations, keeps records.
+- Only the important decisions (spending money, signing a contract) always get a final OK
+  from you.
+
+This repository (= a bundle of folders) is the **template for that company setup**. Think of
+it like a blank submission form for a manga magazine — only the frame is provided, and the
+content (your company's information) is something we're about to fill in together, starting
+now.
+
+---
+
+## 2. Only 3 characters to remember
+
+There are only 3 characters to keep in mind.
+
+| Character | Role | Think of it like |
 |---|---|---|
-| **あなた** | 社長。指示を出す人、最後にOKを出す人 | クラスの係を決める先生 |
-| **Claude Code**（クロード・コード） | AI社員。指示を受けて実際に動く人 | まじめでよく働く新入社員 |
-| **GitHub**（ギットハブ） | 記録係。やることリストや作った書類をぜんぶ保管する場所 | クラスの黒板 + ロッカー |
+| **You** | The boss. Gives instructions, gives the final OK | A teacher assigning classroom duties |
+| **Claude Code** | The AI employee. Receives instructions and actually does the work | A diligent, hard-working new hire |
+| **GitHub** | The record-keeper. Stores every to-do list and every document created | A classroom blackboard + a locker |
 
-登場人物を絵にすると:
+Drawn out as a picture:
 
 ```
-   あなた（社長）
-      │ 「これやって」
+   You (the boss)
+      │ "Do this"
       ▼
-   Claude Code（AI社員）
-      │ 「できました」
+   Claude Code (the AI employee)
+      │ "Done!"
       ▼
-   GitHub（記録係の黒板）
+   GitHub (the record-keeper's blackboard)
       │
-   ぜんぶの記録がここに残る
+   Every record stays here
 ```
 
-- Claude Code は **あなたのパソコンの中で動く AI** です。クラウドに勝手にデータを送ったりしません。
-- GitHub は **ぜんぶをメモしておく黒板** です。何をやったか・何が残っているかがひと目でわかります。
+- Claude Code is **an AI that runs inside your own computer**. It doesn't send data off to
+  the cloud on its own.
+- GitHub is **the blackboard where everything gets noted down**. You can see at a glance
+  what's been done and what's still there.
 
 ---
 
-## 3. なぜ「会社」なの？
+## 3. Why call it a "company"?
 
-「1人でAIを使うだけなら、会社なんて大げさじゃない？」と思うかもしれません。
-でも、こんな悩みはありませんか？
+You might think "if it's just one person using an AI, isn't calling it a 'company' a bit much?"
+But haven't you run into problems like these?
 
-- AIに毎回同じことを説明するのが面倒
-- 昨日AIとどこまで話したか、忘れてしまう
-- AIが勝手にやりすぎて、こまることがある
-- そもそも、何からAIに頼めばいいのかわからない
+- It's a hassle explaining the same thing to the AI every time
+- You forget how far you got in yesterday's conversation with the AI
+- The AI sometimes does too much on its own, and that causes trouble
+- You're not even sure what to ask the AI to do in the first place
 
-これらは全部、「会社のしくみ」が無いから起こります。
+All of these happen because there's no "company structure" in place.
 
-- 会社には**社内ルール**（就業規則）があるから、新入社員が迷わない。
-- 会社には**引き継ぎノート**があるから、担当が変わっても仕事がつづく。
-- 会社には**上司の承認**があるから、勝手にお金を使われない。
+- A company has **in-house rules** (work regulations), so a new hire doesn't get lost.
+- A company has a **handover notebook**, so the work keeps going even when the person in
+  charge changes.
+- A company has **a manager's approval**, so money doesn't get spent without oversight.
 
-このテンプレートは、これらの「会社らしいしくみ」を **AI 用に用意した箱** です。
-
----
-
-## 4. 会社のしくみ — 大事な部品は5つ
-
-このリポジトリの中には、たくさんのフォルダとファイルがあります。
-最初はどれも大事に見えますが、**本当に覚えるべき部品は5つ** です。
-
-### 部品① CLAUDE.md — 会社の憲法
-
-- 場所: いちばん上のフォルダにある `CLAUDE.md`
-- 中身: 「うちの会社はこういう決まりで動きます」というルールブック
-- 例え: 学校の**校則**
-- Claude Code は、仕事を始めるとき **必ずこれを読みます**
-
-### 部品② .claude/rules/ — 細かい社内ルール
-
-- 場所: `.claude/rules/` フォルダ
-- 中身: 「Issue（お仕事チケット）を先に作ってね」「勝手に大きな変更しないでね」など、細かい約束ごと
-- 例え: 学校の**部活のルール**
-- 校則（CLAUDE.md）に「くわしくはこっちを読んで」と書いてあります
-
-### 部品③ definitions/ — 自社のデータ
-
-- 場所: `definitions/` フォルダ
-- 中身: あなたの会社の情報（お客さんは誰か、商品は何か、など）
-- 例え: 会社の**社員名簿と商品カタログ**
-- **最初は空っぽ**。これから書きこんでいく場所です
-
-### 部品④ .claude/commands/ — おまじない集
-
-- 場所: `.claude/commands/` フォルダ
-- 中身: `/define-company` みたいな「よく使うおまじない」の作り方
-- 例え: 電子レンジの「あたためボタン」
-- ぜんぶで9個あります。使いたいときにボタンを押すだけ
-
-### 部品⑤ HANDOFF.md — 引き継ぎノート
-
-- 場所: いちばん上のフォルダにある `HANDOFF.md`
-- 中身: 「きょうはここまでやりました。次はここからやってね」というメモ
-- 例え: リレーの**バトン**
-- セッション（作業時間）が終わるたびに、次の自分に手紙を書く感じです
-
-**この5つさえ覚えれば、あとは必要なときに調べれば大丈夫です。**
+This template is **a box that prepares these "company-like structures" for an AI**.
 
 ---
 
-## 5. 仕事の流れ — 5つのステップ
+## 4. The company's structure — 5 important parts
 
-会社では、どんな仕事も同じ流れで進みます。このテンプレートも同じで、
-どんな仕事も **5つのフェーズ（段階）** をぐるぐる回すだけです。
+There are a lot of folders and files inside this repository. At first, all of them might
+seem important, but there are really only **5 parts you need to remember**.
+
+### Part ① CLAUDE.md — the company's constitution
+
+- Location: `CLAUDE.md`, at the very top folder
+- Contents: a rule book saying "here's how our company operates"
+- Think of it like: your school's **code of conduct**
+- Claude Code **always reads this** when it starts working
+
+### Part ② .claude/rules/ — detailed in-house rules
+
+- Location: the `.claude/rules/` folder
+- Contents: detailed conventions like "make an Issue (a work ticket) first," "don't make a
+  big change on your own"
+- Think of it like: the **rules of a school club**
+- The code of conduct (CLAUDE.md) says "for the details, read this"
+
+### Part ③ definitions/ — your own company's data
+
+- Location: the `definitions/` folder
+- Contents: your company's information (who your customers are, what your products are, etc.)
+- Think of it like: the company's **staff roster and product catalog**
+- **Starts out empty.** This is the place you're about to fill in
+
+### Part ④ .claude/commands/ — a collection of magic words
+
+- Location: the `.claude/commands/` folder
+- Contents: how to make "frequently-used magic words," like `/define-company`
+- Think of it like: the "warm-up" button on a microwave
+- There are 9 in total. Just press the button when you want to use it
+
+### Part ⑤ HANDOFF.md — the handover notebook
+
+- Location: `HANDOFF.md`, at the very top folder
+- Contents: a note saying "here's how far I got today. Please start from here next"
+- Think of it like: a **relay-race baton**
+- Every time a session (a stretch of work) ends, it's like writing a letter to your future self
+
+**As long as you remember these 5, you can look everything else up as you need it.**
+
+---
+
+## 5. The flow of work — 5 steps
+
+At a company, every job moves through the same flow. This template is the same: whatever the
+job is, it just cycles through the same **5 phases**.
 
 ```
-① 定義  →  ② 計画  →  ③ 実行  →  ④ 検証  →  ⑤ 記録
-                                             │
-                          ┌──────────────────┘
-                          ▼
-                    次のサイクルへ
+① Define  ->  ② Plan  ->  ③ Execute  ->  ④ Verify  ->  ⑤ Record
+                                                       │
+                                    ┌──────────────────┘
+                                    ▼
+                              on to the next cycle
 ```
 
-| フェーズ | やること | たとえるなら |
+| Phase | What you do | Think of it like |
 |---|---|---|
-| ① 定義 | 「うちの会社はこういう会社です」を書きだす | 名刺を作る |
-| ② 計画 | 「今度これをやります」と GitHub に書く（お仕事チケット=Issue を作る） | 買い物リストを書く |
-| ③ 実行 | Claude Code と一緒に、実際に作業する | 買い物に行く |
-| ④ 検証 | 「ちゃんとできてる？」を機械にチェックしてもらう | レシートで金額を確認する |
-| ⑤ 記録 | 「きょうはここまでやりました」と書き残す | 家計簿に書きこむ |
+| ① Define | Write out "here's what kind of company we are" | Making a business card |
+| ② Plan | Write "we're going to do this next" onto GitHub (making a work ticket = an Issue) | Writing a shopping list |
+| ③ Execute | Actually do the work, together with Claude Code | Going shopping |
+| ④ Verify | Have a machine check "did it actually get done right?" | Checking the amount against the receipt |
+| ⑤ Record | Write down "here's how far I got today" | Writing it into a household ledger |
 
-小さな仕事（誤字を1文字直すだけ、など）は ① と ② を飛ばしてもOK。
-でも大きな仕事や、あとで取り消せない仕事は、必ず ① から順に通してください。
+Small jobs (fixing a single typo, say) can skip ① and ②. But for a big job, or one you can't
+undo afterward, always go through starting from ①, in order.
 
 ---
 
-## 6. 大事な6つのお約束
+## 6. 6 important promises
 
-このテンプレートを使うときの「6つのお約束」です。全部覚えなくても、
-最初は名前だけ知っておけば大丈夫。
+Here are the "6 promises" to keep when using this template. You don't have to memorize all
+of them — at first it's fine to just know their names.
 
-| お約束 | ひとことで言うと |
+| Promise | In one line |
 |---|---|
-| **Issue-First**（イシューファースト） | 仕事は、まず GitHub にチケットを作ってから始める |
-| **HITL Gate**（ヒットル・ゲート） | お金・契約・取り消せない操作は、必ず人間がOKを出す |
-| **SSOT**（エスエスオーティー） | 大事な情報は「1か所だけ」にまとめる |
-| **Scope Contract**（スコープ・コントラクト） | 始める前に「どこまでやるか」を宣言する |
-| **偽緑禁止**（にせみどり・きんし） | 「動いてないのに動いたフリ」をさせない |
-| **セッション引き継ぎ** | 作業の終わりに、次の自分に手紙を書く |
+| **Issue-First** | Work always starts by making a ticket on GitHub first |
+| **HITL Gate** | Money, contracts, and irreversible operations always get a human's OK |
+| **SSOT** | Important information is kept together in "just one place" |
+| **Scope Contract** | Declare "how far you're going" before you start |
+| **No fake green** | Never let it pretend to work when it isn't actually working |
+| **Session handover** | Write a letter to your future self at the end of a work session |
 
-とくに大事なのは **HITL Gate**（人間の承認）です。
-AIは速いですが、お金を使ったり、大事なデータを消したりする前には、
-**必ず一度立ち止まって、あなたに聞くようになっています**。
+**HITL Gate** (human approval) is especially important. The AI is fast, but before spending
+money or deleting important data, **it's always set up to stop and ask you first**.
 
 ---
 
-## 7. メモ箱（notes/）— 思いついたことを放りこむ場所
+## 7. The memo box (notes/) — a place to toss in whatever crosses your mind
 
-会社には、部品③で見た **`definitions/`（社員名簿や商品カタログ）** という
-「きちんとした書類棚」があります。でも、仕事のアイデアはいつもきちんとした形で
-浮かぶわけではありません。商談のあと、移動中、シャワーのあと——ふっと
-「あ、これメモしておきたい」ということがありますよね。
+The company has a proper "document shelf" — **`definitions/`** (the staff roster and product
+catalog) we saw in Part ③. But work ideas don't always come to mind in a neat, proper shape.
+Right after a meeting, on the move, right out of the shower — you sometimes suddenly think
+"oh, I should jot that down."
 
-そのために、書類棚とは別に **「メモ帳の棚」** が用意されています。それが `notes/`（ノーツ）です。
+For exactly that, there's a **"memo-pad shelf"** separate from the document shelf. That's
+`notes/`.
 
-### あなたが自由に書いていいのは「メモ箱」だけ
+### The only place you're free to write in is the "memo box"
 
-`notes/` の中にはいくつか小部屋がありますが、**あなた（社長）が自由に書いていいのは
-`notes/inbox/`（インボックス＝メモ箱）** だけ、と覚えてください。
+`notes/` has a few small rooms inside it, but remember: **the only one you (the boss) are
+free to write into is `notes/inbox/`** (the inbox = the memo box).
 
-- 商談のあとや移動中に思いついたことを、**書き方（format）を気にせず** そのまま放りこめます。
-- 「きれいに書かなきゃ」と気負わなくて大丈夫。走り書きでOK。
-- 他の小部屋（会社の物語・他社情報・お客さんメモ・手順書）には、あなたが直接書きこむ
-  必要はありません。そこは AI 社員が整理してくれる場所だからです。
+- You can toss in whatever crosses your mind right after a meeting or on the move, **without
+  worrying about format**, exactly as it is.
+- You don't need to feel pressure to "write it neatly." A quick scribble is fine.
+- You don't need to write directly into the other small rooms (the company's story, other
+  companies' information, customer notes, procedure documents) — those are places the AI
+  employee tidies up for you.
 
-### スマホやタブレットからも書ける
+### You can also write from your phone or tablet
 
-メモ箱は、パソコンだけでなく **スマホやタブレットからも書けます**。
-**Obsidian（オブシディアン）** という無料のメモアプリでこのフォルダを開くと、
-外出先からでもメモを落とせます。
+The memo box can be written to **not just from your computer, but from your phone or
+tablet too**. Opening this folder with a free note-taking app called **Obsidian** lets you
+drop in a memo even while you're out.
 
-- Obsidian が無くても大丈夫です。**パソコンで開いたときに、スマホの純正メモから
-  コピペで貼り付けるだけでもOK**。むずかしく考えないでください。
-- くわしい同期のしかたは `notes/inbox/README.md` に書いてあります。
+- You don't need Obsidian for this to work. **It's also fine to just paste it in from your
+  phone's built-in notes app when you're back at your computer.** Don't overthink it.
+- The detailed syncing steps are written in `notes/inbox/README.md`.
 
-### 放りこんだメモは、AI社員が整理してくれる
+### The AI employee tidies up whatever you toss in
 
-メモ箱に入れておくと、次にあなたが Claude Code と作業を始めたとき、
-AI社員がこのおまじないでメモ箱の中身を確認します:
+Once you put something in the memo box, the next time you start working with Claude Code,
+the AI employee checks the memo box's contents using this magic word:
 
 ```
 /ingest-context inbox
 ```
 
-このとき AI社員は、メモに **機密（実名・金額・パスワードなど）が混ざっていないか** を
-チェックしてから、内容に合わせて正しい小部屋へ整理してくれます。
+At this point, the AI employee checks whether the memo has **anything confidential mixed
+in (real names, amounts, passwords, etc.)**, and then tidies it away into the correct small
+room based on its content.
 
-| メモの中身 | 整理される先 |
+| The memo's content | Where it gets tidied to |
 |---|---|
-| 自社の物語・戦略メモ | 「会社の物語」の棚 |
-| 他社・競合・市場のこと | 「他社情報」の棚 |
-| お客さんとの商談メモ | 「お客さんメモ」の棚 |
-| 作業の手順 | 「手順書」の棚 |
+| Your own company's story, strategy memos | The "company story" shelf |
+| Information about other companies, competitors, the market | The "other-company info" shelf |
+| Notes from a meeting with a customer | The "customer notes" shelf |
+| Work procedures | The "procedure document" shelf |
 
-つまり、あなたは **「とりあえずメモ箱に放りこむ」だけ** でよくて、
-片づけは AI社員にまかせられる、というわけです。
+In other words, all you have to do is **"just toss it in the memo box for now"** — the
+tidying up can be left to the AI employee.
 
-### 大事な注意 — メモ箱にも書いてはいけないもの
+### An important warning — things you must not write even in the memo box
 
-メモ箱は git（記録係の黒板）に載って保存されます。だから、
+The memo box gets saved onto git (the record-keeper's blackboard). So:
 
-> **実名・金額・パスワードは、メモ箱にも書かないでください。**
+> **Never write real names, amounts, or passwords, even in the memo box.**
 
-もし認証情報（パスワードやAPIキー）を残す必要があるなら、それは `secrets/` という
-別の「金庫」に入れます（`secrets/` は黒板には載りません）。迷ったら `secrets/` へ、
-と覚えておけば安全です。
+If you need to keep credentials (a password or an API key), put it in a separate "safe"
+called `secrets/` instead (`secrets/` never lands on the blackboard). When in doubt, remember
+"it goes in `secrets/`," and you'll be safe.
 
-### 放置しても大丈夫な安心設計
+### Designed so it's fine even if you leave things sitting
 
-「メモ箱に入れたまま忘れちゃいそう…」と心配になるかもしれません。でも大丈夫。
-メモを **7日以上メモ箱に放置** すると、`/verify`（チェック機械）が
-「メモがたまってるよ」と教えてくれます。だから、思いついたら気軽に放りこんで、
-あとで AI社員と一緒に片づければいいのです。
+You might worry "I might forget I put something in the memo box..." But it's fine. If a memo
+**sits in the memo box for 7 days or more**, `/verify` (the check machine) will tell you
+"memos are piling up." So feel free to toss things in whenever they come to mind, and tidy
+them up together with the AI employee later.
 
 ---
 
-## 8. さあ、始めてみよう — ステップバイステップ
+## 8. Alright, let's get started — step by step
 
-いよいよ、実際に始める手順です。全部で **9ステップ**、だいたい **30分〜1時間** で終わります。
+Now, the actual steps to get started. There are **9 steps** in total, and it takes roughly
+**30 minutes to an hour**.
 
-### ステップ1. 道具をそろえる（買い物リスト）
+### Step 1. Gather your tools (a shopping list)
 
-パソコンにこれらの道具が入っているか、確認してください。
+Check whether your computer has these tools installed.
 
-| 道具 | 何をするもの？ | どうやって入れる？ |
+| Tool | What it does | How to get it |
 |---|---|---|
-| Git（ギット） | ファイルの履歴を残す道具 | [git-scm.com](https://git-scm.com) からダウンロード |
-| Python 3（パイソン） | チェックスクリプトを動かす言語 | [python.org](https://python.org) からダウンロード |
-| Claude Code | AI社員本体 | Claude の月額プランに入って、公式サイトからダウンロード |
-| GitHub アカウント | 記録係の黒板 | [github.com](https://github.com) で無料登録 |
-| GitHub CLI（`gh`） | パソコンから GitHub をあやつる道具 | [cli.github.com](https://cli.github.com) からダウンロード |
+| Git | A tool that keeps a history of your files | Download from [git-scm.com](https://git-scm.com) |
+| Python 3 | The language that runs the check scripts | Download from [python.org](https://python.org) |
+| Claude Code | The AI employee itself | Sign up for a Claude monthly plan, and download from the official site |
+| A GitHub account | The record-keeper's blackboard | Sign up for free at [github.com](https://github.com) |
+| GitHub CLI (`gh`) | A tool to operate GitHub from your computer | Download from [cli.github.com](https://cli.github.com) |
 
-**確認のしかた** — パソコンの「ターミナル」（黒い画面）を開いて、こう打ちます:
+**How to check** — open the "Terminal" (the black screen) on your computer, and type this:
 
 ```bash
 git --version
@@ -262,216 +275,229 @@ claude --version
 gh --version
 ```
 
-それぞれ、バージョン番号（`git version 2.xx.x` みたいな数字）が出たら、その道具は入っています。
-「command not found」と出たら、まだ入っていません。まずインストールしてください。
+If each one shows a version number (something like `git version 2.xx.x`), that tool is
+installed. If it says "command not found," it isn't installed yet — install it first.
 
-### ステップ2. 自分のリポジトリを作る
+### Step 2. Create your own repository
 
-GitHub の画面で、このテンプレートの **"Use this template"** ボタンを押します。
+On the GitHub screen, press this template's **"Use this template"** button.
 
-- **必ず "Private"（プライベート）を選んでください**（あなたの会社の情報を扱うので、外に見えないほうが安全）。
-- リポジトリの名前は、好きな名前でOK（例: `my-ai-company`）。
+- **Be sure to choose "Private"** (since this will handle your company's information, it's
+  safer to keep it out of public view).
+- The repository can be named whatever you like (e.g. `my-ai-company`).
 
-作れたら、それを自分のパソコンにコピー（clone、クローン）します:
+Once it's created, copy it (clone it) onto your own computer:
 
 ```bash
-git clone git@github.com:あなたのアカウント名/リポジトリ名.git
-cd リポジトリ名
+git clone git@github.com:<your-account-name>/<repository-name>.git
+cd <repository-name>
 ```
 
-これで、あなたのパソコンの中に「自分の会社のフォルダ」ができました。
+Now you have "your own company's folder" inside your computer.
 
-### ステップ3. Claude Code を起動する
+### Step 3. Start up Claude Code
 
-同じ黒い画面で、こう打ちます:
+In the same black screen, type this:
 
 ```bash
 claude
 ```
 
-Claude Code が起動して、あいさつしてきます。
-このとき、Claude Code は **自動で `CLAUDE.md`（会社の憲法）を読みます**。
-つまり、あいさつの時点で、あなたの会社のルールが Claude Code の頭に入っています。
+Claude Code starts up and greets you. At this point, Claude Code **automatically reads
+`CLAUDE.md` (the company's constitution)**. That means, by the time it greets you, your
+company's rules are already in Claude Code's head.
 
-### ステップ4. まず1回だけ、チェック機械を動かしてみる
+### Step 4. Try running the check machine, just once for now
 
-Claude Code に、こう頼みます:
+Ask Claude Code this:
 
 ```
 /verify
 ```
 
-これは「うちの会社、ちゃんとルールを守ってる？」を機械にチェックしてもらうおまじないです。
+This is the magic word that has a machine check "is our company actually following the
+rules?"
 
-**最初はほとんど「INFO（まだデータが無いのでスキップ）」が出ます。それが正解です。**
-これから中身を入れていくと、だんだん「PASS（合格）」が増えていきます。
+**At first, almost everything shows "INFO (skipped, since there's no data yet)." That's the
+correct result.** As you fill in more content going forward, "PASS" gradually increases.
 
-### ステップ5. 自社を定義する（いちばん大事!）
+### Step 5. Define your own company (the most important step!)
 
-いよいよ、あなたの会社の情報を入れていきます。Claude Code にこう頼みます:
+Now, let's actually put your company's information in. Ask Claude Code this:
 
 ```
 /define-company
 ```
 
-Claude Code が、4つの質問を1つずつ聞いてきます:
+Claude Code asks you 4 questions, one at a time:
 
-1. **どんな問題を解決している会社ですか？**
-   - 例: 「近所のパン屋さんの、レシピ管理と在庫管理を楽にする道具を作っています」
-2. **主なお客さんは誰ですか？**
-   - 例: 「街の小さなパン屋の店長さん」
-3. **どんな流れで価値を生み出していますか？**
-   - 例: 「レシピ入力 → 材料の在庫チェック → 発注アラート」
-4. **今、いちばん困っていることは何ですか？**
-   - 例: 「発注を人の勘でやっているので、材料が余ったり足りなかったりする」
+1. **What problem does your company solve?**
+   - e.g. "We make tools that make recipe management and inventory management easier for the
+     neighborhood bakery."
+2. **Who are your main customers?**
+   - e.g. "The owner of a small neighborhood bakery."
+3. **What flow do you create value through?**
+   - e.g. "Enter a recipe -> check ingredient stock -> get an order alert."
+4. **What's the biggest thing you're stuck on right now?**
+   - e.g. "Ordering is done by gut feeling, so we end up with too much or too little of an
+     ingredient."
 
-急がなくて大丈夫。1問ずつ、じっくり考えて答えてください。
-Claude Code は、あなたの答えをもとに、`definitions/ontology/company.yaml` という
-「会社の名刺ファイル」を作ってくれます。
+No need to rush. Take your time with each question and answer carefully. Based on your
+answers, Claude Code creates a "company business-card file" called
+`definitions/ontology/company.yaml`.
 
-### ステップ6. できあがった名刺を眺める
+### Step 6. Look over the finished business card
 
-Claude Code が作ってくれた `definitions/ontology/company.yaml` を開いて、
-「これで合ってるかな？」と眺めてください。ちがうところがあれば、その場で書き直しても大丈夫です。
+Open the `definitions/ontology/company.yaml` that Claude Code made, and look it over — "does
+this seem right?" If anything's off, it's fine to rewrite it right there.
 
-**この時点で、AI社員（Claude Code）は、あなたの会社のことを知っている状態になりました。**
-つぎのセッションからは、Claude Code はこの名刺を読んで動きます。
+**At this point, the AI employee (Claude Code) now knows about your company.** From the next
+session on, Claude Code reads this business card and acts accordingly.
 
-### ステップ7. 最初のお仕事チケット（Issue）を作る
+### Step 7. Make your first work ticket (an Issue)
 
-さて、なにか小さな仕事をやってみましょう。たとえば「HANDOFF.md に自己紹介を書く」でもOK。
+Now, let's try doing some small piece of work. For example, "write a self-introduction in
+HANDOFF.md" is fine too.
 
-Issue-First の原則にしたがって、先に GitHub にチケットを作ります。Claude Code にこう頼みます:
-
-```
-新しい Issue を作って: 「HANDOFF.md に自己紹介を追加する」
-```
-
-Claude Code が gh コマンドを使って、GitHub に Issue を起票してくれます。
-これで **作業の予約** ができました。
-
-### ステップ8. 作業する
-
-Claude Code にお願いします:
+Following the Issue-First principle, make a ticket on GitHub first. Ask Claude Code this:
 
 ```
-今作った Issue の作業を進めて
+Create a new Issue: "Add a self-introduction to HANDOFF.md"
 ```
 
-Claude Code は、始める前にかならず **「これを変えます、これは触りません」** を宣言してから
-作業します（=Scope Contract のお約束）。あなたはそれを見て、OKなら「進めて」と答えるだけ。
+Claude Code uses the `gh` command to file an Issue on GitHub for you. Now you have **a
+reservation for the work**.
 
-作業が終わったら、Claude Code が自動でコミット（=セーブ）してくれます。
+### Step 8. Do the work
 
-### ステップ9. 記録を残して終わる
+Ask Claude Code:
 
-セッション（作業時間）を終わるときは、こう頼みます:
+```
+Go ahead and work on the Issue you just created
+```
+
+Before starting, Claude Code always declares **"I'm going to change this, and I'm not going
+to touch that"** (= the Scope Contract promise). You look it over, and if it's OK, just
+answer "go ahead."
+
+Once the work is done, Claude Code automatically commits (= saves) it.
+
+### Step 9. Leave a record and finish up
+
+When you're ending a session (a stretch of work), ask this:
 
 ```
 /handoff
 ```
 
-Claude Code が **HANDOFF.md（引き継ぎノート）** を更新してくれます。
-「きょうはここまでやりました。次はここからやってください」というメモが残ります。
+Claude Code updates **HANDOFF.md (the handover notebook)** for you. It leaves a note saying
+"here's how far I got today. Please start from here next."
 
-次にまたセッションを始めたら、あなた（と Claude Code）は、この引き継ぎノートを読むところから
-始めればいい、というわけです。
+Next time you start a session, you (and Claude Code) can just start by reading this handover
+note.
 
-**おつかれさまでした。これで最初のサイクルが1周まわりました！**
+**Great work! That's your first cycle, all the way around!**
 
 ---
 
-## 9. 3日目までにやるといいこと
+## 9. Things worth trying by day 3
 
-はじめの1〜3日で慣れるために、こんな順番で試すのがおすすめです。
+To get comfortable in the first 1-3 days, we recommend trying things in this order:
 
-| 日 | やること | 使うおまじない |
+| Day | What to do | Magic words used |
 |---|---|---|
-| 1日目 | 上の「ステップ1〜9」を通して1周まわす | `/define-company`, `/verify`, `/handoff` |
-| 2日目 | 大きめの仕事を Epic（親チケット）に分解してみる | `/create-epic` |
-| 3日目 | 会社の中で大事な決めごとをした記録を残す練習。メモを AI に質問されながらきちんとした形で棚に直接しまう練習 | `/decision`, `/retro`, `/stock-note` |
-| 慣れてきたら | この1週間で増えたメモ・決めごとのまとめ（週報のようなもの）を AI に作ってもらう | `/digest` |
+| Day 1 | Go through "Steps 1-9" above, all the way around once | `/define-company`, `/verify`, `/handoff` |
+| Day 2 | Try breaking a bigger piece of work down into an Epic (a parent ticket) | `/create-epic` |
+| Day 3 | Practice recording an important decision made within the company. Practice filing a memo directly onto a proper shelf, in a well-formed way, while the AI asks you questions | `/decision`, `/retro`, `/stock-note` |
+| Once comfortable | Have the AI put together a summary (like a weekly report) of the memos and decisions that piled up this week | `/digest` |
 
-これで、5つのフェーズ全部を1回ずつ体験できます。
-体験しおわると、「あ、これはこう回すのか」というリズムがつかめます。
-
----
-
-## 10. こまったときの逃げ道
-
-作業中に「あれ、うまくいかない」と思ったら、まずこの3つを確認してください。
-
-### Q1. Claude Code がルールを守ってくれない気がする
-
-- `CLAUDE.md` を Claude Code がちゃんと読んでいるか、聞いてみてください:
-  ```
-  CLAUDE.md を読んだ？ 5フェーズと6原則を教えて
-  ```
-- 答えられれば、Claude Code はルールを知っています。答えられなければ、`CLAUDE.md` を Read してもらいましょう。
-
-### Q2. `/verify` が「FAIL」と言ってきた
-
-- **かならず中身を読んでください**。「めんどうだから消しちゃえ」はNG（=偽緑禁止のお約束を破ることになります）。
-- FAIL の内容を Claude Code にコピペして「これ、どうすれば直る？」と聞けば、直し方を教えてくれます。
-
-### Q3. Claude Code が勝手にお金や契約のことをやろうとしている
-
-- **止めてください**。それは HITL Gate（人間の承認）が必要な操作です。
-- 「これは私が判断するから、止まって」と言えば、Claude Code は止まります。
-
-### Q4. 何をどこに書けばいいのか、迷った
-
-- `CLAUDE.md` の **§4.5「コンテキスト地図」** を見てください。「この情報はどこに置く？」の対応表があります。
+This lets you experience all 5 phases once each. Once you've been through them, you'll pick
+up the rhythm of "ah, so this is how it cycles."
 
 ---
 
-## 11. 用語ミニ辞典
+## 10. Escape routes for when you get stuck
 
-このドキュメントに出てきたむずかしい言葉のまとめです。困ったときに戻ってきてください。
+If you're working and think "hmm, this isn't going well," check these 3 things first.
 
-| 言葉 | 意味 |
+### Q1. It feels like Claude Code isn't following the rules
+
+- Ask it whether Claude Code has actually read `CLAUDE.md`:
+  ```
+  Did you read CLAUDE.md? Tell me the 5 phases and 6 principles.
+  ```
+- If it can answer, Claude Code knows the rules. If it can't, have it Read `CLAUDE.md`.
+
+### Q2. `/verify` said "FAIL"
+
+- **Always read what it says.** "It's a hassle, let's just delete the check" is not OK
+  (= that breaks the no-fake-green promise).
+- Paste the FAIL's content to Claude Code and ask "how do I fix this?" — it will tell you
+  how.
+
+### Q3. Claude Code is trying to handle money or a contract on its own
+
+- **Stop it.** That's an operation that needs the HITL Gate (human approval).
+- Say "I'll decide this — stop," and Claude Code will stop.
+
+### Q4. You're not sure what to write where
+
+- Look at `CLAUDE.md`'s **§4.5, "the context map."** It has a table mapping "where does this
+  kind of information go?"
+
+---
+
+## 11. Mini glossary of terms
+
+A summary of the difficult words that showed up in this document. Come back here whenever
+you get stuck.
+
+| Word | Meaning |
 |---|---|
-| **リポジトリ** | ファイルとその歴史をまるごと入れておく箱。GitHub にあるものと、パソコンにあるものが対になる |
-| **クローン** | GitHub の箱を、自分のパソコンにコピーしてくること |
-| **コミット** | 作業のセーブポイントを作ること。あとから「ここに戻して」と言える |
-| **Issue（イシュー）** | GitHub 上の「お仕事チケット」。仕事の予約票 |
-| **PR（プルリクエスト）** | 「この変更をとりこんでいい？」というお伺い。Issue と組で使う |
-| **ラベル** | Issue に貼るタグ（例: `phase:planning`）。状態を表す |
-| **hooks（フック）** | Claude Code が特定のタイミングで自動で動かす小さな検査 |
-| **CLI（シーエルアイ）** | パソコンの黒い画面（ターミナル）から命令を打つやり方 |
-| **YAML（ヤムル）** | 情報を整理して書くための文字のならべ方。人間もAIも読める |
-| **SSOT** | Single Source of Truth。「大事な情報は1か所にだけ書く」というお約束 |
-| **HITL** | Human-In-The-Loop。「大事な判断は人間を通す」というお約束 |
-| **RQT** | Required Quality Test。`scripts/verify.py` が回してくれる自動チェックの正体 |
-| **frontmatter（フロントマター）** | ノートの先頭につける名札。いつ書いたか・何のメモかを機械が読めるようにする |
-| **Obsidian（オブシディアン）** | メモを見たり書いたりできる無料アプリ。無くてもこのテンプレは全部動く |
+| **Repository** | A box holding a whole set of files and their history. There's one on GitHub, paired with one on your computer |
+| **Clone** | Copying GitHub's box onto your own computer |
+| **Commit** | Creating a save point for your work. You can later say "put it back to here" |
+| **Issue** | A "work ticket" on GitHub. A reservation slip for a job |
+| **PR (pull request)** | Asking "is it OK to bring in this change?" Used together with an Issue |
+| **Label** | A tag stuck onto an Issue (e.g. `phase:planning`). Represents its state |
+| **Hooks** | Small checks that Claude Code automatically runs at a specific moment |
+| **CLI** | The way of typing commands from your computer's black screen (the terminal) |
+| **YAML** | A way of arranging text to organize information. Readable by both humans and AI |
+| **SSOT** | Single Source of Truth. The promise that "important information is only written in one place" |
+| **HITL** | Human-In-The-Loop. The promise that "important decisions always go through a human" |
+| **RQT** | Required Quality Test. The real identity of the automatic checks `scripts/verify.py` runs |
+| **Frontmatter** | A name tag put at the top of a note, so a machine can read when it was written and what it's about |
+| **Obsidian** | A free app for viewing and writing notes. This template works completely fine without it too |
 
 ---
 
-## 12. 次に読むもの
+## 12. What to read next
 
-このガイドを読み終わったら、次はこれを読んでみてください（読む順番のおすすめ順）。
+Once you've finished this guide, here's what to read next (in the recommended order):
 
-1. **`docs/starter-manual.md`** — このガイドより1段くわしいスタートマニュアル（15分）
-2. **`notes/README.md`** — メモ箱（`notes/`）の全体像。どの小部屋に何が入るかの説明（§7 の続き）
-3. **`exercises/01-define-your-company.md`** — 実際に手を動かす演習1本目
-4. **`exercises/02-first-hitl-gate.md`** — HITL Gate を体験する演習
-5. **`exercises/03-run-verify-loop.md`** — 検証ループを体験する演習
-6. **`docs/ai-company-explainer.md`** — 概念編（L1〜L9）と対応させた「なぜこの構造なのか」の解説
-7. **`CLAUDE.md`** — 会社の憲法。慣れてきたら、これをカスタマイズしていきます
-
----
-
-## 13. 覚えておいてほしい、たったひとつのこと
-
-このテンプレートに **正解の中身はまだ入っていません**。
-入っているのは **「入れ物」と「書き方の約束」だけ** です。
-
-正解を作るのは、あなたです。
-そして、それを一緒に整理してくれるのが Claude Code（AI社員）です。
-
-> **道具はそろった。あとは、あなたの会社を入れていくだけ。**
+1. **`docs/starter-manual.md`** — a start manual one level more detailed than this guide (15 min)
+2. **`notes/README.md`** — the full picture of the memo box (`notes/`). Which small room holds
+   what (a continuation of §7)
+3. **`exercises/01-define-your-company.md`** — the first hands-on exercise
+4. **`exercises/02-first-hitl-gate.md`** — an exercise to experience the HITL Gate
+5. **`exercises/03-run-verify-loop.md`** — an exercise to experience the verify loop
+6. **`docs/ai-company-explainer.md`** — an explainer of "why this structure," mapped against
+   the concepts edition (L1-L9)
+7. **`CLAUDE.md`** — the company's constitution. Once you're comfortable, you'll start
+   customizing this
 
 ---
 
-*ai-retreat-starter — AIカンパニー はじめてガイド（中学生向け）*
+## 13. The one thing we want you to remember
+
+This template **doesn't yet have the "right answer" filled in**. What it has is only
+**"the container" and "the promise of how to write things."**
+
+You're the one who creates the right answer.
+And Claude Code (the AI employee) is what helps you organize it, together.
+
+> **The tools are all here. All that's left is to put your company in.**
+
+---
+
+*ai-retreat-starter — The Beginner's Guide to an AI Company*

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja" data-theme="light">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIカンパニー はじめてガイド — ai-retreat-starter</title>
+  <title>The Beginner's Guide to an AI Company — ai-retreat-starter</title>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Noto+Sans+JP:wght@400;500;700;900&display=swap" rel="stylesheet">
   <style>
     /* ══════════ DESIGN TOKENS ══════════ */
@@ -111,7 +111,7 @@
       font-size: 13px; color: var(--text); font-weight: 500;
     }
 
-    /* ══════════ TOP BAR（テーマ切替のみ） ══════════ */
+    /* ══════════ TOP BAR (theme toggle only) ══════════ */
     .os-bar {
       background: var(--bg);
       border-bottom: 1px solid var(--border);
@@ -329,391 +329,391 @@
 
 <!-- ════ HERO ════ -->
 <header class="hero">
-  <div class="hero-tag">🏢 AI 駆動経営合宿｜ai-retreat-starter</div>
-  <h1>AI を「社員」にする、<br>小さな会社の<em>はじめ方</em></h1>
-  <p class="hero-sub">プログラミング経験ゼロでも大丈夫。むずかしい用語は、ぜんぶ日本語で説明します。</p>
+  <div class="hero-tag">🏢 AI-Driven Management Retreat｜ai-retreat-starter</div>
+  <h1>Turning AI into a "staff member" —<br>how to <em>start</em> a small company</h1>
+  <p class="hero-sub">Zero programming experience is fine. Every difficult term is explained in plain language.</p>
   <div class="badges">
-    <span class="badge">⏱ 最初の1周は 30分〜1時間</span>
-    <span class="badge">🔰 非エンジニア向け</span>
-    <span class="badge">🍎 Mac / 🪟 Windows 両対応</span>
+    <span class="badge">⏱ The first cycle takes 30 min - 1 hour</span>
+    <span class="badge">🔰 For non-engineers</span>
+    <span class="badge">🍎 Mac / 🪟 Windows both supported</span>
   </div>
 </header>
 
 <!-- ════ TOP BAR ════ -->
 <nav class="os-bar" id="osBar">
-  <span class="os-label">上から順番に読んでください。コマンド（黒い枠）は、今は読むだけでOK。</span>
-  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="ライト／ダークモード切替">🌙</button>
+  <span class="os-label">Read from the top, in order. It's fine to just read the commands (the black boxes) for now.</span>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle light/dark mode">🌙</button>
 </nav>
 
 <!-- ════ STEP NAV ════ -->
 <nav class="step-nav">
-  <a class="snav" href="#s0" onclick="openSec('s0')"><span class="n">0</span> これは何？</a>
-  <a class="snav" href="#s1" onclick="openSec('s1')"><span class="n">1</span> 5つの部品</a>
-  <a class="snav" href="#s2" onclick="openSec('s2')"><span class="n">2</span> 流れとお約束</a>
-  <a class="snav" href="#s3" onclick="openSec('s3')"><span class="n">3</span> メモ箱</a>
-  <a class="snav" href="#s4" onclick="openSec('s4')"><span class="n">4</span> 道具をそろえる</a>
-  <a class="snav" href="#s5" onclick="openSec('s5')"><span class="n">5</span> 最初の1周</a>
-  <a class="snav" href="#s6" onclick="openSec('s6')"><span class="n">6</span> 3日目まで</a>
-  <a class="snav" href="#sq" onclick="openSec('sq')"><span class="n">❓</span> こまったら</a>
-  <a class="snav" href="#sd" onclick="openSec('sd')"><span class="n">📖</span> 用語辞典</a>
+  <a class="snav" href="#s0" onclick="openSec('s0')"><span class="n">0</span> What is this?</a>
+  <a class="snav" href="#s1" onclick="openSec('s1')"><span class="n">1</span> The 5 parts</a>
+  <a class="snav" href="#s2" onclick="openSec('s2')"><span class="n">2</span> Flow &amp; promises</a>
+  <a class="snav" href="#s3" onclick="openSec('s3')"><span class="n">3</span> Memo box</a>
+  <a class="snav" href="#s4" onclick="openSec('s4')"><span class="n">4</span> Gather tools</a>
+  <a class="snav" href="#s5" onclick="openSec('s5')"><span class="n">5</span> First cycle</a>
+  <a class="snav" href="#s6" onclick="openSec('s6')"><span class="n">6</span> By day 3</a>
+  <a class="snav" href="#sq" onclick="openSec('sq')"><span class="n">❓</span> Stuck?</a>
+  <a class="snav" href="#sd" onclick="openSec('sd')"><span class="n">📖</span> Glossary</a>
 </nav>
 
 <!-- ════ MAIN ════ -->
 <main class="main">
 
-  <!-- ════ SEC 0: これは何？ ════ -->
+  <!-- ════ SEC 0: What is this? ════ -->
   <div class="sec open" id="s0">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-navy">0</div>
         <div>
-          <div class="sec-lbl">イントロ</div>
-          <div class="sec-title">これは何？ — 30秒でわかる説明</div>
+          <div class="sec-lbl">Intro</div>
+          <div class="sec-title">What is this? — a 30-second explanation</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約3分</span>
+        <span class="sec-time">⏱ about 3 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <p><strong>AIカンパニー</strong>とは、AI（人工知能）を「社員」のように働かせる、小さな会社のしくみです。</p>
+      <p>An <strong>AI company</strong> is a small company-shaped setup where you have an AI (artificial intelligence) work like a "staff member."</p>
       <ol class="slist">
-        <li class="si"><div class="si-body"><strong>あなた（社長）</strong>が、AIに「これをやって」と指示を出します。</div></li>
-        <li class="si"><div class="si-body">AIは指示のとおりに、資料を作ったり、計算したり、記録をつけたりします。</div></li>
-        <li class="si"><div class="si-body"><strong>大事な判断（お金を使う、契約する）だけは、必ずあなたが最後にOKを出します。</strong></div></li>
+        <li class="si"><div class="si-body"><strong>You (the boss)</strong> give the AI instructions: "do this."</div></li>
+        <li class="si"><div class="si-body">The AI follows the instructions: it drafts documents, does calculations, keeps records.</div></li>
+        <li class="si"><div class="si-body"><strong>Only the important decisions (spending money, signing a contract) always get a final OK from you.</strong></div></li>
       </ol>
-      <p>このリポジトリ（=フォルダのかたまり）は、その<strong>会社のしくみのひな形（テンプレート）</strong>です。
-      たとえるなら「マンガ雑誌の投稿用原稿用紙」。枠だけ用意してあって、中身（あなたの会社の情報）は、これから一緒に書きこんでいきます。</p>
+      <p>This repository (= a bundle of folders) is <strong>the template for that company setup</strong>.
+      Think of it like a blank submission form for a manga magazine. Only the frame is provided, and the content (your company's information) is something we're about to fill in together.</p>
 
-      <h4>登場人物は3人だけ</h4>
+      <h4>Only 3 characters to remember</h4>
       <table class="ttable">
-        <thead><tr><th>登場人物</th><th>役わり</th><th>たとえるなら</th></tr></thead>
+        <thead><tr><th>Character</th><th>Role</th><th>Think of it like</th></tr></thead>
         <tbody>
-          <tr><td><strong>あなた</strong></td><td>社長。指示を出す人、最後にOKを出す人</td><td>クラスの係を決める先生</td></tr>
-          <tr><td><strong>Claude Code</strong>（クロード・コード）</td><td>AI社員。指示を受けて実際に動く人</td><td>まじめでよく働く新入社員</td></tr>
-          <tr><td><strong>GitHub</strong>（ギットハブ）</td><td>記録係。やることリストや作った書類をぜんぶ保管する場所</td><td>クラスの黒板 + ロッカー</td></tr>
+          <tr><td><strong>You</strong></td><td>The boss. Gives instructions, gives the final OK</td><td>A teacher assigning classroom duties</td></tr>
+          <tr><td><strong>Claude Code</strong></td><td>The AI employee. Receives instructions and actually does the work</td><td>A diligent, hard-working new hire</td></tr>
+          <tr><td><strong>GitHub</strong></td><td>The record-keeper. Stores every to-do list and every document created</td><td>A classroom blackboard + a locker</td></tr>
         </tbody>
       </table>
-      <div class="flow">あなた（社長）
-   │ 「これやって」
+      <div class="flow">You (the boss)
+   │ "Do this"
    ▼
-Claude Code（AI社員）
-   │ 「できました」
+Claude Code (the AI employee)
+   │ "Done!"
    ▼
-GitHub（記録係の黒板）
+GitHub (the record-keeper's blackboard)
    │
-ぜんぶの記録がここに残る</div>
+Every record stays here</div>
 
-      <h4>なぜ「会社」なの？</h4>
-      <p>「AIに毎回同じことを説明するのが面倒」「昨日どこまで話したか忘れた」「AIが勝手にやりすぎてこまる」——
-      これらは全部、<strong>「会社のしくみ」が無いから</strong>起こります。</p>
+      <h4>Why call it a "company"?</h4>
+      <p>"It's a hassle explaining the same thing to the AI every time." "I forget how far we got yesterday." "The AI does too much on its own and that causes trouble." —
+      all of these happen <strong>because there's no "company structure" in place</strong>.</p>
       <div class="cl cl-teal">
-        <div class="cl-title">🏢 会社らしいしくみ = AIが迷わないしくみ</div>
-        <p>会社には<strong>社内ルール</strong>があるから新入社員が迷わない。<strong>引き継ぎノート</strong>があるから担当が変わっても仕事がつづく。<strong>上司の承認</strong>があるから勝手にお金を使われない。このテンプレートは、これらを AI 用に用意した箱です。</p>
+        <div class="cl-title">🏢 A company-like structure = a structure where the AI doesn't get lost</div>
+        <p>A company has <strong>in-house rules</strong>, so a new hire doesn't get lost. It has a <strong>handover notebook</strong>, so work continues even when the person in charge changes. It has a <strong>manager's approval</strong>, so money doesn't get spent without oversight. This template is a box that prepares these for an AI.</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 1: 部品5つ ════ -->
+  <!-- ════ SEC 1: The 5 parts ════ -->
   <div class="sec" id="s1">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-navy">1</div>
         <div>
-          <div class="sec-lbl">しくみを知る</div>
-          <div class="sec-title">会社のしくみ — 大事な部品は5つ</div>
+          <div class="sec-lbl">Learn the structure</div>
+          <div class="sec-title">The company's structure — 5 important parts</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約5分</span>
+        <span class="sec-time">⏱ about 5 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <p>フォルダとファイルはたくさんありますが、<strong>本当に覚えるべき部品は5つ</strong>です。</p>
+      <p>There are a lot of folders and files, but there are really only <strong>5 parts you need to remember</strong>.</p>
       <table class="ttable">
-        <thead><tr><th>部品</th><th>場所</th><th>中身</th><th>たとえ</th></tr></thead>
+        <thead><tr><th>Part</th><th>Location</th><th>Contents</th><th>Think of it like</th></tr></thead>
         <tbody>
-          <tr><td><strong>① CLAUDE.md</strong><br>会社の憲法</td><td>いちばん上のフォルダ</td><td>「うちの会社はこういう決まりで動きます」というルールブック。Claude Code は仕事を始めるとき<strong>必ずこれを読みます</strong></td><td>学校の校則</td></tr>
-          <tr><td><strong>② .claude/rules/</strong><br>細かい社内ルール</td><td><code>.claude/rules/</code></td><td>「Issue（お仕事チケット）を先に作ってね」「勝手に大きな変更しないでね」などの約束ごと</td><td>部活のルール</td></tr>
-          <tr><td><strong>③ definitions/</strong><br>自社のデータ</td><td><code>definitions/</code></td><td>あなたの会社の情報（お客さんは誰か、商品は何か）。<strong>最初は空っぽ</strong>。これから書きこんでいく場所</td><td>社員名簿と商品カタログ</td></tr>
-          <tr><td><strong>④ .claude/commands/</strong><br>おまじない集</td><td><code>.claude/commands/</code></td><td><code>/define-company</code> みたいな「よく使うおまじない」の作り方。<strong>ぜんぶで9個</strong>。使いたいときにボタンを押すだけ</td><td>電子レンジのあたためボタン</td></tr>
-          <tr><td><strong>⑤ HANDOFF.md</strong><br>引き継ぎノート</td><td>いちばん上のフォルダ</td><td>「きょうはここまでやりました。次はここからやってね」というメモ。セッションが終わるたびに、次の自分に手紙を書く感じ</td><td>リレーのバトン</td></tr>
+          <tr><td><strong>① CLAUDE.md</strong><br>The company's constitution</td><td>The very top folder</td><td>A rule book saying "here's how our company operates." Claude Code <strong>always reads this</strong> when it starts working</td><td>A school's code of conduct</td></tr>
+          <tr><td><strong>② .claude/rules/</strong><br>Detailed in-house rules</td><td><code>.claude/rules/</code></td><td>Conventions like "make an Issue (a work ticket) first," "don't make a big change on your own"</td><td>The rules of a school club</td></tr>
+          <tr><td><strong>③ definitions/</strong><br>Your own company's data</td><td><code>definitions/</code></td><td>Your company's information (who your customers are, what your products are). <strong>Starts out empty.</strong> The place you're about to fill in</td><td>A staff roster and product catalog</td></tr>
+          <tr><td><strong>④ .claude/commands/</strong><br>A collection of magic words</td><td><code>.claude/commands/</code></td><td>How to make "frequently-used magic words," like <code>/define-company</code>. <strong>9 in total.</strong> Just press the button when you want to use it</td><td>A microwave's "warm-up" button</td></tr>
+          <tr><td><strong>⑤ HANDOFF.md</strong><br>The handover notebook</td><td>The very top folder</td><td>A note saying "here's how far I got today. Please start from here next." Like writing a letter to your future self every time a session ends</td><td>A relay-race baton</td></tr>
         </tbody>
       </table>
       <div class="cl cl-tip">
-        <div class="cl-title">💡 ポイント</div>
-        <p>この5つさえ覚えれば、あとは必要なときに調べれば大丈夫です。</p>
+        <div class="cl-title">💡 The point</div>
+        <p>As long as you remember these 5, you can look everything else up as you need it.</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 2: 流れとお約束 ════ -->
+  <!-- ════ SEC 2: Flow & promises ════ -->
   <div class="sec" id="s2">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-navy">2</div>
         <div>
-          <div class="sec-lbl">しくみを知る</div>
-          <div class="sec-title">仕事の流れ（5ステップ）と 6つのお約束</div>
+          <div class="sec-lbl">Learn the structure</div>
+          <div class="sec-title">The flow of work (5 steps) and 6 promises</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約5分</span>
+        <span class="sec-time">⏱ about 5 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <p>どんな仕事も、この<strong>5つのフェーズ（段階）</strong>をぐるぐる回すだけです。</p>
-      <div class="flow">① 定義 → ② 計画 → ③ 実行 → ④ 検証 → ⑤ 記録
+      <p>Whatever the job is, it just cycles through these <strong>5 phases</strong>.</p>
+      <div class="flow">① Define → ② Plan → ③ Execute → ④ Verify → ⑤ Record
                                     │
              ┌──────────────────────┘
              ▼
-       次のサイクルへ</div>
+       on to the next cycle</div>
       <table class="ttable">
-        <thead><tr><th>フェーズ</th><th>やること</th><th>たとえるなら</th></tr></thead>
+        <thead><tr><th>Phase</th><th>What you do</th><th>Think of it like</th></tr></thead>
         <tbody>
-          <tr><td>① 定義</td><td>「うちの会社はこういう会社です」を書きだす</td><td>名刺を作る</td></tr>
-          <tr><td>② 計画</td><td>「今度これをやります」と GitHub に書く（お仕事チケット=Issue を作る）</td><td>買い物リストを書く</td></tr>
-          <tr><td>③ 実行</td><td>Claude Code と一緒に、実際に作業する</td><td>買い物に行く</td></tr>
-          <tr><td>④ 検証</td><td>「ちゃんとできてる？」を機械にチェックしてもらう</td><td>レシートで金額を確認する</td></tr>
-          <tr><td>⑤ 記録</td><td>「きょうはここまでやりました」と書き残す</td><td>家計簿に書きこむ</td></tr>
+          <tr><td>① Define</td><td>Write out "here's what kind of company we are"</td><td>Making a business card</td></tr>
+          <tr><td>② Plan</td><td>Write "we're going to do this next" onto GitHub (making a work ticket = an Issue)</td><td>Writing a shopping list</td></tr>
+          <tr><td>③ Execute</td><td>Actually do the work, together with Claude Code</td><td>Going shopping</td></tr>
+          <tr><td>④ Verify</td><td>Have a machine check "did it actually get done right?"</td><td>Checking the amount against the receipt</td></tr>
+          <tr><td>⑤ Record</td><td>Write down "here's how far I got today"</td><td>Writing it into a household ledger</td></tr>
         </tbody>
       </table>
-      <p><small>小さな仕事（誤字を1文字直すだけ、など）は ① と ② を飛ばしてもOK。でも大きな仕事や、あとで取り消せない仕事は、必ず ① から順に通してください。</small></p>
+      <p><small>Small jobs (fixing a single typo, say) can skip ① and ②. But for a big job, or one you can't undo afterward, always go through starting from ①, in order.</small></p>
 
-      <h4>大事な6つのお約束</h4>
-      <p>全部覚えなくても、最初は名前だけ知っておけば大丈夫。</p>
+      <h4>6 important promises</h4>
+      <p>You don't have to memorize all of them — at first it's fine to just know their names.</p>
       <table class="ttable">
-        <thead><tr><th>お約束</th><th>ひとことで言うと</th></tr></thead>
+        <thead><tr><th>Promise</th><th>In one line</th></tr></thead>
         <tbody>
-          <tr><td><strong>Issue-First</strong>（イシューファースト）</td><td>仕事は、まず GitHub にチケットを作ってから始める</td></tr>
-          <tr><td><strong>HITL Gate</strong>（ヒットル・ゲート）</td><td>お金・契約・取り消せない操作は、必ず人間がOKを出す</td></tr>
-          <tr><td><strong>SSOT</strong>（エスエスオーティー）</td><td>大事な情報は「1か所だけ」にまとめる</td></tr>
-          <tr><td><strong>Scope Contract</strong>（スコープ・コントラクト）</td><td>始める前に「どこまでやるか」を宣言する</td></tr>
-          <tr><td><strong>偽緑禁止</strong>（にせみどり・きんし）</td><td>「動いてないのに動いたフリ」をさせない</td></tr>
-          <tr><td><strong>セッション引き継ぎ</strong></td><td>作業の終わりに、次の自分に手紙を書く</td></tr>
+          <tr><td><strong>Issue-First</strong></td><td>Work always starts by making a ticket on GitHub first</td></tr>
+          <tr><td><strong>HITL Gate</strong></td><td>Money, contracts, and irreversible operations always get a human's OK</td></tr>
+          <tr><td><strong>SSOT</strong></td><td>Important information is kept together in "just one place"</td></tr>
+          <tr><td><strong>Scope Contract</strong></td><td>Declare "how far you're going" before you start</td></tr>
+          <tr><td><strong>No fake green</strong></td><td>Never let it pretend to work when it isn't actually working</td></tr>
+          <tr><td><strong>Session handover</strong></td><td>Write a letter to your future self at the end of a work session</td></tr>
         </tbody>
       </table>
       <div class="cl cl-warn">
-        <div class="cl-title">⚠️ とくに大事なのは HITL Gate（人間の承認）</div>
-        <p>AIは速いですが、お金を使ったり、大事なデータを消したりする前には、<strong>必ず一度立ち止まって、あなたに聞くようになっています</strong>。</p>
+        <div class="cl-title">⚠️ HITL Gate (human approval) is especially important</div>
+        <p>The AI is fast, but before spending money or deleting important data, <strong>it's always set up to stop and ask you first</strong>.</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 3: メモ箱 ════ -->
+  <!-- ════ SEC 3: Memo box ════ -->
   <div class="sec" id="s3">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-teal">3</div>
         <div>
-          <div class="sec-lbl">しくみを知る</div>
-          <div class="sec-title">メモ箱（notes/）— 思いついたことを放りこむ場所</div>
+          <div class="sec-lbl">Learn the structure</div>
+          <div class="sec-title">The memo box (notes/) — a place to toss in whatever crosses your mind</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約5分</span>
+        <span class="sec-time">⏱ about 5 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <p>会社には <code>definitions/</code>（社員名簿や商品カタログ）という「きちんとした書類棚」とは別に、
-      <strong>「メモ帳の棚」</strong>が用意されています。それが <code>notes/</code>（ノーツ）です。
-      商談のあと、移動中——ふっと「あ、これメモしておきたい」というときのための場所です。</p>
+      <p>Separate from the company's proper "document shelf" <code>definitions/</code> (a staff roster and product catalog),
+      there's a <strong>"memo-pad shelf"</strong> too. That's <code>notes/</code>.
+      It's a place for right after a meeting, or on the move — for when you suddenly think "oh, I should jot that down."</p>
 
-      <h4>あなたが自由に書いていいのは「メモ箱」だけ</h4>
+      <h4>The only place you're free to write in is the "memo box"</h4>
       <ol class="slist">
-        <li class="si"><div class="si-body"><strong>あなた（社長）が自由に書いていいのは <code>notes/inbox/</code>（メモ箱）だけ</strong>、と覚えてください。</div></li>
-        <li class="si"><div class="si-body">書き方（format）を気にせず、<strong>走り書きでOK</strong>。「きれいに書かなきゃ」と気負わなくて大丈夫。</div></li>
-        <li class="si"><div class="si-body">他の小部屋（会社の物語・他社情報・お客さんメモ・手順書）には直接書きこまない。そこは <strong>AI社員が整理してくれる場所</strong>だからです。</div></li>
+        <li class="si"><div class="si-body">Remember: <strong>the only place you (the boss) are free to write into is <code>notes/inbox/</code> (the memo box)</strong>.</div></li>
+        <li class="si"><div class="si-body">Don't worry about format — <strong>a quick scribble is fine</strong>. No need to feel pressure to "write it neatly."</div></li>
+        <li class="si"><div class="si-body">You don't write directly into the other small rooms (the company's story, other companies' info, customer notes, procedure documents) — those are places <strong>the AI employee tidies up for you</strong>.</div></li>
       </ol>
 
-      <h4>スマホやタブレットからも書ける</h4>
-      <p><strong>Obsidian（オブシディアン）</strong>という無料のメモアプリでこのフォルダを開くと、外出先からでもメモを落とせます。
-      Obsidian が無くても大丈夫——<strong>パソコンで開いたときに、スマホの純正メモからコピペで貼り付けるだけでもOK</strong>。
-      くわしい同期のしかたは <code>notes/inbox/README.md</code> に書いてあります。</p>
+      <h4>You can also write from your phone or tablet</h4>
+      <p>Opening this folder with a free note-taking app called <strong>Obsidian</strong> lets you drop in a memo even while you're out.
+      You don't need Obsidian for this — <strong>it's also fine to just paste it in from your phone's built-in notes app when you're back at your computer</strong>.
+      The detailed syncing steps are written in <code>notes/inbox/README.md</code>.</p>
 
-      <h4>放りこんだメモは、AI社員が整理してくれる</h4>
-      <p>次に Claude Code と作業を始めたとき、このおまじないでメモ箱の中身を確認してもらえます:</p>
+      <h4>The AI employee tidies up whatever you toss in</h4>
+      <p>The next time you start working with Claude Code, this magic word has it check the memo box's contents:</p>
       <div class="code-block">
         <span class="code-text">/ingest-context inbox</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p>AI社員は、メモに<strong>機密（実名・金額・パスワードなど）が混ざっていないか</strong>をチェックしてから、正しい小部屋へ整理してくれます。</p>
+      <p>The AI employee checks whether the memo has <strong>anything confidential mixed in (real names, amounts, passwords, etc.)</strong>, and then tidies it into the correct small room.</p>
       <table class="ttable">
-        <thead><tr><th>メモの中身</th><th>整理される先</th></tr></thead>
+        <thead><tr><th>The memo's content</th><th>Where it gets tidied to</th></tr></thead>
         <tbody>
-          <tr><td>自社の物語・戦略メモ</td><td>「会社の物語」の棚（<code>notes/company/</code>）</td></tr>
-          <tr><td>他社・競合・市場のこと</td><td>「他社情報」の棚（<code>notes/market/</code>）</td></tr>
-          <tr><td>お客さんとの商談メモ</td><td>「お客さんメモ」の棚（<code>notes/clients/</code>）</td></tr>
-          <tr><td>作業の手順</td><td>「手順書」の棚（<code>notes/sops/</code>）</td></tr>
+          <tr><td>Your own company's story, strategy memos</td><td>The "company story" shelf (<code>notes/company/</code>)</td></tr>
+          <tr><td>Information about other companies, competitors, the market</td><td>The "other-company info" shelf (<code>notes/market/</code>)</td></tr>
+          <tr><td>Notes from a meeting with a customer</td><td>The "customer notes" shelf (<code>notes/clients/</code>)</td></tr>
+          <tr><td>Work procedures</td><td>The "procedure document" shelf (<code>notes/sops/</code>)</td></tr>
         </tbody>
       </table>
       <div class="cl cl-tip">
-        <div class="cl-title">💡 安心設計</div>
-        <p>メモ箱に7日以上放置すると、<code>/verify</code>（チェック機械）が「たまってるよ」と教えてくれます。つまり、あなたは<strong>「とりあえず放りこむ」だけ</strong>でよくて、片づけは AI社員にまかせられます。</p>
+        <div class="cl-title">💡 Designed so it's fine to leave things sitting</div>
+        <p>If a memo sits in the memo box for 7 days or more, <code>/verify</code> (the check machine) tells you "things are piling up." In other words, you only need to <strong>"toss it in for now"</strong> — tidying up can be left to the AI employee.</p>
       </div>
       <div class="cl cl-err">
-        <div class="cl-title">🚫 大事な注意 — メモ箱にも書いてはいけないもの</div>
-        <p>メモ箱は git（記録係の黒板）に載って保存されます。<strong>実名・金額・パスワードは、メモ箱にも書かないでください。</strong>認証情報は <code>secrets/</code> という別の「金庫」へ（そこは黒板には載りません）。迷ったら <code>secrets/</code> へ、と覚えておけば安全です。</p>
+        <div class="cl-title">🚫 An important warning — things you must not write even in the memo box</div>
+        <p>The memo box gets saved onto git (the record-keeper's blackboard). <strong>Never write real names, amounts, or passwords, even in the memo box.</strong> Credentials go in a separate "safe" called <code>secrets/</code> instead (that never lands on the blackboard). When in doubt, remember "it goes in <code>secrets/</code>," and you'll be safe.</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 4: 道具をそろえる ════ -->
+  <!-- ════ SEC 4: Gather tools ════ -->
   <div class="sec" id="s4">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-teal">4</div>
         <div>
-          <div class="sec-lbl">手を動かす（ステップ1〜4）</div>
-          <div class="sec-title">道具をそろえて、起動する</div>
+          <div class="sec-lbl">Hands-on (Steps 1-4)</div>
+          <div class="sec-title">Gather your tools, and start up</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約20分</span>
+        <span class="sec-time">⏱ about 20 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <h4>ステップ1. 道具をそろえる（買い物リスト）</h4>
+      <h4>Step 1. Gather your tools (a shopping list)</h4>
       <table class="ttable">
-        <thead><tr><th>道具</th><th>何をするもの？</th><th>どうやって入れる？</th></tr></thead>
+        <thead><tr><th>Tool</th><th>What it does</th><th>How to get it</th></tr></thead>
         <tbody>
-          <tr><td>Git（ギット）</td><td>ファイルの履歴を残す道具</td><td><a href="https://git-scm.com" target="_blank">git-scm.com</a> からダウンロード</td></tr>
-          <tr><td>Python 3（パイソン）</td><td>チェックスクリプトを動かす言語</td><td><a href="https://python.org" target="_blank">python.org</a> からダウンロード</td></tr>
-          <tr><td>Claude Code</td><td>AI社員本体</td><td>Claude の月額プランに入って、公式サイトからダウンロード</td></tr>
-          <tr><td>GitHub アカウント</td><td>記録係の黒板</td><td><a href="https://github.com" target="_blank">github.com</a> で無料登録</td></tr>
-          <tr><td>GitHub CLI（<code>gh</code>）</td><td>パソコンから GitHub をあやつる道具</td><td><a href="https://cli.github.com" target="_blank">cli.github.com</a> からダウンロード</td></tr>
+          <tr><td>Git</td><td>A tool that keeps a history of your files</td><td>Download from <a href="https://git-scm.com" target="_blank">git-scm.com</a></td></tr>
+          <tr><td>Python 3</td><td>The language that runs the check scripts</td><td>Download from <a href="https://python.org" target="_blank">python.org</a></td></tr>
+          <tr><td>Claude Code</td><td>The AI employee itself</td><td>Sign up for a Claude monthly plan, and download from the official site</td></tr>
+          <tr><td>A GitHub account</td><td>The record-keeper's blackboard</td><td>Sign up for free at <a href="https://github.com" target="_blank">github.com</a></td></tr>
+          <tr><td>GitHub CLI (<code>gh</code>)</td><td>A tool to operate GitHub from your computer</td><td>Download from <a href="https://cli.github.com" target="_blank">cli.github.com</a></td></tr>
         </tbody>
       </table>
-      <p><strong>確認のしかた</strong> — パソコンの「ターミナル」（黒い画面）を開いて、こう打ちます:</p>
+      <p><strong>How to check</strong> — open the "Terminal" (the black screen) on your computer, and type this:</p>
       <div class="code-block">
         <span class="code-text">git --version && python3 --version && claude --version && gh --version</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p><small>それぞれバージョン番号が出たら、その道具は入っています。「command not found」と出たら、まだ入っていません。</small></p>
+      <p><small>If each one shows a version number, that tool is installed. If it says "command not found," it isn't installed yet.</small></p>
 
-      <h4>ステップ2. 自分のリポジトリを作る</h4>
+      <h4>Step 2. Create your own repository</h4>
       <ol class="slist">
-        <li class="si"><div class="si-body">GitHub の画面で、このテンプレートの <strong>"Use this template"</strong> ボタンを押す。</div></li>
-        <li class="si"><div class="si-body"><strong>必ず "Private"（プライベート）を選ぶ</strong>（あなたの会社の情報を扱うので、外に見えないほうが安全）。名前は好きな名前でOK（例: <code>my-ai-company</code>）。</div></li>
-        <li class="si"><div class="si-body">自分のパソコンにコピー（clone、クローン）する:</div></li>
+        <li class="si"><div class="si-body">On the GitHub screen, press this template's <strong>"Use this template"</strong> button.</div></li>
+        <li class="si"><div class="si-body"><strong>Be sure to choose "Private"</strong> (since this will handle your company's information, it's safer to keep it out of public view). Name it whatever you like (e.g. <code>my-ai-company</code>).</div></li>
+        <li class="si"><div class="si-body">Copy it (clone it) onto your own computer:</div></li>
       </ol>
       <div class="code-block">
-        <span class="code-text">git clone git@github.com:あなたのアカウント名/リポジトリ名.git && cd リポジトリ名</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <span class="code-text">git clone git@github.com:&lt;your-account-name&gt;/&lt;repository-name&gt;.git && cd &lt;repository-name&gt;</span>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
 
-      <h4>ステップ3. Claude Code を起動する</h4>
+      <h4>Step 3. Start up Claude Code</h4>
       <div class="code-block">
         <span class="code-text">claude</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p>Claude Code が起動して、あいさつしてきます。このとき<strong>自動で CLAUDE.md（会社の憲法）を読みます</strong>。あいさつの時点で、会社のルールが頭に入っています。</p>
+      <p>Claude Code starts up and greets you. At this point it <strong>automatically reads CLAUDE.md (the company's constitution)</strong>. By the time it greets you, your company's rules are already in its head.</p>
 
-      <h4>ステップ4. まず1回だけ、チェック機械を動かしてみる</h4>
+      <h4>Step 4. Try running the check machine, just once for now</h4>
       <div class="code-block">
         <span class="code-text">/verify</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
       <div class="cl cl-tip">
-        <div class="cl-title">💡 最初は「INFO」だらけで正解</div>
-        <p>「うちの会社、ちゃんとルールを守ってる？」を機械にチェックしてもらうおまじないです。<strong>最初はほとんど「INFO（まだデータが無いのでスキップ）」が出ます。それが正解です。</strong>これから中身を入れていくと、だんだん「PASS（合格）」が増えていきます。</p>
+        <div class="cl-title">💡 Full of "INFO" at first — that's correct</div>
+        <p>This is the magic word that has a machine check "is our company actually following the rules?" <strong>At first, almost everything shows "INFO (skipped, since there's no data yet)." That's the correct result.</strong> As you fill in more content going forward, "PASS" gradually increases.</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 5: 最初の1周 ════ -->
+  <!-- ════ SEC 5: First cycle ════ -->
   <div class="sec" id="s5">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-teal">5</div>
         <div>
-          <div class="sec-lbl">手を動かす（ステップ5〜9）</div>
-          <div class="sec-title">自社を定義して、最初の1周を回す</div>
+          <div class="sec-lbl">Hands-on (Steps 5-9)</div>
+          <div class="sec-title">Define your company, and run your first cycle</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 約30分</span>
+        <span class="sec-time">⏱ about 30 min</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <h4>ステップ5. 自社を定義する（いちばん大事!）</h4>
+      <h4>Step 5. Define your own company (the most important step!)</h4>
       <div class="code-block">
         <span class="code-text">/define-company</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p>Claude Code が、4つの質問を1つずつ聞いてきます:</p>
+      <p>Claude Code asks you 4 questions, one at a time:</p>
       <ol class="slist">
-        <li class="si"><div class="si-body"><strong>どんな問題を解決している会社ですか？</strong><br><small>例: 「近所のパン屋さんの、レシピ管理と在庫管理を楽にする道具を作っています」</small></div></li>
-        <li class="si"><div class="si-body"><strong>主なお客さんは誰ですか？</strong><br><small>例: 「街の小さなパン屋の店長さん」</small></div></li>
-        <li class="si"><div class="si-body"><strong>どんな流れで価値を生み出していますか？</strong><br><small>例: 「レシピ入力 → 材料の在庫チェック → 発注アラート」</small></div></li>
-        <li class="si"><div class="si-body"><strong>今、いちばん困っていることは何ですか？</strong><br><small>例: 「発注を人の勘でやっているので、材料が余ったり足りなかったりする」</small></div></li>
+        <li class="si"><div class="si-body"><strong>What problem does your company solve?</strong><br><small>e.g. "We make tools that make recipe management and inventory management easier for the neighborhood bakery."</small></div></li>
+        <li class="si"><div class="si-body"><strong>Who are your main customers?</strong><br><small>e.g. "The owner of a small neighborhood bakery."</small></div></li>
+        <li class="si"><div class="si-body"><strong>What flow do you create value through?</strong><br><small>e.g. "Enter a recipe -> check ingredient stock -> get an order alert."</small></div></li>
+        <li class="si"><div class="si-body"><strong>What's the biggest thing you're stuck on right now?</strong><br><small>e.g. "Ordering is done by gut feeling, so we end up with too much or too little of an ingredient."</small></div></li>
       </ol>
-      <p>急がなくて大丈夫。答えをもとに、<code>definitions/ontology/company.yaml</code> という「会社の名刺ファイル」を作ってくれます。</p>
+      <p>No need to rush. Based on your answers, it creates a "company business-card file" called <code>definitions/ontology/company.yaml</code>.</p>
 
-      <h4>ステップ6. できあがった名刺を眺める</h4>
-      <p><code>definitions/ontology/company.yaml</code> を開いて、「これで合ってるかな？」と眺めてください。ちがうところは、その場で書き直しても大丈夫。<strong>この時点で、AI社員はあなたの会社のことを知っている状態になりました。</strong></p>
+      <h4>Step 6. Look over the finished business card</h4>
+      <p>Open <code>definitions/ontology/company.yaml</code>, and look it over — "does this seem right?" If anything's off, it's fine to rewrite it right there. <strong>At this point, the AI employee now knows about your company.</strong></p>
 
-      <h4>ステップ7. 最初のお仕事チケット（Issue）を作る</h4>
-      <p>なにか小さな仕事をやってみましょう。Issue-First の原則にしたがって、先にチケットを作ります:</p>
+      <h4>Step 7. Make your first work ticket (an Issue)</h4>
+      <p>Let's try doing some small piece of work. Following the Issue-First principle, make a ticket first:</p>
       <div class="code-block">
-        <span class="code-text">新しい Issue を作って: 「HANDOFF.md に自己紹介を追加する」</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <span class="code-text">Create a new Issue: "Add a self-introduction to HANDOFF.md"</span>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p>Claude Code が GitHub に Issue を起票してくれます。これで<strong>作業の予約</strong>ができました。</p>
+      <p>Claude Code files an Issue on GitHub for you. Now you have <strong>a reservation for the work</strong>.</p>
 
-      <h4>ステップ8. 作業する</h4>
+      <h4>Step 8. Do the work</h4>
       <div class="code-block">
-        <span class="code-text">今作った Issue の作業を進めて</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <span class="code-text">Go ahead and work on the Issue you just created</span>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p>Claude Code は、始める前にかならず<strong>「これを変えます、これは触りません」</strong>を宣言してから作業します（= Scope Contract のお約束）。あなたはそれを見て、OKなら「進めて」と答えるだけ。終わったら自動でコミット（=セーブ）してくれます。</p>
+      <p>Before starting, Claude Code always declares <strong>"I'm going to change this, and I'm not going to touch that"</strong> (= the Scope Contract promise). You look it over, and if it's OK, just answer "go ahead." Once done, it automatically commits (= saves) it.</p>
 
-      <h4>ステップ9. 記録を残して終わる</h4>
+      <h4>Step 9. Leave a record and finish up</h4>
       <div class="code-block">
         <span class="code-text">/handoff</span>
-        <button class="cp-btn" onclick="cp(this)">コピー</button>
+        <button class="cp-btn" onclick="cp(this)">Copy</button>
       </div>
-      <p><strong>HANDOFF.md（引き継ぎノート）</strong>が更新され、「きょうはここまで。次はここから」というメモが残ります。次のセッションは、このノートを読むところから始めればOK。</p>
+      <p><strong>HANDOFF.md (the handover notebook)</strong> gets updated, leaving a note saying "here's how far I got today. Start from here next." Next session, you can just start by reading this notebook.</p>
       <div class="cl cl-tip">
-        <div class="cl-title">🎉 おつかれさまでした</div>
-        <p>これで最初のサイクルが1周まわりました！</p>
+        <div class="cl-title">🎉 Great work!</div>
+        <p>That's your first cycle, all the way around!</p>
       </div>
     </div>
   </div>
 
-  <!-- ════ SEC 6: 3日目まで ════ -->
+  <!-- ════ SEC 6: By day 3 ════ -->
   <div class="sec" id="s6">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-teal">6</div>
         <div>
-          <div class="sec-lbl">慣れる</div>
-          <div class="sec-title">3日目までにやるといいこと</div>
+          <div class="sec-lbl">Get comfortable</div>
+          <div class="sec-title">Things worth trying by day 3</div>
         </div>
       </div>
       <div class="sec-right">
-        <span class="sec-time">⏱ 3日間</span>
+        <span class="sec-time">⏱ 3 days</span>
         <span class="chev">▼</span>
       </div>
     </div>
     <div class="sec-body">
-      <p>はじめの1〜3日で慣れるために、こんな順番で試すのがおすすめです。</p>
+      <p>To get comfortable in the first 1-3 days, we recommend trying things in this order.</p>
       <table class="ttable">
-        <thead><tr><th>日</th><th>やること</th><th>使うおまじない</th></tr></thead>
+        <thead><tr><th>Day</th><th>What to do</th><th>Magic words used</th></tr></thead>
         <tbody>
-          <tr><td>1日目</td><td>「ステップ1〜9」を通して1周まわす</td><td><code>/define-company</code> <code>/verify</code> <code>/handoff</code></td></tr>
-          <tr><td>2日目</td><td>大きめの仕事を Epic（親チケット）に分解してみる</td><td><code>/create-epic</code></td></tr>
-          <tr><td>3日目</td><td>大事な決めごとの記録を残す練習。メモを AI に質問されながら、きちんとした形で棚に直接しまう練習</td><td><code>/decision</code> <code>/retro</code> <code>/stock-note</code></td></tr>
-          <tr><td>慣れてきたら</td><td>この1週間で増えたメモ・決めごとのまとめ（週報のようなもの）を AI に作ってもらう</td><td><code>/digest</code></td></tr>
+          <tr><td>Day 1</td><td>Go through "Steps 1-9" all the way around once</td><td><code>/define-company</code> <code>/verify</code> <code>/handoff</code></td></tr>
+          <tr><td>Day 2</td><td>Try breaking a bigger piece of work down into an Epic (a parent ticket)</td><td><code>/create-epic</code></td></tr>
+          <tr><td>Day 3</td><td>Practice recording an important decision. Practice filing a memo directly onto a proper shelf, in a well-formed way, while the AI asks you questions</td><td><code>/decision</code> <code>/retro</code> <code>/stock-note</code></td></tr>
+          <tr><td>Once comfortable</td><td>Have the AI put together a summary (like a weekly report) of the memos and decisions that piled up this week</td><td><code>/digest</code></td></tr>
         </tbody>
       </table>
-      <p>これで、5つのフェーズ全部を1回ずつ体験できます。体験しおわると、「あ、これはこう回すのか」というリズムがつかめます。</p>
+      <p>This lets you experience all 5 phases once each. Once you've been through them, you'll pick up the rhythm of "ah, so this is how it cycles."</p>
     </div>
   </div>
 
@@ -723,8 +723,8 @@ GitHub（記録係の黒板）
       <div class="sec-head-l">
         <div class="step-circle sc-gray">❓</div>
         <div>
-          <div class="sec-lbl">トラブルシュート</div>
-          <div class="sec-title">こまったときの逃げ道</div>
+          <div class="sec-lbl">Troubleshooting</div>
+          <div class="sec-title">Escape routes for when you get stuck</div>
         </div>
       </div>
       <div class="sec-right">
@@ -733,37 +733,37 @@ GitHub（記録係の黒板）
     </div>
     <div class="sec-body">
       <table class="ttable">
-        <thead><tr><th>症状</th><th>対処法</th></tr></thead>
+        <thead><tr><th>Symptom</th><th>Fix</th></tr></thead>
         <tbody>
           <tr>
-            <td>Claude Code がルールを守ってくれない気がする</td>
-            <td>「CLAUDE.md を読んだ？ 5フェーズと6原則を教えて」と聞いてみる。答えられればルールを知っています。答えられなければ CLAUDE.md を Read してもらいましょう</td>
+            <td>It feels like Claude Code isn't following the rules</td>
+            <td>Try asking "Did you read CLAUDE.md? Tell me the 5 phases and 6 principles." If it can answer, it knows the rules. If it can't, have it Read CLAUDE.md</td>
           </tr>
           <tr>
-            <td><code>/verify</code> が「FAIL」と言ってきた</td>
-            <td><strong>かならず中身を読む</strong>。「めんどうだから消しちゃえ」はNG（=偽緑禁止のお約束違反）。FAIL の内容をコピペして「これ、どうすれば直る？」と聞けば、直し方を教えてくれます</td>
+            <td><code>/verify</code> said "FAIL"</td>
+            <td><strong>Always read what it says.</strong> "It's a hassle, let's just delete it" is not OK (= a violation of the no-fake-green promise). Paste the FAIL's content and ask "how do I fix this?" — it will tell you how</td>
           </tr>
           <tr>
-            <td>Claude Code が勝手にお金や契約のことをやろうとしている</td>
-            <td><strong>止めてください</strong>。それは HITL Gate（人間の承認）が必要な操作です。「これは私が判断するから、止まって」と言えば止まります</td>
+            <td>Claude Code is trying to handle money or a contract on its own</td>
+            <td><strong>Stop it.</strong> That's an operation that needs the HITL Gate (human approval). Say "I'll decide this — stop," and it will stop</td>
           </tr>
           <tr>
-            <td>何をどこに書けばいいのか、迷った</td>
-            <td>CLAUDE.md の <strong>§4.5「コンテキスト地図」</strong>に「この情報はどこに置く？」の対応表があります</td>
+            <td>You're not sure what to write where</td>
+            <td>CLAUDE.md's <strong>§4.5, "the context map,"</strong> has a table mapping "where does this information go?"</td>
           </tr>
         </tbody>
       </table>
     </div>
   </div>
 
-  <!-- ════ 用語辞典 + 次に読むもの ════ -->
+  <!-- ════ Glossary + what to read next ════ -->
   <div class="sec" id="sd">
     <div class="sec-head" onclick="tog(this)">
       <div class="sec-head-l">
         <div class="step-circle sc-gray">📖</div>
         <div>
-          <div class="sec-lbl">リファレンス</div>
-          <div class="sec-title">用語ミニ辞典 と 次に読むもの</div>
+          <div class="sec-lbl">Reference</div>
+          <div class="sec-title">Mini glossary &amp; what to read next</div>
         </div>
       </div>
       <div class="sec-right">
@@ -771,55 +771,55 @@ GitHub（記録係の黒板）
       </div>
     </div>
     <div class="sec-body">
-      <h4>用語ミニ辞典</h4>
+      <h4>Mini glossary of terms</h4>
       <table class="ttable">
-        <thead><tr><th>言葉</th><th>意味</th></tr></thead>
+        <thead><tr><th>Word</th><th>Meaning</th></tr></thead>
         <tbody>
-          <tr><td><strong>リポジトリ</strong></td><td>ファイルとその歴史をまるごと入れておく箱。GitHub にあるものと、パソコンにあるものが対になる</td></tr>
-          <tr><td><strong>クローン</strong></td><td>GitHub の箱を、自分のパソコンにコピーしてくること</td></tr>
-          <tr><td><strong>コミット</strong></td><td>作業のセーブポイントを作ること。あとから「ここに戻して」と言える</td></tr>
-          <tr><td><strong>Issue（イシュー）</strong></td><td>GitHub 上の「お仕事チケット」。仕事の予約票</td></tr>
-          <tr><td><strong>PR（プルリクエスト）</strong></td><td>「この変更をとりこんでいい？」というお伺い。Issue と組で使う</td></tr>
-          <tr><td><strong>ラベル</strong></td><td>Issue に貼るタグ（例: <code>phase:planning</code>）。状態を表す</td></tr>
-          <tr><td><strong>hooks（フック）</strong></td><td>Claude Code が特定のタイミングで自動で動かす小さな検査</td></tr>
-          <tr><td><strong>CLI（シーエルアイ）</strong></td><td>パソコンの黒い画面（ターミナル）から命令を打つやり方</td></tr>
-          <tr><td><strong>YAML（ヤムル）</strong></td><td>情報を整理して書くための文字のならべ方。人間もAIも読める</td></tr>
-          <tr><td><strong>SSOT</strong></td><td>Single Source of Truth。「大事な情報は1か所にだけ書く」というお約束</td></tr>
-          <tr><td><strong>HITL</strong></td><td>Human-In-The-Loop。「大事な判断は人間を通す」というお約束</td></tr>
-          <tr><td><strong>RQT</strong></td><td>Required Quality Test。<code>scripts/verify.py</code> が回してくれる自動チェックの正体</td></tr>
-          <tr><td><strong>frontmatter（フロントマター）</strong></td><td>ノートの先頭につける名札。いつ書いたか・何のメモかを機械が読めるようにする</td></tr>
-          <tr><td><strong>Obsidian（オブシディアン）</strong></td><td>メモを見たり書いたりできる無料アプリ。無くてもこのテンプレは全部動く</td></tr>
+          <tr><td><strong>Repository</strong></td><td>A box holding a whole set of files and their history. There's one on GitHub, paired with one on your computer</td></tr>
+          <tr><td><strong>Clone</strong></td><td>Copying GitHub's box onto your own computer</td></tr>
+          <tr><td><strong>Commit</strong></td><td>Creating a save point for your work. You can later say "put it back to here"</td></tr>
+          <tr><td><strong>Issue</strong></td><td>A "work ticket" on GitHub. A reservation slip for a job</td></tr>
+          <tr><td><strong>PR (pull request)</strong></td><td>Asking "is it OK to bring in this change?" Used together with an Issue</td></tr>
+          <tr><td><strong>Label</strong></td><td>A tag stuck onto an Issue (e.g. <code>phase:planning</code>). Represents its state</td></tr>
+          <tr><td><strong>Hooks</strong></td><td>Small checks that Claude Code automatically runs at a specific moment</td></tr>
+          <tr><td><strong>CLI</strong></td><td>The way of typing commands from your computer's black screen (the terminal)</td></tr>
+          <tr><td><strong>YAML</strong></td><td>A way of arranging text to organize information. Readable by both humans and AI</td></tr>
+          <tr><td><strong>SSOT</strong></td><td>Single Source of Truth. The promise that "important information is only written in one place"</td></tr>
+          <tr><td><strong>HITL</strong></td><td>Human-In-The-Loop. The promise that "important decisions always go through a human"</td></tr>
+          <tr><td><strong>RQT</strong></td><td>Required Quality Test. The real identity of the automatic checks <code>scripts/verify.py</code> runs</td></tr>
+          <tr><td><strong>Frontmatter</strong></td><td>A name tag put at the top of a note, so a machine can read when it was written and what it's about</td></tr>
+          <tr><td><strong>Obsidian</strong></td><td>A free app for viewing and writing notes. This template works completely fine without it too</td></tr>
         </tbody>
       </table>
 
-      <h4>次に読むもの（おすすめ順）</h4>
+      <h4>What to read next (recommended order)</h4>
       <ol class="slist">
-        <li class="si"><div class="si-body"><code>docs/starter-manual.md</code> — このガイドより1段くわしいスタートマニュアル（15分）</div></li>
-        <li class="si"><div class="si-body"><code>notes/README.md</code> — メモ箱（notes/）の全体像。どの小部屋に何が入るか</div></li>
-        <li class="si"><div class="si-body"><code>exercises/01-define-your-company.md</code> — 実際に手を動かす演習1本目</div></li>
-        <li class="si"><div class="si-body"><code>exercises/02-first-hitl-gate.md</code> — HITL Gate を体験する演習</div></li>
-        <li class="si"><div class="si-body"><code>exercises/03-run-verify-loop.md</code> — 検証ループを体験する演習</div></li>
-        <li class="si"><div class="si-body"><code>docs/ai-company-explainer.md</code> — 「なぜこの構造なのか」の解説</div></li>
-        <li class="si"><div class="si-body"><code>CLAUDE.md</code> — 会社の憲法。慣れてきたら、これをカスタマイズしていきます</div></li>
+        <li class="si"><div class="si-body"><code>docs/starter-manual.md</code> — a start manual one level more detailed than this guide (15 min)</div></li>
+        <li class="si"><div class="si-body"><code>notes/README.md</code> — the full picture of the memo box (notes/). Which small room holds what</div></li>
+        <li class="si"><div class="si-body"><code>exercises/01-define-your-company.md</code> — the first hands-on exercise</div></li>
+        <li class="si"><div class="si-body"><code>exercises/02-first-hitl-gate.md</code> — an exercise to experience the HITL Gate</div></li>
+        <li class="si"><div class="si-body"><code>exercises/03-run-verify-loop.md</code> — an exercise to experience the verify loop</div></li>
+        <li class="si"><div class="si-body"><code>docs/ai-company-explainer.md</code> — an explainer of "why this structure"</div></li>
+        <li class="si"><div class="si-body"><code>CLAUDE.md</code> — the company's constitution. Once you're comfortable, you'll start customizing this</div></li>
       </ol>
     </div>
   </div>
 
   <!-- ════ CLOSING ════ -->
   <div class="closing">
-    <h3>覚えておいてほしい、たったひとつのこと</h3>
-    <p>このテンプレートに<strong>正解の中身はまだ入っていません</strong>。<br>
-    入っているのは<strong>「入れ物」と「書き方の約束」だけ</strong>です。<br>
-    正解を作るのは、あなたです。そして、それを一緒に整理してくれるのが Claude Code（AI社員）です。</p>
-    <p class="punch">道具はそろった。あとは、あなたの会社を入れていくだけ。</p>
+    <h3>The one thing we want you to remember</h3>
+    <p>This template <strong>doesn't yet have the "right answer" filled in</strong>.<br>
+    What it has is only <strong>"the container" and "the promise of how to write things."</strong><br>
+    You're the one who creates the right answer. And Claude Code (the AI employee) is what helps you organize it, together.</p>
+    <p class="punch">The tools are all here. All that's left is to put your company in.</p>
   </div>
 
-  <p class="footer-note">ai-retreat-starter — AIカンパニー はじめてガイド（LP版）｜元原稿: docs/ai-company-beginner-guide.md</p>
+  <p class="footer-note">ai-retreat-starter — The Beginner's Guide to an AI Company (LP edition)｜Source: docs/ai-company-beginner-guide.md</p>
 
 </main>
 
 <script>
-  /* ── アコーディオン ── */
+  /* ── Accordion ── */
   function tog(head) {
     head.parentElement.classList.toggle('open');
   }
@@ -827,7 +827,7 @@ GitHub（記録係の黒板）
     document.getElementById(id)?.classList.add('open');
   }
 
-  /* ── ライト/ダーク切替 ── */
+  /* ── Light/dark toggle ── */
   function toggleTheme() {
     const root = document.documentElement;
     const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
@@ -844,16 +844,16 @@ GitHub（記録係の黒板）
     });
   })();
 
-  /* ── コピーボタン ── */
+  /* ── Copy button ── */
   function cp(btn) {
     const parent = btn.parentElement;
     const a = parent.querySelector('a');
     const span = parent.querySelector('span');
     const text = (a?.href || a?.textContent || span?.textContent || '').trim();
     navigator.clipboard.writeText(text).then(() => {
-      btn.textContent = 'コピー済み ✓';
+      btn.textContent = 'Copied ✓';
       btn.classList.add('copied');
-      setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 2000);
+      setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2000);
     });
   }
 </script>
