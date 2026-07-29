@@ -1,131 +1,132 @@
-# Issue-First 原則
+# The Issue-First principle
 
 > "Everything starts with an Issue. Labels define the state."
 
-すべての作業は GitHub Issue から始まります。ラベルが状態を定義します。
-本ルールは実装作業（Phase 3: 実行）に入る前に必ず適用してください。
+All work starts from a GitHub Issue. Labels define the state.
+Apply this rule before entering implementation work (Phase 3: Execution).
 
-## 1. Issue が必要かどうかの判断
+## 1. Deciding whether an Issue is needed
 
-| 作業の種類 | Issue 要件 |
+| Kind of work | Issue requirement |
 |-----------|-----------|
-| 単純変更（1 ファイル、設定変更、typo 修正） | 推奨（省略可） |
-| 通常変更（複数ファイルにまたがる変更） | 必須 |
-| 複合タスク（3 ステップ以上、または複数日にまたがる） | Epic Issue 必須 + 子 Issue 分解 |
-| 金額・契約・不可逆操作が絡む変更 | 必須 + `.claude/rules/hitl-gate.md` のトリガーも確認 |
+| Simple change (1 file, a config change, a typo fix) | Recommended (may be omitted) |
+| Normal change (spanning multiple files) | Required |
+| Composite task (3 or more steps, or spanning multiple days) | Epic Issue required + break into child Issues |
+| Changes involving money, contracts or irreversible operations | Required + also check the triggers in `.claude/rules/hitl-gate.md` |
 
-迷ったら「必須」側に倒す。Issue を書く数分のコストより、後から経緯を追えなくなるコストの方が高い。
+When in doubt, err towards "required". The cost of a few minutes writing an Issue is lower than the cost of
+not being able to trace the reasoning later.
 
-## 2. 着手前に既存 Issue を確認する
+## 2. Check for existing Issues before you start
 
-新しい Issue を起票する前に、重複がないか確認します。
+Before filing a new Issue, check for duplicates.
 
 ```bash
-gh issue list --search "<キーワード>" --state all
+gh issue list --search "<keyword>" --state all
 gh issue list --label "type:epic" --state open
 ```
 
-類似 Issue が見つかった場合は、新規起票ではなくコメント追記や既存 Issue の再オープンを検討する。
+If you find a similar Issue, consider adding a comment or reopening the existing Issue rather than filing a new one.
 
-## 3. Issue が無い場合の起票
+## 3. Filing when there is no Issue
 
-複合タスクは `/create-epic` コマンドで Epic Issue + 子 Issue 分解を行う。
-単発の作業は `gh issue create` で直接起票してよい:
+For a composite task, use the `/create-epic` command to file an Epic Issue and break it into child Issues.
+For a one-off piece of work, you may file directly with `gh issue create`:
 
 ```bash
 gh issue create \
-  --title "<簡潔なタイトル>" \
+  --title "<concise title>" \
   --label "type:child,phase:planning" \
-  --body "<背景・完了条件>"
+  --body "<background and completion criteria>"
 ```
 
-## 4. ブランチ命名規約
+## 4. Branch naming conventions
 
-Issue 番号を必ずブランチ名に含める。
+Always include the Issue number in the branch name.
 
-| 種別 | 命名パターン | 例 |
+| Kind | Naming pattern | Example |
 |------|-------------|-----|
-| 機能追加 | `feat/<Issue番号>-<短い説明>` | `feat/12-add-retro-template` |
-| バグ修正 | `fix/<Issue番号>-<短い説明>` | `fix/15-verify-py-typo` |
+| Feature | `feat/<Issue number>-<short description>` | `feat/12-add-retro-template` |
+| Bug fix | `fix/<Issue number>-<short description>` | `fix/15-verify-py-typo` |
 
-`<短い説明>` は英数字とハイフンのみ、3-5 単語程度に収める。
+Keep `<short description>` to alphanumerics and hyphens only, around 3-5 words.
 
-## 5. コミットメッセージ規約
+## 5. Commit message conventions
 
-Conventional Commits 形式 + Issue 番号参照を必須とする。
+The Conventional Commits format plus an Issue number reference is mandatory.
 
 ```
-<type>(<scope>): <description> (#<Issue番号>)
+<type>(<scope>): <description> (#<Issue number>)
 ```
 
-| type | 用途 |
+| type | Use |
 |------|------|
-| `feat` | 新機能追加 |
-| `fix` | バグ修正 |
-| `docs` | ドキュメントのみの変更 |
-| `refactor` | 挙動を変えないコード整理 |
-| `chore` | ビルド・設定・依存関係の変更 |
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation-only change |
+| `refactor` | Code tidying that doesn't change behaviour |
+| `chore` | Build, configuration or dependency changes |
 
-例:
+Example:
 
 ```
-fix(verify): ontology yaml の parse エラーメッセージを改善 (#15)
+fix(verify): improve the parse error message for ontology yaml (#15)
 ```
 
-`git commit` 実行後、PostToolUse hook `.claude/hooks/commit-msg-advisor.sh` が
-`git log -1` で実際にコミットされたメッセージを検査し、Conventional Commits 形式・
-Issue 参照（`#N`）の有無を additionalContext 経由でエージェントに advisory として
-届ける（Issue #41）。指摘があれば `git commit --amend` 等で修正する。
+After `git commit` runs, the PostToolUse hook `.claude/hooks/commit-msg-advisor.sh` inspects the message
+actually committed via `git log -1` and delivers advisory feedback to the agent through additionalContext on
+whether it follows the Conventional Commits format and includes an Issue reference (`#N`) (Issue #41).
+If it flags something, fix it with `git commit --amend` or similar.
 
-## 6. PR 本文の要件
+## 6. Requirements for the PR body
 
-PR には対応する Issue への参照を必ず含める。
+A PR must always include a reference to its corresponding Issue.
 
 ```markdown
 ## Summary
-<変更内容の要約>
+<summary of the change>
 
 ## Related
-Resolves #<Issue番号>
+Resolves #<Issue number>
 ```
 
-Epic 配下の子 Issue を解決する PR は、Epic 本体ではなく **子 Issue 番号** を `Resolves` に書く。
-Epic は全子 Issue の Close をもって自動的に完了とみなす。
+A PR resolving a child Issue under an Epic should put the **child Issue number** in `Resolves`, not the Epic itself.
+An Epic is considered complete automatically once all its child Issues are closed.
 
-## 7. 違反した場合の対応
+## 7. What to do when you've broken this rule
 
-先に実装を始めてしまい、Issue を起票していなかったことに後から気づいた場合:
+If you started implementing first and only later realised you hadn't filed an Issue:
 
-1. 作業を中断せず、まず Issue を起票する（事後起票でよい）
-2. Issue 本文に「実装が Issue 起票に先行したこと」を明記する（隠さない）
-3. 以降のコミット・PR には通常通り Issue 番号を参照する
-4. `/handoff` の「Blockers」または「Done today」に、Issue-First 原則から外れた経緯を一言残す
+1. Don't stop the work — file the Issue first (filing after the fact is fine)
+2. State plainly in the Issue body that the implementation preceded the Issue (don't hide it)
+3. Reference the Issue number in later commits and the PR as usual
+4. Leave a line in "Blockers" or "Done today" in `/handoff` about how you departed from Issue-First
 
-Issue-First の目的は「先に作る」ことそのものより、「経緯を追跡可能な状態に保つ」ことにある。
-事後であっても記録を残すことを優先する。
+The purpose of Issue-First is less "creating it first" in itself than "keeping the reasoning traceable".
+Prioritise leaving a record, even after the fact.
 
-## 7.5. オフライン代替（gh・ネットワークが使えない場合）
+## 7.5. Offline fallback (when gh or the network is unavailable)
 
-`gh` コマンドやネットワークが使えない環境（オフライン演習・ネットワーク制限のある環境等）では、
-その場で Issue を起票できません。この場合も作業を止めず、以下の代替手順を取ります。
+In environments where the `gh` command or the network is unavailable (offline exercises, network-restricted
+environments, etc.), you can't file an Issue on the spot. Don't stop working; take these steps instead.
 
-1. 事後起票を前提として作業を進める（§7 と同じ考え方）
-2. コミットメッセージに「Issue 化予定」であることを一言残す（例:
-   `fix(scope): description (issue化予定)`）
-3. セッション終了時、`/handoff` の `HANDOFF.md`「Blockers」に、Issue 未起票である旨と
-   起票予定の内容を明記する
-4. 接続が回復し次第、次のセッションで必ず Issue を起票し、該当コミットのハッシュを
-   Issue 本文に事後参照として追記する
+1. Proceed on the assumption you'll file afterwards (the same thinking as §7)
+2. Leave a line in the commit message noting that an Issue is pending (e.g.
+   `fix(scope): description (issue pending)`)
+3. At the end of the session, state plainly in "Blockers" in `/handoff`'s `HANDOFF.md` that no Issue has been
+   filed and what you intend to file
+4. As soon as connectivity returns, file the Issue in the next session without fail and add the relevant commit
+   hashes to the Issue body as an after-the-fact reference
 
-## 8. アンチパターン
+## 8. Anti-patterns
 
-| アンチパターン | 理由 |
+| Anti-pattern | Why |
 |----------------|------|
-| Issue 無しで複数ファイルにまたがる変更をコミットする | 変更理由が追跡不能になる |
-| 1 つの Issue に無関係な複数の変更を混ぜる | レビューが困難になり、revert 時に巻き添えが出る |
-| Epic Issue 本体に直接実装コミットを紐付ける | 子 Issue 分解の意味が失われる |
-| ラベル無しで Issue を放置する | 状態が読み取れず、棚卸しが不可能になる |
+| Committing a change spanning multiple files with no Issue | The reason for the change becomes untraceable |
+| Mixing multiple unrelated changes into one Issue | Review becomes difficult, and reverting takes innocent changes with it |
+| Attaching implementation commits directly to the Epic Issue itself | The point of breaking it into child Issues is lost |
+| Leaving an Issue sitting with no labels | The state can't be read, making a stock-take impossible |
 
 ---
 
-*ai-retreat-starter — Issue-First 原則*
+*ai-retreat-starter — the Issue-First principle*

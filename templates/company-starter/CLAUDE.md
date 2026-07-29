@@ -1,237 +1,239 @@
-# ai-retreat-starter — 運用憲法
+# ai-retreat-starter — operating constitution
 
-> **本テンプレは plain Claude Code + GitHub だけで完結します。** 必要なのは GitHub アカウント、
-> Claude Code が使えるプラン、`git` と `python3` だけ。
-> MCP サーバー・外部 SDK・追加ツールは **任意（optional）** です。繋ぎたいものは繋いでよい
-> （freee / Notion / Slack など、自社業務に効くものは積極的に活用推奨）。
-> ただし本テンプレの検証（`scripts/verify.py`）・hooks・合宿演習は plain Claude Code のみで
-> 完結するよう設計されており、MCP 未接続でも全機能が動きます。
+> **This template is self-contained with plain Claude Code + GitHub.** All you need is a GitHub account,
+> a plan that lets you use Claude Code, `git` and `python3`.
+> MCP servers, external SDKs and additional tools are **optional**. Connect whatever you want to connect
+> (freee / Notion / Slack and so on — anything that helps your own business is actively encouraged).
+> That said, this template's verification (`scripts/verify.py`), hooks and retreat exercises are designed to be
+> self-contained with plain Claude Code, and every feature works with no MCP connected.
 
-このファイルは、あなたの会社に「AI 自律経営ハーネス」を立ち上げるための運用憲法です。
-Claude Code はセッション開始時に本ファイルを読み、ここに書かれた原則とワークフローに従って動きます。
-
----
-
-## 0. このテンプレが目指すもの
-
-会ったことのない人にリモートで仕事を任せるとき、何が必要か？
-→ 明確な指示、手順書、開けば迷わないファイル構造。
-
-AI エージェントも同じです。むしろ人間より察してくれない分、構造がすべてです。
-このテンプレは「人間がリモートで協働できる仕組み」を先に作り、それを AI が動ける形に構造化したものです。
-5 つの軽量フェーズと 6 つの原則だけで構成されており、特殊なツールを何も要求しません。
+This file is the operating constitution for standing up an "AI autonomous management harness" at your company.
+Claude Code reads this file at the start of a session and works according to the principles and workflow written here.
 
 ---
 
-## 1. 5-Phase 軽量ワークフロー
+## 0. What this template is aiming at
 
-大掛かりな Phase 分割の重量級ワークフローではなく、plain Claude Code だけで回せる
-**5 フェーズ**に縮約しています。大きな施策でも小さな修正でも、このサイクルを回します。
+What do you need when you delegate work remotely to someone you've never met?
+-> Clear instructions, a written procedure, and a file structure you can open without getting lost.
 
-| Phase | 名称 | やること | 主な入出力 |
+The same is true of an AI agent. If anything, structure matters even more, because it infers less than a human would.
+This template first builds "a system humans can collaborate remotely within", then structures it into a form an AI can work in.
+It consists of just 5 lightweight phases and 6 principles, and requires no special tooling.
+
+---
+
+## 1. The 5-phase lightweight workflow
+
+Rather than a heavyweight workflow with elaborate phase divisions, this is condensed into **5 phases**
+that can be run with plain Claude Code alone. Run this cycle for big initiatives and small fixes alike.
+
+| Phase | Name | What you do | Main inputs/outputs |
 |-------|------|---------|-----------|
-| 1 | 定義 | 自社オントロジーを記述する | `docs/templates/ontology-starter.yaml` を `definitions/ontology/` に記入 |
-| 2 | 計画 | GitHub Issue を起票する（Issue-First、Epic → 子 Issue 分解） | GitHub Issue |
-| 3 | 実行 | Claude Code で実装・文書化する（Scope Contract 規律、必要なら Plan Mode） | コード / ドキュメント |
-| 4 | 検証 | `scripts/verify.py`（RQT）+ CI ゲートで確認する（偽緑禁止） | 検証レポート / CI green |
-| 5 | 記録 | Decision RFC を書き、HANDOFF.md を更新する（セッション引き継ぎ） | `docs/decisions/*.md`, `HANDOFF.md` |
+| 1 | Definition | Describe your company ontology | Fill in `docs/templates/ontology-starter.yaml` into `definitions/ontology/` |
+| 2 | Planning | File GitHub Issues (Issue-First, Epic -> child Issue decomposition) | GitHub Issues |
+| 3 | Execution | Implement and document with Claude Code (Scope Contract discipline, Plan Mode if needed) | Code / documentation |
+| 4 | Verification | Check with `scripts/verify.py` (RQT) + CI gates (no fake green) | Verification report / CI green |
+| 5 | Record | Write a Decision RFC and update HANDOFF.md (session handover) | `docs/decisions/*.md`, `HANDOFF.md` |
 
-小さな typo 修正や 1 ファイルの設定変更のような軽微な作業は、Phase 1-2 を省略してよい。
-複数ファイルにまたがる変更や、後戻りしにくい判断（お金・契約・不可逆操作）が絡む作業は、
-必ず Phase 1 から通しで回す。
+For trivial work such as a small typo fix or a one-file config change, you may skip Phases 1-2.
+For changes spanning multiple files, or work involving hard-to-reverse decisions (money, contracts,
+irreversible operations), always run the whole cycle from Phase 1.
 
 ```
-Phase 1 定義 → Phase 2 計画 → Phase 3 実行 → Phase 4 検証 → Phase 5 記録
-     ↑______________________________________________________|
-              (次のサイクルへ、または HANDOFF から再開)
+Phase 1 Definition -> Phase 2 Planning -> Phase 3 Execution -> Phase 4 Verification -> Phase 5 Record
+     ^_______________________________________________________________________________|
+              (on to the next cycle, or resume from HANDOFF)
 ```
 
 ---
 
-## 2. 6 つの原則
+## 2. The 6 principles
 
-AI 自律経営ハーネスの実践から積み上がった「思想」のうち、外部 SDK なしでも成立するものだけを残しています。
+Of the thinking built up from practising the AI autonomous management harness, only what stands up without
+an external SDK is kept here.
 
 ### 2.1 Issue-First
 
 > "Everything starts with an Issue. Labels define the state."
 
-すべての作業は GitHub Issue から始まります。ラベルが状態を定義します。
-複合タスク（3 ステップ以上）は Epic Issue を起票し、子 Issue に分解してから着手する。
-単純な typo・設定変更は Issue を省略してよいが、事後でも記録が必要なら起票する。
+All work starts from a GitHub Issue. Labels define the state.
+For a composite task (3 or more steps), file an Epic Issue and break it into child Issues before starting.
+You may omit an Issue for a simple typo or config change, but file one — even after the fact — if a record is needed.
 
-- ブランチ名に Issue 番号を含める: `fix/123-description`
-- コミットメッセージに Issue 参照を入れる: `fix(scope): description (#123)`
-- PR に `Resolves #123` を記載する
+- Include the Issue number in the branch name: `fix/123-description`
+- Include an Issue reference in the commit message: `fix(scope): description (#123)`
+- Write `Resolves #123` in the PR
 
 ### 2.2 HITL Gate
 
-> 金額・契約・不可逆操作は人間承認必須。
+> Money, contracts and irreversible operations require human approval.
 
-外部への送金・契約締結・本番データの削除・force push のような後戻りしにくい操作は、
-AI が単独で完結させてはいけません。トリガー表とエスカレーション手順は
-`.claude/rules/hitl-gate.md` を参照してください。
+Hard-to-reverse operations such as sending money externally, signing a contract, deleting production data or
+force pushing must not be completed by the AI alone.
+See `.claude/rules/hitl-gate.md` for the trigger table and the escalation procedure.
 
-### 2.3 SSOT（Single Source of Truth）
+### 2.3 SSOT (Single Source of Truth)
 
-定義は 1 箇所の宣言的ファイル（YAML/Markdown）に置き、そこから生成された成果物を
-手で直接編集しない。`docs/templates/` 配下のオントロジー・KPI・サイクル計画テンプレートは
-すべてこの原則に従っています。記入済みの実データは `definitions/` に置きます。
-生成物を直接書き換えたくなったら、まず元の定義を直す。
+Put definitions in one declarative file (YAML/Markdown) and do not hand-edit the artefacts generated from them.
+The ontology, KPI and cycle-plan templates under `docs/templates/` all follow this principle.
+The filled-in real data goes in `definitions/`.
+When you feel the urge to rewrite a generated artefact directly, fix the original definition first.
 
 ### 2.4 Scope Contract
 
-着手前に **CHANGE**（何を変えるか）と **NOT CHANGE**（何を触らないか）、
-そしてだいたいの diff サイズを宣言してから Edit / Write に入る。
-「ついでに直したい」衝動は必ず別 Issue・別コミットに隔離する。
-詳細は `.claude/rules/scope-contract.md`。
+Before starting, declare **CHANGE** (what you will change), **NOT CHANGE** (what you won't touch),
+and a rough diff size, then move to Edit / Write.
+Always isolate the urge to "fix this while I'm here" into a separate Issue and a separate commit.
+Details in `.claude/rules/scope-contract.md`.
 
-### 2.5 偽緑禁止（No fake-green）
+### 2.5 No fake-green
 
-動かない検証・stub な CI・常に PASS するだけのテストを残さない。
-`scripts/verify.py` が FAIL を返したら、それを隠さずに向き合う。
-「とりあえず green にする」ための改ざんは禁止。
+Don't leave verification that doesn't run, stubbed CI, or tests that only ever pass.
+When `scripts/verify.py` returns a FAIL, face it rather than hiding it.
+Tampering to "just make it green" is forbidden.
 
-### 2.6 セッション引き継ぎ
+### 2.6 Session handover
 
-合宿は複数日・複数セッションにまたがります。セッション終了時に `HANDOFF.md` を更新し、
-次に着手する人（未来の自分を含む）が迷わないようにする。`/handoff` コマンドが補助します。
+A retreat spans multiple days and multiple sessions. At the end of a session, update `HANDOFF.md` so whoever
+picks it up next (including your future self) isn't left guessing. The `/handoff` command helps with this.
 
 ---
 
-## 3. コマンド一覧
+## 3. Command list
 
-以下は本テンプレに同梱される、実体のある少数精鋭コマンドです。
-外部ツールの委譲スタブではなく、すべて plain Claude Code 上でそのまま動きます。
+The following are the small number of substantive commands bundled with this template.
+They are not delegation stubs for external tools — they all run as-is on plain Claude Code.
 
-| コマンド | 役割 | 対応する Phase |
+| Command | Role | Corresponding phase |
 |---------|------|---------------|
-| `/define-company` | 自社オントロジーを対話的に定義する | Phase 1 |
-| `/ingest-context` | 外部資料を検疫してから definitions/ の正しい棚へ取り込む（inbox モードで `notes/inbox/` の昇格も可） | Phase 1 |
-| `/create-epic` | Epic Issue + 子 Issue 分解を起票する | Phase 2 |
-| `/stock-note` | L2 ノート（company-note / market / client-note / sop）を正しい棚 + frontmatter で起票する | 随時 |
-| `/verify` | `scripts/verify.py` を実行し結果を解釈する | Phase 4 |
-| `/handoff` | HANDOFF.md を更新し、未完了タスクを棚卸しする | Phase 5 |
-| `/decision` | Decision RFC のテンプレートを起票する | Phase 5 |
-| `/retro` | `retrospective-template.yaml` ベースの振り返りを行う | Phase 5 |
-| `/digest` | notes/ と decisions/retros の frontmatter を集計しオーナー向け週次ダイジェストを生成する | Phase 5 / 随時 |
+| `/define-company` | Define your company ontology interactively | Phase 1 |
+| `/ingest-context` | Quarantine external material and take it onto the correct shelf in definitions/ (inbox mode can also promote from `notes/inbox/`) | Phase 1 |
+| `/create-epic` | File an Epic Issue and break it into child Issues | Phase 2 |
+| `/stock-note` | File an L2 note (company-note / market / client-note / sop) on the correct shelf with the correct frontmatter | Any time |
+| `/verify` | Run `scripts/verify.py` and interpret the results | Phase 4 |
+| `/handoff` | Update HANDOFF.md and take stock of unfinished tasks | Phase 5 |
+| `/decision` | File a Decision RFC from the template | Phase 5 |
+| `/retro` | Run a retrospective based on `retrospective-template.yaml` | Phase 5 |
+| `/digest` | Aggregate frontmatter from notes/ and decisions/retros and generate an owner-facing weekly digest | Phase 5 / any time |
 
 ---
 
-## 4. ディレクトリ構成
+## 4. Directory structure
 
 ```
 ai-retreat-starter/
-├── CLAUDE.md                # 本ファイル — 運用憲法
-├── README.md                # セットアップ手順
-├── LICENSE.md                # 参加者限定ライセンス
+├── CLAUDE.md                # this file — the operating constitution
+├── README.md                # setup instructions
+├── LICENSE.md                # participant-only licence
 ├── .claude/
-│   ├── settings.json         # hooks 配線のみの最小構成
-│   ├── hooks/                # git-ops-validator / format-check 等
+│   ├── settings.json         # minimal configuration, hook wiring only
+│   ├── hooks/                # git-ops-validator / format-check, etc.
 │   ├── rules/                # scope-contract / issue-first / hitl-gate / definitions-touch
-│   └── commands/              # §3 の少数精鋭コマンド
-├── definitions/               # 自社コンテキストの SSOT（記入先。骨格を同梱）
-│   ├── README.md              # ツリー全体の読み方・記入順序
-│   ├── ontology/              # 事業構造の定義（/define-company が company.yaml を生成）
-│   ├── hitl/                  # 承認トリガー定義（triggers/）
-│   ├── kpi/                   # チーム/部門単位の KPI 計測仕様
-│   ├── cycles/                # 業務サイクル計画
-│   ├── retro/                 # 振り返り（KPT + pivot 判定）の型
-│   └── clients/               # クライアントの非機密な構造情報（任意）
-├── notes/                     # L2 記述層（Obsidian 互換、詳細は notes/README.md）
-│   └── company|market|clients|sops|inbox/  # 物語・観察・手順の棚
-├── examples/                  # 記入済みサンプル（読むだけ、verify 対象外）
-│   └── harukaze-ec/           # 架空 EC 会社の完成例一式
+│   └── commands/              # the small set of commands in §3
+├── definitions/               # the SSOT of your company context (where you fill things in; skeleton included)
+│   ├── README.md              # how to read the whole tree, and what order to fill it in
+│   ├── ontology/              # definition of the business structure (/define-company generates company.yaml)
+│   ├── hitl/                  # approval trigger definitions (triggers/)
+│   ├── kpi/                   # KPI measurement specifications per team/department
+│   ├── cycles/                # business cycle plans
+│   ├── retro/                 # the shape of retrospectives (KPT + pivot decisions)
+│   └── clients/               # non-confidential structural information about clients (optional)
+├── notes/                     # the L2 description layer (Obsidian-compatible; see notes/README.md)
+│   └── company|market|clients|sops|inbox/  # shelves for stories, observations and procedures
+├── examples/                  # filled-in samples (read-only, not subject to verify)
+│   └── harukaze-ec/           # a complete set for a fictional e-commerce company
 ├── docs/
-│   ├── directory-map.md       # コンテキスト記入前/後のツリー対比
-│   ├── starter-manual.md      # ハーネスの使い方
-│   ├── concepts/              # 設計思想の解説（context-funnel / hitl-async-approval）
-│   ├── templates/             # オントロジー / KPI / サイクル計画等の雛形（記入元）
-│   ├── decisions/             # Decision RFC 置き場（/decision で生成）
-│   └── retros/                # 振り返り記録置き場（/retro で生成）
-├── state/                     # 業務サイクルログの git 追跡置き場（state/cycles/<team-id>/）
+│   ├── directory-map.md       # the tree before and after filling in context, side by side
+│   ├── starter-manual.md      # how to use the harness
+│   ├── concepts/              # explanations of the design thinking (context-funnel / hitl-async-approval)
+│   ├── templates/             # blank templates for ontology / KPI / cycle plans, etc. (the source you fill in from)
+│   ├── decisions/             # where Decision RFCs live (generated by /decision)
+│   └── retros/                # where retrospective records live (generated by /retro)
+├── state/                     # git-tracked location for business cycle logs (state/cycles/<team-id>/)
 ├── scripts/
-│   ├── verify.py               # RQT ベースの検証ランナー
-│   └── cycle/                  # 業務サイクル運用スクリプト（advanced・合宿演習の範囲外、詳細は scripts/cycle/README.md）
-├── exercises/                  # 合宿当日の演習 3 本
-├── secrets/                    # 常に .gitignore 対象。認証情報はここに置かない
-└── HANDOFF.md                  # セッション引き継ぎ（Phase 5 で更新）
+│   ├── verify.py               # the RQT-based verification runner
+│   └── cycle/                  # business cycle operation scripts (advanced, outside the scope of the retreat exercises; see scripts/cycle/README.md)
+├── exercises/                  # the 3 exercises for the day of the retreat
+├── secrets/                    # always gitignored. Do not put credentials anywhere else
+└── HANDOFF.md                  # session handover (updated in Phase 5)
 ```
 
 ---
 
-## 4.5. コンテキスト地図（情報カテゴリ → 保存先）
+## 4.5. Context map (information category -> where it's stored)
 
-「この情報はどこに置くのか」を迷わないための対応表です。エージェントは情報が必要なとき、
-下記のパスを直接 Read します（push ではなく pull）。
+A mapping table so you never have to wonder "where does this information go".
+When an agent needs information, it Reads the paths below directly (pull, not push).
 
-| 情報カテゴリ | 保存先 |
+| Information category | Where it's stored |
 |-------------|--------|
-| **自社オントロジー（事業構造の定義）** | `definitions/ontology/` |
-| **HITL 承認トリガー定義** | `definitions/hitl/` |
-| **KPI 計測仕様** | `definitions/kpi/` |
-| **業務サイクル計画** | `definitions/cycles/` |
-| **振り返り（KPT + pivot 判定）の型** | `definitions/retro/` |
-| **クライアントの非機密な構造情報** | `definitions/clients/<slug>/` |
-| **自社の物語（沿革・戦略メモ）** | `notes/company/` |
-| **他社情報（競合・市場・パートナー候補）** | `notes/market/` |
-| **クライアントの随時メモ（商談メモ・議事録要旨）** | `notes/clients/<slug>/` |
-| **業務手順（SOP）** | `notes/sops/` |
-| **未分類の生メモ（オーナーの受信箱）** | `notes/inbox/`（唯一オーナーが直接書いてよい棚） |
-| **機密（実名・実額・認証情報・契約書原本）** | `secrets/`（`.gitignore` 対象） |
-| **意思決定記録（Decision RFC）** | `docs/decisions/`（`/decision` で生成） |
-| **振り返り記録** | `docs/retros/`（`/retro` で生成） |
-| **セッション引き継ぎ** | `HANDOFF.md`（`/handoff` で更新） |
-| **記入済みの完成例** | `examples/harukaze-ec/`（読むだけ） |
+| **Company ontology (definition of business structure)** | `definitions/ontology/` |
+| **HITL approval trigger definitions** | `definitions/hitl/` |
+| **KPI measurement specifications** | `definitions/kpi/` |
+| **Business cycle plans** | `definitions/cycles/` |
+| **The shape of retrospectives (KPT + pivot decisions)** | `definitions/retro/` |
+| **Non-confidential structural information about clients** | `definitions/clients/<slug>/` |
+| **Your company's story (history, strategy memos)** | `notes/company/` |
+| **Information about other companies (competitors, market, potential partners)** | `notes/market/` |
+| **Ad-hoc notes on clients (meeting notes, summaries of minutes)** | `notes/clients/<slug>/` |
+| **Standard operating procedures (SOPs)** | `notes/sops/` |
+| **Uncategorised raw memos (the owner's inbox)** | `notes/inbox/` (the only shelf the owner may write to directly) |
+| **Confidential material (real names, real amounts, credentials, original contracts)** | `secrets/` (gitignored) |
+| **Decision records (Decision RFCs)** | `docs/decisions/` (generated by `/decision`) |
+| **Retrospective records** | `docs/retros/` (generated by `/retro`) |
+| **Session handover** | `HANDOFF.md` (updated by `/handoff`) |
+| **Filled-in complete examples** | `examples/harukaze-ec/` (read-only) |
 
-> 記入前/後のフォルダ構成の変化は `docs/directory-map.md` を参照。
-
----
-
-## 5. セッションフロー
-
-### 開始時
-
-1. 本ファイル（CLAUDE.md）と `HANDOFF.md` を読み、現在地を把握する（SessionStart hook が最新セクションを自動注入するが、全文・過去の経緯は従来どおり `HANDOFF.md` を Read する）
-2. 未完了の Issue / TODO があれば確認する（`gh issue list` 等）
-3. 今回のセッションで着手する Phase を決める
-
-### 作業中
-
-1. Phase 2 で Issue が無ければ起票してから着手する（Issue-First）
-2. Edit / Write の前に Scope Contract（CHANGE / NOT CHANGE / diff budget）を宣言する
-3. HITL Gate に該当する操作（お金・契約・不可逆操作）は必ず人間に確認する
-4. まとまった変更のあと `scripts/verify.py` を実行する（偽緑禁止）
-
-### 終了時
-
-1. `/verify` で最終確認する
-2. `/handoff` で `HANDOFF.md` を更新する（次に何をやるか、詰まっている点があれば明記）
-3. 意思決定をした場合は `/decision` で Decision RFC を残す
+> See `docs/directory-map.md` for how the folder structure changes before and after filling things in.
 
 ---
 
-## 6. よくある詰まりどころ
+## 5. Session flow
 
-- **hooks が発火しない**: `.claude/settings.json` の hooks 配線と、hook スクリプトの実行権限
-  （`chmod +x`）を確認する。hooks は失敗しても `exit 0` で非ブロッキングになるよう作られているので、
-  「動かない」ことと「エラーで止まる」ことは別問題として切り分ける。あわせて、hook が期待する
-  入力形式（stdin JSON か argv か）と実装が一致しているかも確認する（Claude Code の
-  PostToolUse/PreToolUse hook は JSON を stdin で渡す。argv 前提で書くと常に空入力を掴んで
-  無言で何もしなくなる — Issue #26 参照）。
-- **`/verify` が FAIL する**: 偽緑禁止の原則に従い、FAIL の中身をそのまま読んで直す。
-  既存の判定を弱めて通す編集は禁止（偽緑禁止）。一方、自社独自の RQT を `scripts/verify.py` に
-  **追加**するのは歓迎される（`exercises/03-run-verify-loop.md` 参照）。
-- **Issue を作らずに実装を始めてしまった**: 事後でもよいので Issue を起票し、
-  コミットメッセージ・PR に参照を残す。Issue-First は「先に作る」が理想だが、
-  「記録を残す」ことの方が優先度が高い。
+### At the start
+
+1. Read this file (CLAUDE.md) and `HANDOFF.md` to work out where things stand (the SessionStart hook auto-injects the latest section, but Read `HANDOFF.md` for the full text and past history as before)
+2. Check for unfinished Issues / TODOs (`gh issue list` etc.)
+3. Decide which Phase you're taking on this session
+
+### While working
+
+1. If there is no Issue in Phase 2, file one before starting (Issue-First)
+2. Declare the Scope Contract (CHANGE / NOT CHANGE / diff budget) before Edit / Write
+3. Always confirm with a human for operations that hit the HITL Gate (money, contracts, irreversible operations)
+4. Run `scripts/verify.py` after a substantial change (no fake green)
+
+### At the end
+
+1. Do a final check with `/verify`
+2. Update `HANDOFF.md` with `/handoff` (what to do next, and anything you're stuck on)
+3. If you made a decision, leave a Decision RFC with `/decision`
 
 ---
 
-## 7. 利用条件
+## 6. Common sticking points
 
-本テンプレは AI 駆動経営合宿の登録参加者向けに限定提供されています。
-再配布・商用再配布・公開リポジトリでの派生物公開は禁止です。詳細は [LICENSE.md](./LICENSE.md) を参照してください。
+- **Hooks don't fire**: check the hook wiring in `.claude/settings.json` and that the hook scripts are
+  executable (`chmod +x`). Hooks are built to be non-blocking with `exit 0` even when they fail, so treat
+  "it doesn't work" and "it stops with an error" as separate problems. Also check that the input format the
+  hook expects (stdin JSON or argv) matches the implementation (Claude Code's PostToolUse/PreToolUse hooks
+  pass JSON on stdin. Written assuming argv, a hook will always grab empty input and silently do nothing —
+  see Issue #26).
+- **`/verify` FAILs**: follow the no-fake-green principle, read the FAIL as written and fix it.
+  Editing to weaken an existing check so it passes is forbidden (no fake green). On the other hand,
+  **adding** your own RQTs to `scripts/verify.py` is welcome (see `exercises/03-run-verify-loop.md`).
+- **You started implementing without creating an Issue**: file the Issue even after the fact, and leave the
+  reference in the commit message and PR. Issue-First ideally means "create it first", but
+  "leaving a record" has the higher priority.
+
+---
+
+## 7. Terms of use
+
+This template is provided exclusively to registered participants of the AI-driven management retreat.
+Redistribution, commercial redistribution, and publishing derivatives in a public repository are prohibited.
+See [LICENSE.md](./LICENSE.md) for details.
 
 ---
 
@@ -243,4 +245,4 @@ ai-retreat-starter/
 
 ---
 
-*ai-retreat-starter — AI 駆動経営合宿 参加者向けテンプレート*
+*ai-retreat-starter — template for participants of the AI-driven management retreat*

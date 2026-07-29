@@ -1,118 +1,119 @@
 # Scope Contract Rule
 
-scope inflation（小さいタスクが肥大化する事故）を防ぐ、着手前の契約ルール。
-「小さく直すつもりが気づけば大改造していた」を構造的に防ぐための最小規律。
+A pre-work contract rule that prevents scope inflation (the accident where a small task balloons).
+The minimum discipline needed to structurally prevent "I meant to make a small fix and somehow ended up rebuilding half of it".
 
-## 0. 原則
+## 0. Principle
 
 > "The diff you didn't write is safer than the diff you did."
 
-- 着手前 5 秒の自問で、ほとんどの scope inflation は防げる
-- Commit = 1 concern。2 concern が混ざった瞬間に契約違反
-- 「ついでに直したい」衝動は **必ず別 commit / 別 Issue** に隔離する
-- 見た目の美しさ（きれいなリファクタ・one-liner 化）は scope 判断とは独立させる
+- Five seconds of self-questioning before you start prevents most scope inflation
+- Commit = 1 concern. The moment two concerns are mixed in, the contract is broken
+- The urge to "fix this while I'm here" must **always** be isolated into a separate commit / separate Issue
+- Keep cosmetic appeal (a tidy refactor, collapsing something into a one-liner) independent of scope judgement
 
-## 1. 着手前 Scope Statement（必須）
+## 1. Scope Statement before starting (mandatory)
 
-Edit / Write ツールを呼ぶ前に、以下 2 つを明示する:
+Before calling the Edit / Write tools, state the following two things explicitly:
 
-| 項目 | 内容 |
+| Item | Content |
 |---|---|
-| **CHANGE** | 何を変更するか（ファイル名:行範囲 / 関数名 / 追加する内容） |
-| **NOT CHANGE** | 何を触らないか（同一ファイル内の他関数 / 周辺のリファクタ / フォーマット / 型変更） |
+| **CHANGE** | What you will change (filename:line range / function name / what you're adding) |
+| **NOT CHANGE** | What you will not touch (other functions in the same file / surrounding refactors / formatting / type changes) |
 
-コミットメッセージの下書きを **着手前に** 書くと自然にこれが達成できる。
-書いていないことはコミットに含めない。
+Drafting the commit message **before you start** achieves this naturally.
+Do not include in the commit anything you didn't write down.
 
-### 例（良い scope statement）
-
-```
-CHANGE: scripts/verify.py の HYGIENE-01 チェック関数内、
-        git blame で 30 日超の TODO(temp) を検出するロジックを追加
-NOT CHANGE: 他の RQT チェック関数
-            Report クラスの内部実装
-            CLI 引数パースの構造
-DIFF BUDGET: 60 行以内
-```
-
-### 例（悪い scope statement）
+### Example (a good scope statement)
 
 ```
-verify.py を改善する
+CHANGE: inside the HYGIENE-01 check function in scripts/verify.py,
+        add logic to detect TODO(temp) markers older than 30 days via git blame
+NOT CHANGE: the other RQT check functions
+            the internal implementation of the Report class
+            the structure of CLI argument parsing
+DIFF BUDGET: within 60 lines
 ```
-→ 動詞「改善」に上限がない。NOT CHANGE が書かれていない。budget もない。
 
-## 2. Discovery-first: 標準ツールで見積もる
+### Example (a bad scope statement)
 
-Scope statement を書く前に、以下を実行してから見積もる:
+```
+Improve verify.py
+```
+-> The verb "improve" has no upper bound. No NOT CHANGE is written. No budget.
 
-| Step | Tool | 目的 | 結果の使い方 |
+## 2. Discovery-first: estimate using standard tools
+
+Before writing the scope statement, run the following and then estimate:
+
+| Step | Tool | Purpose | How to use the result |
 |---|---|---|---|
-| 1 | `Grep "<keyword>"` | 対象概念が既にどこで使われているか探す | 既存パターンに合わせる |
-| 2 | `Glob "**/<name>*"` | 関連ファイルの所在を把握 | 触るべきファイル一覧を確定 |
-| 3 | `Read <target file>` | 対象ファイル全体の文脈を理解する | 影響範囲・依存を把握 |
-| 4 | `Grep -r "<symbol>" .` | 対象 symbol の呼び出し元を洗い出す（簡易 impact 分析） | 変更が波及する箇所を確認 |
+| 1 | `Grep "<keyword>"` | Find where the concept is already used | Match the existing pattern |
+| 2 | `Glob "**/<name>*"` | Locate related files | Settle the list of files to touch |
+| 3 | `Read <target file>` | Understand the whole context of the target file | Grasp the blast radius and dependencies |
+| 4 | `Grep -r "<symbol>" .` | Enumerate callers of the symbol (quick impact analysis) | Check where the change propagates |
 
-この 4 ステップを飛ばして Edit に入ると scope inflation が起きやすい。
-特に「他のファイルからも参照されている関数・変数」を変更する場合は、Step 4 の
-grep で呼び出し元を確認してから着手する。
+Skipping these 4 steps and going straight to Edit makes scope inflation likely.
+In particular, when changing a function or variable referenced from other files, check the callers with the
+Step 4 grep before starting.
 
 ## 3. Diff Size Budget
 
-カテゴリ別の目標 diff と閾値の目安:
+Target diffs and rough thresholds by category:
 
-| カテゴリ | 目標 | 警告 | 要分割検討 | 備考 |
+| Category | Target | Warning | Consider splitting | Notes |
 |---|---|---|---|---|
-| Security / hook 追加 | ≤ 30 行 | 50 行 | 100 行 | 最も厳しく |
-| Bug fix | ≤ 50 行 | 100 行 | 200 行 | テスト追加は別カテゴリとして数える |
-| Feature（単一 concern） | ≤ 150 行 | 300 行 | 500 行 | 関数 1 つ or コンポーネント 1 つ |
-| Refactor | 独立 commit | — | — | 他カテゴリと混ぜない |
-| Doc / rule 追加 | ≤ 300 行 | 500 行 | 1000 行 | 本文は大きくても OK |
+| Security / adding a hook | <= 30 lines | 50 lines | 100 lines | The strictest |
+| Bug fix | <= 50 lines | 100 lines | 200 lines | Count added tests as a separate category |
+| Feature (single concern) | <= 150 lines | 300 lines | 500 lines | One function or one component |
+| Refactor | Independent commit | — | — | Don't mix with other categories |
+| Doc / rule addition | <= 300 lines | 500 lines | 1000 lines | Body text may be large |
 
-### 超過時の対応フロー
+### What to do when you exceed the budget
 
-1. **一旦止まって** `git diff --stat` を確認する
-2. 行数を分解する:
-   - 本当に必要な変更は何行か
-   - 「ついで」で入った変更は何行か
-3. 判断する:
-   - **scope inflation の兆候** → 一部を取り消して minimal 版を作り直す
-   - **正当な複雑さ** → Issue を複数の子 Issue / 複数コミットに分解する
-   - **1 コミットに留める合理的理由がある** → コミットメッセージにその理由を明記して進める
+1. **Stop for a moment** and check `git diff --stat`
+2. Break the line count down:
+   - How many lines are genuinely necessary?
+   - How many lines crept in "while I was there"?
+3. Decide:
+   - **Signs of scope inflation** -> revert part of it and rebuild a minimal version
+   - **Legitimate complexity** -> break the Issue into multiple child Issues / multiple commits
+   - **There is a reasonable case for keeping it in one commit** -> state that reason in the commit message and proceed
 
-## 4. 禁止事項（scope contract 違反）
+## 4. Prohibited (scope contract violations)
 
-| 禁止 | 理由 | 代替 |
+| Prohibited | Why | Instead |
 |---|---|---|
-| bugfix commit に無関係なリファクタを混ぜる | regression が隠れ、reviewer が判別できない | 別 commit / 別 Issue |
-| フォーマット圧縮と機能追加を混ぜる | diff 全体が review 困難になる | フォーマット変更は独立 commit |
-| 「ついでに」既存コードを整理する | scope statement に書いていない変更が紛れる | 気になった箇所はコメントか Issue にメモし、別セッションで対応 |
-| 3 concern 以上を 1 commit に詰め込む | atomic 性が失われ、revert が困難になる | 1 commit = 1 concern の原則を維持 |
-| CHANGE / NOT CHANGE を書かずに Edit を連発する | 気づかないうちに関係ないファイルまで触ってしまう | 着手前に必ず 5 秒チェック（§6）を通す |
+| Mixing an unrelated refactor into a bugfix commit | Regressions get hidden and the reviewer can't tell them apart | Separate commit / separate Issue |
+| Mixing formatting compression with a feature addition | The whole diff becomes hard to review | Formatting changes as an independent commit |
+| Tidying up existing code "while you're there" | Changes not in the scope statement slip in | Note what bothered you in a comment or an Issue and deal with it in a separate session |
+| Cramming 3 or more concerns into one commit | Atomicity is lost and reverting becomes difficult | Maintain the 1 commit = 1 concern principle |
+| Firing off Edits without writing CHANGE / NOT CHANGE | You end up touching unrelated files without noticing | Always run the 5-second check (§6) before starting |
 
-## 5. Bypass（例外運用）
+## 5. Bypass (handling exceptions)
 
-正当な理由で budget を超える場合は、コミットメッセージに理由を明記した上で進めてよい。
-無言でのバイパスは scope contract 違反として扱う。
+If there is a legitimate reason to exceed the budget, you may proceed as long as you state the reason in the
+commit message. Bypassing silently is treated as a scope contract violation.
 
 ```
 feat(verify): add HYGIENE-01 git-blame based stale TODO detection
 
-Budget 60 lines を超過（実測 95 行）。理由: git blame の porcelain
-出力パースが想定より複雑だったため。ロジックは単一 concern に閉じている。
+Exceeded the 60-line budget (95 lines measured). Reason: parsing git blame's
+porcelain output was more involved than expected. The logic is closed over a
+single concern.
 ```
 
-## 6. Quick Reference（着手前 5 秒チェック）
+## 6. Quick Reference (the 5-second check before you start)
 
-Edit / Write を呼ぶ前に、以下 5 問に即答できるか確認する:
+Before calling Edit / Write, check that you can answer these 5 questions immediately:
 
-1. ✅ **変更する対象は何か**（1 行で言えるか）
-2. ✅ **触らない対象は何か**（NOT CHANGE リストがあるか）
-3. ✅ **Grep / Glob で既存パターンを確認したか**
-4. ✅ **呼び出し元への影響を確認したか**（symbol を編集する場合）
-5. ✅ **予想 diff size はどのカテゴリか**
+1. ✅ **What are you changing?** (can you say it in one line?)
+2. ✅ **What are you not touching?** (do you have a NOT CHANGE list?)
+3. ✅ **Have you checked existing patterns with Grep / Glob?**
+4. ✅ **Have you checked the impact on callers?** (if you're editing a symbol)
+5. ✅ **Which category is the expected diff size in?**
 
-5 問すべてに即答できない状態で Edit を呼ばない。
+Do not call Edit while you cannot answer all 5 immediately.
 
 ---
 

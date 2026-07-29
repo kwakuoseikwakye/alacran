@@ -1,80 +1,80 @@
-# HITL (Human-In-The-Loop) Gate 原則
+# The HITL (Human-In-The-Loop) Gate principle
 
-> AI は速く、たくさん動ける。だからこそ「後戻りできない一歩」の手前だけは、
-> 必ず人間の承認を挟む。それ以外の全ては AI に任せてよい。
+> AI is fast and can do a great deal. Precisely because of that, a human approval step goes
+> immediately before "the step you can't take back". Everything else can be left to the AI.
 
-## 1. なぜ HITL Gate が必要か
+## 1. Why a HITL Gate is needed
 
-AI エージェントは提案から実行までを一気通貫でこなせるため、レビューの間を挟まずに
-金銭・契約・公開といった後戻りしにくい操作まで実行してしまうリスクがあります。
-すべての操作を人間が逐一承認していては AI の速度が活きません。
-HITL Gate は「どこで止まるべきか」を事前に明文化することで、**速度と安全のバランス**を取る仕組みです。
+Because an AI agent can go from proposal to execution in one continuous run, there is a risk it executes
+hard-to-reverse operations — money, contracts, publication — without a review step in between.
+Having a human approve every single operation would negate the AI's speed.
+The HITL Gate strikes a **balance between speed and safety** by writing down in advance where to stop.
 
-## 2. トリガー表
+## 2. Trigger table
 
-以下のいずれかに該当する操作は、実行前に必ず一時停止し、人間の承認を得ること。
+Any operation matching one of the following must pause before execution and obtain human approval.
 
-| カテゴリ   | 具体例                                                                                      | 閾値                                                        | エスカレーション先 |
+| Category   | Examples                                                                                    | Threshold                                                   | Escalate to |
 | ---------- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------ |
-| 金額       | 決済・送金・請求書発行・サブスク契約                                                        | $100 相当額を超える、または累計・継続課金が発生するもの全て | リポジトリオーナー |
-| 契約       | 契約書へのサイン、契約条件の変更、NDA 締結                                                  | 金額に関わらず全件                                          | リポジトリオーナー |
-| 不可逆操作 | `git push --force`、本番データの削除、ブランチの `-D` 削除、DB マイグレーションの破壊的変更 | 全件                                                        | リポジトリオーナー |
-| 公開       | public リポジトリへの公開設定変更、外部への情報発信（SNS投稿・プレスリリース等）            | 全件                                                        | リポジトリオーナー |
-| 認証       | API キー・認証情報のローテーション、権限付与・剥奪、新規アカウント発行                      | 全件                                                        | リポジトリオーナー |
+| Money       | Payments, transfers, issuing invoices, subscription contracts                              | Anything over the equivalent of $100, or anything cumulative or recurring | Repository owner |
+| Contracts   | Signing a contract, changing contract terms, entering an NDA                               | All, regardless of amount                                   | Repository owner |
+| Irreversible operations | `git push --force`, deleting production data, deleting a branch with `-D`, destructive DB migrations | All                                                         | Repository owner |
+| Publication | Changing a repository's visibility to public, external communications (social posts, press releases, etc.) | All                                                         | Repository owner |
+| Credentials | Rotating API keys or credentials, granting or revoking permissions, issuing new accounts   | All                                                         | Repository owner |
 
-上記に明示的に書かれていないケースでも、「元に戻すのが困難」「対外的に見える」
-「お金が動く」のいずれかに該当すると判断したら、念のため HITL Gate を通す。
+Even in cases not written explicitly above, if you judge that something is "hard to undo", "externally visible"
+or "involves money", put it through the HITL Gate to be safe.
 
-> なお「不可逆操作」行のうち `git push --force`（`--force-with-lease` 等の lease 系は除く）と
-> `git branch -D` は、`.claude/hooks/git-ops-validator.sh` の blocking 層により実行前に機械的に
-> ブロックされる（exit 2）。表のそれ以外の行（本番データ削除・`reset --hard`・DB 破壊的変更等）は
-> 引き続き運用ルール（人間の明示承認）で担保する。
+> Note that of the "irreversible operations" row, `git push --force` (excluding lease-based forms such as
+> `--force-with-lease`) and `git branch -D` are mechanically blocked before execution by the blocking layer of
+> `.claude/hooks/git-ops-validator.sh` (exit 2). The other rows in the table (deleting production data,
+> `reset --hard`, destructive DB changes, etc.) continue to be assured by operational rules (explicit human approval).
 
-## 3. トリガーが発火したときにやること
+## 3. What to do when a trigger fires
 
-1. **一時停止する** — その場で実行しない。次のアクションに進まない。
-2. **依頼内容を要約する** — 何を・なぜ・どの範囲で実行しようとしているかを簡潔にまとめる。
-   影響範囲（誰に見える／何が変わる／取り消せるか）を明記する。
-3. **明示的な承認を待つ** — ユーザーからの明確な「OK」「実行して」等の返答を待つ。
-4. 承認が得られたら実行し、実行後に結果を報告する。
+1. **Pause** — do not execute on the spot. Do not move on to the next action.
+2. **Summarise the request** — state briefly what you are about to do, why, and within what scope.
+   Spell out the blast radius (who can see it / what changes / whether it can be undone).
+3. **Wait for explicit approval** — wait for a clear "OK", "go ahead" or similar from the user.
+4. Once approval is given, execute, and report the result afterwards.
 
-## 4. やってはいけないこと
+## 4. What you must not do
 
-- **沈黙を承認とみなさない** — ユーザーが次の話題に移った、返信が遅い、といった状況を
-  「暗黙の承認」と解釈して実行してはいけない。承認は常に明示的でなければならない。
-- **依頼を分割して閾値を下げない** — 例えば $250 の決済を「$90 の決済を 3 回に分ける」ように
-  提案・実行し、1 回あたりの金額を閾値未満に見せかけて HITL Gate を回避してはいけない。
-  合計額・累積影響で判断する。
-- **確認を後回しにして先に実行しない** — 「まず実行してから確認を仰ぐ」の順序は禁止。
-  不可逆操作は取り消しコストが高いため、常に確認が実行に先行する。
-- **トリガー表にない、という理由だけで機械的に素通りしない** — トリガー表は代表例であり
-  網羅リストではない。判断に迷う操作はグレーゾーンとして扱い、止まって確認する。
+- **Do not treat silence as approval** — you must not interpret the user moving on to another topic, or being
+  slow to reply, as "implicit approval". Approval must always be explicit.
+- **Do not split a request to get under the threshold** — for example, you must not propose or execute a $250
+  payment as "three payments of $90" so each one appears to fall below the threshold and thereby dodge the
+  HITL Gate. Judge on the total and the cumulative impact.
+- **Do not execute first and confirm later** — the order "execute first, then ask" is forbidden.
+  Irreversible operations have a high cost to undo, so confirmation always precedes execution.
+- **Do not wave something through mechanically just because it isn't in the trigger table** — the trigger table
+  gives representative examples, not an exhaustive list. Treat anything you're unsure about as a grey area, stop and confirm.
 
-## 5. 自社固有トリガーの追加
+## 5. Adding your own triggers
 
-トリガー表は出発点であり、自社の実情に合わせて行を追加することを前提にしています。
-追加例:
+The trigger table is a starting point, and is designed on the assumption you will add rows to fit your own
+circumstances. Examples of additions:
 
-- 顧客データのエクスポート（個人情報保護の観点で契約・不可逆操作に準ずる扱い）
-- 特定の顧客向け価格・条件のカスタマイズ
-- 採用候補者への合否連絡
+- Exporting customer data (treated like contracts or irreversible operations, from a personal-data protection standpoint)
+- Customising prices or terms for a specific customer
+- Notifying a job applicant of the outcome
 
-追加した行は本ファイルの表に直接追記し、コミットして残す（`docs/decisions/` に追加理由を
-Decision RFC として残すとなお良い）。
+Add the row directly to the table in this file and commit it (it is even better to record why you added it as a
+Decision RFC in `docs/decisions/`).
 
-ただし、本ファイル §2 の表は判断原則の **カテゴリ一覧（思想面の全体像）** であり、表への追記だけでは
-`scripts/verify.py` の HITL-02 には機械的に反映されません。トリガーを **運用上の SSOT** として
-機械検証の対象にするには、同じトリガーを `definitions/hitl/triggers/<slug>.yaml` として 1 ファイル
-追加してください（書き方は `definitions/hitl/triggers/_schema.md`、承認者の役割は
-`definitions/hitl/approver-registry.yaml` と対応させます）。yaml 側が verify の検証対象であり、
-md 表と yaml を 1:1 対応させる必要はありません（md = 思想カテゴリ / yaml = 運用 SSOT）。
+However, the table in §2 of this file is the **category list of judgement principles (the conceptual overview)**,
+and adding to the table alone is not mechanically reflected in HITL-02 in `scripts/verify.py`. To make a trigger
+subject to machine verification as the **operational SSOT**, add the same trigger as a single file at
+`definitions/hitl/triggers/<slug>.yaml` (see `definitions/hitl/triggers/_schema.md` for how to write it, and match
+the approver roles to `definitions/hitl/approver-registry.yaml`). The yaml side is what verify checks, and the md
+table and the yaml do not need to correspond 1:1 (md = conceptual categories / yaml = operational SSOT).
 
-## 6. 関連ルール
+## 6. Related rules
 
-- `.claude/rules/issue-first.md` — HITL Gate に該当する作業は Issue 起票も必須（本ルール §1 参照）
-- `.claude/rules/scope-contract.md` — 実行範囲の宣言と HITL Gate は独立した仕組みだが、
-  不可逆操作は両方の観点でチェックする
+- `.claude/rules/issue-first.md` — work matching the HITL Gate also requires an Issue (see §1 of this rule)
+- `.claude/rules/scope-contract.md` — declaring the scope of execution and the HITL Gate are independent
+  mechanisms, but irreversible operations should be checked from both angles
 
 ---
 
-_ai-retreat-starter — HITL Gate 原則_
+_ai-retreat-starter — the HITL Gate principle_
