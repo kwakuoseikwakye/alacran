@@ -1,22 +1,25 @@
-# 15-Minute Setup Walkthrough（期待挙動リファレンス）
+# 15-Minute Setup Walkthrough (an expected-behavior reference)
 
-> 目的: 本テンプレをフレッシュな環境でセットアップした際に、各ステップで**何が起きるべきか**を明示する参照文書。
-> 使い方: 自分でセットアップして「あれ、この挙動でいいんだっけ？」と思ったらこのファイルと突き合わせる。
-> 位置づけ: `docs/starter-manual.md` §2「15分セットアップ」の**詳細版**。手順の意図は starter-manual.md、
-> 実際に出るべき出力はこのファイル、という役割分担。
+> Purpose: a reference document that spells out **what should happen** at each step when
+> setting up this template on a fresh environment.
+> How to use it: if you set this up yourself and think "hold on, is this behavior right?",
+> cross-check against this file.
+> Where it fits: the **detailed counterpart** to `docs/starter-manual.md` §2 ("15-minute
+> setup"). The division of labor: starter-manual.md is the intent behind each step, this file
+> is what output should actually appear.
 
 ---
 
-## 前提条件
+## Prerequisites
 
-| ツール | 想定バージョン | 確認コマンド |
+| Tool | Expected version | Check command |
 |---|---|---|
-| Python | 3.9 以上 | `python3 --version` |
-| Git | 2.x 以上 | `git --version` |
-| GitHub CLI (`gh`) | 2.x 以上 | `gh --version` |
-| Claude Code CLI | Pro 以上 or Claude Code 対応プラン | `claude --version` |
+| Python | 3.9+ | `python3 --version` |
+| Git | 2.x+ | `git --version` |
+| GitHub CLI (`gh`) | 2.x+ | `gh --version` |
+| Claude Code CLI | Pro or above, or a Claude Code-eligible plan | `claude --version` |
 
-いずれか 1 つでも未導入だと以降のステップで詰まる。代表的なエラー例:
+Missing even one of these gets you stuck at a later step. Representative error examples:
 
 ```bash
 $ python3 scripts/verify.py
@@ -33,37 +36,40 @@ $ claude
 zsh: command not found: claude
 ```
 
-→ それぞれ `pip3 install pyyaml` / `gh auth login` / Claude Code CLI のインストールで解消する。
+-> Each is resolved with, respectively, `pip3 install pyyaml` / `gh auth login` / installing
+the Claude Code CLI.
 
 ---
 
 ## Timeline
 
-15 分想定のタイムラインを示す。実測は環境（ネットワーク速度、対話の速さ）によって前後する。
+Shows the expected 15-minute timeline. Actual time varies by environment (network speed, how
+fast you answer the interview).
 
-| # | ステップ | 目安時間 | 入力/操作 | 期待出力サマリ |
+| # | Step | Estimated time | Input/action | Expected-output summary |
 |---|---|---|---|---|
-| 1 | "Use this template" で新規 private リポ作成 | 1 分 | GitHub UI から実行 | 自分の GitHub アカウントに private リポができる。初回コミットは本テンプレの `main` と同一 |
-| 2 | `git clone` + `cd` | 30 秒 | `git clone git@github.com:<your-account>/<your-repo-name>.git` | 約 85 件のファイルが追跡される（テンプレの成長により変動。`git ls-files \| wc -l` で確認可） |
-| 3 | 前提ツール確認 | 1 分 | `python3 --version && git --version && gh --version && claude --version` | 全コマンドがバージョン文字列を返す（エラーなし） |
-| 4 | gh 認証（未認証時のみ） | 2 分 | `gh auth status` → 未認証なら `gh auth login` | `Logged in to github.com account <your-account>` |
-| 5 | 最初の `/verify` 実行 | 30 秒 | `python3 scripts/verify.py` | FAIL 0 件（INFO は未記入の棚 — kpi/cycles/retro/clients 等 — の分だけ残るのが正常） |
-| 6 | Claude Code 起動 + CLAUDE.md 読込 | 1 分 | `claude` | プロンプトが起動する。以後 CLAUDE.md の内容に沿って振る舞う |
-| 7 | `/define-company` 実行 | 5〜8 分 | Claude と対話（4 つの質問に回答） | `definitions/ontology/company.yaml` が新規生成される |
-| 8 | `/verify` 再実行 | 30 秒 | `python3 scripts/verify.py` | `ONTOLOGY-01` が INFO → PASS に変わる（Step 7 完了の証拠）。他の INFO は残ってよい。FAIL 0 件 |
-| 9 | 最初のコミット | 1 分 | `git add definitions/ontology/company.yaml && git commit -m "docs(ontology): 自社オントロジーの初版を定義"` | commit 成功。hook（もしあれば）は advisory のみで非ブロッキング |
+| 1 | Create a new private repo via "Use this template" | 1 min | Done from the GitHub UI | A private repo is created under your GitHub account. Its first commit is identical to this template's `main` |
+| 2 | `git clone` + `cd` | 30 sec | `git clone git@github.com:<your-account>/<your-repo-name>.git` | About 85 files are tracked (varies as the template grows — check with `git ls-files \| wc -l`) |
+| 3 | Confirm prerequisite tools | 1 min | `python3 --version && git --version && gh --version && claude --version` | Every command returns a version string (no errors) |
+| 4 | `gh` authentication (only if not yet authenticated) | 2 min | `gh auth status` -> if not authenticated, `gh auth login` | `Logged in to github.com account <your-account>` |
+| 5 | The first `/verify` run | 30 sec | `python3 scripts/verify.py` | 0 FAILs (it's normal for INFO to remain for shelves not yet filled in — kpi/cycles/retro/clients etc.) |
+| 6 | Start Claude Code + load CLAUDE.md | 1 min | `claude` | The prompt starts up. From here on, it behaves per CLAUDE.md's content |
+| 7 | Run `/define-company` | 5-8 min | Dialogue with Claude (answer 4 questions) | `definitions/ontology/company.yaml` is newly generated |
+| 8 | Re-run `/verify` | 30 sec | `python3 scripts/verify.py` | `ONTOLOGY-01` flips from INFO to PASS (proof Step 7 finished). Other INFOs are fine to remain. 0 FAILs |
+| 9 | The first commit | 1 min | `git add definitions/ontology/company.yaml && git commit -m "docs(ontology): define the initial version of our company ontology"` | The commit succeeds. Any hooks are advisory-only and non-blocking |
 
-合計目安: 約 12〜15 分（ステップ 4 の gh 未認証対応が発生する場合は +2 分）。
+Total estimate: about 12-15 minutes (add +2 minutes if Step 4's `gh` authentication is
+needed).
 
 ---
 
 ## Step-by-step expected output
 
-### Step 3. 前提ツール確認
+### Step 3. Confirm prerequisite tools
 
 ```
 $ python3 --version
-Python 3.9.x  (またはそれ以上)
+Python 3.9.x  (or higher)
 
 $ git --version
 git version 2.x.x
@@ -75,25 +81,26 @@ $ claude --version
 x.x.x (Claude Code)
 ```
 
-いずれかがバージョン表示されずエラーになった場合は、そのツールの導入が先決。
+If any of these errors out instead of showing a version, installing that tool comes first.
 
-### Step 4. gh 認証確認
+### Step 4. Confirm `gh` authentication
 
 ```
 $ gh auth status
 ✓ Logged in to github.com account <your-account> (keyring)
 ```
 
-未認証の場合:
+If not authenticated:
 
 ```
 $ gh auth status
 You are not logged into any GitHub hosts.
 ```
 
-→ `gh auth login` を実行し、対話プロンプトで `GitHub.com` → `HTTPS` または `SSH` → ブラウザ認証、の順に選択する。
+-> Run `gh auth login`, and at the interactive prompt choose, in order, `GitHub.com` ->
+`HTTPS` or `SSH` -> browser authentication.
 
-### Step 5. 最初の `/verify` 実行
+### Step 5. The first `/verify` run
 
 ```
 $ python3 scripts/verify.py
@@ -115,46 +122,49 @@ RQT verify — running...
   [✓] HITL-01          PASS   hitl-gate.md has a trigger table
   [i] HITL-02          INFO   3 trigger template(s) still contain <<TODO>> placeholders — ...
 
-... （STRUCT-DEF / STRUCT-DOC / EXAMPLE / DEFINITIONS / GEN / PATHREF と続く）
+... (continues with STRUCT-DEF / STRUCT-DOC / EXAMPLE / DEFINITIONS / GEN / PATHREF)
 
 ========================================
 Total: 18  PASS: 12  WARN: 0  FAIL: 0  SKIP/INFO: 6
 ========================================
 ```
 
-ここで確認すべきは **FAIL が 0 件であること**。`ONTOLOGY-01` を含む INFO 系のチェック（`HITL-02` /
-`DEF-KPI-01` / `DEF-CYCLE-01` / `DEF-RETRO-01` / `DEF-CLIENT-01` 等）は該当する棚がまだ記入されて
-いないことを示すだけで、FAIL ではない。「テンプレ配布直後にいきなり赤字だらけにしない」という
-`scripts/verify.py` の設計方針どおり。RQT の総数はテンプレの成長とともに増減するため、
-`Total` や `PASS` の具体的な件数そのものを覚える必要はない。判定基準は常に **FAIL 0 件**。
+What to confirm here is **0 FAILs**. The INFO-type checks including `ONTOLOGY-01`
+(`HITL-02` / `DEF-KPI-01` / `DEF-CYCLE-01` / `DEF-RETRO-01` / `DEF-CLIENT-01` etc.) merely
+indicate that the corresponding shelf hasn't been filled in yet — they are not FAILs. This
+follows `scripts/verify.py`'s design policy of "don't show a wall of red the moment the
+template is distributed." The total number of RQTs grows and shrinks as the template
+evolves, so there's no need to memorize the specific `Total`/`PASS` counts. The judging
+criterion is always **0 FAILs**.
 
-### Step 6. Claude Code 起動
+### Step 6. Start Claude Code
 
 ```
 $ claude
 ```
 
-起動すると Claude Code のセッションが立ち上がり、`CLAUDE.md` を自動的に読み込む。ターミナルに
-エラーが出ず、対話プロンプトが表示されれば正常。
+Once it starts, a Claude Code session comes up and automatically loads `CLAUDE.md`. If no
+error appears in the terminal and the interactive prompt is shown, it's working normally.
 
-### Step 7. `/define-company` 実行
+### Step 7. Run `/define-company`
 
 ```
 > /define-company
 ```
 
-Claude が `docs/templates/ontology-starter.yaml` を読み込んだうえで、以下 4 つの質問を**1 つずつ順番に**投げてくる
-（まとめて聞いてきた場合は想定外の挙動）:
+Claude reads `docs/templates/ontology-starter.yaml`, then asks the following 4 questions
+**one at a time, in order** (asking them all at once would be unexpected behavior):
 
-1. 事業ドメイン（どんな問題を解決しているか）
-2. 主要ステークホルダー（誰が事業の中心にいるか）
-3. コアバリューフロー（インプット → 変換 → アウトプット）
-4. 現在最大のボトルネック
+1. Business domain (what problem you solve)
+2. Key stakeholders (who sits at the center of the business)
+3. Core value flow (input -> transformation -> output)
+4. The current biggest bottleneck
 
-全問回答すると、`definitions/ontology/company.yaml` が生成され、Claude が内容を要約して提示する。
-このタイミングで内容の修正依頼をしてもよい。曖昧な項目は `status: draft` のまま残ってよい設計。
+Once you've answered all 4, `definitions/ontology/company.yaml` is generated, and Claude
+summarizes and presents its content. You may ask for corrections at this point. Vague items
+are fine left as `status: draft` — that's by design.
 
-### Step 8. `/verify` 再実行
+### Step 8. Re-run `/verify`
 
 ```
 $ python3 scripts/verify.py
@@ -167,54 +177,59 @@ Total: 18  PASS: 13  WARN: 0  FAIL: 0  SKIP/INFO: 5
 ========================================
 ```
 
-`ONTOLOGY-01` が `INFO` → `PASS` に変わることが Step 7 が正しく完了している証拠。
-`DEF-KPI-01` / `DEF-CYCLE-01` / `DEF-RETRO-01` / `DEF-CLIENT-01` 等、他の棚の INFO はまだ記入していない
-だけなので残ってよい。ここでも判定基準は **FAIL 0 件**（`SKIP/INFO` が全て 0 になる必要はない）。
+`ONTOLOGY-01` flipping from `INFO` to `PASS` is proof Step 7 completed correctly. Other
+shelves' INFOs (`DEF-KPI-01` / `DEF-CYCLE-01` / `DEF-RETRO-01` / `DEF-CLIENT-01` etc.) are
+fine to remain, since those shelves just haven't been filled in yet. Here too, the judging
+criterion is always **0 FAILs** (there's no requirement for `SKIP/INFO` to reach 0).
 
-### Step 9. 最初のコミット
+### Step 9. The first commit
 
 ```
 $ git add definitions/ontology/company.yaml
-$ git commit -m "docs(ontology): 自社オントロジーの初版を定義"
-[main xxxxxxx] docs(ontology): 自社オントロジーの初版を定義
+$ git commit -m "docs(ontology): define the initial version of our company ontology"
+[main xxxxxxx] docs(ontology): define the initial version of our company ontology
  1 file changed, N insertions(+)
 ```
 
-hooks が配線されている場合、commit 前後に advisory メッセージが出ることがあるが、
-**exit 0 で非ブロッキング**な設計なので commit 自体は成功する。エラーで commit が止まった場合は
-「動かない」のではなく「別の問題を検知して意図的に止めている」ケースなので、メッセージを読んで対応する。
+If hooks are wired up, an advisory message may appear around the commit, but by design it's
+**exit 0 and non-blocking**, so the commit itself succeeds. If a commit is stopped by an
+error, that's not "it's broken" — it's a case of "it detected a different problem and
+deliberately stopped" — read the message and address it.
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-| 症状 | 原因 | 対処 |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `python3 scripts/verify.py` が `ModuleNotFoundError` 系で落ちる | `pyyaml` 未インストール | `pip3 install pyyaml` |
-| `gh` コマンドで認証エラーが出る | `gh auth login` 未実施 | `gh auth login` を実行し、SSH または HTTPS を選択して対話ログイン |
-| CI（`verify.yml`）の `secret-scan` job が fail する | private リポで GitHub Advanced Security が有効化されていない状態からの push 等 | まずは PR ではなく直接 push で挙動を確認する。secret-scan 自体は CI 同梱の gitleaks（無償）で動くため追加設定は不要 |
-| `/define-company` が `docs/templates/ontology-starter.yaml` を見つけられない | clone が不完全、または誤ったディレクトリで作業している | `find . -name ontology-starter.yaml` で存在確認。見つからなければ `git clone` からやり直す |
-| `python3 scripts/verify.py` の `HYGIENE-01` が FAIL する | `TODO(temp)` マーカーが 30 日以上放置されている | 該当箇所を実装完了させてマーカーを除去する。検証ロジック側（`scripts/verify.py`）を弱めて通すのは禁止 |
-| `claude` コマンドが `command not found` | Claude Code CLI 未導入 | Claude Code のインストール手順に従って導入する |
-| `definitions/ontology/company.yaml` が生成されない | `/define-company` の質問に全て答え終わっていない | Claude とのやり取りを最後まで進める。質問を飛ばして中断すると生成されない |
-| 文書に書かれた `python3 scripts/verify.py` の期待出力と、実行結果の合計件数（Total）が違って見える | RQT はテンプレの成長とともに増えていくため、件数が一致することは要件ではない | 判定基準は常に FAIL 0 件。INFO は未記入の棚の分だけ残っていれば正常 |
+| `python3 scripts/verify.py` crashes with a `ModuleNotFoundError`-type error | `pyyaml` isn't installed | `pip3 install pyyaml` |
+| The `gh` command gives an authentication error | `gh auth login` hasn't been run | Run `gh auth login` and choose SSH or HTTPS to log in interactively |
+| The CI (`verify.yml`) `secret-scan` job fails | e.g. pushing from a state where GitHub Advanced Security isn't enabled on a private repo | First confirm the behavior with a direct push rather than a PR. secret-scan itself runs on the bundled gitleaks (free), so no extra setup is needed |
+| `/define-company` can't find `docs/templates/ontology-starter.yaml` | The clone is incomplete, or you're working in the wrong directory | Confirm it exists with `find . -name ontology-starter.yaml`. If not found, redo the `git clone` |
+| `python3 scripts/verify.py`'s `HYGIENE-01` FAILs | A `TODO(temp)` marker has been sitting for 30+ days | Finish implementing that part and remove the marker. Weakening the check itself (`scripts/verify.py`) to force a pass is forbidden |
+| The `claude` command says `command not found` | The Claude Code CLI isn't installed | Install it following Claude Code's installation instructions |
+| `definitions/ontology/company.yaml` isn't generated | Not all of `/define-company`'s questions were answered | Go all the way through the exchange with Claude. Skipping a question or stopping partway prevents generation |
+| The expected output documented for `python3 scripts/verify.py` and the actual run's total count (Total) look different | RQTs grow as the template evolves, so matching counts exactly isn't a requirement | The judging criterion is always 0 FAILs. It's normal for INFO to remain only for shelves not yet filled in |
 
 ---
 
-## Success criteria（15分後の期待状態）
+## Success criteria (the expected state after 15 minutes)
 
-- [ ] `python3 scripts/verify.py` の全 RQT が PASS または INFO（FAIL は 0 件。件数そのものは問わない）
-- [ ] `definitions/ontology/company.yaml` が commit 済（自社ドメインの内容が反映されている、または `status: draft`）
-- [ ] Claude Code 上で `/verify` `/define-company` の 2 コマンドが動作確認済み
-- [ ] `git log` に少なくとも 1 件、自分で作った commit が積まれている
+- [ ] Every RQT in `python3 scripts/verify.py` is PASS or INFO (0 FAILs. The exact count
+      doesn't matter)
+- [ ] `definitions/ontology/company.yaml` is committed (reflecting your own company's domain,
+      or left at `status: draft`)
+- [ ] Both `/verify` and `/define-company` have been confirmed working in Claude Code
+- [ ] At least 1 commit you made yourself is in `git log`
 
 ---
 
-## 次のステップ
+## Next steps
 
-- `exercises/01-define-your-company.md` — Step 7 を `/define-company` のスキップ等で飛ばしていた場合、ここで詳細な手順を確認しながらやり直す
-- `exercises/02-first-hitl-gate.md` — HITL Gate を実際に体感する演習
-- `exercises/03-run-verify-loop.md` — `scripts/verify.py` に自社の RQT を追加する演習
+- `exercises/01-define-your-company.md` — if you skipped Step 7 (e.g. skipped
+  `/define-company`), redo it here while following the detailed steps
+- `exercises/02-first-hitl-gate.md` — an exercise to actually experience the HITL Gate
+- `exercises/03-run-verify-loop.md` — an exercise to add your own RQT to `scripts/verify.py`
 
 ---
 

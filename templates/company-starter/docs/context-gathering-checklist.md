@@ -1,85 +1,102 @@
-# 合宿の持ち物 — 自社コンテキスト集めチェックリスト
+# What to bring to the retreat — a company-context gathering checklist
 
-> 対象読者: 合宿への参加が決まった方。配布タイミングは **合宿の数日前**。
-> これは `docs/participant-guide.md`(ツールの準備)と対になる「**素材の準備**」ガイドです。
-> 所要は「探して手元にまとめるだけ」。事前に書き込む作業はありません。
-
----
-
-## なぜ集めるのか
-
-合宿の初日は、あなたの会社を Claude にインタビューさせ、
-自社の構造・ボトルネック・業務の言葉を一気に言語化します(`/define-company` / `/ingest-context`)。
-このとき **手元に会社の生の資料があるほど、当日の仕上がりが濃く・速くなります**。
-
-言語化は当日 AI がやります。あなたがやるのは「材料を持ってくる」ことだけです。
-
-### 持ってくる形
-
-- **デジタルファイルが理想**(PDF・Excel・スクショ・URL なんでも)。1 つのフォルダにまとめてくると当日ラクです。
-- **紙しかないものは写真でOK**。当日その場でデジタル化します。完璧に整える必要はありません。
-- 迷ったら「多めに持ってくる」。使うかどうかは当日判断します。
+> Audience: anyone confirmed to attend the retreat. Distributed **a few days before the
+> retreat**. This is the "**materials to gather**" counterpart to `docs/participant-guide.md`
+> (tool setup). All it takes is "find it and put it in one place" — there's nothing to fill
+> in ahead of time.
 
 ---
 
-## ◎ 必ず持ってくる(5つ)
+## Why gather this
 
-### 1. 会社の説明になるもの
-会社案内・ホームページ・パンフレット。「何をしている会社か」が伝わるもの。
+On day one of the retreat, you'll have Claude interview you about your company, putting your
+business's structure, bottlenecks, and everyday vocabulary into words all at once
+(`/define-company` / `/ingest-context`). **The more raw material about your company you have
+on hand, the richer and faster that day's result will be.**
 
-### 2. 商品・サービスがわかるもの
-カタログ・価格表・メニュー。主力の商品/サービスがわかるもの。
+Putting it into words is the AI's job, on the day. Your job is only to "bring the material."
 
-### 3. 顧客・取引先がわかるもの
-顧客リスト・取引先リスト・よくある問い合わせ。誰に売っているかがわかるもの。
+### What form to bring it in
 
-### 4. 現場の言葉(社内用語・略語)
-社内でだけ通じる言葉・略語・品番ルールなど。メモ程度でよく、無ければ当日口頭でも大丈夫です。
-
-### 5. 一番時間を食っている仕事の資料 ← **最重要**
-毎週やっている・属人化している作業がわかるもの。よく使うメール数通、業務手順書など。
-**当日ここから「AIにやらせる最初の仕事」を作ります。** ここが厚いほど成果が出ます。
-
----
-
-## ○ あると当日一気に進む(3つ)
-
-### 6. 数字がわかるもの
-月次レポート・管理表・ダッシュボードなど、追っている数字がわかるもの(だいたいの数字でOK)。
-
-### 7. 節目・締めのカレンダー
-繁忙期・月初/月末締め・週末セール・季節の波など、仕事の周期がわかるもの。
-
-### 8. クライアント資料 ※受託・卸の方だけ
-案件の範囲・発注/納品の流れがわかるもの。自社完結(店舗・自社ECのみ等)の方は不要です。
+- **Digital files are ideal** (PDF, Excel, screenshots, URLs — anything). Gathering them
+  into one folder ahead of time makes the day easier.
+- **Anything only on paper is fine as a photo.** We'll digitize it on the spot that day. No
+  need to make it perfect.
+- If in doubt, "bring more than you think you need." Whether it gets used is decided on the
+  day.
 
 ---
 
-## 業種別の「たとえば何を?」
+## ◎ Must bring (5 items)
 
-上の8項目が、業種だとどんな資料に当たるかの例です。自分の業種の列だけ見れば十分です。
+### 1. Something that describes the company
+A company brochure, website, or pamphlet — anything that conveys "what kind of company this
+is."
 
-| # | 項目 | 製造 | 小売・EC | 士業・専門サービス | 対人サービス(飲食・美容・教室) | BtoB法人営業 |
+### 2. Something that shows your products/services
+A catalog, price list, or menu — anything that shows your main products/services.
+
+### 3. Something that shows your customers/business partners
+A customer list, a partner list, common inquiries — anything that shows who you sell to.
+
+### 4. On-the-ground vocabulary (in-house jargon, abbreviations)
+Words, abbreviations, or part-numbering rules that only make sense inside your company. A
+rough memo is fine — if you don't have anything written down, it's also fine to just say it
+out loud on the day.
+
+### 5. Material about the work that eats up the most time ← **most important**
+Something that shows a task done every week, or one that's overly dependent on one person —
+a few frequently-used emails, an operating procedure document, etc. **This is what we'll use
+on the day to build the AI's first assigned task.** The richer this is, the more you'll get
+out of it.
+
+---
+
+## ○ Nice to have — speeds things up a lot on the day (3 items)
+
+### 6. Something that shows numbers
+A monthly report, a management spreadsheet, a dashboard — anything that shows the numbers
+you track (rough figures are fine).
+
+### 7. A calendar of milestones and closings
+Busy seasons, month-start/month-end closing, weekend sales, seasonal waves — anything that
+shows the rhythm of the work.
+
+### 8. Client materials — for contracted/wholesale businesses only
+Something that shows the scope of an engagement, or the order/delivery flow. Not needed if
+you're self-contained (e.g. just a storefront or your own EC site).
+
+---
+
+## By industry: "for example, what?"
+
+Examples of what the 8 items above look like by industry. You only need to look at your own
+industry's column.
+
+| # | Item | Manufacturing | Retail/EC | Licensed professions / professional services | Person-facing services (restaurants, beauty, classes) | B2B corporate sales |
 |---|---|---|---|---|---|---|
-| 1 | 会社の説明 | 会社案内・取扱品目 | ショップ紹介・出店モール一覧 | 事務所紹介・対応業務 | 店舗紹介・SNSプロフィール | 会社案内・サービス紹介資料 |
-| 2 | 商品/サービス | 製品カタログ・図面・価格表 | 商品ライン・型番(SKU)・価格 | 提供業務とパッケージ・料金表 | メニュー表・コース・オプション | 提供プラン・料金体系・提案書 |
-| 3 | 顧客・取引先 | 主要取引先・引合いメール | 顧客セグメント・モール別・レビュー | 顧問先リスト・よくある相談 | 常連/新規・予約データ | 見込み/既存先・商談メモ |
-| 4 | 現場の言葉 | 工程名・設備の呼称・品番ルール | モールの社内呼称・SKUコード規則 | 書式名・手続きの略称 | 予約枠・シフト用語 | 案件フェーズの呼び方・社内KPI |
-| 5 | 一番時間を食う仕事 | 受発注・納期回答メール・工程管理表 | 在庫同期の手順・問い合わせ返信 | 申請書類の作成手順・定型連絡 | 予約確認・リマインド・シフト作成 | 見積・提案書・フォローアップ |
-| 6 | 数字 | 生産数・稼働率・不良率 | 転換率・リピート率・在庫回転 | 顧問件数・稼働時間・受任率 | 客数・リピート率・客単価 | 商談数・受注率・LTV |
-| 7 | 節目・締め | 月末締め・繁忙期・定期メンテ | 週末セール・モールのセール・月初締め | 申告期・決算期・給与計算日 | 繁忙曜日/季節・予約ピーク | 四半期末・予算期 |
-| 8 | クライアント(受託・卸のみ) | 受注先ごとの仕様・納期 | 卸先ごとの品目・納品サイクル | 案件範囲・成果物・承認フロー | (該当少) | クライアント別の案件範囲 |
+| 1 | Company description | Company brochure, product lineup | Shop intro, list of marketplaces sold on | Office intro, services handled | Store intro, social-media profile | Company brochure, service intro deck |
+| 2 | Products/services | Product catalog, drawings, price list | Product lines, model numbers (SKU), prices | Services offered, packages, fee schedule | Menu, courses, options | Plans offered, pricing structure, proposal deck |
+| 3 | Customers/partners | Key partners, inquiry emails | Customer segments, by marketplace, reviews | List of advisory clients, common consultations | Regulars/new customers, booking data | Prospects/existing accounts, meeting notes |
+| 4 | On-the-ground vocabulary | Process names, equipment nicknames, part-numbering rules | In-house names for marketplaces, SKU coding rules | Form names, procedure abbreviations | Booking slots, shift terminology | Deal-phase names, in-house KPI terms |
+| 5 | The most time-consuming work | Order handling, delivery-date reply emails, process-control sheets | Inventory-sync procedure, inquiry responses | Application-form preparation procedure, standard correspondence | Booking confirmation, reminders, shift scheduling | Quotes, proposal decks, follow-ups |
+| 6 | Numbers | Units produced, utilization rate, defect rate | Conversion rate, repeat rate, inventory turnover | Number of advisory clients, hours worked, engagement-acceptance rate | Customer count, repeat rate, average spend | Number of meetings, win rate, LTV |
+| 7 | Milestones/closings | Month-end closing, busy season, scheduled maintenance | Weekend sales, marketplace sales, month-start closing | Filing season, fiscal year-end, payroll date | Busy days of the week/season, booking peaks | Quarter-end, budget period |
+| 8 | Clients (contracted/wholesale only) | Spec and delivery date per customer | Items and delivery cycle per wholesale account | Engagement scope, deliverables, approval flow | (rarely applicable) | Engagement scope per client |
 
-> 記入済みの完成イメージが見たい方へ: このテンプレには生活雑貨EC「ハルカゼ商店」の
-> 記入済みサンプルが同梱されています(`examples/harukaze-ec/`)。当日そこも見られます。
+> If you want to see what a filled-in result looks like: this template ships with a filled-in
+> sample for the everyday-goods EC shop "Harukaze Store" (`examples/harukaze-ec/`). You can
+> look at it on the day too.
 
 ---
 
-## 当日の流れ(このリストがどう使われるか)
+## The flow on the day (how this list gets used)
 
-1. 持ってきた資料を1フォルダにまとめる
-2. Claude が会社をインタビュー → 自社の構造を言語化(`/define-company`)
-3. 集めた資料を取り込み → 会社の「記憶」に(`/ingest-context`)
-4. 「5. 一番時間を食う仕事」を種に、AIにやらせる最初の仕事を作る
+1. Gather what you brought into one folder
+2. Claude interviews you about the company -> puts your business's structure into words
+   (`/define-company`)
+3. The gathered material is ingested -> becomes the company's "memory" (`/ingest-context`)
+4. Using "5. the most time-consuming work" as the seed, build the AI's first assigned task
 
-準備は「集めるだけ」。言語化と仕組み化は当日いっしょにやります。気負わず来てください。
+Preparation is "just gather it." Putting it into words and turning it into a system happens
+together, on the day. Come as you are.

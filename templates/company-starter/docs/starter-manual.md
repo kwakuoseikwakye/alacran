@@ -1,228 +1,233 @@
-# スターターマニュアル — AI駆動経営合宿
+# Starter Manual — AI-driven management retreat
 
-> 想定読了時間: 約15分。読み終えたら `exercises/01-define-your-company.md` に進んでください。
-
----
-
-## 1. このテンプレートは何か
-
-本テンプレートは、**plain Claude Code（+ GitHub）だけで完結する**、AI自律経営ハーネスの雛形です。
-外部SDKや専用MCPサーバー群は不要で、`git clone` してすぐに Claude Code から使い始められます。
-
-含まれているもの:
-
-- 5フェーズの軽量ワークフロー（定義 → 計画 → 実行 → 検証 → 記録）
-- Issue-First / HITL Gate / SSOT / Scope Contract / 偽緑禁止 という5つの運用原則
-- 自社オントロジー・KPI・サイクル・振り返りなどのYAML/Markdownテンプレート
-- 動く検証スクリプト（`scripts/verify.py`）とそれを回すCI
-- 合宿当日に手を動かす3本の演習
-
-含まれていないもの（意図的に）:
-
-- 外部SDK・専用エージェント群・専用MCPサーバー
-- 課金モデルやGTM設計などの経営中枢情報（各自の合宿ワークで設計するもの）
-- あなたの会社固有の答え（テンプレートは「型」であり「答え」ではありません）
+> Expected read time: about 15 minutes. Once you've read it, move on to
+> `exercises/01-define-your-company.md`.
 
 ---
 
-## 2. 15分セットアップ
+## 1. What this template is
 
-### 2.1 前提の準備
+This template is a starter kit for an AI autonomous management harness that **runs on plain
+Claude Code (+ GitHub) alone**. No external SDK or dedicated fleet of MCP servers is needed —
+`git clone` it and start using it from Claude Code right away.
+
+What's included:
+
+- A lightweight 5-phase workflow (Definition -> Planning -> Execution -> Verification -> Record)
+- The 5 operating principles: Issue-First / HITL Gate / SSOT / Scope Contract / no fake green
+- YAML/Markdown templates for your own company ontology, KPIs, cycles, and retrospectives
+- A working verification script (`scripts/verify.py`) and the CI that runs it
+- 3 hands-on exercises for the day of the retreat
+
+What's deliberately NOT included:
+
+- An external SDK, a dedicated fleet of agents, a dedicated MCP server
+- Core management information like a pricing model or GTM design (something you design in
+  your own retreat work)
+- Your company's specific answers (the template is a "shape," not an "answer")
+
+---
+
+## 2. 15-minute setup
+
+### 2.1 Prepare the prerequisites
 
 ```bash
-git --version        # 必須
-python3 --version    # 3.9+ 推奨
-claude --version      # Claude Code CLI（Pro以上、または Claude Code 対応プラン）
+git --version        # required
+python3 --version    # 3.9+ recommended
+claude --version      # Claude Code CLI (Pro or above, or a Claude Code-eligible plan)
 ```
 
-いずれかが無ければ、先に用意してください。GitHubアカウントも必要です。
+If any of these are missing, set them up first. You'll also need a GitHub account.
 
-### 2.2 自分のリポジトリを作る
+### 2.2 Create your own repository
 
-本テンプレートは GitHub の **Template Repository** として配布されています。
-"Use this template" ボタンから、**自分の private リポジトリ**として複製してください
-（fork ではなく複製なので、履歴やネットワーク関係は本テンプレートと切り離されます）。
+This template is distributed as a GitHub **Template Repository**. Duplicate it as **your own
+private repository** via the "Use this template" button (it's a duplicate, not a fork, so its
+history and network relationship are separated from this template).
 
 ```bash
 git clone git@github.com:<your-account>/<your-repo-name>.git
 cd <your-repo-name>
 ```
 
-> ⚠️ **必ず private リポジトリで開始してください。** 自社の機密情報を扱うワークが
-> 合宿には含まれます。詳細は README.md のセキュリティ運用セクションを参照。
+> ⚠️ **Always start from a private repository.** The retreat includes work that handles your
+> own company's confidential information. See README.md's security-operations section for
+> details.
 
-### 2.3 Claude Code を起動して読み込ませる
+### 2.3 Start Claude Code and have it read in
 
 ```bash
 claude
 ```
 
-起動したら、まず `CLAUDE.md` を読ませてください。これがこのテンプレートの
-「運用憲法」で、Claude Code はセッション開始時にこれを自動的に読み込みます。
+Once it starts, first have it read `CLAUDE.md`. This is the template's "operating
+constitution," and Claude Code automatically loads it at the start of a session.
 
-### 2.4 検証ループを一度動かす
+### 2.4 Run the verification loop once
 
 ```bash
 python3 scripts/verify.py
 ```
 
-これは RQT（要件トレーサビリティ）検証スクリプトです。最初はほぼ全て `INFO`（対象
-ファイルがまだ存在しないためスキップ）になりますが、それで正常です。合宿を進める
-につれて `PASS` が増えていきます。使い方の詳細は `scripts/verify.py` 冒頭の
-docstring と `.claude/rules/scope-contract.md` を参照してください。
+This is the RQT (Requirements Traceability) verification script. At first, almost everything
+shows `INFO` (skipped because the target file doesn't exist yet) — that's normal. `PASS`
+grows as you progress through the retreat. For usage details, see the docstring at the top
+of `scripts/verify.py` and `.claude/rules/scope-contract.md`.
 
-以上で15分セットアップは完了です。
-
----
-
-## 3. 5フェーズワークフロー（概要）
-
-本テンプレートは、元となった自律経営ハーネスの8フェーズワークフローを、
-plain Claude Code で回せる**軽量5フェーズ**に縮約しています。
-
-```
-Phase 1 定義   — 自社オントロジー記述（templates/ontology-starter.yaml）
-Phase 2 計画   — GitHub Issue起票（Issue-First原則、Epic → 子Issue分解）
-Phase 3 実行   — Claude Codeで実装/文書化（Scope Contract規律を守る）
-Phase 4 検証   — scripts/verify.py（RQT）で機械検証
-Phase 5 記録   — Decision記録 + HANDOFF更新（セッション引き継ぎ）
-```
-
-各フェーズの詳しい手順とテンプレートの使い方は `CLAUDE.md` に記載されています。
-本マニュアルでは概要のみ扱い、実際に手を動かす詳細は各 `exercises/*.md` に譲ります。
+That's it — the 15-minute setup is done.
 
 ---
 
-## 4. あなたの最初のIssue（Issue-First原則）
+## 3. The 5-phase workflow (overview)
 
-このテンプレートでは、**すべての作業はGitHub Issueから始まります**。
-「ラベルが状態を定義する」— つまり、今何が進行中で何が完了しているかは、
-コードやドキュメントを漁らなくても Issue 一覧を見れば分かる、という設計です。
+This template condenses the 8-phase workflow of the autonomous management harness it's
+derived from into a **lightweight 5 phases** that run on plain Claude Code.
 
-### 例: 「自社の定義」というEpicを起票する
+```
+Phase 1 Definition   — write your company ontology (templates/ontology-starter.yaml)
+Phase 2 Planning     — file a GitHub Issue (the Issue-First principle, Epic -> child Issue decomposition)
+Phase 3 Execution    — implement/document with Claude Code (follow the Scope Contract discipline)
+Phase 4 Verification — machine-verify with scripts/verify.py (RQT)
+Phase 5 Record       — record the Decision + update HANDOFF (session handover)
+```
 
-1. 既存Issueを確認する: `gh issue list`
-2. 該当するものが無ければ Epic Issue を起票する:
+The detailed procedure for each phase and how to use the templates is documented in
+`CLAUDE.md`. This manual covers only the overview — the hands-on details are left to each
+`exercises/*.md`.
+
+---
+
+## 4. Your first Issue (the Issue-First principle)
+
+In this template, **all work starts from a GitHub Issue**. "Labels define the state" — that
+is, this is designed so that what's currently in progress and what's done can be seen from
+the Issue list alone, without digging through code or docs.
+
+### Example: filing an Epic for "defining our company"
+
+1. Check for an existing Issue: `gh issue list`
+2. If nothing matches, file an Epic Issue:
    ```bash
-   gh issue create --title "Epic: 自社オントロジーを定義する" \
-     --body "templates/ontology-starter.yaml をベースに、自社の顧客・組織・
-   プロダクトの構造を定義する。子Issueに分解して進める。"
+   gh issue create --title "Epic: define our company ontology" \
+     --body "Based on templates/ontology-starter.yaml, define the structure of our own
+   customer, org, and product domains. Break this into child Issues as we go."
    ```
-3. 複合タスクなら子Issueに分解する（1子Issue = 1 concern）
-4. ブランチ名にIssue番号を含める: `feature/12-define-customer-ontology`
-5. コミットメッセージにIssue参照を含める: `feat(ontology): define customer entity (#12)`
-6. 作業が終わったらPRに `Resolves #12` を記載する
+3. For a composite task, break it into child Issues (1 child Issue = 1 concern)
+4. Include the Issue number in the branch name: `feature/12-define-customer-ontology`
+5. Include an Issue reference in the commit message: `feat(ontology): define customer entity (#12)`
+6. Once the work is done, write `Resolves #12` in the PR
 
-`/define-company` の演習は `exercises/01-define-your-company.md` にあります。
-Issue起票を含む合宿当日の流れは `docs/retreat-day-flow.md` を参照してください。
+The `/define-company` exercise lives at `exercises/01-define-your-company.md`. For the
+retreat day's flow, including filing Issues, see `docs/retreat-day-flow.md`.
 
 ---
 
-## 5. HITL Gate — 人間が判断すべきとき
+## 5. The HITL Gate — when a human should be the one to decide
 
-AIエージェントに「なんでも自動でやらせる」のは危険です。特に以下のような
-**金額・契約・不可逆な操作**は、人間の承認を挟むべきタイミングとして
-`.claude/rules/hitl-gate.md` にトリガー表としてまとめてあります。
+Letting an AI agent "just automate everything" is dangerous. In particular,
+**money, contracts, and irreversible operations** like the following are compiled as a
+trigger table in `.claude/rules/hitl-gate.md`, marking when human approval should be
+inserted.
 
-典型的なHITLトリガーの例:
+Typical HITL trigger examples:
 
-| カテゴリ | 例 |
+| Category | Example |
 |---|---|
-| 大型金額 | 一定額以上の取引・契約 |
-| 契約 | 契約書へのサイン、法的拘束力のある合意 |
-| 不可逆操作 | 本番データの削除、force push、対外発表 |
-| 重大インシデント | サービス停止クラスの障害対応 |
-| 採用・解雇 | 人事の最終判断 |
+| Large amounts | Transactions/contracts above a certain amount |
+| Contracts | Signing a contract, a legally binding agreement |
+| Irreversible operations | Deleting production data, force push, external announcements |
+| Major incidents | Responding to a service-outage-class failure |
+| Hiring/firing | A final HR decision |
 
-「AIに何を任せて、何を人間が握るか」を最初に決めておくことが、合宿全体の
-出発点になります。実際に1つのHITLトリガーを設計する演習が
-`exercises/02-first-hitl-gate.md` です（Phase B完了後に追加されます）。
+Deciding up front "what to delegate to the AI, and what a human holds onto" is the starting
+point for the whole retreat. The exercise for actually designing one HITL trigger is
+`exercises/02-first-hitl-gate.md` (added once Phase B is complete).
 
 ---
 
-## 6. SSOTとディレクトリの歩き方
+## 6. SSOT and how to navigate the directory
 
-「真実は1か所だけ」— SSOT（Single Source of Truth）原則です。同じ情報を
-スプレッドシート・ドキュメント・コードにバラバラに持つと、どれが最新か
-分からなくなり、AIも人間も混乱します。
+"There's only one truth in one place" — the SSOT (Single Source of Truth) principle. Keeping
+the same information scattered across a spreadsheet, a document, and code separately makes
+it unclear which is current, and confuses both the AI and humans.
 
 ```
 <your-repo>/
-├─ CLAUDE.md                    ← Claude Codeへの指示書（最優先で読まれる）
-├─ README.md                    ← リポジトリの入口・利用条件
-├─ LICENSE.md                   ← 合宿参加者限定ライセンス
+├─ CLAUDE.md                    <- the instruction manual for Claude Code (read with top priority)
+├─ README.md                    <- the repo's entry point / terms of use
+├─ LICENSE.md                   <- a license limited to retreat participants
 ├─ .claude/
-│   ├─ hooks/                   ← git commit時などの advisory チェック
-│   ├─ rules/                   ← scope-contract / hitl-gate 等の運用規律
-│   └─ commands/                ← 厳選コマンド（/define-company 等）
+│   ├─ hooks/                   <- advisory checks, e.g. at git commit time
+│   ├─ rules/                   <- operating disciplines like scope-contract / hitl-gate
+│   └─ commands/                <- a curated set of commands (/define-company etc.)
 ├─ docs/
-│   ├─ starter-manual.md        ← このファイル
-│   ├─ concepts/                ← 設計思想の解説（context-funnel / hitl-async-approval）
-│   └─ templates/               ← 雛形群（オントロジー・KPI・サイクル・振り返り）と
-│                                  path-selector / onboarding-checklist ガイド
-├─ definitions/                 ← 自社コンテキストの SSOT（記入先。雛形をコピーして記入）
-├─ examples/                    ← 記入済みサンプル（読むだけ）
+│   ├─ starter-manual.md        <- this file
+│   ├─ concepts/                <- explanations of the design thinking (context-funnel / hitl-async-approval)
+│   └─ templates/                <- the templates (ontology, KPI, cycle, retrospective) and
+│                                   the path-selector / onboarding-checklist guides
+├─ definitions/                 <- the SSOT of your own company's context (fill in here, copied from the templates)
+├─ examples/                    <- filled-in samples (read-only)
 ├─ scripts/
-│   ├─ cycle/                   ← 業務サイクル運用スクリプト（advanced・演習範囲外）
-│   └─ verify.py                ← RQT機械検証スクリプト
-├─ state/                       ← サイクル運用ログの置き場（scripts/cycle/ が書き出す）
+│   ├─ cycle/                   <- business-cycle operations scripts (advanced, outside the exercises' scope)
+│   └─ verify.py                <- the RQT machine-verification script
+├─ state/                       <- where cycle-operations logs live (written by scripts/cycle/)
 ├─ .github/workflows/
-│   └─ verify.yml                ← CI gate（verify.pyを自動実行）
-└─ exercises/                   ← 合宿当日の演習3本
+│   └─ verify.yml                <- the CI gate (automatically runs verify.py)
+└─ exercises/                   <- the 3 exercises for the day of the retreat
 ```
 
-新しい定義を追加するときは、まず `templates/` の該当雛形をコピーして、
-1箇所（YAMLまたはMarkdown）に書きます。生成物やコピーを複数箇所に
-散らかさないでください。
+When adding a new definition, first copy the corresponding template under `templates/`, and
+write it into one single place (YAML or Markdown). Don't scatter generated copies across
+multiple places.
 
 ---
 
-## 7. よくある落とし穴
+## 7. Common pitfalls
 
-### 7.1 secrets/ にAPIキーや契約書をコミットしてしまう
+### 7.1 Accidentally committing an API key or contract into secrets/
 
-`secrets/` は `.gitignore` で遮断されていますが、**間違えて別の場所に置いた**
-機密情報はガードされません。commit前に必ず `git status` で差分を確認する
-習慣をつけてください。private リポジトルで開始するのも、この事故を防ぐ
-ための保険の1つです。
+`secrets/` is blocked by `.gitignore`, but confidential information **accidentally placed
+somewhere else** isn't guarded. Make a habit of always checking the diff with `git status`
+before committing. Starting from a private repository is also one layer of insurance against
+this accident.
 
-### 7.2 1つのPRに複数の関心事を混ぜる
+### 7.2 Mixing multiple concerns into one PR
 
-「ついでにこっちも直した」が積み重なると、レビューが困難になり、
-regressionが紛れ込んでも気づけなくなります。`.claude/rules/scope-contract.md`
-の「着手前5秒チェック」を毎回通してください。CHANGE / NOT CHANGE / diff
-budget を最初に決めてから着手するだけで、ほとんどのscope inflationは防げます。
+Once "fixed this other thing while I was at it" starts piling up, review becomes difficult,
+and a regression can slip in unnoticed. Run `.claude/rules/scope-contract.md`'s "5-second
+check before starting" every time. Just deciding CHANGE / NOT CHANGE / diff budget before you
+start prevents most scope inflation.
 
-### 7.3 verify.pyを実行せずに「動いたつもり」で進める
+### 7.3 Proceeding on "I think it works" without running verify.py
 
-見た目が動いているように見えても、機械検証を通していない変更は
-「偽緑（false green）」の温床です。作業の節目では必ず
-`python3 scripts/verify.py` を実行し、FAILが無いことを確認してから
-次に進んでください。詳しくは `exercises/03-run-verify-loop.md` で
-体験できます。
+Even if it looks like it's working, a change that hasn't gone through machine verification is
+a breeding ground for "fake green." At every milestone, always run
+`python3 scripts/verify.py` and confirm there's no FAIL before moving on. You can experience
+this hands-on in `exercises/03-run-verify-loop.md`.
 
-### 7.4 HITLトリガーを決めずに自動化を進めてしまう
+### 7.4 Automating without first deciding on HITL triggers
 
-「とりあえず全部AIに任せる」から始めると、後から金額や契約に関わる
-判断まで自動化されていたことに気づいて慌てることになります。
-自動化の設計と同時に、HITLトリガー（§5）も必ず設計してください。
-
----
-
-## 8. 次にやること
-
-このマニュアルを読み終えたら、次のファイルに進んでください:
-
-👉 **`exercises/01-define-your-company.md`** — 自社オントロジーを定義する
-最初の演習です。
-
-その後は `exercises/02-first-hitl-gate.md`（HITLゲート体験）、
-`exercises/03-run-verify-loop.md`（検証ループ体験）と続きます。
-
-各演習を終えるごとに、自分の経営課題についてのEpic Issueを1つ起票する
-ことをお勧めします。合宿終了時には、あなたのリポジトリには「自社に
-適用したAI駆動経営ハーネスの雛形」が育っているはずです。
+Starting from "let's just hand everything to the AI for now" leads to a scramble later, when
+you realize decisions touching money or contracts had quietly been automated too. Design your
+HITL triggers (§5) at the same time as your automation, without fail.
 
 ---
 
-*ai-retreat-starter — スターターマニュアル*
+## 8. What to do next
+
+Once you've finished reading this manual, move on to the next file:
+
+👉 **`exercises/01-define-your-company.md`** — the first exercise, defining your own company
+ontology.
+
+After that comes `exercises/02-first-hitl-gate.md` (experiencing the HITL Gate), then
+`exercises/03-run-verify-loop.md` (experiencing the verify loop).
+
+After finishing each exercise, we recommend filing one Epic Issue about your own management
+challenge. By the end of the retreat, your repository should have grown into "a template for
+an AI-driven management harness applied to your own company."
+
+---
+
+*ai-retreat-starter — Starter Manual*
