@@ -1,130 +1,131 @@
 ---
 name: api-connect
-description: Use when the user wants to connect an external service's API, CLI, or webhook to Claude Code or their project - 「○○のAPIを繋いで」「○○と連携したい」「APIキーを設定して」「トークン発行手伝って」「セットアップして」など。対象サービスは問わない(LINE/Notion/X/Google/Slack/決済/広告API等)。キー取得画面へのナビゲーション、.envへの安全な受け渡し、疎通確認まで面倒を見る。
+description: Use when the user wants to connect an external service's API, CLI, or webhook to Claude Code or their project - "connect the API for X", "I want to integrate with X", "set up an API key", "help me issue a token", "set it up", and so on. Any service is in scope (LINE/Notion/X/Google/Slack/payment/advertising APIs, etc.). Handles navigation to the key-issuing screen, safe hand-off into .env, and a connectivity check.
 ---
 
-# api-connect - APIセットアップ・コンシェルジュ
+# api-connect - the API setup concierge
 
-## 概要
+## Overview
 
-外部サービスのAPI/CLIをプロジェクトに接続する作業を、ユーザーの手数が最小になるように代行する。
-理想形: **ユーザーがやるのは「ログイン」と「コピーボタンを押して.envに貼る」だけ**。
-リサーチ、画面までのナビゲーション、設定ファイル作成、疎通確認はすべてAIがやる。
+Takes over the work of connecting an external service's API/CLI to a project, so the user has to do as little as possible.
+The ideal: **all the user does is "log in" and "press the copy button and paste into .env"**.
+Research, navigating to the right screen, creating config files and the connectivity check are all done by the AI.
 
-**原則: 質問攻めにしない。** サービス名と目的が分かったら、確認は最大1回で走り出す。
+**Principle: don't bombard them with questions.** Once you know the service name and the goal, confirm at most once and get moving.
 
-## 鉄則(セキュリティ)
+## Iron rules (security)
 
-**文字通りに守る。「今回は特別」はない。**
+**Follow these literally. There is no "just this once".**
 
-1. **秘密情報をチャットに出させない・出さない。** APIキー、トークン、シークレット、パスワードを
-   チャットに貼るよう頼まない。ユーザーが誤って貼ったら、即座に「そのキーは無効化して再発行を」と伝える。
-2. **受け渡しは.envファイル直接ペースト方式のみ。** AIがプレースホルダ付き.envを先に作り、
-   ユーザーは管理画面のコピーボタン → .envの該当行に貼るだけにする。
-3. **AIはログイン・パスワード入力・アカウント作成をしない。** ログインページまで連れて行き、
-   ユーザーに操作してもらう。CAPTCHAも同様。
-4. **.envの値を表示しない。** 読み込みは `set -a; . ./.env; set +a` のようにシェル内で完結させ、
-   `cat .env` や値のechoをしない。疎通確認の出力にキーが含まれないことを確認してから表示する。
-5. **不可逆な操作は無断でしない。** プロバイダー選択、既存トークンの再発行(旧トークン失効)、
-   プラン変更、課金設定などは、影響を1行で説明して承認を得てから。
-6. **規約同意・作成/送信ボタンはAIが押さない。** 「By creating ... you agree to Terms」の類が
-   付いたボタン(Create/Submit/同意して作成)は、可逆な操作であってもユーザーに押してもらう。
-   AIはその一歩手前(入力済み・確認済みの状態)までお膳立てする。
+1. **Don't let secrets into the chat, and don't put them there yourself.** Never ask the user to paste an API key,
+   token, secret or password into the chat. If the user pastes one by mistake, tell them immediately: "revoke that key and reissue it".
+2. **The only hand-off mechanism is pasting directly into a .env file.** The AI creates the .env with placeholders
+   first, and the user only has to hit the copy button in the admin console and paste it into the relevant line of .env.
+3. **The AI does not log in, enter passwords, or create accounts.** Take them as far as the login page and have the
+   user do it. The same goes for CAPTCHAs.
+4. **Don't display .env values.** Load them entirely inside the shell, e.g. `set -a; . ./.env; set +a`, and never
+   `cat .env` or echo a value. Check that the connectivity-check output contains no keys before showing it.
+5. **Don't perform irreversible operations without asking.** Choosing a provider, reissuing an existing token
+   (which revokes the old one), changing a plan, configuring billing — explain the impact in one line and get approval first.
+6. **The AI does not press buttons that accept terms, or create/submit buttons.** Buttons carrying something like
+   "By creating ... you agree to Terms" (Create/Submit/Agree and create) are for the user to press, even when the
+   operation is reversible. The AI sets everything up to the step right before (filled in and checked).
 
-## フロー
+## Flow
 
-### Step 0: 目的の把握
-サービス名 + 何をしたいか(例: メッセージ送信、投稿、読み取り)を把握する。
-不明なのはどちらか片方だけなら質問1回、両方分かるなら即開始。
+### Step 0: Understand the goal
+Establish the service name + what they want to do (e.g. send messages, post, read).
+If only one of the two is unclear, ask once; if you know both, start immediately.
 
-### Step 1: リサーチ
-セットアップ手順は頻繁に変わる(例: LINEは2024年9月にチャネル作成の起点が変更された)。
-**記憶で進めず、必ずWebで最新手順を調べる。** サブエージェント(web-search系)に委任できる
-環境なら委任し、できない環境(サブエージェント内での実行等)ではWebSearch/WebFetchで
-自分で調べる。省略だけが禁止で、実行主体はどちらでもよい。調査する項目:
+### Step 1: Research
+Setup procedures change often (e.g. LINE changed where channel creation starts in September 2024).
+**Don't work from memory — always look up the latest procedure on the web.** If you're in an environment where you
+can delegate to a subagent (web-search type), delegate; where you can't (e.g. running inside a subagent), look it up
+yourself with WebSearch/WebFetch. Only skipping it is forbidden; either actor is fine. What to research:
 
-- 手順の起点となる正確なURL(管理コンソール、開発者ポータル)
-- 画面上のタブ名・ボタン名(「どのタブの、どのボタンか」まで)
-- 認証情報の種類(キー/トークン/OAuth)と、**最も簡単に発行できるもの**はどれか
-- **キー発行後に必要な認可手順**(リソースの共有、スコープ付与、OAuth同意など。
-  例: Notionはページに統合を接続しないと404、Slackはスコープ、Googleは同意画面)
-- 疎通確認に使える最小のAPIコール(curl一発)と、**ユーザーの目的(読み書き等)を検証できる
-  次に安いAPIコール**の2つ
-- ハマりどころ(アカウント種別、権限、不可逆な選択、最近のフロー変更)
+- The exact URL where the procedure starts (admin console, developer portal)
+- The names of tabs and buttons on screen (down to "which button on which tab")
+- The kind of credential (key/token/OAuth) and **which is the easiest to issue**
+- **Any authorisation step needed after the key is issued** (sharing the resource, granting scopes, OAuth consent, etc.
+  e.g. Notion returns 404 unless the integration is connected to the page; Slack needs scopes; Google needs a consent screen)
+- The smallest API call usable for a connectivity check (a single curl), plus **the next-cheapest API call that
+  verifies the user's actual goal (reading, writing, etc.)** — two calls in total
+- Pitfalls (account type, permissions, irreversible choices, recent flow changes)
 
-バックグラウンド実行できる環境ならリサーチ中にStep 2を並行して進める。
-サブエージェントとして動いていて並行できない場合は逐次でよい。
+If you're in an environment that can run things in the background, do Step 2 in parallel while researching.
+If you're running as a subagent and can't parallelise, sequential is fine.
 
-### Step 2: ブラウザ準備(Claude in Chrome)
-1. `tabs_context_mcp` で接続確認、専用タブを用意する
-2. 対象ドメインへ移動してスクリーンショットを1枚撮る
-3. ここで問題が出たら下の「トラブルシューティング」で対処。**同じ失敗を3回以上繰り返さない**
+### Step 2: Browser preparation (Claude in Chrome)
+1. Confirm the connection with `tabs_context_mcp` and prepare a dedicated tab
+2. Navigate to the target domain and take one screenshot
+3. If something goes wrong here, handle it via "Troubleshooting" below. **Don't repeat the same failure 3 or more times**
 
-### Step 3: ナビゲーション
-リサーチ結果の手順どおり、キー発行画面までAIが移動する。
-作成フォームがあれば入力まで済ませ、**最後の作成/同意ボタンだけユーザーに押してもらう**(鉄則6)。
-同種のキー・統合・アプリが既にある場合は、勝手に再利用せず「既存の○○を使うか、新規に作るか」を
-選択肢1行で確認する(用途が別なら新規が無難、と添える)。
+### Step 3: Navigation
+Following the researched procedure, the AI navigates to the key-issuing screen.
+If there's a creation form, fill it in, and **have the user press only the final create/agree button** (iron rule 6).
+If a key, integration or app of the same kind already exists, don't silently reuse it — offer a one-line choice:
+"use the existing X, or create a new one?" (adding that a new one is safer if the purpose is different).
 
-- **ログイン画面が出たら**: 操作を止め、ユーザーに「このタブでログインしてください。
-  終わったら教えてください」と伝える。ログイン情報には一切触れない
-- **拡張の許可がないドメイン**: ユーザーにChromeツールバーのClaude拡張アイコン →
-  該当サイトを許可、と具体的に案内する
-- **不可逆な選択肢**(プロバイダー作成、ワークスペース紐付け等)が出たら、選択肢と影響を
-  1行ずつで示して承認を待つ
-- **ユーザーが先回りしてブラウザを操作していることがある**。ユーザー操作待ちから再開する時は
-  まずスクリーンショットで画面の現状を確認し、想定と違っても画面の事実に合わせて続行する
+- **If a login screen appears**: stop, and tell the user "please log in in this tab and let me know when you're done".
+  Never touch login credentials
+- **Domains the extension isn't allowed on**: give concrete instructions — the Claude extension icon in the Chrome
+  toolbar -> allow this site
+- **If an irreversible choice appears** (creating a provider, linking a workspace, etc.), lay out the options and
+  their impact one line each and wait for approval
+- **The user may have got ahead of you and operated the browser themselves.** When resuming after waiting on the user,
+  take a screenshot first to check the current state of the screen, and continue based on what's actually there even
+  if it differs from what you expected
 
-### Step 4: キーの受け渡し(.env)
-1. プロジェクト直下の`.env`を確認。無ければ作成、あれば追記(既存行は壊さない)
-2. 貼る場所をプレースホルダとコメントで明示する。**変数名はそのサービスの慣用名**
-   (公式ドキュメントのcurl例やSDKが使う名前。例: `NOTION_TOKEN`、`SLACK_BOT_TOKEN`)を使う:
+### Step 4: Handing over the key (.env)
+1. Check for `.env` at the project root. Create it if absent, append if present (don't break existing lines)
+2. Mark where to paste with a placeholder and a comment. **Use the conventional variable name for that service**
+   (the name used in the official docs' curl examples and SDKs, e.g. `NOTION_TOKEN`, `SLACK_BOT_TOKEN`):
    ```bash
-   # ↓ <サービス名>のコンソールでコピーした<キー名>をこの行の = の後ろに貼る
+   # v paste the <key name> you copied in the <service> console after the = on this line
    NOTION_TOKEN=
    ```
-3. `.gitignore`に`.env`が入っているか確認。無ければ追加する
-4. ユーザーへの指示は「押すボタン」と「貼る行」だけに絞る。例:
-   「画面の [発行] を押す → 表示されたトークンの [コピー] を押す → `.env`の`NOTION_TOKEN=`の後ろに貼って保存 → 終わったら教えてください」
-   ファイルは`file://`リンクで示す
+3. Check that `.env` is in `.gitignore`. Add it if not
+4. Narrow the user's instructions down to just "the button to press" and "the line to paste into". For example:
+   "Press [Issue] on screen -> press [Copy] on the token that appears -> paste it after `NOTION_TOKEN=` in `.env` and save -> let me know when you're done"
+   Point at the file with a `file://` link
 
-### Step 4.5: リソースの認可(共有・スコープ・同意)
-キーが有効でも、対象リソースへの認可が別に必要なサービスが多い(リサーチで判明した手順に従う)。
-これはハッピーパスの必須ステップとして、Step 4のユーザー指示に必ず含める。例:
+### Step 4.5: Authorising the resource (sharing, scopes, consent)
+Even with a valid key, many services need separate authorisation for the target resource (follow the procedure found
+in research). Always include this in the Step 4 user instructions as a mandatory part of the happy path. For example:
 
-- Notion: 対象ページの [•••] → [Connections] で統合を接続(しないと404)
-- Slack: アプリに必要スコープを付与して再インストール
-- Google系: OAuth同意画面での許可
+- Notion: [•••] on the target page -> [Connections] to connect the integration (404 without it)
+- Slack: grant the app the necessary scopes and reinstall
+- Google: allow it on the OAuth consent screen
 
-### Step 5: 疎通確認(2段階)
-1. `.env`を値を表示せずに読み込む
-2. **認証確認**: 最小APIコール(例: `/users/me`相当)でキーの有効性を確認する
-3. **目的確認**: ユーザーがやりたいこと(読み取り、送信など)を安く検証できるAPIコールを
-   もう1つ叩く。キー有効でも認可漏れ(Step 4.5)だとここで0件/404になるので、両方通って初めて成功
-4. 成功: レスポンスの安全な部分(アカウント名、bot名など)を見せて完了を宣言
-5. 失敗: ステータスコードから原因を切り分ける(401=キー誤り/失効、403=権限・プラン・スコープ、
-   404や0件=リソース未接続・未共有=Step 4.5の漏れ)。ハマりどころ表と突き合わせて修正手順を案内する
+### Step 5: Connectivity check (two stages)
+1. Load `.env` without displaying values
+2. **Auth check**: confirm the key is valid with the smallest API call (e.g. the equivalent of `/users/me`)
+3. **Goal check**: make one more API call that cheaply verifies what the user actually wants to do (read, send, etc.).
+   Even with a valid key, a missing authorisation (Step 4.5) produces 0 results / 404 here, so it's only a success once both pass
+4. Success: show the safe parts of the response (account name, bot name, etc.) and declare completion
+5. Failure: narrow down the cause from the status code (401 = wrong or expired key, 403 = permissions/plan/scope,
+   404 or 0 results = resource not connected or shared = a gap at Step 4.5). Cross-reference the pitfalls table and guide the fix
 
-### Step 6: 完了処理
-- `.env.example`に同じキー名を空値で追記(チーム共有用)
-- 何を設定しどう呼べるか2〜3行でまとめる。今後のコード例を1つ添える
+### Step 6: Wrapping up
+- Append the same key name with an empty value to `.env.example` (for sharing with the team)
+- Summarise in 2-3 lines what was configured and how to call it. Add one example of future code
 
-## Claude in Chrome トラブルシューティング
+## Claude in Chrome troubleshooting
 
-| 症状 | 対処 |
+| Symptom | What to do |
 |---|---|
-| `Permission denied for this action on this domain` | ユーザーに: 該当タブを開く → ツールバーのClaude拡張アイコン → このサイトでの操作を許可 |
-| ツールが未ロード | ToolSearchで`mcp__claude-in-chrome__*`を1回でまとめてロード |
-| タブが見つからない/無効 | `tabs_context_mcp`を再実行して最新のタブIDを取得。古いIDを使い回さない |
-| 拡張が応答しない | ユーザーに: Chromeが起動しているか、拡張が有効か、`chrome://extensions`で確認してもらう |
-| ページがログインループ等で進まない | 2〜3回で止めて状況をユーザーに報告し、指示を仰ぐ |
+| `Permission denied for this action on this domain` | Tell the user: open the tab -> the Claude extension icon in the toolbar -> allow operating on this site |
+| Tools not loaded | Load `mcp__claude-in-chrome__*` all at once with ToolSearch |
+| Tab not found / invalid | Re-run `tabs_context_mcp` to get the latest tab ID. Don't reuse an old ID |
+| The extension isn't responding | Ask the user to check that Chrome is running and the extension is enabled, via `chrome://extensions` |
+| The page won't progress, e.g. a login loop | Stop after 2-3 attempts, report the situation to the user and ask for direction |
 
-## やってはいけないこと(Red Flags)
+## What you must not do (red flags)
 
-- 「キーをここに貼ってください」とチャットで言う → **鉄則1違反。.env方式に戻る**
-- 「作成は可逆だから」と規約同意付きのCreate/Submitボタンを代行する → **鉄則6違反。ユーザーに押してもらう**
-- キーの疎通(認証)だけ確認して「完了」と言う → 目的のAPIコールまで通して初めて完了(Step 5の2段階)
-- `cat .env`、`echo $API_KEY`、キーが写る画面のスクリーンショット掲載 → **鉄則4違反**
-- リサーチを省略して記憶の手順で進める → 手順が古くて詰まる。**必ずStep 1を通す**
-- ログインフォームへの入力を「効率のため」代行する → **鉄則3違反**
-- 疎通確認せずに「設定完了です」と言う → Step 5まで終えて初めて完了
+- Saying "paste the key here" in the chat -> **violates iron rule 1. Go back to the .env method**
+- Pressing a Create/Submit button carrying terms acceptance because "creating it is reversible" -> **violates iron rule 6. Have the user press it**
+- Checking only key connectivity (auth) and saying "done" -> it's only done once the goal API call also passes (the two stages of Step 5)
+- `cat .env`, `echo $API_KEY`, posting a screenshot with a key visible -> **violates iron rule 4**
+- Skipping research and working from a remembered procedure -> the procedure is out of date and you get stuck. **Always go through Step 1**
+- Filling in a login form "for efficiency" -> **violates iron rule 3**
+- Saying "setup complete" without a connectivity check -> it's only complete once you've finished Step 5

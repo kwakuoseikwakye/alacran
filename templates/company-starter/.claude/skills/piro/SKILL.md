@@ -1,91 +1,92 @@
 ---
 name: piro
-description: Kiro互換のspec一式(EARS形式のrequirements.md / design.md / tasks.md / .config.kiro)を生成して対象プロジェクトの .kiro/specs/ に置くスキル。「Kiroのspec作って」「Kiro形式で要件定義して」「piroで○○のspec」「Kiroに渡せる形で」等で発動。要件定義書はHTMLレビューページで人間の承認を得てから設計・タスクを生成する。
+description: A skill that generates a full Kiro-compatible spec set (requirements.md in EARS format / design.md / tasks.md / .config.kiro) and places it in the target project's .kiro/specs/. Triggered by things like "make a Kiro spec", "write the requirements in Kiro format", "a spec for X with piro", or "in a form I can hand to Kiro". The requirements document goes through an HTML review page for human approval before the design and tasks are generated.
 ---
 
-# piro - Kiro互換 spec 生成
+# piro - Kiro-compatible spec generation
 
-Kiroの1文字違いの弟分。機能の説明から、KiroのSpecsパネルがそのまま認識するspec一式を生成する。
-Kiroは日本語で指示しても英語でspecを生成しがちなので、日本語の要件定義を外部で作って渡すのがpiroの役割。
+Kiro's little brother, one letter away. From a description of a feature, it generates a spec set that Kiro's Specs
+panel recognises as-is. Kiro tends to generate specs in English even when instructed in Japanese, so piro's job is to
+produce the requirements definition externally and hand it over.
 
-## 生成物(出力先: `<project>/.kiro/specs/<slug>/`)
+## Output (destination: `<project>/.kiro/specs/<slug>/`)
 
-| ファイル | 内容 | 規約 |
+| File | Content | Convention |
 |---|---|---|
-| requirements.md | 要件定義書(EARS形式) | [reference/requirements-template.md](reference/requirements-template.md) |
-| requirements.html | 人間レビュー用ページ(Kiroは読まない) | [reference/review-page.md](reference/review-page.md) |
-| design.md | 設計書(Kiro公式6見出し) | [reference/design-template.md](reference/design-template.md) |
-| tasks.md | 実装計画(チェックボックス+要件参照) | [reference/tasks-template.md](reference/tasks-template.md) |
-| .config.kiro | Kiroのspecメタ(1行JSON) | 下記フローの手順9 |
+| requirements.md | Requirements document (EARS format) | [reference/requirements-template.md](reference/requirements-template.md) |
+| requirements.html | Page for human review (Kiro doesn't read it) | [reference/review-page.md](reference/review-page.md) |
+| design.md | Design document (Kiro's official 6 headings) | [reference/design-template.md](reference/design-template.md) |
+| tasks.md | Implementation plan (checkboxes + requirement references) | [reference/tasks-template.md](reference/tasks-template.md) |
+| .config.kiro | Kiro's spec metadata (single-line JSON) | Step 9 of the flow below |
 
-## 入力
+## Input
 
-- 必須: 機能の説明(1行でも、詳細資料でもよい)
-- 任意: 対象プロジェクトのパス(省略時はカレントプロジェクト)
-- 任意: 言語指定(デフォルトは本文日本語+EARSキーワード英語。「全編英語で」と言われたら英語)
+- Required: a description of the feature (a single line, or detailed material)
+- Optional: the path of the target project (defaults to the current project)
+- Optional: language (the default is body text in the project's language + EARS keywords in English. If asked for "all in English", use English)
 
-不明点は質問せず妥当な前提で埋める。埋めた前提は第1段階の報告で最大5点提示する。
+Don't ask about unknowns — fill them with reasonable assumptions. Present at most 5 of the assumptions you made in the stage-1 report.
 
-## フロー
+## Flow
 
-### 第1段階: Requirements + HTMLレビュー
+### Stage 1: Requirements + HTML review
 
-1. 対象プロジェクトの CLAUDE.md・README・関連コードを読み、文脈を取り込む
-2. slug を決める(機能名の英語kebab-case)。既存の `.kiro/specs/<slug>/` があるときは
-   上書きしてよいかユーザーに確認してから進む
-3. [reference/ears.md](reference/ears.md) と
-   [reference/requirements-template.md](reference/requirements-template.md) を読み、
-   `.kiro/specs/<slug>/requirements.md` を生成する
-4. [reference/review-page.md](reference/review-page.md) に従い
-   `.kiro/specs/<slug>/requirements.html` を生成し、`open` でブラウザ表示する
-5. チャットで報告して承認を待つ。報告内容は「レビューページの場所」と「埋めた前提(最大5点)」だけ
-6. 修正指摘は requirements.md に反映し、HTMLを再生成する(正は常にmd)
+1. Read the target project's CLAUDE.md, README and related code, and take in the context
+2. Decide the slug (the feature name in English kebab-case). If `.kiro/specs/<slug>/` already exists,
+   confirm with the user that it's OK to overwrite before proceeding
+3. Read [reference/ears.md](reference/ears.md) and
+   [reference/requirements-template.md](reference/requirements-template.md), and
+   generate `.kiro/specs/<slug>/requirements.md`
+4. Following [reference/review-page.md](reference/review-page.md), generate
+   `.kiro/specs/<slug>/requirements.html` and display it in the browser with `open`
+5. Report in the chat and wait for approval. Report only "where the review page is" and "the assumptions you filled in (at most 5)"
+6. Reflect any correction into requirements.md and regenerate the HTML (the md is always the source of truth)
 
-### 第2段階: Design + Tasks + メタ(承認後、質問せず一気に)
+### Stage 2: Design + Tasks + metadata (after approval, all in one go, no questions)
 
-7. [reference/design-template.md](reference/design-template.md) を読み design.md を生成する
-8. [reference/tasks-template.md](reference/tasks-template.md) を読み tasks.md を生成する
-9. `.config.kiro` を生成する(1行・改行なし):
+7. Read [reference/design-template.md](reference/design-template.md) and generate design.md
+8. Read [reference/tasks-template.md](reference/tasks-template.md) and generate tasks.md
+9. Generate `.config.kiro` (a single line, no newline):
 
    ```bash
    printf '{"specId": "%s", "workflowType": "requirements-first", "specType": "feature"}' \
      "$(uuidgen | tr 'A-Z' 'a-z')" > .config.kiro
    ```
 
-10. 自己チェック(下記)を実行し、完了報告する(置いた場所+Kiroでの開き方)
+10. Run the self-check (below) and report completion (where you put it + how to open it in Kiro)
 
-## 自己チェック(第2段階の最後に必ず実行)
+## Self-check (always run at the end of stage 2)
 
-機械チェック:
+Machine check:
 
 ```bash
-python3 <このスキルのディレクトリ>/scripts/validate.py <specディレクトリ>
+python3 <this skill's directory>/scripts/validate.py <spec directory>
 ```
 
-全チェック合格(exit 0)を確認する。失敗したら直してから完了報告する。加えて目視で:
+Confirm all checks pass (exit 0). If any fail, fix them before reporting completion. In addition, check by eye:
 
-- mermaidブロックが構文validか
-- 組織名・人名・環境固有パスのハードコードがないか(入力に含まれる場合を除く)
-- requirements.html が最新の requirements.md と同期しているか
+- Are the mermaid blocks syntactically valid?
+- Are there any hard-coded organisation names, personal names or environment-specific paths (except where they were in the input)?
+- Is requirements.html in sync with the latest requirements.md?
 
-## 絶対にやらないこと
+## Never do this
 
-- **tasks.meta.json を生成しない**。Kiroのタスク実行(waves)が壊れる既知の事故原因。
-  Kiroが初回「Run Task」時に自動生成する
-- `.config.kiro` に specId / workflowType / specType 以外のフィールドを足さない
-- EARSキーワード・構造見出しを日本語化しない
-- 既存specフォルダを無確認で上書きしない
-- 生成前の対話的インタビューをしない(前提は埋めてHTMLレビューで指摘を受ける)
+- **Do not generate tasks.meta.json.** A known cause of breakage in Kiro's task execution (waves).
+  Kiro generates it automatically the first time you "Run Task"
+- Do not add fields other than specId / workflowType / specType to `.config.kiro`
+- Do not translate EARS keywords or structural headings out of English
+- Do not overwrite an existing spec folder without confirming
+- Do not conduct an interactive interview before generating (fill in the assumptions and take feedback on the HTML review)
 
-## Kiroでの検証手順(初回利用時に一度確認する)
+## How to verify in Kiro (check once on first use)
 
-1. 生成先プロジェクトを Kiro で開く
-2. Specs パネルに該当specが表示される(= .config.kiro が受容された)
-3. requirements / design / tasks が正しくレンダリングされる
-4. tasks からタスクを1つ「Run Task」で実行できる(このときKiroが tasks.meta.json を自動生成する)
-5. requirements.html の同梱が Specs パネル表示に悪影響を与えない
+1. Open the destination project in Kiro
+2. The spec appears in the Specs panel (= .config.kiro was accepted)
+3. requirements / design / tasks render correctly
+4. You can run one task from tasks with "Run Task" (at this point Kiro auto-generates tasks.meta.json)
+5. Including requirements.html doesn't adversely affect the Specs panel display
 
-## 運用ノート
+## Operating notes
 
-- Kiro内でspecの「大規模な再生成」を指示しない(既存ファイル丸ごと上書きの既知不具合)。差分編集に留める
-- タスク実行後の状態([x] や tasks.meta.json)は Kiro 側が管理する。piroで再生成するときは上書き確認を必ず挟む
+- Don't instruct Kiro to do a "large-scale regeneration" of a spec inside Kiro (a known defect that overwrites whole existing files). Keep to incremental edits
+- Post-execution state (`[x]` and tasks.meta.json) is managed by Kiro. When regenerating with piro, always insert an overwrite confirmation
