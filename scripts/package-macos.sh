@@ -29,6 +29,14 @@ DEFAULT_PORT="4319"             # uncommon default to avoid collisions
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$REPO_ROOT"
 
+# Single source of truth for the version: package.json. It used to be typed
+# by hand into CFBundleVersion and CFBundleShortVersionString, which meant a
+# shipped build could claim 0.1.0 forever while package.json moved on — and
+# a bundle that lies about its version makes "is the user up to date?"
+# unanswerable for support.
+APP_VERSION="$(node -p "require('./package.json').version")"
+echo "==> Packaging version $APP_VERSION"
+
 DIST="$REPO_ROOT/dist"
 APP="$DIST/$APP_NAME.app"
 PAYLOAD="$APP/Contents/Resources/app"
@@ -106,8 +114,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleName</key><string>$APP_NAME</string>
   <key>CFBundleDisplayName</key><string>$APP_NAME</string>
   <key>CFBundleIdentifier</key><string>app.alacran.desktop</string>
-  <key>CFBundleVersion</key><string>0.1.0</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleVersion</key><string>$APP_VERSION</string>
+  <key>CFBundleShortVersionString</key><string>$APP_VERSION</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>launcher</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
