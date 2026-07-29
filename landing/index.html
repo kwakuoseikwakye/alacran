@@ -45,9 +45,41 @@
       <a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free trial</a>
       <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/download/v0.1.0/Alacran.dmg" download>Download for macOS</a>
     </div>
-    <p class="hero-trust"><b>14 days free</b> · bring your own Claude · nothing leaves your Mac</p>
+    <p class="hero-trust"><b>14 days free</b> · bring your own Claude · no analytics, no tracking, ever</p>
   </div>
 </header>
+
+<section class="section" id="plain">
+  <div class="wrap">
+    <div class="plain r">
+      <p class="eyebrow">In plain English</p>
+      <h2>Never used an AI tool before? Start here.</h2>
+      <p>You already know how to ask ChatGPT or Claude a question. The catch is that it starts every conversation as a total stranger. It doesn&rsquo;t know what you sell, who your customers are, or how you like things written, so you end up typing the same background paragraph over and over before it can be any use.</p>
+      <p><b>Alacr&aacute;n is a small app for your Mac that fixes exactly that.</b> You write down the basics of your business once, in ordinary words. From then on your AI reads that first, every single time, and gets straight to the actual work.</p>
+      <div class="plain-split">
+        <div class="plain-col no">
+          <h3>Without it</h3>
+          <ul>
+            <li>You re-explain the business in every new chat</li>
+            <li>You copy answers out of a chat window by hand</li>
+            <li>Last month&rsquo;s good draft is lost in old conversations</li>
+            <li>The tone comes out slightly wrong every time</li>
+          </ul>
+        </div>
+        <div class="plain-col yes">
+          <h3>With it</h3>
+          <ul>
+            <li>It already knows the business before you ask</li>
+            <li>The work is saved where you can find it later</li>
+            <li>Anything it did well becomes a one-click repeat</li>
+            <li>You read the change and approve it, or you don&rsquo;t</li>
+          </ul>
+        </div>
+      </div>
+      <p class="plain-foot"><b>No coding, at any point.</b> If you can fill in a form and read a paragraph before clicking Yes, you can run this. It all happens on your own laptop, and we don&rsquo;t run a server your business could reach, so there is nowhere for your data to go.</p>
+    </div>
+  </div>
+</section>
 
 <section class="section" id="easy">
   <div class="wrap">
@@ -334,10 +366,123 @@
 
 <section class="local" id="local">
   <div class="wrap r">
-    <p class="eyebrow">Local by design</p>
-    <h2>It runs where <span class="glow">you</span> do.</h2>
-    <p>Your business context, your AI, and your keys never leave the laptop. There&rsquo;s no account of ours holding your data, because there&rsquo;s nowhere for it to go.</p>
-    <div class="row"><span>Runs offline</span><span>Your own Claude</span><span>Nothing uploaded</span><span>Undo anything</span></div>
+    <p class="eyebrow">Privacy, specifically</p>
+    <h2>We couldn&rsquo;t spy on you if <span class="glow">we</span> wanted to.</h2>
+    <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own Mac, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
+    <p>There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
+    <p>So we won&rsquo;t claim &ldquo;nothing ever leaves your Mac&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
+    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>Your prompts, to Anthropic, when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
+    <p style="margin-top:26px;font-size:1rem">That&rsquo;s the whole list. Everything else stays in a folder you picked, in plain text you can read without us.</p>
+  </div>
+</section>
+
+<section class="section" id="faq">
+  <div class="wrap">
+    <div class="sec-head center r">
+      <p class="eyebrow">Questions</p>
+      <h2>The things people actually ask.</h2>
+      <p>Straight answers, including the awkward ones.</p>
+    </div>
+    <div class="faq r">
+
+      <details>
+        <summary><span>I&rsquo;ve never used an AI tool. Is this going to be over my head?</span></summary>
+        <div class="ans">
+          <p>No. If you can fill in a form and read a paragraph before clicking Yes, you can use Alacr&aacute;n. There is no code, no prompt writing, and no jargon to learn.</p>
+          <p>Setup is four plain questions about your business, in ordinary words. After that, running a job is pressing a button and reading what comes back. Our <a href="/how-to-use">complete guide</a> walks through every screen assuming you&rsquo;ve never touched an AI tool in your life.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Can you see my business data?</span></summary>
+        <div class="ans">
+          <p><b>No, and not because we promise not to. We have no way to.</b></p>
+          <p>Alacr&aacute;n runs on your Mac, listening only to your own machine. We don&rsquo;t operate a server your company data could be sent to, which means there is no database on our side holding your work and no internal tool any employee of ours could use to look at it. The data sits in a folder you chose, on your laptop.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Alright, so what <i>does</i> leave my Mac?</span></summary>
+        <div class="ans">
+          <p>Fair question, and here&rsquo;s the complete list rather than a vague reassurance:</p>
+          <p><b>1. Your licence key</b> goes to Lemon Squeezy, the company that processes payments for us, to check your subscription is active. It sends the key and nothing else. No machine ID, no email, no hint of what you&rsquo;re working on. It happens at most once a day.</p>
+          <p><b>2. Your prompts go to Anthropic</b> when you press Run, exactly as they would if you typed into Claude yourself. That&rsquo;s the AI doing its job. Nothing is sent when you&rsquo;re just clicking around the app.</p>
+          <p><b>3. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
+          <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Do I have to pay for AI on top of this?</span></summary>
+        <div class="ans">
+          <p>You need your own Claude subscription from Anthropic, which many people already have. Alacr&aacute;n uses that.</p>
+          <p>We deliberately don&rsquo;t resell AI usage, so there&rsquo;s no metered bill from us that creeps up the more you use it. You pay Anthropic for the AI and us for the app, and both are predictable.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>What if the AI gets something wrong?</span></summary>
+        <div class="ans">
+          <p>Then you don&rsquo;t approve it, and nothing happens. This is the core design of the app rather than a safety feature bolted on.</p>
+          <p>When a job finishes, nothing has been saved yet. You see exactly what it wants to change, laid out clearly, and you either accept it or throw it away. If you accept something and regret it later, every approval is saved as a checkpoint you can roll back to.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Could it email a client or delete something by accident?</span></summary>
+        <div class="ans">
+          <p>It can&rsquo;t email anyone. The Gmail connection is built read-only, so sending, replying, labelling, archiving and deleting are not capabilities it has. That isn&rsquo;t a checkbox someone could tick by mistake; the ability simply isn&rsquo;t there.</p>
+          <p>For files, nothing is written until you approve it, and everything that is written becomes a checkpoint you can undo.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Does it work without internet?</span></summary>
+        <div class="ans">
+          <p>Partly, and here&rsquo;s the honest split. The app itself, your files and your whole history are local, so you can open it and read everything on a plane.</p>
+          <p>Anything that asks the AI to do something needs a connection, because that request goes to Anthropic. The licence check also needs to reach the internet occasionally, though it keeps working offline for a week between checks so a normal trip won&rsquo;t lock you out.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>What happens when I get a new laptop?</span></summary>
+        <div class="ans">
+          <p>Press Back up before you switch. That creates a private repository on your own GitHub account and pushes your workspace into it.</p>
+          <p>On the new Mac, install Alacr&aacute;n, sign in to the same GitHub account, and restore. Everything comes back, including the full history. Switching machines used to mean starting over, which is exactly why we built this.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Do I need to know what &ldquo;git&rdquo; is?</span></summary>
+        <div class="ans">
+          <p>Not at all. Git is the technology underneath, the same thing software teams use to track changes, and it&rsquo;s what gives you the undo button and the full history.</p>
+          <p>You never have to touch it or learn a single command. You&rsquo;ll only ever see it as &ldquo;approve this change&rdquo; and &ldquo;here&rsquo;s what happened last week&rdquo;.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>If I stop paying, do I lose my work?</span></summary>
+        <div class="ans">
+          <p>No. Everything the app produces is ordinary text files sitting in a folder you chose on your own Mac. You can open them in any text editor, today or in ten years.</p>
+          <p>There&rsquo;s no proprietary format and no export process to go through, because your work was never locked inside the app to begin with.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Is there a Windows or Linux version?</span></summary>
+        <div class="ans">
+          <p>Not yet. Alacr&aacute;n is a Mac app today. If you&rsquo;d like it elsewhere, email us and tell us which, because that&rsquo;s genuinely how we&rsquo;re deciding what to build next.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Can I cancel?</span></summary>
+        <div class="ans">
+          <p>Any time, and the 14-day trial is there so you can find out whether this fits how you work before you pay anything. If you cancel, your files stay exactly where they are on your Mac.</p>
+        </div>
+      </details>
+
+    </div>
   </div>
 </section>
 
@@ -374,7 +519,7 @@
     <span>Alacr&aacute;n. Your business, remembered. On your own Mac.</span>
     <span class="foot-nav">
       <a href="/use-cases">Use cases</a><a href="/integrations">Integrations</a>
-      <a href="/docs">Docs</a><a href="/pricing">Pricing</a>
+      <a href="/docs">Docs</a><a href="/#faq">FAQ</a><a href="/pricing">Pricing</a>
       <a href="mailto:contact@alacran.ai" style="color:var(--red)">contact@alacran.ai</a>
     </span>
   </div>
