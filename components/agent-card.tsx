@@ -25,6 +25,7 @@ type AgentCardProps = {
   removable?: boolean
   avatarUrl?: string | null
   showSetupCompanyButton?: boolean
+  showEditCompanyButton?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
   /** Position in the grid — drives the staggered entrance animation. */
@@ -50,6 +51,7 @@ export function AgentCard({
   removable,
   avatarUrl,
   showSetupCompanyButton,
+  showEditCompanyButton,
   integrationStatus,
   showInstallDailyTeamLogButton,
   index = 0,
@@ -109,6 +111,9 @@ export function AgentCard({
           {showVerifyButton && <VerifyButton />}
           {showDailyTeamLogButton && <DailyTeamLogButton />}
           {showSetupCompanyButton && <CompanySetupWizard agentId={agent.id} companyName={agent.name} />}
+          {showEditCompanyButton && (
+            <CompanySetupWizard agentId={agent.id} companyName={agent.name} mode="edit" />
+          )}
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}

@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { saveCompanyOntology } from "@/lib/save-company-ontology"
+import { getCompanyOntology } from "@/lib/get-company-ontology"
 import type { Stakeholder } from "@/lib/build-company-ontology"
 import { formatDefineCompanyFields } from "@/lib/format-define-company-fields"
 import { DefineCompanyAiDraft } from "@/components/define-company-ai-draft"
@@ -14,9 +15,19 @@ import { DefineCompanyAiDraft } from "@/components/define-company-ai-draft"
 const STEPS = ["about", "stakeholders", "value-flow", "bottleneck", "review"] as const
 type Step = (typeof STEPS)[number]
 
-export function CompanySetupWizard({ agentId, companyName }: { agentId: string; companyName: string }) {
+export function CompanySetupWizard({
+  agentId,
+  companyName,
+  mode = "create",
+}: {
+  agentId: string
+  companyName: string
+  /** "edit" prefills every field from the company's saved company.yaml on open. */
+  mode?: "create" | "edit"
+}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const [loadingExisting, setLoadingExisting] = useState(false)
   const [step, setStep] = useState<Step>("about")
   const [domain, setDomain] = useState("")
   const [employeeCount, setEmployeeCount] = useState("")
@@ -39,6 +50,25 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
     setBottleneck("")
     setMessage(null)
     setAiDraftFields(null)
+  }
+
+  async function openWizard() {
+    setOpen(true)
+    if (mode !== "edit") return
+    setLoadingExisting(true)
+    setMessage(null)
+    const result = await getCompanyOntology(agentId)
+    setLoadingExisting(false)
+    if (!result.ok) {
+      setMessage(result.message)
+      return
+    }
+    const { answers } = result
+    setDomain(answers.domain)
+    setEmployeeCount(answers.employeeCount !== undefined ? String(answers.employeeCount) : "")
+    setStakeholders(answers.stakeholders.length > 0 ? answers.stakeholders : [{ role: "", position: "" }])
+    setValueFlow(answers.valueFlow)
+    setBottleneck(answers.bottleneck)
   }
 
   function handleStartAiDraft() {
@@ -107,16 +137,17 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => setOpen(true)}>
-        Set up your company
+      <Button size="sm" variant="outline" onClick={() => void openWizard()}>
+        {mode === "edit" ? "Edit company details" : "Set up your company"}
       </Button>
       <Sheet open={open} onOpenChange={(next) => !next && resetAndClose()}>
         <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
-            <SheetTitle>Set up {companyName}</SheetTitle>
+            <SheetTitle>{mode === "edit" ? `${companyName}'s company details` : `Set up ${companyName}`}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 px-4 pb-4">
-            {step === "about" && (
+            {loadingExisting && <p className="text-sm text-muted-foreground">Loading saved details…</p>}
+            {!loadingExisting && step === "about" && (
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What problem does your company solve?</label>
@@ -141,7 +172,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 </div>
               </div>
             )}
-            {step === "stakeholders" && (
+            {!loadingExisting && step === "stakeholders" && (
               <div className="space-y-3">
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Who are your key stakeholders?</p>
@@ -174,7 +205,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 </Button>
               </div>
             )}
-            {step === "value-flow" && (
+            {!loadingExisting && step === "value-flow" && (
               <div className="space-y-3">
                 <p className="text-xs text-muted-foreground">
                   Describe your business as a simple chain: something comes in, you do something to it, something
@@ -215,7 +246,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 </div>
               </div>
             )}
-            {step === "bottleneck" && (
+            {!loadingExisting && step === "bottleneck" && (
               <div className="space-y-1">
                 <label className="text-sm font-medium">
                   What&apos;s the most time-consuming or tribal-knowledge-dependent work right now?
@@ -231,7 +262,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 />
               </div>
             )}
-            {step === "review" && !aiDraftFields && (
+            {!loadingExisting && step === "review" && !aiDraftFields && (
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="font-medium">Your company</p>
@@ -260,7 +291,7 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 </div>
               </div>
             )}
-            {step === "review" && aiDraftFields && (
+            {!loadingExisting && step === "review" && aiDraftFields && (
               <DefineCompanyAiDraft
                 agentId={agentId}
                 fieldValues={aiDraftFields}
@@ -268,8 +299,10 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 onCommitted={handleAiDraftCommitted}
               />
             )}
-            {!aiDraftFields && message && <p className="text-xs text-destructive">{message}</p>}
-            {!aiDraftFields && (
+            {!loadingExisting && !aiDraftFields && message && (
+              <p className="text-xs text-destructive">{message}</p>
+            )}
+            {!loadingExisting && !aiDraftFields && (
               <div className="flex justify-between pt-2">
                 <Button size="sm" variant="ghost" onClick={goBack} disabled={stepIndex === 0 || pending}>
                   Back
