@@ -1,9 +1,11 @@
-# docs/decisions/ — Decision RFC 置き場
+# docs/decisions/ — where Decision RFCs live
 
-意思決定の根拠を後から追跡できるよう、Decision RFC をここに置きます。
-`/decision` コマンドが `docs/decisions/YYYY-MM-DD-<slug>.md` を生成します（`CLAUDE.md` Phase 5: 記録）。
+Decision RFCs live here so the reasoning behind a decision can be traced later. The
+`/decision` command generates `docs/decisions/YYYY-MM-DD-<slug>.md` (`CLAUDE.md` Phase 5:
+Record).
 
-- **命名規約**: `YYYY-MM-DD-<slug>.md`（`<slug>` は英数字とハイフンのみ、2-4 語）。
-- **frontmatter**: `date` と `status`（`proposed` / `accepted` / `superseded`）を持ちます。
-- 既存の Decision は上書きしません。内容が変わった場合は新ファイルを作り、旧ファイルの
-  `status` を `superseded` に更新して新ファイルへの参照を残します。
+- **Naming convention**: `YYYY-MM-DD-<slug>.md` (`<slug>` is alphanumeric and hyphens only,
+  2-4 words).
+- **Frontmatter**: carries `date` and `status` (`proposed` / `accepted` / `superseded`).
+- Existing Decisions are never overwritten. If the content changes, create a new file, and
+  update the old file's `status` to `superseded` with a reference to the new file.

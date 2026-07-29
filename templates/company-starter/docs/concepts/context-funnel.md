@@ -1,64 +1,69 @@
-# Context Funnel — 会社情報を安全に取り込む
+# Context Funnel — safely bringing company information in
 
-> 外から来た資料・URL・テキストを、いきなり `definitions/` に流し込まない。
-> 検疫（機密チェック）を通し、正しい棚に分類してから格納する。この「じょうご」を
-> 挟むことで、機密混入と棚の無秩序化を同時に防ぐ。
+> Don't pour external material — documents, URLs, text — straight into `definitions/`.
+> Route it through quarantine (a confidentiality check), classify it onto the correct
+> shelf, and only then file it. Inserting this "funnel" prevents both confidential-data
+> leakage and shelf disorder at the same time.
 
-`/ingest-context` コマンドはこのじょうごを手順化したものです。
+The `/ingest-context` command turns this funnel into a concrete procedure.
 
 ---
 
-## 1. 4 段のじょうご
+## 1. The 4-stage funnel
 
 ```
-受領 → 検疫 → 分類 → 格納
-Intake  Quarantine  Route  Store
+Intake -> Quarantine -> Route -> Store
 ```
 
-| 段 | やること | 失敗すると |
+| Stage | What happens | What goes wrong if skipped |
 |----|---------|-----------|
-| **受領（Intake）** | 資料・URL・テキストを受け取り、まず `definitions/.staging/`（gitignore 対象）に一時保存する | 生データが直接 git に載る |
-| **検疫（Quarantine）** | 認証情報・実名の契約額・個人情報が混ざっていないかスキャンする。混入があれば止めて `secrets/` 行きを案内する | 機密が git に永久に残る |
-| **分類（Route）** | 内容が ontology / kpi / hitl / clients のどの棚に属するか判定する | 情報が迷子になり再利用されない |
-| **格納（Store）** | 整形して `definitions/` の正しい棚に置き、`.staging/` を掃除する | 生データが散らかったまま残る |
+| **Intake** | Receive the document/URL/text and first stash it temporarily in `definitions/.staging/` (gitignored) | Raw data lands directly in git |
+| **Quarantine** | Scan for mixed-in credentials, real contract amounts, or personal information. If found, stop and direct it to `secrets/` instead | Confidential data stays in git permanently |
+| **Route** | Determine which shelf the content belongs to — ontology / kpi / hitl / clients | The information gets lost and never reused |
+| **Store** | Format it and place it on the correct shelf in `definitions/`, then clean up `.staging/` | Raw data is left scattered around |
 
 ---
 
-## 2. 2 相書き込み（staging → 検査 → 昇格）
+## 2. Two-phase writes (staging → inspection → promotion)
 
-いきなり本棚（`definitions/`）に書かず、**下書き置き場を経由**します。
+Rather than writing straight to a shelf (`definitions/`), this **goes through a draft
+staging area** first.
 
 ```
-definitions/.staging/   ← 相 1: 一時保存（gitignore 対象。生データはここまで）
-        │  （検疫スキャン + 分類）
+definitions/.staging/   <- Phase 1: temporary storage (gitignored. Raw data stays here)
+        │  (quarantine scan + classification)
         ▼
-definitions/<棚>/        ← 相 2: 検査を通ったものだけ昇格（git 追跡）
+definitions/<shelf>/     <- Phase 2: only what passes inspection is promoted (git-tracked)
 ```
 
-- 相 1（staging）は `.gitignore` 対象なので、検査前の生データがコミットされる事故を構造的に防ぐ。
-- 相 2（昇格）は、機密が除かれ・分類が決まったものだけが載る。
-- 昇格後は `.staging/` を掃除し、変更を `/handoff` で記録する。
+- Because Phase 1 (staging) is gitignored, it structurally prevents the accident of raw,
+  pre-inspection data being committed.
+- Only content that's had confidential data removed and been classified reaches Phase 2
+  (promotion).
+- After promotion, clean up `.staging/` and record the change with `/handoff`.
 
 ---
 
-## 3. 司書モデル（棚を整える、push しない）
+## 3. The librarian model (tend the shelves, don't push)
 
-情報の扱い方には 2 つのやり方があります。
+There are 2 ways to handle information.
 
-| モデル | 動き | 問題 |
+| Model | Behavior | Problem |
 |--------|------|------|
-| push 型 | 「これも読んで」と全エージェントに情報を配る | 文脈が溢れ、何が正典か分からなくなる |
-| **pull 型（司書）** | 棚を整えるだけ。エージェントは必要なとき自分で棚から取りに来る | 溢れない・正典が 1 箇所に集まる |
+| Push | Distribute information to every agent with "read this too" | Context overflows, and it becomes unclear what's canonical |
+| **Pull (the librarian)** | Just tend the shelves. An agent comes and gets what it needs from the shelf itself, when it needs it | Doesn't overflow — the canon stays in one place |
 
-このテンプレは **pull 型（司書モデル）** を採ります。Context Funnel の役割は
-「棚（`definitions/`）を綺麗に保つ司書」であって、情報を押し付ける配達人ではありません。
-だから CLAUDE.md の「コンテキスト地図」に沿って、エージェントは必要な棚を自分で Read します。
+This template adopts the **pull model (the librarian model)**. The Context Funnel's role is
+"a librarian who keeps the shelf (`definitions/`) tidy" — not a delivery person who pushes
+information onto everyone. That's why, following `CLAUDE.md`'s "context map," an agent Reads
+whichever shelf it needs, itself.
 
 ---
 
-## 4. 関連
+## 4. Related
 
-- `.claude/commands/ingest-context.md` — このじょうごを実行する `/ingest-context` コマンド
-- `definitions/README.md` — 棚（`definitions/`）の読み方・記入順序
-- `.claude/rules/hitl-gate.md` — 検疫で機密を見つけたときの「認証」「公開」トリガー
-- `CLAUDE.md` §4.5 コンテキスト地図 — 情報カテゴリ → 保存先の対応表
+- `.claude/commands/ingest-context.md` — the `/ingest-context` command that runs this funnel
+- `definitions/README.md` — how to read the shelves (`definitions/`), and the fill-in order
+- `.claude/rules/hitl-gate.md` — the "credentials" and "publication" triggers for when
+  quarantine finds confidential data
+- `CLAUDE.md` §4.5, the context map — the information-category → storage-location table

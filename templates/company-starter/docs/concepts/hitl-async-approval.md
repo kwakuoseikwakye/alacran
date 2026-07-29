@@ -1,68 +1,78 @@
-# HITL 非同期承認 — 承認者 1 人問題を乗り越える
+# Asynchronous HITL approval — overcoming the single-approver problem
 
-> 承認ゲート（HITL Gate）は安全装置だが、素朴に作ると「承認者が 1 人で、その人が
-> 不在だと会社全体が止まる」という単一障害点（SPOF）になる。これを非同期承認と
-> 縮退規則で緩和する。
+> The approval gate (HITL Gate) is a safety mechanism, but built naively it becomes a single
+> point of failure (SPOF): "there's only one approver, and if they're unavailable the whole
+> company stops." Asynchronous approval and degradation rules mitigate this.
 
-思想の全体像は `.claude/rules/hitl-gate.md`、承認者の写像は
-`definitions/hitl/approver-registry.yaml` を参照。
-
----
-
-## 1. 承認 SPOF 問題
-
-小さな会社では、承認者が実質 1 人（オーナー）のことが多い。このとき素朴な承認ゲートは:
-
-- オーナーが 24 時間不在 → 承認待ちタスクが全部止まる → **サイクル全体が停止**
-- 役職名（CEO / CFO …）を並べても、実体が全部同じ人なら「別人が承認するフリ（擬制）」になる
-
-**出発点は擬制をやめること**。承認者が 1 人なら、`approver-registry.yaml` で全役割を正直に
-同一人物へ写像し、代理は `vacant`（空席）と書く。事実を隠さないことが対策の第一歩です。
+For the overall philosophy, see `.claude/rules/hitl-gate.md`; for the approver mapping, see
+`definitions/hitl/approver-registry.yaml`.
 
 ---
 
-## 2. 縮退規則（sole-owner mode）
+## 1. The approval SPOF problem
 
-承認者と代理が同一人物に解決される（＝実質 1 人）とき、severity 別に挙動を切り替える。
+At a small company, there's often effectively only one approver (the owner). A naively built
+approval gate then means:
 
-| severity | 時間切れの挙動 | 自動承認 |
+- The owner is unavailable for 24 hours -> every task awaiting approval stops -> **the
+  entire cycle grinds to a halt**
+- Lining up role titles (CEO / CFO...) doesn't help if they all resolve to the same actual
+  person — that's just "pretending a different person approves it" (a fiction)
+
+**The starting point is to stop pretending.** If there's only one approver, honestly map
+every role to that same person in `approver-registry.yaml`, and write the deputy as
+`vacant`. Not hiding the fact is the first step of the mitigation.
+
+---
+
+## 2. Degradation rules (sole-owner mode)
+
+When the approver and the deputy resolve to the same person (i.e. effectively just one),
+behavior is switched per severity.
+
+| severity | Behavior on timeout | Auto-approval |
 |----------|--------------|---------|
-| `critical` | 該当項目のみ保留（`hold_item_only`） | **禁止** |
-| `high` | 該当項目のみ保留 | **禁止** |
-| `medium` | ログを残して自動承認（`auto_approve_with_log`） | 許可 |
+| `critical` | Hold only the item in question (`hold_item_only`) | **Forbidden** |
+| `high` | Hold only the item in question | **Forbidden** |
+| `medium` | Auto-approve while logging it (`auto_approve_with_log`) | Allowed |
 
-ポイントは 2 つ:
+There are 2 key points:
 
-- **critical / high は絶対に auto-approve しない**。速度のために不可逆・高リスクの承認を
-  省くのは、リスクが非対称（失敗の代償が大きすぎる）なので禁止する。
-- **停止範囲を「該当項目だけ」に縮める**。承認待ちの 1 件を保留しても、承認の要らない
-  他タスクはサイクルごと止めない（`item_isolation.suspend_whole_cycle: false`）。
-  「人間不在＝会社停止」を「人間不在＝その 1 件だけ停滞」に縮小する。
-
----
-
-## 3. GitHub label による非同期承認
-
-承認を「その場で待つ同期処理」ではなく、「ラベルで後追いする非同期処理」にする。
-
-```
-1. ゲート発火 → 承認待ちの Issue を立て、hitl:<trigger> ラベルを付ける
-2. AI / 担当は、その 1 件は保留したまま他タスクを進める
-3. 承認者は手が空いたときにラベル付き Issue を確認し、承認/却下をコメント
-4. 承認されたら保留していた項目を進める
-```
-
-こうすると、承認者が別作業中でも他の仕事は止まらない。トリガー yaml では
-`notify: github_label` を指定し、`notify_label` にラベル名を書く。緊急・対面が
-自然な場面だけ `notify: manual`（チャット/口頭で即時確認）を使う。
-
-> このテンプレは外部の承認 SaaS を持ち込まず、GitHub の Issue + ラベルと手動確認だけで
-> 非同期承認を成立させます（plain Claude Code + GitHub の範囲）。
+- **Never auto-approve `critical` / `high`, ever.** Skipping approval on an irreversible,
+  high-risk item for the sake of speed is forbidden, because the risk is asymmetric (the
+  cost of failure is too large).
+- **Shrink the scope of the stoppage down to "the item in question only".** Holding one item
+  awaiting approval doesn't stop the whole cycle for other tasks that don't need approval
+  (`item_isolation.suspend_whole_cycle: false`). This shrinks "no human = company stops"
+  down to "no human = that one item stalls".
 
 ---
 
-## 4. 関連
+## 3. Asynchronous approval via GitHub labels
 
-- `definitions/hitl/approver-registry.yaml` — 役割→承認者の写像 + 縮退規則
-- `definitions/hitl/triggers/_schema.md` — トリガー記法（notify / on_timeout）
-- `.claude/rules/hitl-gate.md` — HITL Gate の 5 カテゴリと基本手順
+Instead of treating approval as "a synchronous process you wait on right there," treat it as
+"an asynchronous process followed up on via a label."
+
+```
+1. A gate fires -> file a pending-approval Issue, and label it hitl:<trigger>
+2. The AI / person in charge holds that one item and moves on to other tasks
+3. The approver checks labeled Issues whenever they have time, and comments approve/reject
+4. Once approved, the held item proceeds
+```
+
+This way, other work doesn't stop just because the approver is on other tasks. In the
+trigger yaml, specify `notify: github_label` and write the label name in `notify_label`. Use
+`notify: manual` (confirm immediately via chat/verbally) only for situations where urgency or
+being face-to-face is natural.
+
+> This template doesn't bring in an external approval SaaS — asynchronous approval is
+> achieved with nothing but GitHub Issues + labels and manual confirmation (staying within
+> plain Claude Code + GitHub).
+
+---
+
+## 4. Related
+
+- `definitions/hitl/approver-registry.yaml` — the role→approver mapping + degradation rules
+- `definitions/hitl/triggers/_schema.md` — trigger notation (notify / on_timeout)
+- `.claude/rules/hitl-gate.md` — the HITL Gate's 5 categories and basic procedure

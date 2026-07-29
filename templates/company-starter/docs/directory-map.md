@@ -1,21 +1,22 @@
-# ディレクトリ地図 — コンテキストを入れる前 / 入れた後
+# Directory map — before and after filling in context
 
-「自社・クライアントのコンテキストを記入すると、フォルダはどう変わるのか」を
-3 段階のツリーで示します。**生成物** と注記した項目は、コマンドやサイクル運用が実行時に作るもので、
-配布直後には存在しません。それ以外は配布時点で実在します。
+Shows, as a 3-stage tree, "how the folders change once you fill in your own company's and
+clients' context." Items annotated **generated** are created at runtime by a command or by
+cycle operations — they don't exist right after distribution. Everything else genuinely
+exists at distribution time.
 
 ---
 
-## (a) 配布直後（現状）
+## (a) Right after distribution (the current state)
 
-まだ何も記入していない、テンプレートを clone した直後の姿です。
+The shape right after cloning the template, before anything has been filled in.
 
 ```
 ai-retreat-starter/
-├── CLAUDE.md                       # 運用憲法
+├── CLAUDE.md                       # the operating constitution
 ├── README.md
 ├── LICENSE.md
-├── HANDOFF.md                      # セッション引き継ぎ（配布直後は初期状態のプレースホルダ）
+├── HANDOFF.md                      # session handover (a placeholder in its initial state right after distribution)
 ├── .claude/
 │   ├── settings.json
 │   ├── hooks/
@@ -23,125 +24,129 @@ ai-retreat-starter/
 │   └── commands/                   # /define-company, /ingest-context, /create-epic,
 │                                    # /verify, /handoff, /decision, /retro
 ├── .github/
-│   ├── ISSUE_TEMPLATE/              # feedback-* 系テンプレ + config.yml
-│   └── workflows/verify.yml         # CI（scripts/verify.py を実行）
-├── definitions/                    # ★自社コンテキストの SSOT（骨格のみ、README で記入先を案内）
+│   ├── ISSUE_TEMPLATE/              # the feedback-* templates + config.yml
+│   └── workflows/verify.yml         # CI (runs scripts/verify.py)
+├── definitions/                    # ★the SSOT of your own company's context (skeleton only, README points to where to fill in)
 │   ├── README.md
 │   ├── ontology/README.md
-│   ├── hitl/README.md + approver-registry.yaml + triggers/（記法ガイド + 雛形 3 本）
+│   ├── hitl/README.md + approver-registry.yaml + triggers/ (notation guide + 3 templates)
 │   ├── kpi/README.md
 │   ├── cycles/README.md
 │   ├── retro/README.md
 │   └── clients/README.md
-├── examples/                       # ★記入済みサンプル（読むだけ）
+├── examples/                       # ★filled-in samples (read-only)
 │   ├── README.md
-│   └── harukaze-ec/                # 架空 EC 会社の完成例一式
+│   └── harukaze-ec/                # a complete example for a fictional EC company
 ├── docs/
-│   ├── directory-map.md            # 本ファイル
+│   ├── directory-map.md            # this file
 │   ├── starter-manual.md
-│   ├── participant-guide.md        # 合宿前の参加者向け事前案内
-│   ├── retreat-day-flow.md         # 合宿当日の進行表
-│   ├── feedback-collection.md      # フィードバック収集の運用
-│   ├── ai-company-explainer.md     # 「AI 自律経営ハーネス」の背景解説
-│   ├── concepts/                   # 設計思想の解説（context-funnel / hitl-async-approval）
-│   ├── simulations/                # オンボーディング検証記録（読むだけ）
-│   ├── templates/                  # 記入元の雛形（ontology / kpi / cycle-plan / retrospective ほか）
-│   ├── decisions/README.md         # Decision RFC 置き場の案内（中身はまだ無い）
-│   └── retros/README.md            # 振り返り記録置き場の案内（中身はまだ無い）
-├── state/README.md                 # 業務サイクルログの置き場の案内（中身はまだ無い）
+│   ├── participant-guide.md        # pre-retreat guidance for participants
+│   ├── retreat-day-flow.md         # the retreat day's run-of-show
+│   ├── feedback-collection.md      # how feedback collection is operated
+│   ├── ai-company-explainer.md     # background on the "AI autonomous management harness"
+│   ├── concepts/                   # explanations of the design thinking (context-funnel / hitl-async-approval)
+│   ├── simulations/                # onboarding-verification records (read-only)
+│   ├── templates/                  # source templates to fill in from (ontology / kpi / cycle-plan / retrospective etc.)
+│   ├── decisions/README.md         # guide to where Decision RFCs live (nothing there yet)
+│   └── retros/README.md            # guide to where retrospective records live (nothing there yet)
+├── state/README.md                 # guide to where business-cycle logs live (nothing there yet)
 ├── scripts/
-│   ├── verify.py                   # RQT ベースの検証ランナー
-│   └── （サイクル運用補助スクリプト）
+│   ├── verify.py                   # the RQT-based verification runner
+│   └── (cycle-operations helper scripts)
 ├── exercises/
-└── secrets/                        # 機密のみ（.gitignore 対象、.gitkeep で構造だけ保持）
+└── secrets/                        # confidential data only (gitignored, structure kept via .gitkeep)
     ├── customers/
     └── contracts/
 ```
 
 ---
 
-## (b) 自社コンテキストを記入した後
+## (b) After filling in your own company's context
 
-`/define-company` と各雛形の記入を終えた姿です。`definitions/` の各サブディレクトリに
-自社の実データ（`company.yaml` や `<team>-*.yaml`）が入り、運用の記録が残り始めます。
+The shape once `/define-company` and each template have been filled in. Each subdirectory
+under `definitions/` now holds your own company's real data (`company.yaml`,
+`<team>-*.yaml`), and operational records start accumulating.
 
 ```
 ai-retreat-starter/
-├── HANDOFF.md                      # ファイル自体は (a) から存在。中身: /handoff がセッション実績を追記
+├── HANDOFF.md                      # the file itself already existed at (a). Content: /handoff appends session results
 ├── definitions/
 │   ├── ontology/
 │   │   ├── README.md
-│   │   └── company.yaml            # 生成物: /define-company（または雛形コピー）
+│   │   └── company.yaml            # generated: /define-company (or copied from the template)
 │   ├── hitl/
 │   │   ├── README.md
-│   │   └── triggers/               # 自社の承認トリガー（記法ガイド + 雛形 3 本を同梱）
+│   │   └── triggers/               # your own company's approval triggers (bundled with the notation guide + 3 templates)
 │   ├── kpi/
 │   │   ├── README.md
-│   │   └── ec-team-kpi.yaml        # 雛形をコピーして記入
+│   │   └── ec-team-kpi.yaml        # copied from the template and filled in
 │   ├── cycles/
 │   │   ├── README.md
-│   │   └── ec-team-cycle-plan.yaml # 雛形をコピーして記入
+│   │   └── ec-team-cycle-plan.yaml # copied from the template and filled in
 │   ├── retro/
 │   │   ├── README.md
 │   │   └── ec-team-retrospective.yaml
-│   └── clients/README.md           # 自社完結なら空のまま
+│   └── clients/README.md           # stays empty for a self-contained company
 ├── docs/
 │   ├── decisions/
-│   │   ├── README.md               # (a) から存在
-│   │   └── YYYY-MM-DD-*.md         # 中身が増える: /decision が Decision RFC を追加
+│   │   ├── README.md               # already existed at (a)
+│   │   └── YYYY-MM-DD-*.md         # contents grow: /decision adds a Decision RFC
 │   └── retros/
-│       ├── README.md               # (a) から存在
-│       └── YYYY-MM-DD-retro.md     # 中身が増える: /retro が振り返り記録を追加
-└── （他は (a) と同じ）
+│       ├── README.md               # already existed at (a)
+│       └── YYYY-MM-DD-retro.md     # contents grow: /retro adds a retrospective record
+└── (everything else is the same as (a))
 ```
 
 ---
 
-## (c) クライアント 2 社を運用している後
+## (c) After operating with 2 clients
 
-受託・卸などでクライアントを持つ場合、`definitions/clients/<slug>/` に
-非機密の構造情報が 1 社 = 1 ディレクトリで増えます。機密は `secrets/customers/<slug>/` 側へ。
+If you have clients (e.g. contracted or wholesale work), non-confidential structural
+information grows under `definitions/clients/<slug>/`, one directory per company.
+Confidential data goes to `secrets/customers/<slug>/` instead.
 
 ```
 ai-retreat-starter/
 ├── definitions/
 │   └── clients/
 │       ├── README.md
-│       ├── midori-hotel/           # クライアント 1（非機密の構造情報）
+│       ├── midori-hotel/           # Client 1 (non-confidential structural information)
 │       │   ├── profile.yaml
 │       │   ├── ontology.yaml
 │       │   └── engagement.yaml
-│       └── aozora-cafe/            # クライアント 2（同型）
+│       └── aozora-cafe/            # Client 2 (same shape)
 │           ├── profile.yaml
 │           ├── ontology.yaml
 │           └── engagement.yaml
 └── secrets/
-    └── customers/                  # 機密（.gitignore 対象、git には乗らない）
-        ├── midori-hotel/           # 実額・契約書原本・連絡先
+    └── customers/                  # confidential data (gitignored, never lands in git)
+        ├── midori-hotel/           # real amounts, original contracts, contact details
         └── aozora-cafe/
 ```
 
 ---
 
-## どのコマンド/雛形がどのファイルを生むか
+## Which command/template produces which file
 
-| 記入先 | 生成/記入の起点 | 種別 |
+| Destination | Where it's generated/filled from | Kind |
 |--------|----------------|------|
-| `definitions/ontology/company.yaml` | `/define-company`（または `docs/templates/ontology-starter.yaml` をコピー） | 生成物/記入 |
-| `definitions/hitl/triggers/*.yaml` | 同梱雛形（large-deal / incident / new-ontology-entity）に記入 | 記入 |
-| `definitions/kpi/<team>-kpi.yaml` | `docs/templates/kpi-measurement-template.yaml` をコピー | 記入 |
-| `definitions/cycles/<team>-cycle-plan.yaml` | `docs/templates/cycle-plan-template.yaml` をコピー | 記入 |
-| `definitions/retro/<team>-retrospective.yaml` | `docs/templates/retrospective-template.yaml` をコピー | 記入 |
-| `definitions/clients/<slug>/{profile,ontology,engagement}.yaml` | 手動記入（`definitions/clients/README.md` の 3 ファイル構成） | 記入 |
-| `HANDOFF.md` | `/handoff` | 生成物 |
-| `docs/decisions/YYYY-MM-DD-*.md` | `/decision` | 生成物 |
-| `docs/retros/...` | `/retro` | 生成物 |
-| `secrets/customers/<slug>/*` | 手動（機密のみ、git 追跡外） | 記入（非追跡） |
+| `definitions/ontology/company.yaml` | `/define-company` (or copy `docs/templates/ontology-starter.yaml`) | Generated/filled in |
+| `definitions/hitl/triggers/*.yaml` | Fill in the bundled templates (large-deal / incident / new-ontology-entity) | Filled in |
+| `definitions/kpi/<team>-kpi.yaml` | Copy `docs/templates/kpi-measurement-template.yaml` | Filled in |
+| `definitions/cycles/<team>-cycle-plan.yaml` | Copy `docs/templates/cycle-plan-template.yaml` | Filled in |
+| `definitions/retro/<team>-retrospective.yaml` | Copy `docs/templates/retrospective-template.yaml` | Filled in |
+| `definitions/clients/<slug>/{profile,ontology,engagement}.yaml` | Filled in by hand (the 3-file structure from `definitions/clients/README.md`) | Filled in |
+| `HANDOFF.md` | `/handoff` | Generated |
+| `docs/decisions/YYYY-MM-DD-*.md` | `/decision` | Generated |
+| `docs/retros/...` | `/retro` | Generated |
+| `secrets/customers/<slug>/*` | By hand (confidential data only, not git-tracked) | Filled in (untracked) |
 
-> **`docs/retros/` は 2 系統あります。** `/retro` が作るのはセッション単位のフラットな
-> `docs/retros/YYYY-MM-DD-retro.md`。一方 `definitions/retro/<team>-retrospective.yaml`
-> （SSOT）が宣言する出力先は、チーム×頻度でネストした `docs/retros/<team_id>/weekly/`
-> と `docs/retros/<team_id>/monthly/` です。両方とも `docs/retros/` 配下に共存しますが、
-> 生成元と粒度が異なる別の記録である点に注意してください。
+> **`docs/retros/` has 2 separate lineages.** `/retro` creates flat, per-session files at
+> `docs/retros/YYYY-MM-DD-retro.md`. Meanwhile, `definitions/retro/<team>-retrospective.yaml`
+> (the SSOT) declares an output location nested by team × frequency:
+> `docs/retros/<team_id>/weekly/` and `docs/retros/<team_id>/monthly/`. Both coexist under
+> `docs/retros/`, but note that they're separate records with different origins and
+> granularity.
 
-> 完成イメージが欲しいときは `examples/harukaze-ec/` を開いてください（架空の EC 会社の記入済み一式）。
+> If you want a picture of the finished state, open `examples/harukaze-ec/` (a complete,
+> filled-in set for a fictional EC company).
