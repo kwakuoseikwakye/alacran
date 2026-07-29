@@ -1,213 +1,232 @@
-# 参加者向け事前案内 — AI駆動経営合宿
+# Pre-retreat guidance for participants — AI-driven management retreat
 
-> 対象読者: 合宿への参加が決まった方。配布タイミングは **合宿の1〜2週間前** を想定しています。
-> 想定読了時間: 約10分。
-
----
-
-## はじめに
-
-この合宿では、あなた自身の会社を題材に「AIエージェントと一緒に経営を回す」ための
-最小構成のハーネス（ワークフロー・ルール・テンプレート一式）を、実際に手を動かしながら
-自分のリポジトリに育てます。合宿が終わる頃には、以下が揃った状態になっているはずです。
-
-- 自社のドメイン・ステークホルダー・ボトルネックを言語化した「自社オントロジー」
-- 実業務の課題を分解した最初のEpic Issue（GitHub上）
-- HITL（Human-in-the-Loop）ゲート — どこを人間が握り、どこをAIに任せるかの設計
-- 機械検証（`scripts/verify.py`）が通る状態のリポジトリ一式
-
-事前準備は15分程度です。本ガイドの手順に沿って、合宿当日までに済ませておいてください。
-当日は事前準備の完了を前提に進行します。
+> Audience: anyone confirmed to attend the retreat. Distributed **1-2 weeks before the
+> retreat**.
+> Expected read time: about 10 minutes.
 
 ---
 
-## 持ち物 / 前提ツール
+## Introduction
 
-以下は合宿当日までに、お使いのPC（Mac / Windows / Linux いずれでも可）にインストールしておいてください。
+In this retreat, using your own company as the material, you'll grow, hands-on, in your own
+repository, a minimal-footprint harness (a set of workflows, rules, and templates) for
+"running the business alongside an AI agent." By the time the retreat ends, you should have
+all of the following in place:
 
-| ツール | 用途 | 確認コマンド | 目安バージョン |
+- A "company ontology" that puts your own company's domain, stakeholders, and bottlenecks
+  into words
+- Your first Epic Issue (on GitHub), decomposing a real operational challenge
+- HITL (Human-in-the-Loop) gates — a design for where a human holds the reins and where the
+  AI is trusted
+- A repository where machine verification (`scripts/verify.py`) passes
+
+Pre-retreat prep takes about 15 minutes. Follow this guide's steps and finish it before the
+day of the retreat. The day itself proceeds assuming this prep is already done.
+
+---
+
+## What to bring / prerequisite tools
+
+Install the following on your PC (Mac / Windows / Linux — any is fine) before the day of the
+retreat.
+
+| Tool | Purpose | Check command | Approximate version |
 |---|---|---|---|
-| `git` | リポジトリの複製・commit | `git --version` | 2.x 以上 |
-| `python3` | 検証スクリプト (`scripts/verify.py`) の実行 | `python3 --version` | 3.9 以上 |
-| `gh` (GitHub CLI) | Issue起票・認証確認 | `gh --version` | 2.x 以上 |
-| `claude` (Claude Code CLI) | 合宿本体の作業環境 | `claude --version` | Pro以上、または Claude Code 対応プラン |
+| `git` | Duplicating the repo, committing | `git --version` | 2.x+ |
+| `python3` | Running the verification script (`scripts/verify.py`) | `python3 --version` | 3.9+ |
+| `gh` (GitHub CLI) | Filing Issues, confirming authentication | `gh --version` | 2.x+ |
+| `claude` (Claude Code CLI) | Your working environment for the retreat itself | `claude --version` | Pro or above, or a Claude Code-eligible plan |
 
-加えて、**GitHubアカウント**（できれば二要素認証 [2FA] 有効化済み）が必要です。
-社用アカウント・個人アカウントどちらでも構いませんが、合宿後も継続して使うアカウントを推奨します。
+In addition, you'll need a **GitHub account** (ideally with two-factor authentication [2FA]
+already enabled). Either a work or personal account is fine, but we recommend one you'll keep
+using after the retreat.
 
-Windows をお使いの場合は WSL (Windows Subsystem for Linux) 上での作業を推奨します。
-`git` / `python3` / `gh` / `claude` はいずれも WSL の Linux 環境から導入してください。
+If you're on Windows, we recommend working inside WSL (Windows Subsystem for Linux). Install
+`git` / `python3` / `gh` / `claude` all from within the WSL Linux environment.
 
-### 会社の「素材」も集めてくる
+### Also gather your company's "materials"
 
-上のツール準備に加えて、当日 AI に会社を言語化させるための **自社の資料** を手元にまとめてきてください。
-何を集めればよいかは、業種別の例つきチェックリストにまとめてあります(集めるだけ・書く作業なし)。
+On top of the tool setup above, gather **your own company's materials** so the AI can put
+your company into words on the day. What to gather is laid out in a checklist with examples
+by industry (it's just gathering — no writing required).
 
-- [自社コンテキスト集めチェックリスト](context-gathering-checklist.md)
+- [Company-context gathering checklist](context-gathering-checklist.md)
 
-集めた資料は初日に `/define-company` と `/ingest-context` で会社の「記憶」に取り込みます。
+The gathered material is ingested into the company's "memory" on day one, via
+`/define-company` and `/ingest-context`.
 
 ---
 
-## 事前準備 15分手順
+## The 15-minute pre-retreat setup
 
-以下を順番に実施してください。所要時間の目安は各ステップに記載しています。
+Work through the following in order. Each step notes its estimated time.
 
-### 1. GitHubアカウントの確認（2分）
+### 1. Confirm your GitHub account (2 min)
 
 ```bash
-# ブラウザで github.com にログインできることを確認
-# 2FA が未設定の場合は Settings > Password and authentication から有効化を推奨
+# Confirm you can log in to github.com in a browser
+# If 2FA isn't set up, we recommend enabling it under Settings > Password and authentication
 ```
 
-2FAは必須ではありませんが、合宿中に会社の機密情報に近い内容（自社の課題・ボトルネック等）を
-private リポジトリで扱うため、アカウントのセキュリティを高めておくことを推奨します。
+2FA isn't mandatory, but since you'll be handling content close to your company's
+confidential information (your own challenges, bottlenecks, etc.) in a private repository
+during the retreat, we recommend tightening your account's security.
 
-### 2. Claude Code CLI のインストール（3分）
+### 2. Install the Claude Code CLI (3 min)
 
-インストール手順はご利用のOSにより異なります。公式のインストール手順に従ってください。
-インストール後、以下でバージョンが表示されることを確認します。
+Installation steps vary by OS. Follow the official installation instructions. After
+installing, confirm the version shows:
 
 ```bash
 claude --version
 ```
 
-Claude Code CLI は **Pro プラン以上**、または Claude Code が利用可能なプランでの契約が必要です。
-未契約の場合は合宿事務局に事前にご相談ください。
+The Claude Code CLI requires a **Pro plan or above**, or a plan where Claude Code is
+available. If you don't have one yet, consult the retreat organizers ahead of time.
 
-### 3. GitHub CLI のインストール + 認証（3分）
+### 3. Install the GitHub CLI + authenticate (3 min)
 
 ```bash
 gh --version
 gh auth login
 ```
 
-`gh auth login` は対話形式です。`GitHub.com` → `HTTPS` または `SSH` → ブラウザ認証、の順に選択すれば完了します。
-認証が済んでいるかは以下で確認できます。
+`gh auth login` is interactive. Choosing, in order, `GitHub.com` -> `HTTPS` or `SSH` ->
+browser authentication completes it. Confirm you're authenticated with:
 
 ```bash
 gh auth status
-# ✓ Logged in to github.com account <your-account> と表示されればOK
+# It's OK if it shows: ✓ Logged in to github.com account <your-account>
 ```
 
-### 4. python3 + pip の確認（1分）
+### 4. Confirm python3 + pip (1 min)
 
 ```bash
-python3 --version   # 3.9 以上
+python3 --version   # 3.9 or above
 pip3 --version
 ```
 
-`python3` が入っていない場合は、公式インストーラまたはOSのパッケージマネージャ
-（`brew install python3` / `apt install python3` 等）で導入してください。
+If `python3` isn't installed, install it via the official installer or your OS's package
+manager (`brew install python3` / `apt install python3` etc.).
 
-### 5. テンプレートを自分の private リポジトリに複製（3分）
+### 5. Duplicate the template into your own private repository (3 min)
 
-配布されたテンプレートリポジトリのページで **"Use this template"** ボタンを押し、
-**必ず Private** を選択して、自分のアカウント配下に新規リポジトリを作成してください。
+On the distributed template repository's page, press the **"Use this template"** button, and
+be sure to choose **Private**, creating a new repository under your own account.
 
-> ⚠️ **Public を選ばないでください。** 合宿中は自社の事業ドメインやボトルネックなど、
-> ある程度踏み込んだ情報をリポジトリに書き込みます。Private を選ぶことで、
-> 自社機密が外部に露出するリスクを防ぎます。
+> ⚠️ **Don't choose Public.** During the retreat you'll write somewhat sensitive information
+> into the repository — your business domain, bottlenecks, and so on. Choosing Private
+> prevents your own company's confidential details from being exposed externally.
 
-複製が終わったら、手元にclone します。
+Once the duplicate is created, clone it locally.
 
 ```bash
 git clone git@github.com:<your-account>/<your-repo-name>.git
 cd <your-repo-name>
 ```
 
-### 6. 検証スクリプトが通ることを確認（2分）
+### 6. Confirm the verification script passes (2 min)
 
 ```bash
 python3 scripts/verify.py
 ```
 
-`FAIL` が0件であれば準備完了です。多くの項目が `INFO`（まだ何も書いていないためスキップ）
-と表示されますが、これは想定通りの挙動です。`FAIL` が出た場合は、次のいずれかを確認してください。
+If there are 0 `FAIL`s, you're ready. Many items will show `INFO` (skipped because nothing's
+been written yet) — that's expected behavior. If a `FAIL` appears, check the following:
 
-- `ModuleNotFoundError` 系のエラー → `pip3 install pyyaml` を実行
-- その他のエラー → 手順1〜5のいずれかが未完了の可能性があります
+- A `ModuleNotFoundError`-type error -> run `pip3 install pyyaml`
+- Any other error -> one of steps 1-5 may not be complete
 
-ここまで完了したら事前準備は終了です。当日は `claude` を起動するところから始めます。
-
----
-
-## 合宿までに考えておくこと
-
-当日の最初の演習（自社オントロジーの定義）をスムーズに進めるため、
-以下の3点について事前に考えを整理しておくことを強く推奨します。
-完璧な答えを用意する必要はありません。当日Claude Codeとの対話の中で言語化・修正していきます。
-
-### 1. 自社の一言事業ドメイン（30文字以内）
-
-「うちの会社は、誰の・どんな課題を・どう解決しているか」を一言で表すとどうなるか。
-業界用語や社内呼称ではなく、初めて聞く人にも伝わる言葉で考えてみてください。
-
-### 2. 主要ステークホルダー
-
-顧客・従業員・パートナー・株主など、事業に関わる人たちのうち、
-**今いちばん中心に置くべきなのは誰か**を考えておいてください。全員を並列で挙げるのではなく、
-優先順位をつけることが目的です。
-
-### 3. 今いちばん時間がかかっている業務
-
-日々の業務の中で、「これがなければもっと事業が前に進むのに」と感じているボトルネックを
-1つ思い浮かべておいてください。合宿ではこのボトルネックを最初のEpic Issueとして起票し、
-実際にAIエージェントと一緒に取り組みます。抽象的な課題（「営業力が弱い」等）よりも、
-具体的な業務（「見積書の作成に毎回2時間かかる」等）の方が、合宿中の題材として扱いやすいです。
-
-### 4. コアバリューフロー（インプット → 変換 → アウトプット）
-
-自社の中心的な事業活動を「何を受け取り（インプット）→ 何をして（変換）→ 何を渡すか
-（アウトプット）」の一文で表すとどうなるか、考えておいてください。例えば
-「問い合わせ（インプット）→ 見積・提案（変換）→ 受注（アウトプット）」のような形です。
-これは当日の自社オントロジー定義（`definitions/ontology/`）で使う土台になります。
+Once you've gotten this far, pre-retreat prep is done. The day itself starts from running
+`claude`.
 
 ---
 
-## 合宿当日までのQ&A
+## Things to think about before the retreat
 
-**Q1. Claude Code って何ですか？普段使っているチャットAIと何が違いますか？**
-A. Claude Code はターミナル（コマンドライン）上で動作するAIエージェントです。
-ファイルの読み書き・コマンド実行・GitHubとの連携などを、対話しながら自律的に行える点が
-通常のチャット画面との大きな違いです。合宿では、あなたの会社の情報をリポジトリに蓄積しながら、
-Claude Codeと一緒に経営タスクを進めていきます。
+To make the first exercise of the day (defining your own company ontology) go smoothly, we
+strongly recommend organizing your thinking on the following 3 points ahead of time. You
+don't need a perfect answer prepared — you'll put it into words and refine it during the
+dialogue with Claude Code on the day.
 
-**Q2. python を使ったことがないのですが大丈夫ですか？**
-A. 問題ありません。合宿中に自分でpythonコードを書く場面はほぼありません。
-`python3 scripts/verify.py` という1つのコマンドを実行するだけで、
-リポジトリの状態が正しいかを機械的にチェックしてくれます。中身を読む必要はありません。
+### 1. Your company's business domain, in one line (under 30 words)
 
-**Q3. GitHubアカウントを持っていないのですが？**
-A. 事前準備の時間内に無償で作成できます。[github.com](https://github.com) から
-サインアップしてください。2FAの設定もあわせて行うことを推奨します。
+How would you put "who my company solves what problem for, and how" into one sentence? Try
+to phrase it in words that make sense to someone hearing about it for the first time, rather
+than industry jargon or in-house terms.
 
-**Q4. 自社の機密情報を書き込むのが不安です。**
-A. 必ず private リポジトリで作業してください（手順5）。またリポジトリ内の `secrets/` フォルダは
-`.gitignore` で保護されており、認証情報やAPIキーはここに置く運用です。それでも
-「どこまで書き込んでよいか」に迷う場合は、合宿当日に講師へ相談してください。
+### 2. Key stakeholders
 
-**Q5. 事前準備がどうしても15分で終わりません。**
-A. 特にインストール系のステップ（Claude Code CLI / GitHub CLI）は初回だとネットワーク環境により
-時間がかかることがあります。合宿の前々日までには一度着手し、詰まった場合は早めに事務局へ連絡してください。
-当日に持ち越すと、その分演習に使える時間が減ってしまいます。
+Among the people involved in the business — customers, employees, partners, shareholders,
+etc. — think about **who should be placed at the center right now**. The goal isn't to list
+everyone side by side, but to rank them.
 
----
+### 3. The work that currently takes the most time
 
-## 利用条件の確認
+Picture one bottleneck in your day-to-day operations that you feel "if this weren't there,
+the business would move forward faster." At the retreat, you'll file this bottleneck as your
+first Epic Issue and actually work on it together with an AI agent. A concrete task (e.g.
+"preparing a quote takes 2 hours every time") is easier to work with during the retreat than
+an abstract issue (e.g. "our sales are weak").
 
-本テンプレートは合宿の **登録参加者本人の自社利用に限定** して提供されます。
-再配布・商用再配布・公開リポジトリでの派生物公開は禁止です。
-詳細は複製したリポジトリ内の `LICENSE.md` を参照してください。
+### 4. Core value flow (input -> transformation -> output)
 
----
-
-## サポート
-
-事前準備でつまずいた場合や、参加可否に関わる不明点がある場合は、合宿事務局までご連絡ください。
-
-連絡先: {{ 事務局が個別に案内 }}
+Think about how you'd express your company's central business activity as one sentence:
+"what comes in (input) -> what happens to it (transformation) -> what goes out (output)."
+For example, something like "an inquiry (input) -> a quote/proposal (transformation) -> a
+signed order (output)." This becomes the foundation you'll use when defining your company
+ontology (`definitions/ontology/`) on the day.
 
 ---
 
-*ai-retreat-starter — 参加者向け事前案内*
+## Q&A before the day of the retreat
+
+**Q1. What is Claude Code? How is it different from the chat AI I normally use?**
+A. Claude Code is an AI agent that runs in a terminal (the command line). The big difference
+from a normal chat screen is that it can read/write files, run commands, and integrate with
+GitHub — acting autonomously through dialogue. At the retreat, you'll work through management
+tasks together with Claude Code while accumulating your company's information in the
+repository.
+
+**Q2. I've never used Python — is that OK?**
+A. No problem. There's almost no point during the retreat where you write Python code
+yourself. Running the one command `python3 scripts/verify.py` mechanically checks whether
+the repository's state is correct — you don't need to read its internals.
+
+**Q3. I don't have a GitHub account — what do I do?**
+A. You can create one for free within the pre-retreat prep window. Sign up at
+[github.com](https://github.com). We also recommend setting up 2FA at the same time.
+
+**Q4. I'm uneasy about writing my company's confidential information in.**
+A. Always work in a private repository (Step 5). Also, the `secrets/` folder within the
+repository is protected by `.gitignore`, and credentials/API keys are meant to go there. If
+you're still unsure how much you can write in, consult the instructor on the day of the
+retreat.
+
+**Q5. I really can't finish the pre-retreat prep in 15 minutes.**
+A. The installation steps in particular (Claude Code CLI / GitHub CLI) can take longer the
+first time depending on your network environment. Start at least 2 days before the retreat,
+and if you get stuck, contact the organizers early. Carrying it over to the day itself eats
+into the time you'd otherwise have for the exercises.
+
+---
+
+## Confirming the terms of use
+
+This template is provided **exclusively for a registered retreat participant's own use at
+their own company**. Redistribution, commercial redistribution, and publishing derivative
+works in a public repository are all prohibited. See `LICENSE.md` inside your duplicated
+repository for details.
+
+---
+
+## Support
+
+If you get stuck during pre-retreat prep, or have questions affecting whether you can
+participate, contact the retreat organizers.
+
+Contact: {{ provided individually by the organizers }}
+
+---
+
+*ai-retreat-starter — pre-retreat guidance for participants*

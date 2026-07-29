@@ -1,183 +1,204 @@
-# フィードバック収集フロー
+# Feedback collection flow
 
-> 対象読者: 合宿事務局・テンプレート保守担当者。参加者にも「フィードバックの出し方」として案内可能。
-
----
-
-## なぜフィードバックが必要か
-
-このテンプレートは「作ったら終わり」のものではありません。合宿参加者が実際に手を動かして
-初めて見えてくる摩擦（コマンドが分かりにくい、ドキュメントの説明が足りない、演習の難易度が
-合っていない等）は、事務局側だけでは発見できません。
-
-参加者体験は毎回の合宿ごとに積み上げて改善していくものであり、フィードバック収集は
-その改善サイクルの入口にあたります。テンプレート自体もSSOT原則・偽緑禁止原則に従っており、
-「動いているように見えるが実は使いにくい」状態を放置しないことが重要です。
+> Audience: retreat organizers, the people maintaining the template. Can also be shared with
+> participants as "how to give feedback."
 
 ---
 
-## 収集方法（3チャネル）
+## Why feedback is needed
 
-### 1. GitHub Issues（推奨）
+This template isn't a "build it and you're done" thing. Friction that only becomes visible
+once retreat participants actually get their hands on it (a confusing command, insufficient
+documentation, an exercise whose difficulty doesn't match) can't be discovered by the
+organizers alone.
 
-参加者は、自分のprivateリポジトリで作業中に気づいた改善点を、**テンプレート本体のリポジトリ**にも
-Issueとして起票できます。自分のリポジトリはテンプレートから複製された独立リポジトリのため、
-そこにIssueを書いても事務局には届きません。フィードバックは必ずテンプレート本体側に起票する
-運用であることを、参加者ガイドや合宿当日に案内してください。
-
-Issue起票時は以下を含めてもらうと、トリアージがスムーズになります。
-
-- 何をしようとしていたか（どの演習・どのコマンドか）
-- 実際に何が起きたか（エラーメッセージ・想定と違った挙動）
-- 期待していた挙動
-- 自社の機密に触れる内容は書かず、一般化した表現に置き換える（詳細は §プライバシー）
-
-テンプレート側は `feedback` ラベルで参加者由来のIssueを分類します。
-
-### 2. 合宿後アンケート
-
-合宿終了後、事務局が半構造化アンケートを実施します。構成は以下の通りです。
-
-- 5段階評価 × 5問（例: 事前準備の分かりやすさ / 演習の難易度 / 講師の進行 / ツールの安定性 /
-  総合満足度）
-- 自由記述 × 3問（例: 良かった点 / 改善してほしい点 / 合宿後も使い続けたい機能）
-
-アンケートの実施・集計は合宿事務局が担当します。回答結果のうち、テンプレート改善に関わる
-指摘は §トリアージフロー に従ってIssue化してください。
-
-### 3. 1-on-1フォローアップ（希望者のみ）
-
-合宿後のフォローアップメール（`docs/retreat-day-flow.md` §合宿後のフォローアップ 参照）に応じて
-希望した参加者には、講師と30分ほどのオンライン面談を設定します。実業務での使用状況や、
-合宿だけでは見えなかった継続利用時の課題をヒアリングする場です。
-
-面談内容のうち、テンプレート改善に関わる指摘は、参加者の同意を得たうえで
-匿名化してIssue化してください（§プライバシー参照）。
+The participant experience is something that accumulates and improves retreat by retreat, and
+feedback collection is the entry point to that improvement cycle. The template itself follows
+the SSOT principle and the no-fake-green principle, so it's important not to leave a state
+where "it looks like it's working but is actually hard to use" unaddressed.
 
 ---
 
-## Issue label 体系（テンプレート側で使うlabel）
+## Collection methods (3 channels)
 
-テンプレート本体リポジトリでは、以下のlabelでフィードバックIssueを分類します。
+### 1. GitHub Issues (recommended)
 
-| Label | 用途 |
+While working in their own private repository, a participant can also file an Issue for an
+improvement they noticed in **the template's own repository**. Since their own repository is
+an independent repo duplicated from the template, filing an Issue there never reaches the
+organizers. Make sure the participant guide and the retreat day itself both make clear that
+feedback should always be filed against the template's own repo.
+
+Having them include the following when filing an Issue speeds up triage:
+
+- What they were trying to do (which exercise, which command)
+- What actually happened (the error message, behavior that differed from expectations)
+- The behavior they expected
+- Don't write anything touching your own company's confidential details — replace it with
+  generalized wording instead (see §Privacy for details)
+
+The template side classifies participant-originated Issues with the `feedback` label.
+
+### 2. Post-retreat survey
+
+After the retreat ends, the organizers run a semi-structured survey. Its structure is as
+follows:
+
+- 5 questions on a 5-point scale (e.g. clarity of pre-retreat prep / exercise difficulty /
+  how the instructor ran things / tool stability / overall satisfaction)
+- 3 free-text questions (e.g. what was good / what you'd like improved / what you want to
+  keep using after the retreat)
+
+Running and tallying the survey is the retreat organizers' responsibility. Among the
+responses, points relevant to improving the template should be turned into Issues following
+§Triage flow.
+
+### 3. 1-on-1 follow-up (opt-in only)
+
+For participants who opt in via the post-retreat follow-up email (see `docs/retreat-day-flow.md`
+§Post-retreat follow-up), a roughly 30-minute online meeting is arranged with the instructor.
+This is a chance to hear about how it's being used in real work, and about issues with
+continued use that only surface after the retreat.
+
+Among what comes up in these conversations, points relevant to improving the template should
+be turned into an Issue only with the participant's consent, and anonymized (see §Privacy).
+
+---
+
+## The Issue label system (labels used on the template side)
+
+In the template's own repository, feedback Issues are classified with the following labels.
+
+| Label | Purpose |
 |---|---|
-| `feedback:content` | テンプレートの内容（説明文・演習構成等）への意見 |
-| `feedback:tool-friction` | `verify.py` / commands / hooks 等ツール面での摩擦報告 |
-| `feedback:doc-gap` | ドキュメントの不足箇所・分かりにくい箇所の指摘 |
-| `feedback:success-story` | うまくいった事例。改善のヒントとして蓄積する |
-| `priority:critical` | 次の合宿までに必ず直すべきもの |
-| `priority:high` | 直近2〜3回の合宿サイクル内に対応したいもの |
-| `priority:medium` | 中期的に検討するもの |
-| `priority:low` | 余力があれば対応するもの |
+| `feedback:content` | Opinions about the template's content (explanatory text, exercise structure, etc.) |
+| `feedback:tool-friction` | Reports of friction with tools like `verify.py` / commands / hooks |
+| `feedback:doc-gap` | Points to a place documentation is missing or unclear |
+| `feedback:success-story` | A case that went well. Accumulated as a hint for improvement |
+| `priority:critical` | Must be fixed before the next retreat |
+| `priority:high` | Want to address within the next 2-3 retreat cycles |
+| `priority:medium` | Something to consider over the medium term |
+| `priority:low` | Address if there's spare capacity |
 
-`feedback:*` は内容の性質、`priority:*` は緊急度を表すため、原則としてIssueには両方のlabelを
-付与します（例: `feedback:tool-friction` + `priority:high`）。
-
----
-
-## トリアージフロー（合宿事務局側）
-
-1. **週次でIssueを見直す** — `feedback` labelが付いたIssue一覧を確認する
-2. **優先度付け** — 上記labelテーブルに従って `priority:*` を付与する。判断に迷う場合は
-   「次の合宿で同じ問題が再発するか」を基準にする（再発しそうなら`high`以上）
-3. **テンプレート本体への反映PR起票** — `priority:critical` / `priority:high` のIssueは、
-   次の合宿までに反映するPRを起票する。対応が完了したIssueはcloseし、Issue内に
-   対応内容を簡潔に記載する
-4. **反映しない判断もアリ** — 特定の参加者固有の事情によるフィードバックで、
-   一般化が難しいものはcloseしてよい。ただしclose理由をIssueに残すこと（サイレントクローズ禁止）
+`feedback:*` describes the nature of the content, and `priority:*` describes urgency, so as a
+rule an Issue gets both labels (e.g. `feedback:tool-friction` + `priority:high`).
 
 ---
 
-## 反映済フィードバックのbroadcast
+## Triage flow (for the retreat organizers)
 
-テンプレートに反映されたフィードバックは、以下いずれかの方法で参加者・関係者に共有します。
-
-- **CHANGELOG.md**（将来のフェーズで追加予定）— テンプレート本体のリポジトリに変更履歴として記録
-- **定期メール** — 一定期間分の改善内容をまとめて、過去参加者に案内する
-
-現時点ではCHANGELOG.mdが未整備のため、当面は定期メールでの共有を基本とし、
-CHANGELOG.mdが追加され次第そちらに一本化してください。
+1. **Review Issues weekly** — check the list of Issues tagged with the `feedback` label
+2. **Assign priority** — attach a `priority:*` label following the label table above. When
+   unsure, use "would this same problem recur at the next retreat" as the criterion (if it's
+   likely to recur, `high` or above)
+3. **File a PR to reflect it in the template itself** — for `priority:critical` /
+   `priority:high` Issues, file a PR that reflects the fix before the next retreat. Once
+   addressed, close the Issue, with a brief note of what was done written in the Issue
+4. **It's also fine to decide not to reflect it** — feedback rooted in one participant's
+   specific circumstances, hard to generalize, may be closed. But always leave the reason for
+   closing in the Issue (no silent closes)
 
 ---
 
-## 参加者への謝辞
+## Broadcasting feedback that's been addressed
 
-フィードバックが実際にテンプレートへ反映された場合、貢献した参加者への謝辞を残すことを
-推奨します。具体的には、反映内容のcommitメッセージのtrailerに、Issue起票者（GitHubの表示名 or
-希望する呼称）を記載します。
+Feedback that's been reflected in the template is shared with participants/stakeholders via
+one of the following:
+
+- **CHANGELOG.md** (planned for a future phase) — recorded as a change log in the template's
+  own repository
+- **A periodic email** — summarizing a period's worth of improvements and sharing it with
+  past participants
+
+Since CHANGELOG.md isn't set up yet at this time, use the periodic email as the primary
+channel for now, and consolidate onto CHANGELOG.md once it's added.
+
+---
+
+## Crediting participants
+
+When feedback actually gets reflected in the template, we recommend leaving a note of thanks
+to the contributing participant. Concretely, put the Issue filer (their GitHub display name,
+or whatever name they prefer) in the trailer of the commit message for the change.
 
 ```
-docs(exercises): ex02のHITLトリガー例を分かりやすく修正
+docs(exercises): clarify ex02's HITL trigger example
 
-Reported-by: <参加者の表示名 or 匿名希望なら省略>
+Reported-by: <the participant's display name, or omit if they prefer anonymity>
 ```
 
-謝辞を残すかどうかは参加者の希望を確認したうえで判断してください。匿名を希望する場合は
-trailerを省略し、Issue本文にも個人が特定できる情報を残さないようにします。
+Whether to leave this credit should be decided after confirming the participant's
+preference. If they prefer anonymity, omit the trailer, and also avoid leaving any personally
+identifying information in the Issue body.
 
 ---
 
-## プライバシー
+## Privacy
 
-参加者のIssueには、自社の機密情報（具体的な売上・取引先名・未公開の事業計画等）が
-意図せず含まれる可能性があります。以下の運用でリスクを抑えてください。
+A participant's Issue may unintentionally contain their own company's confidential
+information (specific revenue figures, business-partner names, unpublished business plans,
+etc.). Use the following practices to keep the risk down:
 
-- 参加者には、Issue起票時に自社固有の情報を一般化した表現に置き換えるよう案内する
-  （例: 「A社との契約金額が〜」ではなく「特定取引先との契約金額が〜」）
-- 事務局は、公開Issueとして扱う前に内容を確認し、機密性が高いと判断した場合は
-  参加者本人に確認のうえ、事務局内部の非公開チャネルに転記してから元Issueをサニタイズ
-  （機密箇所を削除・匿名化）する
-- 1-on-1フォローアップで得た情報は、参加者の明示的な同意なしにIssue化しない
-- サニタイズ後も内容の意図が変わっていないか、可能であれば参加者本人に確認を取る
+- Instruct participants, when filing an Issue, to replace their own company's specific
+  details with generalized wording (e.g. "the contract amount with a certain business
+  partner" rather than "the contract amount with Company A")
+- Before treating something as a public Issue, the organizers review its content, and if
+  they judge it sensitive, they confirm with the participant, transcribe it to an internal,
+  non-public channel, then sanitize the original Issue (delete/anonymize the sensitive parts)
+- Information obtained during a 1-on-1 follow-up is never turned into an Issue without the
+  participant's explicit consent
+- Where possible, confirm with the participant themselves that the intent hasn't changed
+  even after sanitizing
 
 ---
 
-## Issue起票テンプレート例
+## Example Issue-filing template
 
-参加者がIssueを起票する際の参考として、以下の構成を案内してください。
-テンプレート本体リポジトリに `.github/ISSUE_TEMPLATE/` としてIssueフォームを用意する場合も、
-この構成をベースにします。
+Share the following structure with participants as a reference for filing an Issue. If you
+set up an Issue form as `.github/ISSUE_TEMPLATE/` in the template's own repository, base it
+on this structure too.
 
 ```markdown
-## 何をしようとしていたか
-（どの演習・どのコマンドを実行していたか）
+## What were you trying to do
+(which exercise, which command you were running)
 
-## 実際に何が起きたか
-（エラーメッセージ、想定と違った挙動をそのまま貼り付ける）
+## What actually happened
+(paste the error message, or the behavior that differed from expectations, verbatim)
 
-## 期待していた挙動
-（本来どうなってほしかったか）
+## What behavior did you expect
+(what should have happened instead)
 
-## 環境
+## Environment
 - OS:
-- python3 バージョン:
-- claude --version の出力:
+- python3 version:
+- output of claude --version:
 
-## 補足
-（自社固有の情報は一般化した表現に置き換えてください）
+## Additional notes
+(replace anything specific to your own company with generalized wording)
 ```
 
-環境情報を含めてもらうことで、OS依存の不具合（Windows/WSL特有の挙動など）の切り分けが
-早くなります。
+Including environment information speeds up isolating OS-dependent issues (e.g.
+Windows/WSL-specific behavior).
 
 ---
 
-## 集計と定期レビュー
+## Aggregation and periodic review
 
-トリアージフローとは別に、四半期に1回程度の頻度で、蓄積したフィードバックを俯瞰する
-定期レビューを実施することを推奨します。
+Separately from the triage flow, we recommend a periodic review — roughly once a quarter —
+to take a step back and look at accumulated feedback as a whole.
 
-- `feedback:*` label別のIssue件数を集計し、どのカテゴリに摩擦が集中しているかを可視化する
-- `feedback:success-story` は特に見落とされやすいため、意識的に拾い上げる。
-  成功事例は次回合宿の演習設計や事前案内の改善材料になる
-- 同じ内容の指摘が複数回の合宿で繰り返し出ている場合は、単発のPRではなく
-  ドキュメント構成そのものの見直しを検討する
+- Tally the Issue count by `feedback:*` label, to visualize which category friction is
+  concentrated in
+- `feedback:success-story` is especially easy to overlook, so pick it up deliberately.
+  Success stories become material for improving the next retreat's exercise design and
+  pre-retreat guidance
+- If the same point keeps coming up across multiple retreats, consider reworking the
+  document structure itself rather than a one-off PR
 
-定期レビューの結果は、必要に応じて `docs/retreat-day-flow.md` のタイムラインや
-講師tipsにも反映してください。フィードバック収集はテンプレート本体だけでなく、
-運用ドキュメント全体の改善サイクルの一部です。
+Where relevant, reflect the periodic review's results in `docs/retreat-day-flow.md`'s timeline
+and instructor tips too. Feedback collection is part of the improvement cycle for the
+operational documentation as a whole, not just the template itself.
 
 ---
 
-*ai-retreat-starter — フィードバック収集フロー*
+*ai-retreat-starter — Feedback collection flow*
