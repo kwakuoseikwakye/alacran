@@ -1,6 +1,7 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
 import { stat } from "node:fs/promises"
+import path from "node:path"
 import { registerCompanyImpl } from "../companies-registry"
 import type { ExecFileFn } from "../git-commit-file"
 
@@ -47,20 +48,29 @@ export async function restoreCompanyImpl(
   if (!isAcceptableCloneUrl(url)) {
     return { ok: false, message: "That doesn't look like a GitHub repository URL" }
   }
-  if (await exists(targetPath)) {
-    return { ok: false, message: `${targetPath} already exists — pick a different folder` }
+  // targetPath is just as attacker-controlled as the URL. A value like
+  // "--upload-pack=<cmd>" would be read by git as an option, not a directory.
+  // Requiring an absolute path both matches what a company path actually is
+  // and rules out every leading-dash form.
+  const target = targetPath.trim()
+  if (!path.isAbsolute(target)) {
+    return { ok: false, message: "Enter the full folder path, starting with /" }
+  }
+  if (await exists(target)) {
+    return { ok: false, message: `${target} already exists — pick a different folder` }
   }
 
   try {
-    await execFn("git", ["clone", url, targetPath])
+    // "--" terminates option parsing: belt-and-braces alongside the checks above
+    await execFn("git", ["clone", "--", url, target])
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     return { ok: false, message: `Clone failed: ${message}` }
   }
 
   const registered = registryPath
-    ? await registerCompanyImpl(name, targetPath, registryPath)
-    : await registerCompanyImpl(name, targetPath)
+    ? await registerCompanyImpl(name, target, registryPath)
+    : await registerCompanyImpl(name, target)
   if (!registered.ok) return registered
   return { ok: true }
 }

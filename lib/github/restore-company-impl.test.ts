@@ -51,7 +51,7 @@ describe("restoreCompanyImpl", () => {
 
     expect(result.ok).toBe(true)
     const clone = calls.find((c) => c.args[0] === "clone")
-    expect(clone!.args).toEqual(["clone", "https://github.com/me/acme.git", target])
+    expect(clone!.args).toEqual(["clone", "--", "https://github.com/me/acme.git", target])
   })
 
   it("refuses a target directory that already exists", async () => {
@@ -73,6 +73,46 @@ describe("restoreCompanyImpl", () => {
 
     expect(result.ok).toBe(false)
     expect(calls.some((c) => c.args[0] === "clone")).toBe(false)
+  })
+
+  it("rejects a targetPath that git would parse as a flag", async () => {
+    const { restoreCompanyImpl } = await import("./restore-company-impl")
+
+    const result = await restoreCompanyImpl(
+      "Evil",
+      "https://github.com/me/x.git",
+      "--upload-pack=touch /tmp/pwned",
+      registryPath,
+      fakeExec()
+    )
+
+    expect(result.ok).toBe(false)
+    expect(calls.some((c) => c.args[0] === "clone")).toBe(false)
+  })
+
+  it("rejects a relative targetPath", async () => {
+    const { restoreCompanyImpl } = await import("./restore-company-impl")
+
+    const result = await restoreCompanyImpl(
+      "Rel",
+      "https://github.com/me/x.git",
+      "some/relative/dir",
+      registryPath,
+      fakeExec()
+    )
+
+    expect(result.ok).toBe(false)
+    expect(calls.some((c) => c.args[0] === "clone")).toBe(false)
+  })
+
+  it("passes an argv terminator so no operand can be read as an option", async () => {
+    const { restoreCompanyImpl } = await import("./restore-company-impl")
+    const target = path.join(parent, "term")
+
+    await restoreCompanyImpl("Term", "https://github.com/me/x.git", target, registryPath, fakeExec(realisticClone))
+
+    const clone = calls.find((c) => c.args[0] === "clone")
+    expect(clone!.args).toEqual(["clone", "--", "https://github.com/me/x.git", target])
   })
 
   it("reports a clone that produced something that isn't a company", async () => {

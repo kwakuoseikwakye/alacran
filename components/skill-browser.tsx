@@ -53,10 +53,27 @@ export function SkillBrowser({
   return (
     <>
       <div className="space-y-6">
-        {results.map((result) => (
+        {results.map((result) => {
+          const owned = entries.filter((entry) => entry.agentId === result.agent.id)
+          return (
           <div key={result.agent.id} className="space-y-2">
-            <h2 className="font-medium">{result.agent.name}</h2>
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
+              <h2 className="font-display text-lg font-bold">{result.agent.name}</h2>
+              <Badge variant="outline" className="border-border text-muted-foreground">
+                {owned.length} available
+              </Badge>
+              {/* Every company scaffolded from the template already inherits
+                  .claude/skills and .claude/commands — nothing to install. */}
+              <span className="text-xs text-muted-foreground">
+                already installed in this company — open one to read or run it
+              </span>
+            </div>
             {result.error && <p className="text-sm text-destructive">Source unavailable: {result.error}</p>}
+            {!result.error && owned.length === 0 && (
+              <p className="text-sm text-muted-foreground">
+                No skills or commands found in this company&apos;s <code>.claude/</code> folder.
+              </p>
+            )}
             {!result.error && (
               <div className="grid gap-3 sm:grid-cols-2">
                 {entries
@@ -79,7 +96,8 @@ export function SkillBrowser({
               </div>
             )}
           </div>
-        ))}
+          )
+        })}
       </div>
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
         <SheetContent className="w-full sm:max-w-xl">
