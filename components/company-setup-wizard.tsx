@@ -120,7 +120,15 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
               <div className="space-y-3">
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What problem does your company solve?</label>
-                  <Textarea value={domain} onChange={(e) => setDomain(e.target.value)} className="min-h-24" />
+                  <p className="text-xs text-muted-foreground">
+                    A plain-language description of what you do and who it&apos;s for — no jargon needed.
+                  </p>
+                  <Textarea
+                    value={domain}
+                    onChange={(e) => setDomain(e.target.value)}
+                    className="min-h-24"
+                    placeholder="e.g. We help small clinics manage patient appointments and billing, so front-desk staff spend less time on the phone."
+                  />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">How many employees? (optional)</label>
@@ -135,7 +143,13 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
             )}
             {step === "stakeholders" && (
               <div className="space-y-3">
-                <p className="text-sm font-medium">Who are your key stakeholders?</p>
+                <div className="space-y-1">
+                  <p className="text-sm font-medium">Who are your key stakeholders?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Anyone who cares about or is affected by the business — customers, employees, managers,
+                    partners, investors.
+                  </p>
+                </div>
                 {stakeholders.map((s, i) => (
                   <div key={i} className="flex gap-2">
                     <Input
@@ -162,25 +176,41 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
             )}
             {step === "value-flow" && (
               <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Describe your business as a simple chain: something comes in, you do something to it, something
+                  goes out.
+                </p>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What do you receive?</label>
+                  <p className="text-xs text-muted-foreground">
+                    The raw material, request, or information that starts the work.
+                  </p>
                   <Textarea
                     value={valueFlow.input}
                     onChange={(e) => setValueFlow((v) => ({ ...v, input: e.target.value }))}
+                    placeholder="e.g. A customer's appointment request, or raw materials from a supplier"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What do you do with it?</label>
+                  <p className="text-xs text-muted-foreground">
+                    The work, process, or transformation your company applies to it.
+                  </p>
                   <Textarea
                     value={valueFlow.transform}
                     onChange={(e) => setValueFlow((v) => ({ ...v, transform: e.target.value }))}
+                    placeholder="e.g. We schedule it, prepare it, review it, or manufacture it"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What do you deliver?</label>
+                  <p className="text-xs text-muted-foreground">
+                    The finished result the other side ends up with.
+                  </p>
                   <Textarea
                     value={valueFlow.output}
                     onChange={(e) => setValueFlow((v) => ({ ...v, output: e.target.value }))}
+                    placeholder="e.g. A confirmed appointment, a finished product, a signed report"
                   />
                 </div>
               </div>
@@ -190,7 +220,15 @@ export function CompanySetupWizard({ agentId, companyName }: { agentId: string; 
                 <label className="text-sm font-medium">
                   What&apos;s the most time-consuming or tribal-knowledge-dependent work right now?
                 </label>
-                <Textarea value={bottleneck} onChange={(e) => setBottleneck(e.target.value)} className="min-h-24" />
+                <p className="text-xs text-muted-foreground">
+                  Something that eats a lot of manual time, or that only one person really knows how to do.
+                </p>
+                <Textarea
+                  value={bottleneck}
+                  onChange={(e) => setBottleneck(e.target.value)}
+                  className="min-h-24"
+                  placeholder="e.g. Only Maria knows how to reconcile the monthly invoices, and it takes her a full day"
+                />
               </div>
             )}
             {step === "review" && !aiDraftFields && (
