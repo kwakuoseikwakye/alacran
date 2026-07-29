@@ -78,6 +78,7 @@ export default async function AgentTreePage() {
                 avatarUrl={avatarByAgentId[result.agent.id] ?? null}
                 showSetupCompanyButton={needsCompanySetup}
                 showEditCompanyButton={hasOntology}
+                showBackupButton={isCommandSet}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                 index={index}

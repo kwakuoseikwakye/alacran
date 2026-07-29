@@ -10,14 +10,14 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
 }
 
 export type ToolStatus = {
-  id: "claude" | "google"
+  id: "claude" | "google" | "github"
   label: string
   connected: boolean
   detail: string
   guidance: { steps: string[]; command?: string; link?: string }
 }
 
-export type ConnectStatus = { claude: ToolStatus; google: ToolStatus }
+export type ConnectStatus = { claude: ToolStatus; google: ToolStatus; github: ToolStatus }
 
 async function isPresent(execFn: ExecFileFn, name: string): Promise<boolean> {
   try {
@@ -118,7 +118,64 @@ async function googleStatus(execFn: ExecFileFn): Promise<ToolStatus> {
   return notConnected("No Google account connected yet.", "gog auth setup")
 }
 
+/**
+ * GitHub is what makes a company survive losing the machine: the app can create
+ * the repo and push for you, but only once `gh` is installed and signed in.
+ *
+ * Creating a GitHub ACCOUNT is a browser signup (email verification, CAPTCHA,
+ * terms) that no local tool can do on the user's behalf — same boundary as
+ * `gog auth setup`. So this detects and guides, and the automation picks up
+ * from `gh auth login` onward.
+ */
+async function githubStatus(execFn: ExecFileFn): Promise<ToolStatus> {
+  const label = "GitHub (company backup)"
+  const notConnected = (detail: string, command: string, link?: string): ToolStatus => ({
+    id: "github",
+    label,
+    connected: false,
+    detail,
+    guidance: {
+      steps: [
+        "Run the command below and follow the browser sign-in.",
+        "No GitHub account yet? The same command offers to create one.",
+        "Come back and press Re-check.",
+      ],
+      command,
+      link,
+    },
+  })
+
+  if (!(await isPresent(execFn, "gh"))) {
+    return notConnected(
+      "The GitHub CLI (gh) is not installed.",
+      "brew install gh",
+      "https://cli.github.com"
+    )
+  }
+
+  // `gh api user` is the cleanest signed-in probe: it returns the login name
+  // as plain text and exits non-zero when unauthenticated.
+  try {
+    const { stdout } = await execFn("gh", ["api", "user", "--jq", ".login"])
+    const login = stdout.trim()
+    if (!login) return notConnected("Not signed in to GitHub yet.", "gh auth login")
+    return {
+      id: "github",
+      label,
+      connected: true,
+      detail: `Signed in as ${login}. Companies can be backed up to private repos.`,
+      guidance: { steps: [] },
+    }
+  } catch {
+    return notConnected("Not signed in to GitHub yet.", "gh auth login")
+  }
+}
+
 export async function getConnectStatusImpl(execFn: ExecFileFn = defaultExecFile): Promise<ConnectStatus> {
-  const [claude, google] = await Promise.all([claudeStatus(execFn), googleStatus(execFn)])
-  return { claude, google }
+  const [claude, google, github] = await Promise.all([
+    claudeStatus(execFn),
+    googleStatus(execFn),
+    githubStatus(execFn),
+  ])
+  return { claude, google, github }
 }

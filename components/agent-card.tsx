@@ -13,6 +13,7 @@ import { StatusDot } from "@/components/status-dot"
 import { CompanySetupWizard } from "@/components/company-setup-wizard"
 import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
 import { BrandIcon } from "@/components/brand-icon"
+import { BackupCompanyButton } from "@/components/backup-company-button"
 
 type AgentCardProps = {
   agent: Agent
@@ -26,6 +27,7 @@ type AgentCardProps = {
   avatarUrl?: string | null
   showSetupCompanyButton?: boolean
   showEditCompanyButton?: boolean
+  showBackupButton?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
   /** Position in the grid — drives the staggered entrance animation. */
@@ -52,6 +54,7 @@ export function AgentCard({
   avatarUrl,
   showSetupCompanyButton,
   showEditCompanyButton,
+  showBackupButton,
   integrationStatus,
   showInstallDailyTeamLogButton,
   index = 0,
@@ -117,6 +120,7 @@ export function AgentCard({
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
+          {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
           <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
         </div>
