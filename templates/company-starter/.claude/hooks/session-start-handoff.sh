@@ -2,23 +2,26 @@
 # ===================================================================
 # Session Start Handoff Hook (ai-retreat-starter)
 # ===================================================================
-# Purpose: セッション開始時に HANDOFF.md の最新セクションを additionalContext で
-#          文脈へ決定論的に注入し、CLAUDE.md §5 開始手順 1 を機械化する。
-# Trigger: SessionStart — 全セッション開始時（matcher なし）
-# Policy: 非ブロッキング。exit は常に 0。stdout は valid JSON か空のみ。
-#   WHY: CLAUDE.md §5「開始時」手順 1 は「HANDOFF.md を読む」をモデルの遵守に
-#   依存していた。本 hook が最新セクションを機械的に注入することで、開始手順の
-#   決定論化を図る（全文・過去の経緯は従来どおり HANDOFF.md を Read する）（Issue #47）。
-#   SessionStart は有用な stdin を持たないため入力は解釈せず捨てる。
+# Purpose: at session start, deterministically inject HANDOFF.md's most
+#          recent section into context via additionalContext, mechanising
+#          step 1 of CLAUDE.md §5's start-of-session procedure.
+# Trigger: SessionStart — every session start (no matcher)
+# Policy: non-blocking. Always exits 0. stdout is either valid JSON or empty.
+#   WHY: step 1 of CLAUDE.md §5's "at the start" procedure relied on the
+#   model actually complying with "read HANDOFF.md". This hook mechanically
+#   injects the most recent section so the start-of-session step is
+#   deterministic (the full text and past history are still read from
+#   HANDOFF.md as before) (Issue #47).
+#   SessionStart carries no useful stdin, so any input is discarded unread.
 # ===================================================================
 
 set -uo pipefail
 
 main() {
-    # 1. stdin を読み捨てる（HARNESS スモークテストの Bash 形式 JSON 含め、何が来ても block しない）
+    # 1. discard stdin unread (never blocks regardless of what arrives, including HARNESS's Bash-shaped smoke-test JSON)
     cat >/dev/null 2>&1 || true
 
-    # 2. PROJECT_ROOT の決定
+    # 2. determine PROJECT_ROOT
     local project_root="${CLAUDE_PROJECT_DIR:-}"
     if [[ -z "$project_root" ]]; then
         local script_dir
@@ -27,29 +30,29 @@ main() {
     fi
 
     local handoff="$project_root/HANDOFF.md"
-    # 3. HANDOFF.md が無い/読めない → 無言で exit 0
+    # 3. HANDOFF.md missing/unreadable -> exit 0 silently
     [[ -r "$handoff" ]] || exit 0
 
-    # 4. 最後の `## ` 見出しから末尾までを抽出（無ければ無言で exit 0）
+    # 4. extract from the last `## ` heading to the end (exit 0 silently if there is none)
     local last_h
     last_h=$(grep -n '^## ' "$handoff" 2>/dev/null | tail -n1 | cut -d: -f1) || exit 0
     [[ -n "$last_h" ]] || exit 0
     local section
     section=$(tail -n "+${last_h}" "$handoff")
-    # 末尾の `---` 区切り行を除去
+    # strip a trailing `---` separator line
     section=$(printf '%s\n' "$section" | sed -e '${/^---[[:space:]]*$/d}')
 
-    # 5. コンテキスト予算のためキャップ（3000 バイト）。切り詰めたら注記を付す
+    # 5. cap it for the context budget (3000 bytes). Note it if truncated
     local cap=3000 truncated=""
     if [[ ${#section} -gt $cap ]]; then
         section=$(printf '%s' "$section" | head -c "$cap")
-        truncated=$'\n（… 以下省略。全文は HANDOFF.md を Read すること）'
+        truncated=$'\n(... truncated. Read HANDOFF.md for the full text)'
     fi
 
     local context_text
-    context_text="[session-start] HANDOFF.md 最新セクション（全文と過去の経緯は HANDOFF.md を Read すること）:"$'\n'"${section}${truncated}"
+    context_text="[session-start] HANDOFF.md's most recent section (Read HANDOFF.md for the full text and past history):"$'\n'"${section}${truncated}"
 
-    # 6. JSON を安全に組み立てる（jq 優先、python3 フォールバック。どちらも無ければ何も出さない）
+    # 6. safely build the JSON (jq preferred, python3 fallback. Output nothing if neither exists)
     if command -v jq >/dev/null 2>&1; then
         jq -n --arg ctx "$context_text" \
             '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $ctx}}'

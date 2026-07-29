@@ -2,30 +2,41 @@
 # ===================================================================
 # Git Ops Validator Hook (ai-retreat-starter)
 # ===================================================================
-# Purpose: git 操作のうち、機械的に判定できる不可逆操作を exit 2 でブロックし（Blocking 層）、
-#          さらに正当用途も多い reset --hard は permissionDecision=ask で人間の許可プロンプトに委ねる（Ask 層, Issue #58）。
-# Trigger: PreToolUse(Bash) — git 系コマンドが検出されたとき
+# Purpose: of git operations, mechanically blocks the irreversible ones with
+#          exit 2 (the Blocking layer), and separately defers reset --hard
+#          (which has plenty of legitimate uses) to a human permission
+#          prompt via permissionDecision=ask (the Ask layer, Issue #58).
+# Trigger: PreToolUse(Bash) — when a git-family command is detected
 #
-# 高頻度イベントの hook は set -e で全体を落とさない。
+# A high-frequency-event hook should not bring the whole thing down with set -e.
 #
-# Scope: Blocking 層（exit 2）の対象は git push の --force / -f、+refspec（強制）、
-#      :refspec・--delete・-d（リモートブランチ削除）、git branch -D（単独短フラグ）、
-#      git branch の削除フラグ（-d/-D/--delete）と --force の併用。
-#      （--force-with-lease / --force-if-includes は安全側 force として除外する）。
-#      Ask 層（permissionDecision=ask）の対象は git reset --hard（Issue #58）。
-#      これは .claude/rules/hitl-gate.md §2「不可逆操作」の一部を機械担保するもの。
-#  上記以外の不可逆操作（本番データ削除 / DB 破壊的変更等）は
-#  引き続き hitl-gate.md の HITL Gate（人間の明示承認）でのみ担保する。
+# Scope: the Blocking layer (exit 2) covers git push's --force / -f,
+#      +refspec (force), :refspec / --delete / -d (deleting a remote
+#      branch), git branch -D (a standalone short flag), and git branch's
+#      delete flags (-d/-D/--delete) combined with --force.
+#      (--force-with-lease / --force-if-includes are excluded as the safer
+#      form of force.)
+#      The Ask layer (permissionDecision=ask) covers git reset --hard
+#      (Issue #58).
+#      This mechanically backs part of the "irreversible operations" in
+#      .claude/rules/hitl-gate.md §2.
+#  Irreversible operations other than the above (deleting production data,
+#  destructive DB changes, etc.) continue to be backed only by hitl-gate.md's
+#  HITL Gate (explicit human approval).
 #
-#  スレットモデル: この Blocking 層は「うっかり実行」に対する defense-in-depth であり、
-#  意図的な回避（sh -c / env-prefix（VAR=x git push …）/ 文字列組み立て 等）を機械的に
-#  防ぐセキュリティ境界ではない。意図的な不可逆操作は引き続き hitl-gate.md の人間承認で統治する。
+#  Threat model: this Blocking layer is defense-in-depth against "accidental
+#  execution" — it is not a mechanical security boundary against deliberate
+#  evasion (sh -c / an env-prefix like VAR=x git push …/ assembling the
+#  string, etc.). A deliberate irreversible operation continues to be
+#  governed by human approval in hitl-gate.md.
 #
-#  旧版はここに「git commit のメッセージ衛生」を検査する advisory 層（非ブロッキング）
-#  も持っていたが、PreToolUse hook の stderr は exit 0 のとき Claude Code の仕様上
-#  モデルに一切渡らないため、advisory が一度もモデルに届いていなかった（Issue #41）。
-#  そのため commit-msg-advisor.sh（PostToolUse, additionalContext でモデルに到達）へ
-#  移設した。コミットメッセージ衛生は `.claude/hooks/commit-msg-advisor.sh` を参照。
+#  The old version also had an advisory layer (non-blocking) here checking
+#  "git commit message hygiene", but a PreToolUse hook's stderr is never
+#  passed to the model at all when it exits 0, per Claude Code's own spec —
+#  so that advisory had never actually reached the model (Issue #41).
+#  It was therefore moved to commit-msg-advisor.sh (PostToolUse, which
+#  reaches the model via additionalContext). See
+#  `.claude/hooks/commit-msg-advisor.sh` for commit message hygiene.
 # ===================================================================
 
 set -uo pipefail
@@ -35,8 +46,8 @@ main() {
     raw_input="${1:-$(cat)}"
     local bash_cmd=""
 
-    # Claude Code の PreToolUse hook は JSON を渡してくる。
-    # jq があれば jq、無ければ python3、どちらも無ければ生入力をそのまま扱う。
+    # Claude Code's PreToolUse hook passes JSON.
+    # Use jq if it's available, python3 if not, and the raw input as-is if neither is.
     if command -v jq >/dev/null 2>&1 \
         && echo "$raw_input" | jq -e '.tool_input.command' >/dev/null 2>&1
     then
@@ -55,59 +66,66 @@ main() {
         exit 0
     fi
 
-    # ---- Blocking 層: 機械的に判定できる不可逆操作を exit 2 でブロック ----
-    # コマンド位置（文字列先頭 or シェル区切り &&/||/;/|/$(/バッククォート/改行 の直後）に
-    # 現れる git のみを対象とする。クォート内の文字列に紛れた git は誤検知しない
-    # （例: echo "git push --force …" >> notes.md は素通り）。なお env-prefix
-    # （VAR=x git push …）は anchor に一致しないため防げない — ヘッダのスレットモデル注記の通り許容。
+    # ---- Blocking layer: mechanically block irreversible operations with exit 2 ----
+    # In scope only when git appears in command position (at the start of the
+    # string, or right after a shell separator &&/||/;/|/$(/backtick/newline).
+    # A "git" buried inside a quoted string is not a false positive (e.g.
+    # echo "git push --force …" >> notes.md passes through). Note that an
+    # env-prefix (VAR=x git push …) doesn't match the anchor and so isn't
+    # caught — accepted, per the threat-model note in the header.
     local anchor='(^|[;&|(`])[[:space:]]*(command[[:space:]]+)?'
 
-    # --force-with-lease / --force-if-includes は安全側の force なので除外してから判定する。
+    # --force-with-lease / --force-if-includes are the safer form of force, so exclude them before judging.
     local scrubbed
     scrubbed=$(echo "$bash_cmd" | sed -E 's/--force-with-lease(=[^[:space:]]*)?//g; s/--force-if-includes//g')
 
-    # git push の強制/削除系: --force / -f（単独ワード）、+refspec（強制）、
-    # :refspec・--delete・-d（リモートブランチ削除）。いずれも不可逆。
-    # フラグ検査は「anchor された git push から次のシェル区切りまでのセグメント」に
-    # 限定する。コマンド全文を走査すると、同一コマンド内の別セグメント
-    # （例: commit メッセージ中の "+refspec" への言及）で正当な push が誤ブロックされる。
+    # git push's force/delete forms: --force / -f (a standalone word),
+    # +refspec (force), :refspec / --delete / -d (deleting a remote branch).
+    # All irreversible. The flag check is scoped to "the segment from an
+    # anchored git push to the next shell separator" only. Scanning the whole
+    # command would wrongly block a legitimate push over an unrelated segment
+    # in the same command (e.g. a mention of "+refspec" inside a commit message).
     local push_segs
     push_segs=$(echo "$scrubbed" | grep -oE "${anchor}git[[:space:]]+push[^;&|\`(]*")
     if [[ -n "$push_segs" ]] \
         && echo "$push_segs" | grep -qE '(--force([[:space:]]|$)|(^|[[:space:]])-f([[:space:]]|$)|[[:space:]]\+[^[:space:]]|[[:space:]]:[^[:space:]]|(^|[[:space:]])(--delete|-d)([[:space:]]|$))'; then
-        echo "[BLOCKED][git-ops-validator] HITL Gate: git push の強制/削除系操作（--force/-f/+refspec/:refspec/--delete）は不可逆のため機械的にブロックしました。実行にはリポジトリオーナーの明示承認が必要です（.claude/rules/hitl-gate.md §2）。承認済みの場合は人間が手動で実行するか、承認の旨を伝えて再依頼してください。" >&2
+        echo "[BLOCKED][git-ops-validator] HITL Gate: a git push force/delete operation (--force/-f/+refspec/:refspec/--delete) was mechanically blocked because it is irreversible. Executing it requires the repository owner's explicit approval (.claude/rules/hitl-gate.md §2). If it has already been approved, either have a human run it manually, or state that it was approved and ask again." >&2
         exit 2
     fi
 
-    # git branch の強制削除: 単独 -D、または 削除フラグ（-d/-D/--delete）と --force の併用。
-    # push と同様、検査はセグメント単位に限定する。
+    # git branch's forced deletion: a standalone -D, or a delete flag
+    # (-d/-D/--delete) combined with --force. As with push, the check is
+    # scoped to a single segment.
     local branch_segs
     branch_segs=$(echo "$bash_cmd" | grep -oE "${anchor}git[[:space:]]+branch[^;&|\`(]*")
     if [[ -n "$branch_segs" ]] \
         && { echo "$branch_segs" | grep -qE '(^|[[:space:]])-D([[:space:]]|$)' \
              || { echo "$branch_segs" | grep -qE '(^|[[:space:]])(--delete|-d|-D)([[:space:]]|$)' \
                   && echo "$branch_segs" | grep -qE '(^|[[:space:]])--force([[:space:]]|$)'; }; }; then
-        echo "[BLOCKED][git-ops-validator] HITL Gate: git branch の強制削除（-D、または --delete/-d と --force の併用）は不可逆のため機械的にブロックしました。実行にはリポジトリオーナーの明示承認が必要です（.claude/rules/hitl-gate.md §2）。承認済みの場合は人間が手動で実行するか、承認の旨を伝えて再依頼してください。" >&2
+        echo "[BLOCKED][git-ops-validator] HITL Gate: a git branch forced deletion (-D, or --delete/-d combined with --force) was mechanically blocked because it is irreversible. Executing it requires the repository owner's explicit approval (.claude/rules/hitl-gate.md §2). If it has already been approved, either have a human run it manually, or state that it was approved and ask again." >&2
         exit 2
     fi
-    # ---- Blocking 層ここまで ----
+    # ---- End of the Blocking layer ----
 
-    # ---- Ask 層: git reset --hard を人間の許可プロンプトに委ねる（Issue #58） ----
-    # ask はブロックでも素通りでもない第 3 の HITL 実装 — 正当用途（reset --hard HEAD 等）が
-    # 多いため機械ブロックせず人間の許可プロンプトに委ねる（Issue #58）。
-    # Blocking 層の後段に置き、benign なコマンドは従来通り stdout 無しで silent exit 0 のまま。
-    # push/branch と同様にセグメント単位（anchor された git reset から次のシェル区切りまで）に
-    # 限定し、-m メッセージ等の文字列内の "reset --hard" 言及を誤検知しない。
+    # ---- Ask layer: defer git reset --hard to a human permission prompt (Issue #58) ----
+    # "ask" is a third HITL implementation, neither block nor pass-through —
+    # since reset --hard HEAD etc. has plenty of legitimate uses, it isn't
+    # mechanically blocked but instead deferred to a human permission prompt
+    # (Issue #58). Placed after the Blocking layer, so a benign command still
+    # falls through to a silent exit 0 with no stdout, as before. Scoped to a
+    # single segment (from an anchored git reset to the next shell
+    # separator) just like push/branch, so a "reset --hard" mention inside a
+    # -m message etc. isn't a false positive.
     local reset_segs
     reset_segs=$(echo "$bash_cmd" | grep -oE "${anchor}git[[:space:]]+reset[^;&|\`(]*")
     if [[ -n "$reset_segs" ]] \
         && echo "$reset_segs" | grep -qE '(^|[[:space:]])--hard([[:space:]]|$)'; then
         cat <<'JSON'
-{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "git reset --hard は未コミットの作業を不可逆に破棄します（hitl-gate.md §2 不可逆操作）。実行してよいか確認してください。"}}
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": "git reset --hard irreversibly discards uncommitted work (hitl-gate.md §2, irreversible operations). Please confirm whether it's OK to run."}}
 JSON
         exit 0
     fi
-    # ---- Ask 層ここまで ----
+    # ---- End of the Ask layer ----
 
     exit 0
 }

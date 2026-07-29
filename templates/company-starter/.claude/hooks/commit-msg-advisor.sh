@@ -2,17 +2,20 @@
 # ===================================================================
 # Commit Message Advisor Hook (ai-retreat-starter)
 # ===================================================================
-# Purpose: 直前の git commit のメッセージ衛生（Conventional Commits 形式 /
-#          Issue 参照 / 私用メールドメイン / --no-verify）を検査しモデルに届ける。
-# Trigger: PostToolUse(Bash) — git commit を含むコマンド実行後
-# Policy: 非ブロッキング advisory。exit は常に 0。
-#   PreToolUse hook の stderr は exit 0 のとき Claude Code の仕様上モデルに
-#   一切渡らないため、旧 git-ops-validator.sh の advisory 層（コミット
-#   メッセージ衛生）は一度も届いていなかった（Issue #41）。加えて旧実装は
-#   `-m "..."` の sed 抽出依存で heredoc 形式を取りこぼしていた（Issue #26 系）。
-#   本 hook は PostToolUse の hookSpecificOutput.additionalContext を使い、
-#   実際にコミットされた結果を `git log -1` で post-execution に読むため、
-#   上記のクォート/heredoc 問題は構造的に発生しない。
+# Purpose: checks the hygiene of the most recent git commit message
+#          (Conventional Commits format / Issue reference / personal email
+#          domain / --no-verify) and delivers it to the model.
+# Trigger: PostToolUse(Bash) — after running a command that includes git commit
+# Policy: non-blocking advisory. Always exits 0.
+#   A PreToolUse hook's stderr is never passed to the model at all when it
+#   exits 0, per Claude Code's own spec — so the old git-ops-validator.sh's
+#   advisory layer (commit message hygiene) was never actually reaching the
+#   model (Issue #41). On top of that, the old implementation relied on
+#   sed-extracting `-m "..."` and missed the heredoc form entirely (part of
+#   Issue #26). This hook instead uses PostToolUse's
+#   hookSpecificOutput.additionalContext and reads what was actually
+#   committed post-execution via `git log -1`, so the quoting/heredoc problem
+#   above can't structurally happen here.
 # ===================================================================
 
 set -uo pipefail
@@ -40,7 +43,7 @@ main() {
         exit 0
     fi
 
-    # git commit を含まないコマンドは対象外（false negative は advisory として許容）
+    # a command that doesn't include git commit is out of scope (a false negative is acceptable for an advisory)
     if ! echo "$bash_cmd" | grep -qE 'git[[:space:]]+commit'; then
         exit 0
     fi
@@ -61,20 +64,20 @@ main() {
     local findings=()
 
     if ! echo "$subject" | grep -qE '^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\([a-z0-9-]+\))?:[[:space:]].+'; then
-        findings+=("コミットメッセージが Conventional Commits 形式（例: feat(scope): subject）ではありません（git commit --amend で修正可能）")
+        findings+=("The commit message is not in Conventional Commits format (e.g. feat(scope): subject) — fixable with git commit --amend")
     fi
 
     if ! echo "${subject}"$'\n'"${body}" | grep -qE '#[0-9]+' \
-        && ! echo "$subject" | grep -q 'issue化予定'; then
-        findings+=("Issue 参照（#N）がありません（issue-first §5。オフライン時は「issue化予定」を残す）")
+        && ! echo "$subject" | grep -q 'issue pending'; then
+        findings+=("No Issue reference (#N) found (issue-first §5. Leave \"issue pending\" if offline)")
     fi
 
     if echo "${subject}"$'\n'"${body}"$'\n'"${author_email}" | grep -qiE '@(gmail|yahoo|icloud|outlook|hotmail)\.[a-z.]+'; then
-        findings+=("コミットメッセージまたは author に私用メールドメインらしき文字列が含まれています")
+        findings+=("The commit message or author looks like it contains a personal email domain")
     fi
 
     if echo "$bash_cmd" | grep -q -- "--no-verify"; then
-        findings+=("--no-verify で pre-commit フックがスキップされています")
+        findings+=("--no-verify was used, skipping the pre-commit hook")
     fi
 
     if [[ ${#findings[@]} -eq 0 ]]; then
@@ -84,7 +87,7 @@ main() {
     local joined
     joined=$(printf '%s / ' "${findings[@]}")
     joined="${joined% / }"
-    local context_text="[commit-msg-advisor] ${joined} — 対象: ${subject}"
+    local context_text="[commit-msg-advisor] ${joined} — subject: ${subject}"
 
     if command -v jq >/dev/null 2>&1; then
         jq -n --arg ctx "$context_text" \

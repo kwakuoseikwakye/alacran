@@ -2,16 +2,17 @@
 #
 # Format Check Hook
 #
-# このフックは Edit/Write 操作後に自動的にフォーマットをチェックします。
+# This hook automatically checks formatting after an Edit/Write operation.
 #
-# Policy: コードは自動整形 / md・yaml は check + advisory（Issue #55 —
-#         自動整形が Scope Contract と衝突していたため）。非ブロッキング、
-#         失敗しても exit 0。
+# Policy: code is auto-formatted / md and yaml get a check + advisory only
+#         (Issue #55 — auto-formatting was colliding with the Scope Contract).
+#         Non-blocking, exits 0 even on failure.
 #
-# 入力契約: Claude Code の PostToolUse hook は JSON を stdin で渡してくる
-# （argv ではない）。git-ops-validator.sh と同じ jq → python3 フォールバックで
-# tool_input.file_path を抽出する（Issue #26 — 従来の argv 前提実装は常に
-# FILE_PATH が空になり、一度も整形が実行されていなかった）。
+# Input contract: Claude Code's PostToolUse hook passes JSON on stdin (not
+# argv). Extracts tool_input.file_path with the same jq -> python3 fallback
+# as git-ops-validator.sh (Issue #26 — the previous argv-assuming
+# implementation always got an empty FILE_PATH, so formatting had never
+# actually run once).
 
 set -uo pipefail
 
@@ -53,13 +54,14 @@ main() {
             fi
             ;;
         *.md | *.yaml | *.yml)
-            # 手で整列した表を PostToolUse で書き換えると Scope Contract に
-            # 違反するため（Issue #55）、md/yaml は --write せず --check で
-            # 差分の有無だけ調べ、あれば advisory を返す。
+            # Rewriting a hand-aligned table in PostToolUse would violate the
+            # Scope Contract (Issue #55), so md/yaml are never --write'd —
+            # only --check'd for whether a diff exists, and an advisory is
+            # returned if so.
             if command -v prettier >/dev/null 2>&1 \
                 && ! prettier --check "$file_path" >/dev/null 2>&1
             then
-                local ctx="[format-check] ${file_path} に prettier のフォーマット差分があります。整形する場合は機能変更と混ぜず、独立コミットで prettier --write を実行してください（scope-contract §4）。"
+                local ctx="[format-check] ${file_path} has a prettier formatting diff. If you format it, don't mix it with a functional change — run prettier --write in its own independent commit (scope-contract §4)."
                 if command -v jq >/dev/null 2>&1; then
                     jq -n --arg primary "$ctx" \
                         '{hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: $primary}}'
