@@ -286,6 +286,48 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
 .appcard .ln .bi { width: 13px; height: 13px; }
 .appcard .ln em { width: 6px; height: 6px; border-radius: 50%; background: var(--success); font-style: normal; flex: none; }
 
+/* ===================== Execute board (a live simulation of a real run) ====
+   Mirrors the real product mechanic 1:1, not an invented one: a company
+   command sits idle, goes to "Running…" while polled, then (if it produced
+   a change) surfaces a diff behind "Confirm & commit" before anything is
+   written to git. See components/company-command-runner.tsx for the real
+   copy this borrows ("Running…", "Confirm & commit", "Commit this result?"). */
+.board { display: grid; gap: 14px; grid-template-columns: repeat(4, 1fr); margin-top: 8px; }
+.board-col { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.board-colhead { display: flex; align-items: center; justify-content: space-between; padding: 0 2px; }
+.board-collabel { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--dune); }
+.board-count { font-family: var(--font-mono); font-size: 11px; color: var(--dune); background: var(--shell-2); border: 1px solid var(--line); border-radius: 999px; padding: 1px 8px; min-width: 20px; text-align: center; }
+.board-cards { display: flex; flex-direction: column; gap: 10px; min-height: 60px; }
+.board-card { background: var(--shell); border: 1px solid var(--line); border-radius: var(--card-radius); padding: 13px 14px; animation: board-in .5s var(--ease); }
+.board-card .co { font-family: var(--font-display); font-weight: 800; font-size: 13px; }
+.board-card .task { color: var(--dune); font-size: 12.5px; margin-top: 4px; line-height: 1.4; }
+.board-card .foot { display: flex; align-items: center; gap: 8px; margin-top: 11px; }
+.board-card .foot .brandtile { width: 24px; height: 24px; border-radius: 7px; color: var(--dune); }
+.board-card .foot .brandtile .bi { width: 12px; height: 12px; }
+.board-status { font-family: var(--font-mono); font-size: 11px; color: var(--dune); }
+.board-note { font-family: var(--font-mono); font-size: 11px; color: var(--dune); margin-top: 9px; }
+.board-empty { color: var(--dune); font-size: 12px; font-family: var(--font-mono); opacity: .55; padding: 10px 2px; }
+.board-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; background: var(--line); }
+.board-dot.is-running { background: var(--red); animation: beacon-red 1.6s ease-out infinite; }
+.board-dot.is-awaiting { background: var(--ember); animation: beacon-ember 1.9s ease-out infinite; }
+.board-dot.is-done { background: var(--success); }
+.board-prog { height: 3px; border-radius: 99px; background: var(--line); overflow: hidden; margin-top: 10px; }
+.board-prog i { display: block; height: 100%; width: 35%; background: var(--red); border-radius: inherit; animation: board-prog 2.6s ease-in-out infinite; font-style: normal; }
+.board-actions { display: flex; gap: 8px; margin-top: 12px; }
+.board-actions button { font-family: var(--font-body); font-size: 11.5px; font-weight: 700; padding: 6px 11px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: var(--dune); opacity: 1; }
+.board-actions button.go { color: #fff; background: var(--red); border-color: transparent; }
+.board-card.is-done { opacity: .78; }
+.board-hash { font-family: var(--font-mono); }
+.board-compare { text-align: center; max-width: 580px; margin: 28px auto 0; color: var(--dune); font-size: .95rem; }
+.board-compare b { color: var(--bone); }
+.board-cap { text-align: center; margin-top: 14px; font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--dune); opacity: .7; }
+@keyframes board-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes board-prog { 0% { width: 8%; } 55% { width: 82%; } 100% { width: 8%; } }
+@keyframes beacon-red { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--red) 55%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@keyframes beacon-ember { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ember) 55%, transparent); } 70% { box-shadow: 0 0 0 6px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (max-width: 860px) { .board { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 520px) { .board { grid-template-columns: 1fr; } }
+
 /* ===================== Setup steps (the "Get started" strip) ===================== */
 .steps { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin-top: 10px; }
 .step { background: var(--shell); border: 1px solid var(--line); border-radius: 16px; padding: 24px 22px; transition: transform .25s var(--ease), border-color .25s var(--ease), box-shadow .25s var(--ease); }
@@ -318,6 +360,9 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
   .diagram.drawn .pulse { animation: none; }
   .orbit .spin, .orbit .sat > .brandtile { animation: none; }
   .pill.live i { animation: none; }
+  .board-card { animation: none; }
+  .board-dot.is-running, .board-dot.is-awaiting { animation: none; }
+  .board-prog i { animation: none; width: 55%; }
 }
 @media (max-width: 560px) { .hero { padding: 128px 0 60px; } .section, .local, .final, .orch { padding: 64px 0; } .page-hero { padding: 130px 0 30px; } }
 

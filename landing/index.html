@@ -122,6 +122,36 @@
   </div>
 </section>
 
+<section class="section" id="execute">
+  <div class="wrap">
+    <div class="sec-head center r">
+      <p class="eyebrow">03 &mdash; Execute</p>
+      <h2>Watch the work happen, live.</h2>
+      <p>Every command a company runs goes through the same four stages, out in the open. It sits idle, it runs, it shows you what changed, and nothing lands in git until you say so.</p>
+    </div>
+    <div class="board r" id="execBoard" role="img" aria-label="A live simulation of company commands moving from ready to running to awaiting your approval to done">
+      <div class="board-col" data-stage="ready">
+        <div class="board-colhead"><span class="board-collabel">Ready to run</span><span class="board-count">0</span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-stage="running">
+        <div class="board-colhead"><span class="board-collabel">Running</span><span class="board-count">0</span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-stage="awaiting">
+        <div class="board-colhead"><span class="board-collabel">Awaiting your OK</span><span class="board-count">0</span></div>
+        <div class="board-cards"></div>
+      </div>
+      <div class="board-col" data-stage="done">
+        <div class="board-colhead"><span class="board-collabel">Done</span><span class="board-count">0</span></div>
+        <div class="board-cards"></div>
+      </div>
+    </div>
+    <p class="board-cap">A simulated run, not a real company &middot; this is exactly the runner, diff, and commit step the app itself uses</p>
+    <p class="board-compare"><b>Most automation tools</b> show you a result after it already happened. Alacr&aacute;n shows you the diff before it&rsquo;s real, and nothing commits until you approve it.</p>
+  </div>
+</section>
+
 <section class="section" id="features">
   <div class="wrap">
     <div class="sec-head r"><p class="eyebrow">What&rsquo;s inside</p><h2>Everything a small company runs on. Automated, but always under your hand.</h2></div>
@@ -353,6 +383,93 @@
     if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
     var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});
     els.forEach(function(e){io.observe(e);});})();
+
+  /* ── Execute board: a live simulation of the app's real runner/diff/commit
+     mechanic (see components/company-command-runner.tsx). Not a real
+     company; the cadence and copy ("Running…", "Confirm & commit") mirror
+     the real UI. ── */
+  (function(){
+    var board = document.getElementById("execBoard");
+    if(!board) return;
+    var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var STAGES = ["ready","running","awaiting","done"];
+    var NEXT = {ready:"running", running:"awaiting", awaiting:"done", done:"ready"};
+    var tasks = [
+      {co:"Acme Co",   task:"Weekly digest",           icon:"b-git",    stage:"ready",    left:2, note:"Weekly digest ready to review"},
+      {co:"Field Ops", task:"Run a retrospective",     icon:"b-claude", stage:"ready",    left:3, note:"Retrospective ready to review"},
+      {co:"Harbor",    task:"Check inbox",             icon:"b-gmail",  stage:"running",  left:2, note:"Inbox summary ready to review"},
+      {co:"Acme Co",   task:"Session handoff",         icon:"b-git",    stage:"running",  left:3, note:"HANDOFF.md updated"},
+      {co:"Field Ops", task:"Define company ontology", icon:"b-claude", stage:"awaiting", left:3, note:"3 ontology entities drafted"},
+      {co:"Harbor",    task:"Record a decision",       icon:"b-claude", stage:"done",     left:4, note:"Decision RFC drafted", hash:"7c1d0aa"}
+    ];
+    var cols = {};
+    STAGES.forEach(function(s){ cols[s] = board.querySelector('.board-col[data-stage="'+s+'"]'); });
+
+    function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+    function cardHTML(t){
+      var head = '<div class="co">'+esc(t.co)+'</div><div class="task">'+esc(t.task)+'</div>';
+      var icon = '<span class="brandtile sm"><svg class="bi"><use href="#'+t.icon+'"/></svg></span>';
+      if(t.stage==="running"){
+        return '<div class="board-card">'+head+
+          '<div class="foot">'+icon+'<span class="board-dot is-running"></span><span class="board-status">Running&hellip;</span></div>'+
+          '<div class="board-prog"><i></i></div></div>';
+      }
+      if(t.stage==="awaiting"){
+        return '<div class="board-card">'+head+
+          '<div class="foot">'+icon+'<span class="board-dot is-awaiting"></span><span class="board-status">Diff ready</span></div>'+
+          (t.note ? '<div class="board-note">'+esc(t.note)+'</div>' : "")+
+          '<div class="board-actions"><button type="button" disabled>Cancel</button><button type="button" class="go" disabled>Confirm &amp; commit</button></div></div>';
+      }
+      if(t.stage==="done"){
+        return '<div class="board-card is-done">'+head+
+          '<div class="foot">'+icon+'<span class="board-dot is-done"></span><span class="board-status">Committed &middot; <span class="board-hash">'+esc(t.hash||"")+'</span></span></div></div>';
+      }
+      return '<div class="board-card">'+head+
+        '<div class="foot">'+icon+'<span class="board-dot"></span><span class="board-status">Not started yet</span></div></div>';
+    }
+
+    function render(){
+      STAGES.forEach(function(s){
+        var col = cols[s]; if(!col) return;
+        var list = tasks.filter(function(t){ return t.stage===s; });
+        col.querySelector(".board-count").textContent = list.length;
+        col.querySelector(".board-cards").innerHTML = list.length
+          ? list.map(cardHTML).join("")
+          : '<div class="board-empty">Nothing here right now</div>';
+      });
+    }
+
+    render();
+    if(reduced) return;
+
+    function tick(){
+      tasks.forEach(function(t){ t.left--; });
+      var due = tasks.filter(function(t){ return t.left<=0; });
+      if(!due.length) return;
+      var t = due[0];
+      t.stage = NEXT[t.stage];
+      t.left = t.stage==="ready" ? (2+Math.floor(Math.random()*2))
+             : t.stage==="running" ? (1+Math.floor(Math.random()*2))
+             : t.stage==="awaiting" ? (2+Math.floor(Math.random()*2))
+             : (3+Math.floor(Math.random()*3));
+      if(t.stage==="done") t.hash = Math.random().toString(16).slice(2,9);
+      render();
+    }
+
+    var interval = null;
+    function start(){ if(!interval) interval = setInterval(tick, 3800); }
+    function stop(){ if(interval){ clearInterval(interval); interval = null; } }
+
+    if("IntersectionObserver" in window){
+      var bio = new IntersectionObserver(function(entries){
+        entries.forEach(function(e){ e.isIntersecting ? start() : stop(); });
+      }, {threshold:0.2});
+      bio.observe(board);
+    } else {
+      start();
+    }
+  })();
 </script>
 </body>
 </html>
