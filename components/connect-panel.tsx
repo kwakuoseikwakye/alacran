@@ -15,6 +15,7 @@ import type { ConnectStatus, ToolStatus } from "@/lib/connect/connect-status-imp
 const TOOL_BRAND: Record<ToolStatus["id"], BrandId> = {
   claude: "claude",
   google: "google",
+  github: "github",
 }
 
 // The Google services a connected `gog` unlocks — real marks, so the payoff of
@@ -147,6 +148,7 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
       <div className="grid gap-4 sm:grid-cols-2">
         <ToolCard tool={status.claude} delay={0} />
         <ToolCard tool={status.google} delay={90} />
+        <ToolCard tool={status.github} delay={180} />
       </div>
     </div>
   )

@@ -18,6 +18,7 @@ import {
 import { registerCompany } from "@/lib/register-company"
 import { getCompanyPathStatus } from "@/lib/get-company-path-status"
 import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
+import { restoreCompany } from "@/lib/github/github-actions"
 
 export function AddCompanyForm({
   /** Onboarding shows this as the step's primary action; the dashboard keeps it quiet. */
@@ -30,6 +31,8 @@ export function AddCompanyForm({
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
+  const [restoreUrl, setRestoreUrl] = useState("")
+  const [showRestore, setShowRestore] = useState(false)
 
   async function handleSubmit() {
     setPending(true)
@@ -46,6 +49,23 @@ export function AddCompanyForm({
       setName("")
       setRootPath("")
       setMessage(`Registered "${result.company.name}"`)
+      setOpen(false)
+      router.refresh()
+    } else {
+      setMessage(result.message)
+    }
+  }
+
+  async function handleRestore() {
+    setPending(true)
+    setMessage(null)
+    const result = await restoreCompany(name, restoreUrl, rootPath)
+    setPending(false)
+    if (result.ok) {
+      setName("")
+      setRootPath("")
+      setRestoreUrl("")
+      setShowRestore(false)
       setOpen(false)
       router.refresh()
     } else {
@@ -104,14 +124,47 @@ export function AddCompanyForm({
           placeholder="/Users/you/AI-Native/second-co"
         />
       </div>
-      <div className="flex gap-2">
-        <Button size="sm" onClick={handleSubmit} disabled={pending || !name || !rootPath}>
-          {pending ? "Adding…" : "Add company"}
-        </Button>
+      {showRestore && (
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">GitHub repository URL</label>
+          <Input
+            value={restoreUrl}
+            onChange={(e) => setRestoreUrl(e.target.value)}
+            placeholder="https://github.com/you/your-company"
+          />
+          <p className="text-xs text-muted-foreground">
+            Clones a company you previously backed up, so it works on this Mac too.
+          </p>
+        </div>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        {showRestore ? (
+          <Button size="sm" onClick={handleRestore} disabled={pending || !name || !rootPath || !restoreUrl}>
+            {pending ? "Restoring…" : "Restore company"}
+          </Button>
+        ) : (
+          <Button size="sm" onClick={handleSubmit} disabled={pending || !name || !rootPath}>
+            {pending ? "Adding…" : "Add company"}
+          </Button>
+        )}
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)} disabled={pending}>
           Cancel
         </Button>
       </div>
+
+      <button
+        type="button"
+        className="text-xs text-primary underline-offset-4 hover:underline"
+        onClick={() => {
+          setShowRestore((v) => !v)
+          setMessage(null)
+        }}
+        disabled={pending}
+      >
+        {showRestore ? "← Create a new company instead" : "Restoring from a backup on another Mac? →"}
+      </button>
+
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
 
       <AlertDialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>

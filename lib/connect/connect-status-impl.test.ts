@@ -80,4 +80,46 @@ describe("getConnectStatusImpl", () => {
     expect(status.google.connected).toBe(false)
     expect(status.google.guidance.command).toBe("gog auth setup")
   })
+
+  it("reports GitHub signed in with the login name", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "gh") return { stdout: "octocat\n" }
+      if (command === "gog")
+        return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec)
+
+    expect(status.github.connected).toBe(true)
+    expect(status.github.detail).toContain("octocat")
+  })
+
+  it("guides installing gh when the GitHub CLI is missing", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which" && args[0] === "gh") return new Error("not found")
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "gog")
+        return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec)
+
+    expect(status.github.connected).toBe(false)
+    expect(status.github.guidance.command).toBe("brew install gh")
+  })
+
+  it("guides `gh auth login` when gh is installed but unauthenticated", async () => {
+    const exec = fakeExec((command) => {
+      if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "gh") return new Error("gh: not authenticated")
+      if (command === "gog")
+        return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec)
+
+    expect(status.github.connected).toBe(false)
+    expect(status.github.guidance.command).toBe("gh auth login")
+  })
 })
