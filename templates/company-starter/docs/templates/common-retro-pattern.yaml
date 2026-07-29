@@ -1,13 +1,13 @@
 # =============================================================================
-# 共通 振り返りパターン（KPT + pivot 判定の骨格）
+# Common retrospective pattern (the KPT + pivot-decision skeleton)
 # =============================================================================
-# どんなチーム・部門でも使える振り返りの「共通骨格」を示す参照ファイルです。
-# チーム個別の振り返り仕様は docs/templates/retrospective-template.yaml を
-# definitions/retro/<team>-retrospective.yaml にコピーして記入します。本ファイルは
-# 「週次 KPT」と「月次 pivot 判定」の型を示す設計リファレンスで、直接コピーして
-# 使うものではありません。
+# A reference file showing the "common skeleton" of a retrospective that any team/department
+# can use. A team's individual retrospective spec is filled in by copying
+# docs/templates/retrospective-template.yaml to definitions/retro/<team>-retrospective.yaml.
+# This file is a design reference showing the shape of "weekly KPT" and "monthly pivot
+# decisions" — it isn't meant to be copied and used directly.
 #
-# 記入済みの例: examples/harukaze-ec/definitions/retro/ec-team-retrospective.yaml
+# Filled-in example: examples/harukaze-ec/definitions/retro/ec-team-retrospective.yaml
 # =============================================================================
 
 version: 1
@@ -15,74 +15,74 @@ kind: retrospective_pattern
 pattern_id: common-retro-pattern
 
 # =============================================================================
-# 1. 週次振り返り（KPT）
+# 1. Weekly retrospective (KPT)
 # =============================================================================
-# サイクル単位が weekly のチームは必須。monthly のチームでも任意で持ってよい。
+# Mandatory for teams whose cycle unit is weekly. Optional even for monthly teams.
 weekly_retrospective:
   trigger_hint:
-    schedule: "サイクル末（例: 金曜 17:00）"
+    schedule: "End of the cycle (e.g. Friday 17:00)"
     duration_minutes: 30
   output_path_hint: "docs/retros/<team-id>/weekly/{YYYY-Www}.md"
 
   required_sections:
     - id: kpi_dashboard
-      title: "## 1. KPI ダッシュボード"
-      content: "共通 2 KPI + 固有 KPI の実績 vs 目標テーブル"
+      title: "## 1. KPI dashboard"
+      content: "A results-vs-target table for the 2 common KPIs + team-specific KPIs"
     - id: kpt
-      title: "## 2. KPT（Keep / Problem / Try）"
+      title: "## 2. KPT (Keep / Problem / Try)"
       subsections:
-        keep: "今サイクルで機能したこと・続けたいこと"
-        problem: "閾値超過や観察された摩擦・詰まり"
-        try: "次サイクルで試す改善（1〜3 件）"
+        keep: "What worked this cycle and should continue"
+        problem: "Threshold breaches or observed friction/sticking points"
+        try: "Improvements to try next cycle (1-3 items)"
     - id: decision_pending
-      title: "## 3. 保留中の意思決定"
-      content: "サイクル中に保留した判断（title / 提起日 / blocker / 解決予定サイクル）"
+      title: "## 3. Decisions pending"
+      content: "Decisions held pending during the cycle (title / date raised / blocker / cycle expected to resolve)"
     - id: next_cycle_action
-      title: "## 4. 次サイクルのアクション"
-      content: "Try と保留判断の解決期限から作る TODO（担当・期限つき）"
+      title: "## 4. Next cycle's actions"
+      content: "A TODO list (with owner and deadline) built from Try items and pending-decision resolution deadlines"
 
 # =============================================================================
-# 2. 月次振り返り（続けるか見直すかの pivot 判定）
+# 2. Monthly retrospective (the continue-or-reconsider pivot decision)
 # =============================================================================
-# サイクル単位に依らず、全チームで持つ「本番化/継続判断」のレイヤー。
+# The "go-live/continue" decision layer every team keeps, regardless of cycle unit.
 monthly_retrospective:
   trigger_hint:
-    schedule: "月末（例: 最終金曜 17:00）"
+    schedule: "End of month (e.g. last Friday, 17:00)"
     duration_minutes: 60
   output_path_hint: "docs/retros/<team-id>/monthly/{YYYY-MM}.md"
 
   required_sections:
     - id: kpi_trend
-      title: "## 1. KPI トレンド（直近 4 サイクル）"
-      content: "全 KPI の 4 サイクル分トレンドと目標達成率"
+      title: "## 1. KPI trend (last 4 cycles)"
+      content: "The 4-cycle trend and target-achievement rate for every KPI"
     - id: pivot_judgment
-      title: "## 2. Pivot 判定"
-      content: "下記 4 区分のいずれかを verdict として選び、根拠を書く"
+      title: "## 2. Pivot decision"
+      content: "Pick one of the 4 categories below as the verdict, and state the reasoning"
 
-  # --- pivot 判定の 4 区分 ---
+  # --- The 4 categories of pivot decision ---
   pivot_verdicts:
     continue:
-      meaning: "現状維持"
-      criteria: "共通 2 KPI が 4 サイクル連続で目標達成、固有 KPI の閾値超過なし"
+      meaning: "Keep the current course"
+      criteria: "The 2 common KPIs hit target for 4 consecutive cycles, with no team-specific KPI threshold breaches"
     extend:
-      meaning: "運用範囲を広げる（新チャネル/自動化の追加検討）"
-      criteria: "運用が 4 サイクル安定し、担当が拡張の必要性を挙げた"
+      meaning: "Broaden the scope of operations (consider adding a new channel/automation)"
+      criteria: "Operations have been stable for 4 cycles, and the team has raised a need to expand"
     pivot:
-      meaning: "サイクル設計を見直す"
-      criteria: "共通 KPI が 3 サイクル連続で未達、または固有 KPI の閾値超過が多発"
+      meaning: "Reconsider the cycle design"
+      criteria: "The common KPIs missed target for 3 consecutive cycles, or team-specific KPI threshold breaches are frequent"
     retire:
-      meaning: "この運用を畳む（チーム再編・撤退）"
-      criteria: "対象事業の撤退、または運用の全面再設計が必要"
+      meaning: "Wind down this operation (team reorganization / withdrawal)"
+      criteria: "The target business is being withdrawn, or the operation needs a full redesign"
 
   cross_reference:
-    weekly_aggregation: "直近 4 サイクルの週次 KPT をまとめて重複除去する"
-    decision_promotion: "解決した保留判断を docs/decisions/ の Decision RFC に昇格させる"
+    weekly_aggregation: "Roll up and deduplicate the last 4 cycles' weekly KPT"
+    decision_promotion: "Promote resolved pending decisions to a Decision RFC in docs/decisions/"
 
 # =============================================================================
-# 3. 記録先の約束
+# 3. Conventions for where records live
 # =============================================================================
 storage:
   weekly_path_hint: "docs/retros/<team-id>/weekly/"
   monthly_path_hint: "docs/retros/<team-id>/monthly/"
   git_tracked: true
-  note: "振り返り記録そのものは docs/retros/ に一本化する（/retro コマンドが補助）"
+  note: "Consolidate the retrospective record itself under docs/retros/ (the /retro command helps)"

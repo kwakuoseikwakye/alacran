@@ -3,96 +3,100 @@ date: 2026-07-03
 type: template-package-readme
 ---
 
-# 汎用テンプレート配布パッケージ
+# Generic template distribution package
 
-> オントロジー駆動の自律運営（SSOT の YAML/Markdown + HITL Gate + 業務サイクル）を
-> **任意の会社** に展開するための雛形集。plain Claude Code + GitHub だけで動きます。
-
----
-
-## 1. このテンプレで何ができるか
-
-運用モデル中立で設計されており、どんな届け方にも適用できます:
-
-- **専属型**（受託・顧問・常駐: 顧客ごとに深く入り込む）
-- **製品型**（プロダクトを多数に低タッチで提供）
-- **ハイブリッド**（専属で立ち上げ → 製品化してスケール）
-
-業種・運用モデルを問わず、SSOT 駆動の自律運営を最小コストで立ち上げられます。
-運用モデルの選び方は `docs/templates/path-selector.md`。
+> A set of templates for rolling out ontology-driven autonomous operation (SSOT YAML/Markdown +
+> HITL Gate + business cycles) to **any company**. Runs on plain Claude Code + GitHub alone.
 
 ---
 
-## 2. 同梱ファイル
+## 1. What this template lets you do
 
-| ファイル | 用途 | 編集要否 |
+Designed to be operating-model neutral, it applies to any delivery shape:
+
+- **Dedicated** (contracted / advisory / embedded — going deep with each customer)
+- **Product** (delivering a product to many, with a light touch)
+- **Hybrid** (start dedicated, then productize to scale)
+
+Regardless of industry or operating model, you can stand up SSOT-driven autonomous operation
+at minimal cost. See `docs/templates/path-selector.md` for how to choose an operating model.
+
+---
+
+## 2. Bundled files
+
+| File | Purpose | Needs editing? |
 |---|---|---|
-| `README-template.md` | このファイル（案内のみ） | 不要 |
-| `onboarding-checklist.md` | 新会社セットアップ手順書 | 不要（実行手順書） |
-| `path-selector.md` | 運用モデル選択ガイド | 不要（参照のみ） |
-| `AGENTS-template.md` | Agent システム設計指針（原則 + role 6 分類 + skeleton） | 不要（参照のみ） |
-| `ontology-starter.yaml` | 最小オントロジー（customer + org + product） | **必須**（会社情報を反映） |
-| `ontology-schema-reference.md` | entity / event / relation の記法ガイド | 不要（参照のみ） |
-| `kpi-measurement-template.yaml` | チーム単位の KPI 計測仕様の雛形 | 任意（KPI を回すなら） |
-| `cycle-plan-template.yaml` | 業務サイクル計画の雛形 | 任意 |
-| `retrospective-template.yaml` | 振り返り（KPT + pivot 判定）の雛形 | 任意 |
-| `common-kpi-pattern.yaml` / `common-retro-pattern.yaml` | KPI・振り返りの共通骨格の解説 | 不要（参照のみ） |
-| `cycle-execution-log-schema.yaml` | サイクルログ（cycle.jsonl）の schema | 不要（参照のみ） |
+| `README-template.md` | This file (guide only) | No |
+| `onboarding-checklist.md` | The new-company setup procedure | No (a runbook) |
+| `path-selector.md` | The operating-model selection guide | No (reference only) |
+| `AGENTS-template.md` | Agent system design guidelines (principles + 6-way role taxonomy + skeleton) | No (reference only) |
+| `ontology-starter.yaml` | A minimal ontology (customer + org + product) | **Yes** (reflects your own company's data) |
+| `ontology-schema-reference.md` | The entity / event / relation notation guide | No (reference only) |
+| `kpi-measurement-template.yaml` | A template for per-team KPI measurement specifications | Optional (if you run KPIs) |
+| `cycle-plan-template.yaml` | A template for business cycle plans | Optional |
+| `retrospective-template.yaml` | A template for retrospectives (KPT + pivot decisions) | Optional |
+| `common-kpi-pattern.yaml` / `common-retro-pattern.yaml` | An explanation of the common skeleton for KPIs/retrospectives | No (reference only) |
+| `cycle-execution-log-schema.yaml` | The schema for the cycle log (cycle.jsonl) | No (reference only) |
 
-HITL トリガーの雛形は `definitions/hitl/triggers/`（`_schema.md` + `*.yaml`）にあります。
+HITL trigger templates live in `definitions/hitl/triggers/` (`_schema.md` + `*.yaml`).
 
 ---
 
-## 3. 推奨セットアップ順序
+## 3. Recommended setup order
 
 ```
-Step 1. path-selector.md を読む → 運用モデルを決める
-Step 2. onboarding-checklist.md に沿って進める
-Step 3. /define-company で definitions/ontology/company.yaml を作る
-Step 4. 選んだモデルに応じて definitions/ の棚を記入する
-Step 5. python3 scripts/verify.py で検証する
-Step 6. HANDOFF.md に onboarding 履歴を追記する（/handoff）
+Step 1. Read path-selector.md -> decide your operating model
+Step 2. Follow onboarding-checklist.md
+Step 3. Build definitions/ontology/company.yaml with /define-company
+Step 4. Fill in the definitions/ shelves that fit your chosen model
+Step 5. Verify with python3 scripts/verify.py
+Step 6. Append the onboarding history to HANDOFF.md (/handoff)
 ```
 
-詳細は `onboarding-checklist.md` を参照。
+See `onboarding-checklist.md` for details.
 
 ---
 
-## 4. テンプレの設計原則
+## 4. This template's design principles
 
-| 原則 | 説明 |
+| Principle | Description |
 |---|---|
-| **Pull Model 強制** | テンプレは Push しない。エージェントは必要時に CLAUDE.md / オントロジーを自分で Read する |
-| **運用モデル中立** | 専属 / 製品 / ハイブリッドどれにも適用できる抽象を保つ |
-| **最小開始** | 最小オントロジー 3 domain（customer/org/product）のみ用意。残りは必要時に追加 |
-| **業種非依存** | 業種固有 entity（例: EC の sku）はテンプレに含めない。各社で追加 |
+| **Enforces the Pull Model** | The template doesn't push. An agent Reads CLAUDE.md / the ontology itself, when it needs to |
+| **Operating-model neutral** | Stays abstract enough to apply to dedicated / product / hybrid alike |
+| **Start minimal** | Ships only a minimal 3-domain ontology (customer/org/product). Add the rest when you need it |
+| **Industry-agnostic** | Industry-specific entities (e.g. an EC company's sku) aren't included in the template. Each company adds its own |
 
 ---
 
-## 5. 記入前と記入後
+## 5. Before and after filling it in
 
-- **記入前（配布直後）**: `definitions/` は README 付きの空の骨格。`docs/templates/` に雛形がある。
-- **記入後**: `definitions/` 配下の各サブディレクトリ（ontology / kpi / cycles / retro / hitl / clients）に自社の実データが埋まる。
-- **完成形の見本**: `examples/harukaze-ec/`（架空の EC 会社の記入済みフルセット。読むだけ）。
+- **Before filling in (right after distribution)**: `definitions/` is an empty skeleton with
+  READMEs. The templates live in `docs/templates/`.
+- **After filling in**: each subdirectory under `definitions/` (ontology / kpi / cycles / retro
+  / hitl / clients) is filled with your own company's real data.
+- **A worked example of the finished shape**: `examples/harukaze-ec/` (a fictional EC
+  company's complete, filled-in set. Read-only).
 
-記入前/後のフォルダ構成の対比は `docs/directory-map.md` を参照。
+See `docs/directory-map.md` for a before/after comparison of the folder layout.
 
 ---
 
-## 6. 配布対象
+## 6. Who this is distributed to
 
-| 対象 | 提供形態 |
+| Audience | Delivery form |
 |---|---|
-| 社内別部門 | 本テンプレを "Use this template" で新規 private リポ作成 |
-| 外部案件 | テンプレ部分のみ抜粋して納品物に同梱 |
+| Another in-house department | Create a new private repo from this template via "Use this template" |
+| An external engagement | Extract just the template parts and bundle them with the deliverable |
 
 ---
 
-## 7. 関連ドキュメント
+## 7. Related documents
 
-- `CLAUDE.md` — 本テンプレの運用憲法（5-phase workflow + 6 原則 + コンテキスト地図）
-- `docs/starter-manual.md` — 15 分セットアップから始める初心者ガイド
-- `.claude/rules/scope-contract.md` / `issue-first.md` / `hitl-gate.md` — 3 大規律
+- `CLAUDE.md` — this template's operating constitution (the 5-phase workflow + 6 principles +
+  context map)
+- `docs/starter-manual.md` — a beginner's guide starting from a 15-minute setup
+- `.claude/rules/scope-contract.md` / `issue-first.md` / `hitl-gate.md` — the 3 major disciplines
 
 ---
 

@@ -1,44 +1,51 @@
-# definitions/hitl/ — 人間承認トリガーの定義
+# definitions/hitl/ — human-approval trigger definitions
 
-「後戻りできない一歩」の手前で AI を止め、人間の承認を挟むためのトリガー定義を置く場所です。
-思想の全体像は `.claude/rules/hitl-gate.md`（金額・契約・不可逆操作・公開・認証の 5 カテゴリ）を参照。
-ここには、その思想を自社の実運用に落とし込んだ **個別トリガーの宣言的定義** を置きます。
+Where trigger definitions live that stop the AI just short of "an irreversible step" and insert
+human approval. See `.claude/rules/hitl-gate.md` for the overall philosophy (the 5 categories:
+money, contracts, irreversible operations, publication, credentials). This is where that
+philosophy gets translated into your own actual operations, as **declarative definitions of
+individual triggers**.
 
-## md と yaml の役割分担（どちらが正か）
+## Division of roles between the md and the yaml (which one is authoritative)
 
-`.claude/rules/hitl-gate.md` §2 の表と、この `triggers/*.yaml` は **役割が違います**。
+The table in `.claude/rules/hitl-gate.md` §2 and this `triggers/*.yaml` **play different roles**.
 
-| 場所 | 役割 | 性格 |
-|------|------|------|
-| `.claude/rules/hitl-gate.md` §2 の表 | 判断原則の **カテゴリ一覧**（人間と AI が読む思想面の全体像） | 代表例。網羅リストではない |
-| `definitions/hitl/triggers/*.yaml` | 個別トリガーの **運用上の SSOT**（機械検証の対象） | ここが正 |
+| Location | Role | Character |
+|------|------|-------|
+| The table in `.claude/rules/hitl-gate.md` §2 | The **category list** of judgement principles (the conceptual overview a human and AI both read) | Representative examples. Not an exhaustive list |
+| `definitions/hitl/triggers/*.yaml` | The **operational SSOT** of individual triggers (what machine verification checks) | This one is authoritative |
 
-トリガーを追加・変更するときは **yaml が正** です。`scripts/verify.py` の HITL-02 が検証するのは
-yaml 側であり、md 表への追記だけでは機械的にはどこにも反映されません。md 表は「思想カテゴリの
-代表例」として、必要に応じて更新すれば十分です（yaml と 1:1 対応させる必要はありません）。
+When adding or changing a trigger, **the yaml is authoritative**. `scripts/verify.py`'s HITL-02
+verifies the yaml side — merely appending a row to the md table is reflected nowhere
+mechanically. It's enough to update the md table as needed, as a "representative example of the
+philosophy's category" (there's no need to keep it 1:1 with the yaml).
 
-> つまり: **止めるべき操作を 1 つ増やす = `triggers/` に yaml を 1 ファイル追加する**。
-> md 表への行追加は、その思想が新カテゴリに当たるときの「読み物としての補足」に留めます。
+> In other words: **adding one more operation that should be stopped = adding one yaml file
+> under `triggers/`.** Adding a row to the md table is left as "supplementary reading" for when
+> that philosophy falls under a new category.
 
-## 置き場所
+## Where things go
 
-- `triggers/` — 個別トリガーの YAML（例: 一定額以上の発注、本番データ削除、新規契約締結）。
-  各トリガーは「発火条件」「通知先」「承認者」を宣言します。
-  通知の手段は `github_label`（Issue にラベルを付けて承認を促す）または `manual`（担当者へ口頭/チャットで確認）の
-  どちらかを基本とします。
+- `triggers/` — YAML for individual triggers (e.g. purchase orders over a certain amount,
+  deleting production data, signing a new contract). Each trigger declares its "fire condition",
+  "who to notify", and "who approves". The notification method is normally one of
+  `github_label` (adds a label to an Issue to prompt approval) or `manual` (confirm verbally/via
+  chat with the person in charge).
 
-## トリガー雛形について
+## About the trigger templates
 
-- 記法ガイド: `triggers/_schema.md`（必須キー・severity・通知手段・時間切れ挙動）
-- トリガー雛形: `triggers/large-deal.yaml` / `incident.yaml` / `new-ontology-entity.yaml`
-  （`<<TODO>>` を自社の値に置き換えて使う）
-- 承認者レジストリ: `approver-registry.yaml`（役割→承認者の写像 + 承認者 1 人時の縮退規則）
+- Notation guide: `triggers/_schema.md` (required keys, severity, notification method,
+  timeout behavior)
+- Trigger templates: `triggers/large-deal.yaml` / `incident.yaml` / `new-ontology-entity.yaml`
+  (fill in `<<TODO>>` with your own company's values)
+- Approver registry: `approver-registry.yaml` (the role→approver mapping + the degradation
+  rule for when there's only one approver)
 
-承認 SPOF（承認者 1 人で全停止）と GitHub label による非同期承認の考え方は
-`docs/concepts/hitl-async-approval.md` を参照してください。
+See `docs/concepts/hitl-async-approval.md` for the thinking behind an approval SPOF (a single
+approver stopping everything) and asynchronous approval via GitHub labels.
 
-## 記入済みの例
+## Filled-in examples
 
-- HITL トリガー: `examples/harukaze-ec/definitions/hitl/triggers/large-deal.yaml`
-- 承認者レジストリ: `examples/harukaze-ec/definitions/hitl/approver-registry.yaml`
-- クライアント固有の承認閾値: `examples/harukaze-ec/definitions/clients/midori-hotel/engagement.yaml`
+- HITL trigger: `examples/harukaze-ec/definitions/hitl/triggers/large-deal.yaml`
+- Approver registry: `examples/harukaze-ec/definitions/hitl/approver-registry.yaml`
+- Client-specific approval thresholds: `examples/harukaze-ec/definitions/clients/midori-hotel/engagement.yaml`

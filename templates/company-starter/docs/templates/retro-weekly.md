@@ -1,82 +1,85 @@
 <!--
 =============================================================================
-週次振り返りテンプレート（retro-weekly.md）— チーム単位の汎用フォーマット
+Weekly retrospective template (retro-weekly.md) — a generic per-team format
 =============================================================================
-scripts/cycle/retro-render.py の DEFAULT_TEMPLATE です。render は cycle.jsonl +
-kpi.json（cycle-kpi-snapshot.py 生成）を読み、下記の {…} プレースホルダのうち
-「識別情報」と「KPI ダッシュボードの共通 2 KPI」だけを自動で埋めます。
-KPT / 保留判断 / 次サイクルアクションは、振り返りの場で人間が記入する欄なので
-自動では触りません（そのまま残ります）。
+This is scripts/cycle/retro-render.py's DEFAULT_TEMPLATE. The renderer reads cycle.jsonl +
+kpi.json (produced by cycle-kpi-snapshot.py) and automatically fills in only the "identity
+information" and "the common 2 KPIs' dashboard rows" among the {…} placeholders below.
+KPT / decisions-pending / next-cycle-action are fields a human fills in during the
+retrospective itself, so they are left untouched by automation (they stay as-is).
 
-生成先: docs/retros/<team-id>/weekly/{YYYY-Www}.md
-設計リファレンス: docs/templates/common-retro-pattern.yaml（KPT + pivot 判定の型）
+Generated to: docs/retros/<team-id>/weekly/{YYYY-Www}.md
+Design reference: docs/templates/common-retro-pattern.yaml (the shape of KPT + pivot decisions)
 =============================================================================
 -->
 
-# 週次振り返り — {TEAM_ID} — {WEEK_LABEL}（{CYCLE_START} → {CYCLE_END}）
+# Weekly retrospective — {TEAM_ID} — {WEEK_LABEL} ({CYCLE_START} → {CYCLE_END})
 
-> **サイクル ID**: {CYCLE_ID}
-> **ファシリテーター**: （記入：振り返りの進行役）
-> **生成時刻**: {GENERATED_AT}
+> **Cycle ID**: {CYCLE_ID}
+> **Facilitator**: (fill in: who runs the retrospective)
+> **Generated at**: {GENERATED_AT}
 
 ---
 
-## 1. KPI ダッシュボード
+## 1. KPI dashboard
 
-> 共通 2 KPI は cycle.jsonl から自動集計しています。
-> 目標値（target）は自社の `definitions/kpi/<team>-kpi.yaml` が正です。ここでの
-> 判定は汎用のデフォルト目安（完了率 >= 95% / 承認介入率 <= 35%）で付けているので、
-> 自社目標と照合して読み替えてください。
+> The 2 common KPIs are auto-aggregated from cycle.jsonl.
+> Your own `definitions/kpi/<team>-kpi.yaml` is authoritative for the target values. The
+> verdict here is set against generic default benchmarks (completion rate >= 95% / HITL
+> intervention rate <= 35%), so cross-check against your own company's targets and adjust
+> your reading accordingly.
 
-| KPI | 説明 | 実績 | 判定 |
+| KPI | Description | Actual | Verdict |
 |-----|------|------|------|
-| cycle_completion_rate | サイクル完了率（cycle_completed / cycle_started） | {ACTUAL_CCR} | {STATUS_CCR} |
-| hitl_intervention_rate | 人間承認介入率（hitl_gate_fired / task_executed） | {ACTUAL_HIR} | {STATUS_HIR} |
+| cycle_completion_rate | Cycle completion rate (cycle_completed / cycle_started) | {ACTUAL_CCR} | {STATUS_CCR} |
+| hitl_intervention_rate | Human-approval intervention rate (hitl_gate_fired / task_executed) | {ACTUAL_HIR} | {STATUS_HIR} |
 
-**このサイクルの閾値アラート**: {ALERT_SUMMARY}
+**This cycle's threshold alerts**: {ALERT_SUMMARY}
 
-> チーム固有 KPI（転換率・応答時間など）は外部データソースが要るため自動集計対象外です。
-> `definitions/kpi/<team>-kpi.yaml` の各 KPI を、それぞれの data_source から集計して下の表に追記してください。
+> Team-specific KPIs (conversion rate, response time, etc.) are out of scope for automatic
+> aggregation since they need an external data source. Aggregate each KPI in
+> `definitions/kpi/<team>-kpi.yaml` from its own data_source and add it to the table below.
 
-| チーム固有 KPI | 目標 | 実績 | 判定 |
+| Team-specific KPI | Target | Actual | Verdict |
 |----------------|------|------|------|
-| （記入） | （記入） | （記入） | （記入） |
+| (fill in) | (fill in) | (fill in) | (fill in) |
 
 ---
 
-## 2. KPT（Keep / Problem / Try）
+## 2. KPT (Keep / Problem / Try)
 
-### Keep（今サイクルで機能した・続けたいこと）
+### Keep (what worked this cycle and should continue)
 
-- （記入）
+- (fill in)
 
-### Problem（閾値超過・観察された摩擦・詰まり）
+### Problem (threshold breaches, observed friction/sticking points)
 
-- （記入）
+- (fill in)
 
-### Try（次サイクルで試す改善：1〜3 件）
+### Try (improvements to try next cycle: 1-3 items)
 
-- [ ] （記入）
+- [ ] (fill in)
 
 ---
 
-## 3. 保留中の意思決定
+## 3. Decisions pending
 
-> サイクル中に保留した判断を書き出します（title / 提起日 / blocker / 解決予定サイクル）。
-> 解決したものは `docs/decisions/` の Decision RFC に昇格させます。
+> Write out decisions held pending during the cycle (title / date raised / blocker / cycle
+> expected to resolve). Once resolved, promote them to a Decision RFC in `docs/decisions/`.
 
-| タイトル | 提起日 | blocker | 解決予定サイクル |
+| Title | Date raised | Blocker | Cycle expected to resolve |
 |----------|--------|---------|------------------|
-| （記入） | （記入） | （記入） | （記入） |
+| (fill in) | (fill in) | (fill in) | (fill in) |
 
 ---
 
-## 4. 次サイクルのアクション
+## 4. Next cycle's actions
 
-> Try と保留判断の解決期限から、担当・期限つきの TODO を作ります。
+> Build a TODO list with owner and deadline, from the Try items and the pending decisions'
+> resolution deadlines.
 
-- [ ] （記入：担当 / 期限）
+- [ ] (fill in: owner / deadline)
 
 ---
 
-*ai-retreat-starter — 週次振り返りテンプレート（retro-weekly.md）*
+*ai-retreat-starter — weekly retrospective template (retro-weekly.md)*

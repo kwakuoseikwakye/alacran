@@ -1,38 +1,41 @@
 # =============================================================================
-# HITL トリガー雛形 — 新規オントロジー entity ゲート（new-ontology-entity）
+# HITL trigger template — new ontology entity gate (new-ontology-entity)
 # =============================================================================
-# definitions/ontology/ に新しい entity / event / relation の「型」を追加するとき、
-# レビューを挟むためのトリガー。オントロジーは会社の「正典」なので、無秩序な増殖を防ぐ。
-# 書き方は _schema.md を参照。<<TODO>> を自社の値に置き換えて使います。
+# A trigger to insert review when adding a new "type" of entity / event / relation to
+# definitions/ontology/. The ontology is the company's "canon", so this guards against
+# unchecked proliferation. See _schema.md for how to write one. Replace <<TODO>> with your
+# own company's values.
 # =============================================================================
 
 version: 1
 id: new-ontology-entity
-name: 新規オントロジー entity ゲート
-severity: high                      # SSOT 骨格の変更 → high（新 type は自動承認しない）
+name: New ontology entity gate
+severity: high                      # a change to the SSOT structure -> high (new types are never auto-approved)
 
 description: |
-  オントロジー（definitions/ontology/）に新しい entity type / event type /
-  relation type や新ドメインを追加するとき、担当者のレビューを必須とする。
-  既存 entity への任意フィールドの軽微な追加は低リスクとして扱ってよい（§auto_proceed）。
+  Requires review by the person in charge when adding a new entity type / event type /
+  relation type, or a new domain, to the ontology (definitions/ontology/).
+  A minor addition of an optional field to an existing entity may be treated as low-risk
+  (see §auto_proceed).
 
 fire_when:
-  - when: "新しい entity / event / relation の型を新設する"
-    condition: "<<TODO: 例 ontology.change_kind == new_type>>"
-  - when: "新しいドメイン yaml を追加する"
-    condition: "<<TODO: 例 ontology.change_kind == new_domain>>"
-  - when: "既存 schema の後方互換を壊す変更"
-    condition: "<<TODO: 例 ontology.breaking_change == true>>"
+  - when: "Establishing a new entity / event / relation type"
+    condition: "<<TODO: e.g. ontology.change_kind == new_type>>"
+  - when: "Adding a new domain yaml"
+    condition: "<<TODO: e.g. ontology.change_kind == new_domain>>"
+  - when: "A change that breaks backward compatibility with the existing schema"
+    condition: "<<TODO: e.g. ontology.breaking_change == true>>"
 
-approver_role: "<<TODO: 例 owner>>"   # approver-registry.yaml の役割と対応
+approver_role: "<<TODO: e.g. owner>>"   # corresponds to a role in approver-registry.yaml
 notify: github_label
 notify_label: "hitl:ontology"
-on_timeout: re_notify               # SSOT 変更は自動進行しない（別手段で再通知）
+on_timeout: re_notify               # SSOT changes never auto-proceed (re-notify via another channel)
 
-# 既存 entity への任意フィールド追加など「型を増やさない」軽微変更は medium 相当に降格し、
-# 条件付きで自動承認してよい（新 type / 新ドメイン / 破壊的変更は対象外＝上の high 維持）。
-auto_proceed: false                 # 既定は false。軽微変更のみ運用で条件付き許可
+# A minor change that "doesn't add a new type" (e.g. adding an optional field to an existing
+# entity) may be downgraded to medium-equivalent and conditionally auto-approved (new types /
+# new domains / breaking changes are out of scope for this — they keep the high severity above).
+auto_proceed: false                 # defaults to false. Only minor changes may be conditionally allowed operationally
 
 examples:
-  - "<<TODO: 例 customer ドメインに partner entity type を追加>>"
-  - "<<TODO: 例 新ドメイン supplier.yaml を新設>>"
+  - "<<TODO: e.g. adding a partner entity type to the customer domain>>"
+  - "<<TODO: e.g. establishing a new supplier.yaml domain>>"

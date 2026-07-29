@@ -1,74 +1,85 @@
-# オンボーディング・チェックリスト（新しい会社の立ち上げ）
+# Onboarding checklist (standing up a new company)
 
-> このテンプレを自社に導入するときの手順書です。必要なのは GitHub アカウント、
-> Claude Code が使えるプラン、`git` と `python3` だけ。外部 SDK・MCP サーバーは要りません。
+> The procedure for adopting this template at your own company. All you need is a GitHub
+> account, a plan that lets you use Claude Code, `git` and `python3`. No external SDK or MCP
+> server is required.
 
-各ステップは上から順に。詰まったら `docs/starter-manual.md` と `CLAUDE.md` を再読してください。
+Work through each step top to bottom. If you get stuck, re-read `docs/starter-manual.md` and
+`CLAUDE.md`.
 
 ---
 
-## Step 1. リポジトリを用意する
+## Step 1. Set up the repository
 
-- [ ] このテンプレを "Use this template" で自社の private リポジトリとして複製する
-- [ ] 手元に clone する（`git clone <your-repo>`）
-- [ ] `python3 --version` と `git --version` が通ることを確認する
-- [ ] `pip3 install pyyaml`（`scripts/verify.py` が使う）
+- [ ] Duplicate this template as your own private repository via "Use this template"
+- [ ] Clone it locally (`git clone <your-repo>`)
+- [ ] Confirm `python3 --version` and `git --version` both run
+- [ ] `pip3 install pyyaml` (used by `scripts/verify.py`)
 
-## Step 2. 運用憲法を読む
+## Step 2. Read the operating constitution
 
-- [ ] `CLAUDE.md` を読む（5-Phase ワークフロー + 6 原則 + コンテキスト地図）
-- [ ] `.claude/rules/` の 3 大規律（`scope-contract` / `issue-first` / `hitl-gate`）に目を通す
-- [ ] `docs/directory-map.md` で「記入前 / 記入後」のフォルダ構成の違いを掴む
+- [ ] Read `CLAUDE.md` (the 5-phase workflow + 6 principles + context map)
+- [ ] Skim the 3 major disciplines in `.claude/rules/` (`scope-contract` / `issue-first` /
+      `hitl-gate`)
+- [ ] Get a feel for the "before / after filling in" folder-layout difference in
+      `docs/directory-map.md`
 
-## Step 3. 完成例を眺める（1 分）
+## Step 3. Look at the complete example (1 minute)
 
-- [ ] `examples/harukaze-ec/` を開き、記入済みの会社がどう見えるか確認する
-      （オントロジー・KPI・サイクル・振り返り・HITL・クライアント）
-- [ ] 「読むだけ」。ここはコピー元にしない（自社定義は `definitions/` 側に作る）
+- [ ] Open `examples/harukaze-ec/` and see what a filled-in company looks like (ontology, KPI,
+      cycles, retrospectives, HITL, clients)
+- [ ] "Read only." Don't use it as a source to copy from — build your own company's
+      definitions under `definitions/` instead
 
-## Step 4. 自社オントロジーを定義する（Phase 1）
+## Step 4. Define your own company's ontology (Phase 1)
 
-- [ ] Claude Code で `/define-company` を実行する
-- [ ] 対話に答えて `definitions/ontology/company.yaml` を生成する
-- [ ] 業種固有の entity（例: EC なら `sku`）を追記する。記法は
-      `docs/templates/ontology-schema-reference.md` を参照
+- [ ] Run `/define-company` in Claude Code
+- [ ] Answer the questions to generate `definitions/ontology/company.yaml`
+- [ ] Add any industry-specific entities (e.g. `sku` for an EC company). See
+      `docs/templates/ontology-schema-reference.md` for the notation
 
-## Step 5. 承認ゲートを整える（任意だが推奨）
+## Step 5. Set up the approval gate (optional but recommended)
 
-- [ ] `.claude/rules/hitl-gate.md` のトリガー表に自社固有の行を足す
-- [ ] 一定額の発注など個別トリガーが要るなら、`definitions/hitl/triggers/` に
-      雛形（`large-deal.yaml` 等）をコピーして記入する
-- [ ] 承認者が実質 1 人なら `definitions/hitl/approver-registry.yaml` を正直に埋める
-      （代理は `vacant`。考え方は `docs/concepts/hitl-async-approval.md`）
+- [ ] Add your own company-specific rows to the trigger table in `.claude/rules/hitl-gate.md`
+- [ ] If you need individual triggers (e.g. purchase orders over a certain amount), copy a
+      template (`large-deal.yaml` etc.) into `definitions/hitl/triggers/` and fill it in
+- [ ] If there's effectively only one approver, fill in
+      `definitions/hitl/approver-registry.yaml` honestly (the deputy is `vacant`. See
+      `docs/concepts/hitl-async-approval.md` for the thinking)
 
-## Step 6. KPI・サイクル・振り返りを立てる（任意）
+## Step 6. Set up KPIs, cycles, and retrospectives (optional)
 
-- [ ] `docs/templates/kpi-measurement-template.yaml` を `definitions/kpi/<team>-kpi.yaml` に記入
-- [ ] `docs/templates/cycle-plan-template.yaml` を `definitions/cycles/<team>-cycle-plan.yaml` に記入
-- [ ] `docs/templates/retrospective-template.yaml` を `definitions/retro/<team>-retrospective.yaml` に記入
-- [ ] `team_id` で対象チームを明示し、`<<TODO_*>>` を全部埋める
+- [ ] Fill in `docs/templates/kpi-measurement-template.yaml` as
+      `definitions/kpi/<team>-kpi.yaml`
+- [ ] Fill in `docs/templates/cycle-plan-template.yaml` as
+      `definitions/cycles/<team>-cycle-plan.yaml`
+- [ ] Fill in `docs/templates/retrospective-template.yaml` as
+      `definitions/retro/<team>-retrospective.yaml`
+- [ ] Make the target team explicit via `team_id`, and fill in every `<<TODO_*>>`
 
-## Step 7. 検証する（Phase 4）
+## Step 7. Verify (Phase 4)
 
-- [ ] `python3 scripts/verify.py`（または `/verify`）を実行する
-- [ ] FAIL があれば中身を読んで直す（偽緑禁止。検証側を弱めない）
-- [ ] 未記入の棚が INFO/SKIP で出るのは正常（段階的に育てる前提）
+- [ ] Run `python3 scripts/verify.py` (or `/verify`)
+- [ ] If there's a FAIL, read what it says and fix it (no fake green — don't weaken the check
+      itself)
+- [ ] It's normal for an unfilled shelf to show up as INFO/SKIP (the design assumes you grow
+      this incrementally)
 
-## Step 8. 合宿の演習をやる
+## Step 8. Do the retreat exercises
 
 - [ ] `exercises/01-define-your-company.md`
 - [ ] `exercises/02-first-hitl-gate.md`
 - [ ] `exercises/03-run-verify-loop.md`
 
-## Step 9. 引き継ぎを残す（Phase 5）
+## Step 9. Leave a handover (Phase 5)
 
-- [ ] `/handoff` で `HANDOFF.md` を更新する（今回やったこと・次にやること）
-- [ ] 意思決定をしたら `/decision` で Decision RFC を残す
+- [ ] Update `HANDOFF.md` with `/handoff` (what you did this time, what's next)
+- [ ] If you made a decision, leave a Decision RFC with `/decision`
 
 ---
 
-## 関連
+## Related
 
-- `docs/starter-manual.md` — 15 分セットアップから始める初心者ガイド
-- `docs/templates/README-template.md` — 同梱テンプレの一覧と役割
-- `.claude/commands/ingest-context.md` — 外部資料を安全に取り込む `/ingest-context`
+- `docs/starter-manual.md` — a beginner's guide starting from a 15-minute setup
+- `docs/templates/README-template.md` — the list of bundled templates and their roles
+- `.claude/commands/ingest-context.md` — `/ingest-context`, for safely bringing in external material

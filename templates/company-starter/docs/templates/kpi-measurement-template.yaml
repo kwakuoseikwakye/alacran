@@ -1,74 +1,75 @@
 # =============================================================================
-# 雛形 — definitions/kpi/<team>-kpi.yaml の記入元
+# Template — the source for definitions/kpi/<team>-kpi.yaml
 # =============================================================================
-# チーム/部門単位の KPI 計測仕様を立ち上げるための出発点です。
-# 本ファイル自体は稼働しません。コピーして記入します。
+# The starting point for standing up a team/department's KPI measurement specification.
+# This file itself is not live. Copy it and fill it in.
 #
-# 共通骨格の解説: docs/templates/common-kpi-pattern.yaml
-# 記入済みの例:   examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml
-# 関連:           docs/templates/cycle-plan-template.yaml /
-#                 docs/templates/retrospective-template.yaml
+# Explanation of the common skeleton: docs/templates/common-kpi-pattern.yaml
+# Filled-in example:                  examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml
+# Related:                            docs/templates/cycle-plan-template.yaml /
+#                                      docs/templates/retrospective-template.yaml
 #
-# 使い方:
-# 1. 本ファイルを definitions/kpi/<team>-kpi.yaml にコピー
-# 2. <<TODO_*>> を全て自社の値に置き換える
-# 3. 共通 2 KPI（cycle_completion_rate / hitl_intervention_rate）は必須
-# 4. チーム固有 KPI を 2 件以上追加
-# 5. 通知手段は github_label / manual（自社で運用できる手段）に統一
+# How to use:
+# 1. Copy this file to definitions/kpi/<team>-kpi.yaml
+# 2. Replace every <<TODO_*>> with your own company's values
+# 3. The 2 common KPIs (cycle_completion_rate / hitl_intervention_rate) are mandatory
+# 4. Add 2 or more team-specific KPIs
+# 5. Standardize on github_label / manual for the notification method (whatever your
+#    company can actually operate)
 # =============================================================================
 
 version: 1
 schema_version_meta: "<<TODO_YYYY-MM-DD>>"
 status: draft
-team_id: <<TODO_team_id>>                          # 例: ec-team（org.team の team_id と一致）
+team_id: <<TODO_team_id>>                          # e.g. ec-team (matches org.team's team_id)
 
 # =============================================================================
-# 計測インフラ
+# Measurement infrastructure
 # =============================================================================
 measurement_infrastructure:
   collection_window:
-    cycle_start: "<<TODO_cycle_start>>"            # 例: "Monday 00:00 JST"
-    cycle_end: "<<TODO_cycle_end>>"                # 例: "Sunday 23:59 JST"
-    duration_hours: <<TODO_duration>>              # weekly: 167 / monthly: 720 前後
-    measurement_finalize: "<<TODO_finalize>>"      # 例: "Sunday 22:00 JST"
+    cycle_start: "<<TODO_cycle_start>>"            # e.g. "Monday 00:00 JST"
+    cycle_end: "<<TODO_cycle_end>>"                # e.g. "Sunday 23:59 JST"
+    duration_hours: <<TODO_duration>>              # weekly: ~167 / monthly: ~720
+    measurement_finalize: "<<TODO_finalize>>"      # e.g. "Sunday 22:00 JST"
 
   data_sources:
     cycle_log:
       path: "state/cycles/<<TODO_team_id>>/<YYYY-MM-DD>/cycle.jsonl"
       format: jsonl
-      writer: "サイクル運用スクリプト（cycle-event）"
-      retention: "全期間 git 保持"
-    # 業種固有データソースを追加（例: 注文エクスポート CSV / 問い合わせログ）
+      writer: "The cycle-operations script (cycle-event)"
+      retention: "Kept in git for the entire history"
+    # Add an industry-specific data source (e.g. an order-export CSV / an inquiry log)
     <<TODO_industry_data_source>>:
       path: "<<TODO_path>>"
       format: <<TODO_format>>                      # jsonl / csv
       writer: "<<TODO_writer>>"
-      retention: "全期間 git 保持"
+      retention: "Kept in git for the entire history"
 
   notification:
     channels:
       - id: github_label
-        use_for: "警告アラート（Issue にラベルを付けて担当に周知）"
+        use_for: "A warning-level alert (labels an Issue to notify the person in charge)"
       - id: manual
-        use_for: "重大アラート（担当へチャット/口頭で即時確認）"
+        use_for: "A critical alert (confirm immediately with the person in charge via chat/verbally)"
 
 # =============================================================================
-# KPI 定義
+# KPI definitions
 # =============================================================================
-# 共通 2 KPI（cycle_completion_rate / hitl_intervention_rate）は必須。
-# チーム固有 KPI を 2 件以上追加。各 KPI に description / target /
-# measurement_formula / threshold / notification / data_source / audit_format。
+# The 2 common KPIs (cycle_completion_rate / hitl_intervention_rate) are mandatory.
+# Add 2 or more team-specific KPIs. Each KPI needs description / target /
+# measurement_formula / threshold / notification / data_source / audit_format.
 
-# --- 共通 KPI #1: サイクル完了率 ---
+# --- Common KPI #1: cycle completion rate ---
 cycle_completion_rate:
-  description: "1 サイクルで全フェーズが期限までに完了した比率"
+  description: "The proportion of cycles where every phase completed by its deadline"
   target: 0.95
   measurement_formula: |
     completed_cycles / total_cycles
-    completed_cycles = count(cycle.jsonl の event.type == "cycle_completed")
+    completed_cycles = count(event.type == "cycle_completed" in cycle.jsonl)
     total_cycles     = count(event.type == "cycle_started")
   threshold:
-    low_alert: "3 サイクル連続で < 0.80"
+    low_alert: "< 0.80 for 3 consecutive cycles"
     high_alert: null
     target_steady_state: ">= 0.95"
   notification:
@@ -78,16 +79,16 @@ cycle_completion_rate:
   audit_format: |
     {"cycle_completion_rate": <float>, "completed": <int>, "total": <int>}
 
-# --- 共通 KPI #2: 人間承認介入率 ---
+# --- Common KPI #2: human-approval intervention rate ---
 hitl_intervention_rate:
-  description: "全タスクのうち人間承認ゲートを経由した比率（低いほど自律的）"
-  target: <<TODO_hitl_target>>                     # チーム別 0.20〜0.30 目安
+  description: "The proportion of all tasks that went through a human approval gate (lower = more autonomous)"
+  target: <<TODO_hitl_target>>                     # ~0.20-0.30, varies by team
   measurement_formula: |
     hitl_invoked / total_tasks
     hitl_invoked = count(event.type == "hitl_gate_fired")
     total_tasks  = count(event.type == "task_executed")
   threshold:
-    low_alert: "3 サイクル連続で > <<TODO_hitl_escalation>>"  # 例: 0.35
+    low_alert: "> <<TODO_hitl_escalation>> for 3 consecutive cycles"  # e.g. 0.35
     high_alert: null
     target_steady_state: "<= <<TODO_hitl_target>>"
   notification:
@@ -97,11 +98,11 @@ hitl_intervention_rate:
   audit_format: |
     {"hitl_intervention_rate": <float>, "invoked": <int>, "total": <int>}
 
-# --- チーム固有 KPI #1 ---
-# 例: EC 転換率 / 問い合わせ応答時間 / 納期遵守率
+# --- Team-specific KPI #1 ---
+# e.g. EC conversion rate / inquiry response time / on-time delivery rate
 <<TODO_team_kpi_1_name>>:
   description: "<<TODO_team_kpi_1_description>>"
-  target: <<TODO_team_kpi_1_target>>               # string も可（"<=1 per week"）
+  target: <<TODO_team_kpi_1_target>>               # a string is also fine ("<=1 per week")
   measurement_formula: |
     <<TODO_team_kpi_1_formula>>
   threshold:
@@ -111,11 +112,11 @@ hitl_intervention_rate:
   notification:
     low: <<TODO_notify_low>>                        # github_label / manual / null
     high: <<TODO_notify_high>>
-  data_source: <<TODO_data_source>>                # cycle_log + 業種固有ソース
+  data_source: <<TODO_data_source>>                # cycle_log + an industry-specific source
   audit_format: |
     {"<<TODO_team_kpi_1_name>>": <value>}
 
-# --- チーム固有 KPI #2 ---
+# --- Team-specific KPI #2 ---
 <<TODO_team_kpi_2_name>>:
   description: "<<TODO_team_kpi_2_description>>"
   target: <<TODO_team_kpi_2_target>>
@@ -133,29 +134,29 @@ hitl_intervention_rate:
     {"<<TODO_team_kpi_2_name>>": <value>}
 
 # =============================================================================
-# 週次ダイジェスト
+# Weekly digest
 # =============================================================================
 weekly_digest:
-  description: "週次の振り返り時点で生成する KPI ダッシュボード"
+  description: "The KPI dashboard generated at the point of the weekly retrospective"
   format: markdown
   output_path: "docs/retros/<<TODO_team_id>>/weekly/{YYYY-Www}.md"
-  generated_at: "<<TODO_digest_time>>"             # 例: "Friday 17:00 JST"
+  generated_at: "<<TODO_digest_time>>"             # e.g. "Friday 17:00 JST"
   contents:
-    - "全 KPI の実績 vs 目標テーブル"
-    - "閾値超過アラートの要約"
-    - "直近 4 サイクルの移動平均トレンド"
-    - "次サイクルの推奨アクション"
+    - "A results-vs-target table for every KPI"
+    - "A summary of threshold-breach alerts"
+    - "The last 4 cycles' moving-average trend"
+    - "Recommended actions for the next cycle"
 
 # =============================================================================
-# 記入時の確認項目（本テンプレをコピーした instance に適用）
+# Checklist for filling it in (applies to the instance created by copying this template)
 # =============================================================================
 acceptance_criteria:
-  - "team_id でチームを明示している"
-  - "measurement_infrastructure に collection_window + data_sources + notification 3 種"
-  - "共通 2 KPI（cycle_completion_rate / hitl_intervention_rate）が存在"
-  - "チーム固有 KPI 2 件以上、各 KPI に 7 項目（description / target / measurement_formula / threshold / notification / data_source / audit_format）"
-  - "通知手段は github_label / manual / null のいずれか"
-  - "全 <<TODO_*>> を埋めた状態（scripts/verify.py の DEF-KPI-01 で残存が検出される）"
-  - "yaml 構文が正常"
+  - "team_id makes the team explicit"
+  - "measurement_infrastructure has all 3 of collection_window + data_sources + notification"
+  - "The 2 common KPIs (cycle_completion_rate / hitl_intervention_rate) are present"
+  - "2 or more team-specific KPIs, each with the 7 fields (description / target / measurement_formula / threshold / notification / data_source / audit_format)"
+  - "The notification method is one of github_label / manual / null"
+  - "Every <<TODO_*>> is filled in (any that remain are detected by scripts/verify.py's DEF-KPI-01)"
+  - "The yaml syntax is valid"
 
-# 検証: python3 scripts/verify.py の DEF-KPI-01（parse + <<TODO 残存ゼロ + team_id 存在）
+# Verification: python3 scripts/verify.py's DEF-KPI-01 (parses + zero remaining <<TODO + team_id present)

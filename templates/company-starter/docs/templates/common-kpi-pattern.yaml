@@ -1,13 +1,13 @@
 # =============================================================================
-# 共通 KPI パターン（業種を問わない KPI 計測の骨格）
+# Common KPI pattern (an industry-agnostic KPI-measurement skeleton)
 # =============================================================================
-# どんなチーム・部門でも使える KPI 計測の「共通骨格」を示す参照ファイルです。
-# チーム個別の KPI 仕様は docs/templates/kpi-measurement-template.yaml を
-# definitions/kpi/<team>-kpi.yaml にコピーして記入します。本ファイルは
-# 「共通で必ず入れる KPI」と「業種固有 KPI の足し方」を示す設計リファレンスで、
-# 直接コピーして使うものではありません。
+# A reference file showing the "common skeleton" of KPI measurement that any team/department
+# can use. A team's individual KPI spec is filled in by copying
+# docs/templates/kpi-measurement-template.yaml to definitions/kpi/<team>-kpi.yaml. This file
+# is a design reference showing "the KPIs every team must always have" and "how to add
+# industry-specific KPIs on top" — it isn't meant to be copied and used directly.
 #
-# 記入済みの例: examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml
+# Filled-in example: examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml
 # =============================================================================
 
 version: 1
@@ -15,64 +15,64 @@ kind: kpi_pattern
 pattern_id: common-kpi-pattern
 
 # =============================================================================
-# 1. 計測インフラの共通構造（3 要素）
+# 1. The common structure of the measurement infrastructure (3 elements)
 # =============================================================================
-# チームによって値は変わるが、この 3 要素の「枠」は共通で持つ。
+# The values vary by team, but every team shares this 3-element "frame".
 measurement_infrastructure:
   collection_window:
-    # 計測の窓（いつからいつまでを 1 サイクルとして集計するか）
+    # The measurement window (from when to when 1 cycle is aggregated over)
     required_fields: [cycle_start, cycle_end, duration_hours, measurement_finalize]
-    weekly_hint: "duration_hours ≈ 167（週次）"
-    monthly_hint: "duration_hours ≈ 720（月次）"
+    weekly_hint: "duration_hours ≈ 167 (weekly)"
+    monthly_hint: "duration_hours ≈ 720 (monthly)"
 
   data_sources:
-    # 集計元。少なくとも 1 つはサイクルログ（git 追跡下）を持つ。
+    # Where the aggregation is sourced from. At least one should be a cycle log (git-tracked).
     cycle_log:
       path_hint: "state/cycles/<team-id>/<YYYY-MM-DD>/cycle.jsonl"
       format: jsonl
-      note: "サイクル運用スクリプトが追記する（cycle-execution-log-schema.yaml 準拠）"
-    industry_source_hint: "業種固有ソースを足す（例: 注文エクスポート CSV / 問い合わせログ）"
+      note: "Appended to by the cycle-operations script (per cycle-execution-log-schema.yaml)"
+    industry_source_hint: "Add an industry-specific source (e.g. an order-export CSV / an inquiry log)"
 
   notification:
-    # 通知手段は自社で運用できる 2 択に抽象化する。
+    # Abstract the notification method down to 2 choices your company can actually operate.
     channels:
       - id: github_label
-        use_for: "警告アラート（Issue にラベルを付けて担当に周知）"
+        use_for: "A warning-level alert (labels an Issue to notify the person in charge)"
       - id: manual
-        use_for: "重大アラート（担当へチャット/口頭で即時確認）"
+        use_for: "A critical alert (confirm immediately with the person in charge via chat/verbally)"
 
 # =============================================================================
-# 2. 共通 KPI（どのチームでも必ず定義する 2 つ）
+# 2. Common KPIs (the 2 every team must always define)
 # =============================================================================
 common_kpis:
   cycle_completion_rate:
-    description: "1 サイクルで全フェーズが期限までに完了した比率"
-    target_hint: 0.95                 # 全チーム共通の目安
+    description: "The proportion of cycles where every phase completed by its deadline"
+    target_hint: 0.95                 # a shared benchmark across all teams
     measurement_formula: |
       completed_cycles / total_cycles
       completed_cycles = count(event.type == "cycle_completed")
       total_cycles     = count(event.type == "cycle_started")
     threshold_hint:
-      low_alert: "3 サイクル連続で目標を大きく下回る"
+      low_alert: "Falls well short of target for 3 consecutive cycles"
     data_source: cycle_log
 
   hitl_intervention_rate:
-    description: "全タスクのうち人間承認ゲートを経由した比率（低いほど自律的）"
-    target_hint: "チーム別 0.20〜0.30（承認の要る業務が多いほど高め）"
+    description: "The proportion of all tasks that went through a human approval gate (lower = more autonomous)"
+    target_hint: "0.20-0.30 per team (higher for teams with more approval-requiring work)"
     measurement_formula: |
       hitl_invoked / total_tasks
       hitl_invoked = count(event.type == "hitl_gate_fired")
       total_tasks  = count(event.type == "task_executed")
     threshold_hint:
-      low_alert: "3 サイクル連続で目標＋0.10 を超える"
+      low_alert: "Exceeds target + 0.10 for 3 consecutive cycles"
     data_source: cycle_log
 
 # =============================================================================
-# 3. 業種固有 KPI の足し方
+# 3. How to add industry-specific KPIs
 # =============================================================================
-# 共通 2 KPI に加えて、チーム固有の KPI を 2 件以上足す。各 KPI には
-# description / target / measurement_formula / threshold / notification /
-# data_source / audit_format の 7 項目を必ず持たせる。
+# On top of the 2 common KPIs, add 2 or more team-specific KPIs. Every KPI must always have
+# these 7 fields: description / target / measurement_formula / threshold / notification /
+# data_source / audit_format.
 industry_kpi_guidance:
   min_count: 2
   required_fields_per_kpi:
@@ -90,14 +90,14 @@ industry_kpi_guidance:
     professional_services: [billable_ratio, escalation_count]
 
 # =============================================================================
-# 4. 週次ダイジェスト（共通）
+# 4. Weekly digest (common)
 # =============================================================================
 weekly_digest:
-  description: "週次の振り返り時点で生成する KPI ダッシュボード"
+  description: "The KPI dashboard generated at the point of the weekly retrospective"
   format: markdown
   output_path_hint: "docs/retros/<team-id>/weekly/{YYYY-Www}.md"
   contents:
-    - "全 KPI の実績 vs 目標テーブル"
-    - "閾値超過アラートの要約"
-    - "直近 4 サイクルの移動平均トレンド"
-    - "次サイクルの推奨アクション"
+    - "A results-vs-target table for every KPI"
+    - "A summary of threshold-breach alerts"
+    - "The last 4 cycles' moving-average trend"
+    - "Recommended actions for the next cycle"

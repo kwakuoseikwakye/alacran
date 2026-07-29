@@ -1,82 +1,87 @@
-# オントロジー記法リファレンス（entity / event / relation）
+# Ontology notation reference (entity / event / relation)
 
-`definitions/ontology/` に置く自社オントロジーの書き方リファレンスです。
-出発点の雛形は `docs/templates/ontology-starter.yaml`、対話生成は `/define-company`。
-このファイルは「entity / event / relation をどう書くか」の記法だけを説明します。
+A reference for how to write your own ontology under `definitions/ontology/`.
+The starting template is `docs/templates/ontology-starter.yaml`; `/define-company` generates
+one interactively. This file only explains the notation for "how to write an entity / event /
+relation."
 
 ---
 
-## 1. オントロジーの 3 要素
+## 1. The 3 elements of an ontology
 
-| 要素 | 何を表すか | 例 |
+| Element | What it represents | Example |
 |------|-----------|----|
-| **entity** | ドメイン内の永続的な存在（モノ・人・契約） | `customer.account` / `org.employee` / `product.sku` |
-| **event** | 時間軸を持つ出来事 | `order.placed` / `inventory.oversold` / `contract.signed` |
-| **relation** | entity 間の関係（グラフの辺） | `order` belongs_to `customer.account` |
+| **entity** | A persistent thing within a domain (a thing, a person, a contract) | `customer.account` / `org.employee` / `product.sku` |
+| **event** | A time-bound occurrence | `order.placed` / `inventory.oversold` / `contract.signed` |
+| **relation** | The relationship between entities (an edge in the graph) | `order` belongs_to `customer.account` |
 
-命名規約は `lowercase + ドット区切り`（例: `customer.account`）。ドメイン名を接頭辞にします。
+The naming convention is `lowercase + dot-separated` (e.g. `customer.account`). Prefix with
+the domain name.
 
 ---
 
-## 2. entity の書き方
+## 2. How to write an entity
 
 ```yaml
-- id: customer.account          # ドメイン.種別（必須）
-  type: account                 # account / person / contract / order / sku など（必須）
-  name: 顧客アカウント            # 人間可読名（必須）
-  description: 契約・購入の主体。  # 任意
-  attributes:                   # 自由属性。運用しながら足してよい
+- id: customer.account          # domain.kind (required)
+  type: account                 # account / person / contract / order / sku etc. (required)
+  name: Customer account        # a human-readable name (required)
+  description: The contracting/purchasing party.  # optional
+  attributes:                   # free-form attributes. Add these as you go
     segment: enum               # consumer / wholesale
     tier: enum                  # first_time / repeat / vip
-    amount_band: enum           # 実額は書かない。桁のバンドで表す
-  tags: [primary]               # 横断検索用の任意タグ
+    amount_band: enum           # don't write a real amount — express it as an order-of-magnitude band
+  tags: [primary]               # optional tags for cross-cutting search
 ```
 
-**機密の扱い**: 実名・実額・連絡先・認証情報は attributes に書かず、`secrets/` 側に置いて
-id で参照します（`profile.yaml` は役職のみ、金額は `amount_band` のようにバンド化）。
+**Handling confidential data**: don't write real names, real amounts, contact details, or
+credentials into attributes — put those in `secrets/` and reference them by id (`profile.yaml`
+holds only a role label, and an amount is banded, e.g. `amount_band`).
 
 ---
 
-## 3. event の書き方
+## 3. How to write an event
 
 ```yaml
 events:
-  - id: order.placed            # ドメイン.出来事名（必須）
-    type: order_placed          # 動詞形（必須）
-    actor: customer             # 誰が発生させたか（必須。agent / role / external）
-    target: customer.order      # 影響を受ける entity id（任意）
-    payload:                    # 自由構造データ（任意）
+  - id: order.placed            # domain.event_name (required)
+    type: order_placed          # verb form (required)
+    actor: customer             # who caused it (required. agent / role / external)
+    target: customer.order      # the affected entity id (optional)
+    payload:                    # free-form data (optional)
       channel: enum
       amount_band: enum
-    hitl_required: true         # true なら承認ゲートの対象（任意）
-    hitl_trigger_ref: large-deal  # definitions/hitl/triggers/<id>.yaml を参照（任意）
+    hitl_required: true         # true if this is subject to an approval gate (optional)
+    hitl_trigger_ref: large-deal  # references definitions/hitl/triggers/<id>.yaml (optional)
 ```
 
-`hitl_required: true` の event は、`hitl_trigger_ref` で承認トリガーに結びつけます
-（`definitions/hitl/triggers/` と `.claude/rules/hitl-gate.md` を参照）。
+An event with `hitl_required: true` is tied to an approval trigger via `hitl_trigger_ref`
+(see `definitions/hitl/triggers/` and `.claude/rules/hitl-gate.md`).
 
 ---
 
-## 4. relation の書き方
+## 4. How to write a relation
 
 ```yaml
 relations:
   - id: order_belongs_to_account
-    from_entity: customer.order   # 起点 entity id（必須）
-    to_entity: customer.account   # 終点 entity id（必須）
-    type: belongs_to              # belongs_to / signed / contains など（必須）
-    strength: 1.0                 # 0.0〜1.0 の関係の強さ（任意）
+    from_entity: customer.order   # the source entity id (required)
+    to_entity: customer.account   # the target entity id (required)
+    type: belongs_to              # belongs_to / signed / contains etc. (required)
+    strength: 1.0                 # the relationship's strength, 0.0-1.0 (optional)
 ```
 
 ---
 
-## 5. 新しい型を足すときの手順
+## 5. Steps for adding a new type
 
-1. 該当ドメインの yaml に entity / event / relation のエントリを追加する
-2. 新しい「型」の追加は `definitions/hitl/triggers/new-ontology-entity.yaml` の承認対象
-   （既存 entity への軽微なフィールド追加は低リスク）
-3. `schema_version` を更新する
-4. `python3 scripts/verify.py` の `ONTOLOGY-01`（YAML 構文）が PASS することを確認する
+1. Add an entity / event / relation entry to the relevant domain's yaml
+2. Adding a new "type" is subject to approval via
+   `definitions/hitl/triggers/new-ontology-entity.yaml` (a minor field addition to an
+   existing entity is low-risk)
+3. Update `schema_version`
+4. Confirm `python3 scripts/verify.py`'s `ONTOLOGY-01` (YAML syntax) PASSes
 
-> 既存のフィールド定義済み backend（外部ストレージ URI など）は starter では扱いません。
-> ここで表現するのは「事業構造の宣言」だけで、機密の物理保存先は `secrets/` に分離します。
+> This starter doesn't handle an already-field-defined backend (an external storage URI,
+> etc.). What's expressed here is only "the declaration of the business structure" — the
+> physical, confidential storage location is kept separate, in `secrets/`.

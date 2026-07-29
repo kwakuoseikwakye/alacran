@@ -1,17 +1,20 @@
-# Ontology Starter Template — 最小 3 domain (customer + org + product)
-# 自社オントロジー (事業構造の宣言的定義) を書き始めるための出発点。
+# Ontology Starter Template — a minimal 3 domains (customer + org + product)
+# The starting point for writing your own company ontology (the declarative definition of
+# your business structure).
 #
-# 使い方:
-#   1. 本ファイルを `definitions/ontology/company.yaml` にコピー
-#      (`/define-company` コマンドで対話生成する場合はこの手順を自動化)
-#   2. 必要に応じて customer.yaml / org.yaml / product.yaml に分割
-#   3. 業種固有 entity を attributes に追加 (例: 社労士なら labor_contract、EC なら sku)
-#   4. HITL Gate (`.claude/rules/hitl-gate.md`) の承認手順を踏んでから commit
+# How to use:
+#   1. Copy this file to `definitions/ontology/company.yaml`
+#      (automated by the `/define-company` command if generating interactively)
+#   2. Split into customer.yaml / org.yaml / product.yaml if needed
+#   3. Add industry-specific entities to attributes (e.g. labor_contract for a labor
+#      consultant, sku for an EC company)
+#   4. Commit only after going through the HITL Gate (`.claude/rules/hitl-gate.md`)
+#      approval procedure
 #
-# 設計原則:
-#   - 業種非依存 (どの業種でも適用可)
-#   - 最小開始 (workspace/task/schedule 等の domain は必要になってから追加)
-#   - 命名規約 = lowercase + ドット区切り (例: customer.account)
+# Design principles:
+#   - Industry-agnostic (applies to any industry)
+#   - Start minimal (add domains like workspace/task/schedule only once you actually need them)
+#   - Naming convention = lowercase + dot-separated (e.g. customer.account)
 
 version: 1
 schema_version: "2026-06-30-template"
@@ -19,23 +22,23 @@ template_origin: docs/templates/ontology-starter.yaml
 status: template
 
 # ============================================================
-# Domain 1: customer (顧客)
+# Domain 1: customer
 # ============================================================
 customer:
   domain: customer
   primary_owner_candidates:
-    - 営業担当 / SalesAgent
-    - 顧客対応チーム
-    - 社内オーケストレーター（CoordinatorAgent）
+    - Sales rep / SalesAgent
+    - Customer-support team
+    - The in-house orchestrator (CoordinatorAgent)
 
   entities:
     - id: customer.account
       type: account
-      name: 顧客アカウント
-      description: 顧客企業 / 個人 / 政府機関。契約主体。
+      name: Customer account
+      description: A customer company / individual / government body. The contracting party.
       attributes:
         name: string
-        industry: string  # 例: finance / healthcare / saas / labor_consulting / ec / manufacturing
+        industry: string  # e.g. finance / healthcare / saas / labor_consulting / ec / manufacturing
         employee_count: integer
         country: string
         tier: enum  # poc / pilot / production / strategic
@@ -45,8 +48,8 @@ customer:
 
     - id: customer.contact
       type: person
-      name: 顧客担当者
-      description: 顧客企業内の窓口・意思決定者。
+      name: Customer contact
+      description: The point of contact / decision-maker inside the customer company.
       attributes:
         name: string
         role: string
@@ -58,8 +61,8 @@ customer:
 
     - id: customer.contract
       type: contract
-      name: 契約
-      description: 顧客との金銭契約。単発 / 継続 / 成果報酬などの混合可。
+      name: Contract
+      description: A monetary contract with a customer. May be one-time, recurring, outcome-based, or a mix.
       attributes:
         contract_type: enum  # one_time / recurring / outcome / hybrid
         acv: number  # Annual Contract Value
@@ -70,7 +73,7 @@ customer:
       tags: [primary]
 
 # ============================================================
-# Domain 2: org (社内組織)
+# Domain 2: org
 # ============================================================
 org:
   domain: org
@@ -81,8 +84,8 @@ org:
   entities:
     - id: org.role
       type: role
-      name: 役割
-      description: 社内の職務役割。人 (employee) と agent の両方に割当可能。
+      name: Role
+      description: An in-house job role. Can be assigned to either a person (employee) or an agent.
       attributes:
         name: string
         description: string
@@ -92,8 +95,8 @@ org:
 
     - id: org.employee
       type: person
-      name: 従業員
-      description: 人間スタッフ。agent と協働。
+      name: Employee
+      description: A human staff member, working alongside agents.
       attributes:
         name: string
         email: string
@@ -106,8 +109,8 @@ org:
 
     - id: org.team
       type: team
-      name: チーム
-      description: 機能単位のチーム（運用チーム / 製品チーム等）。
+      name: Team
+      description: A functional team (e.g. an operations team, a product team).
       attributes:
         name: string
         purpose: string
@@ -117,19 +120,19 @@ org:
       tags: [secondary]
 
 # ============================================================
-# Domain 3: product (製品 / サービス)
+# Domain 3: product
 # ============================================================
 product:
   domain: product
   primary_owner_candidates:
-    - 商品企画担当 / ProductAgent
-    - 各製品の運用担当
+    - Product planning lead / ProductAgent
+    - The person operating each product
 
   entities:
     - id: product.offering
       type: offering
-      name: 提供物
-      description: 販売対象となる product / service。
+      name: Offering
+      description: The product / service being sold.
       attributes:
         name: string
         kind: enum  # saas / fde_engagement / consulting / hybrid
@@ -141,8 +144,8 @@ product:
 
     - id: product.feature
       type: feature
-      name: 機能
-      description: offering 内の個別機能単位。
+      name: Feature
+      description: An individual feature unit within an offering.
       attributes:
         name: string
         offering_id: string  # ref: product.offering
@@ -151,34 +154,35 @@ product:
       tags: [secondary]
 
 # ============================================================
-# Domain 別追加候補（業種別）
+# Candidate additional domains (by industry)
 # ============================================================
-# 本テンプレには含めないが、必要に応じて追加:
+# Not included in this template, but add as needed:
 #
-# Domain 追加候補:
-#   - partner (外部パートナー — 仕入先・媒体・代理店網など。事業の中心に外部主体がいる業種で追加)
+# Candidate domains to add:
+#   - partner (an external partner — suppliers, media, agency networks, etc. Add this for an
+#     industry where an external party sits at the center of the business)
 #
-# 運用系の追加候補:
-#   - hitl_gate_event (承認ゲート発火イベントの記録)
-#   - cycle_event (業務サイクルの周期記録)
+# Candidate operational additions:
+#   - hitl_gate_event (a record of approval-gate fire events)
+#   - cycle_event (a periodic record of the business cycle)
 #
-# 業種別例:
-#   専門サービス: engagement / session / case（案件）
-#   EC:          sku / order / inventory_alert
-#   製造:        production_line / quality_incident / equipment_maintenance
+# Examples by industry:
+#   Professional services: engagement / session / case (a matter)
+#   EC:                    sku / order / inventory_alert
+#   Manufacturing:         production_line / quality_incident / equipment_maintenance
 #
-# 追加手順:
-#   1. 該当 domain.yaml に entities[] エントリ追加
-#   2. HITL Gate (.claude/rules/hitl-gate.md) で承認要否を確認
-#   3. 新しい「型」の追加は new-ontology-entity トリガーの承認を通す
-#   4. scripts/verify.py で ONTOLOGY-01（YAML 構文）PASS を確認
+# How to add one:
+#   1. Add an entities[] entry to the relevant domain.yaml
+#   2. Check whether approval is needed via the HITL Gate (.claude/rules/hitl-gate.md)
+#   3. Route the addition of a new "type" through the new-ontology-entity trigger's approval
+#   4. Confirm ONTOLOGY-01 (YAML syntax) PASSes in scripts/verify.py
 
 # ============================================================
 # Template Acceptance
 # ============================================================
 template_acceptance:
-  - 3 domain (customer + org + product) 定義
-  - 各 domain に primary + secondary entity 計 8 件
-  - 命名規約 = lowercase + ドット区切り遵守
-  - 業種別追加候補をコメントで明示
-  - 業種固有 entity をテンプレ本体に含めない (中立性保持)
+  - Defines 3 domains (customer + org + product)
+  - 8 primary + secondary entities total across the domains
+  - Follows the naming convention = lowercase + dot-separated
+  - Candidate additions by industry are called out in comments
+  - Industry-specific entities are not included in the template body itself (keeps it neutral)

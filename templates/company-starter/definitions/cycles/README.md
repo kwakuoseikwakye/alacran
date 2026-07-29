@@ -1,21 +1,24 @@
-# definitions/cycles/ — 業務サイクル計画
+# definitions/cycles/ — business cycle plans
 
-チーム/部門の業務サイクル（週次・月次・日次）の刻みと、各フェーズの活動・承認ゲートを
-宣言する場所です。KPI（`kpi/`）と振り返り（`retro/`）がこのサイクルを基準に回ります。
+Where a team/department declares the cadence of its business cycle (weekly, monthly, daily) and
+the activities and approval gates of each phase. KPIs (`kpi/`) and retrospectives (`retro/`) both
+run against this cycle.
 
-## 生成のしかた
+## How to generate it
 
-`docs/templates/cycle-plan-template.yaml` を本ディレクトリにコピーし、
-`<team>-cycle-plan.yaml`（例: `ec-team-cycle-plan.yaml`）として記入します。
+Copy `docs/templates/cycle-plan-template.yaml` into this directory and fill it in as
+`<team>-cycle-plan.yaml` (e.g. `ec-team-cycle-plan.yaml`).
 
-- `cycle_unit` を `monthly` / `weekly` / `daily` から選ぶ（月締めが本質なら monthly、受注速度が速いなら weekly）。
-- `cycle_phases` は 3〜4 フェーズを推奨。各フェーズに `day_range` / `activities` / `hitl_gates` を書く。
-- 共通 2 KPI に加え、チーム固有の指標を metrics に足す。
-- `<<TODO_*>>` を全て埋め、`team_id` でチームを明示する。
+- Choose `cycle_unit` from `monthly` / `weekly` / `daily` (monthly if month-end closing is the
+  essence of the work, weekly if order velocity is fast).
+- 3–4 `cycle_phases` is recommended. Give each phase a `day_range` / `activities` / `hitl_gates`.
+- Add team-specific metrics on top of the 2 common KPIs.
+- Fill in every `<<TODO_*>>`, and make the team explicit via `team_id`.
 
-## 記入時の約束
+## Conventions when filling it in
 
-- サイクルのアンカー（週末セール・月初締め等）を `cycle_calendar` に明示する。
-- 承認ゲート（`hitl_gates`）は `definitions/hitl/` のトリガーと整合させる。
+- Make the cycle's anchors (a weekend sale, month-start closing, etc.) explicit in
+  `cycle_calendar`.
+- Keep approval gates (`hitl_gates`) consistent with the triggers in `definitions/hitl/`.
 
-記入済みの例: `examples/harukaze-ec/definitions/cycles/ec-team-cycle-plan.yaml`
+Filled-in example: `examples/harukaze-ec/definitions/cycles/ec-team-cycle-plan.yaml`

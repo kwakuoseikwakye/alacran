@@ -1,21 +1,24 @@
-# definitions/ontology/ — 事業構造の定義
+# definitions/ontology/ — definition of the business structure
 
-会社の事業構造（顧客 / 組織 / 製品の 3 ドメイン）を宣言的に記述する場所です。
-ここが埋まると、以降の KPI・サイクル・振り返りが「何についての指標か」を参照できるようになります。
+Where the company's business structure (the 3 domains of customer / org / product) is declared.
+Once this is filled in, the KPI, cycle and retrospective work that follows can reference "what a
+metric is actually about".
 
-## 生成のしかた
+## How to generate it
 
-- **対話生成（推奨）**: `/define-company` コマンドを実行すると、質問に答える形で
-  `definitions/ontology/company.yaml` が生成されます。
-- **手動記入**: `docs/templates/ontology-starter.yaml` を本ディレクトリに
-  `company.yaml` としてコピーし、customer / org / product の各ドメインを自社の実データで埋めます。
-  業種固有の entity（例: EC なら `sku` / `order`）は `company.yaml` にのみ追記し、雛形本体は編集しません。
+- **Interactive generation (recommended)**: running the `/define-company` command generates
+  `definitions/ontology/company.yaml` by answering a series of questions.
+- **Manual fill-in**: copy `docs/templates/ontology-starter.yaml` into this directory as
+  `company.yaml`, and fill in each of the customer / org / product domains with your own real
+  data. Industry-specific entities (e.g. `sku` / `order` for an EC company) should only be added
+  to `company.yaml` — never edit the template itself.
 
-## 記入時の約束
+## Conventions when filling it in
 
-- 命名規約は `lowercase + ドット区切り`（例: `customer.account`）。
-- entity や attribute を追加・削除したら `schema_version` を今日の日付に更新する
-  （詳細は `.claude/rules/definitions-touch.md`）。
-- 顧客の実名・個人情報は書かない（id 参照に留め、実データは別管理）。
+- Naming convention: `lowercase + dot-separated` (e.g. `customer.account`).
+- When you add or remove an entity or attribute, bump `schema_version` to today's date
+  (see `.claude/rules/definitions-touch.md` for details).
+- Don't write customers' real names or personal information (stick to id references — manage
+  the real data elsewhere).
 
-記入済みの例: `examples/harukaze-ec/definitions/ontology/company.yaml`
+Filled-in example: `examples/harukaze-ec/definitions/ontology/company.yaml`

@@ -1,21 +1,24 @@
-# definitions/kpi/ — KPI 計測仕様
+# definitions/kpi/ — KPI measurement specifications
 
-チーム/部門単位で「何を・どう測り・どの閾値で警告するか」を宣言する場所です。
-特定のコンセプトに依存せず、どんなチームの KPI でも記述できます。
+Where each team/department declares "what to measure, how, and at what threshold to warn."
+Not tied to any specific concept — any team's KPIs can be described here.
 
-## 生成のしかた
+## How to generate it
 
-`docs/templates/kpi-measurement-template.yaml` を本ディレクトリにコピーし、
-`<team>-kpi.yaml`（例: `ec-team-kpi.yaml`）として記入します。
+Copy `docs/templates/kpi-measurement-template.yaml` into this directory and fill it in as
+`<team>-kpi.yaml` (e.g. `ec-team-kpi.yaml`).
 
-- `<<TODO_*>>` プレースホルダーを全て自社の値に置き換える。
-- 共通 2 KPI（`cycle_completion_rate` / `hitl_intervention_rate`）は必須。
-- チーム固有の KPI を 2 件以上追加（例: 転換率・リピート率・在庫回転・問い合わせ応答時間）。
-- 通知手段は `github_label` / `manual` など、自社で運用できる任意の手段を指定する。
+- Replace every `<<TODO_*>>` placeholder with your own real values.
+- The 2 common KPIs (`cycle_completion_rate` / `hitl_intervention_rate`) are mandatory.
+- Add 2 or more team-specific KPIs (e.g. conversion rate, repeat rate, inventory turnover,
+  inquiry response time).
+- For the notification method, specify whatever your company can actually operate — `github_label`
+  / `manual` etc.
 
-## 記入時の約束
+## Conventions when filling it in
 
-- `team_id` でどのチームの KPI かを明示する（`docs/templates/` の雛形の一般化 placeholder）。
-- 実績値は創作値ではなく実データを入れる（例が欲しいときは examples/ を見る）。
+- Make clear which team's KPIs these are via `team_id` (a placeholder generalized from the
+  template in `docs/templates/`).
+- Put in real recorded values, not invented ones (see examples/ if you want a worked example).
 
-記入済みの例: `examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml`
+Filled-in example: `examples/harukaze-ec/definitions/kpi/ec-team-kpi.yaml`
