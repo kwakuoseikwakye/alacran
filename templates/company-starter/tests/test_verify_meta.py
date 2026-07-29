@@ -1,33 +1,33 @@
-"""verify.py の META（Issue-First / commit 規約遵守度）チェックの unittest スイート
-（Issue #45, #56）。
+"""The unittest suite for verify.py's META (adherence to Issue-First / commit
+conventions) check (Issue #45, #56).
 
-対象カテゴリ:
-  - META-01 (Issue 参照率)
-  - META-02 (Conventional Commits 準拠率)
-  - META-03 (コミットあたり diff サイズ / scope-contract.md §3 の自己計測)
+Categories covered:
+  - META-01 (the Issue-reference rate)
+  - META-02 (the Conventional Commits compliance rate)
+  - META-03 (diff size per commit / self-measuring scope-contract.md §3)
 
-META は verify.py で初めて WARN status を実際に発行する RQT である
-（Report クラス自体は元から WARN を定義していたが、どの verify_*() 関数も
-一度も emit していなかった）。WARN は exit code に影響しない「指標」であって
-「ゲート」ではない、という設計を PASS/WARN 両側で pin する。
+META is the first RQT in verify.py that actually emits a WARN status (the
+Report class itself always defined WARN, but no verify_*() function had ever
+emitted it). This pins the design that WARN is a non-blocking "indicator", not
+a "gate" that affects the exit code — on both the PASS and WARN sides.
 
-実行:
+Run:
     python3 -m unittest discover -s tests -p "test_verify_meta.py" -v
 """
 
 import unittest
 
-import helpers  # noqa: F401  (import 副作用で scripts/ が sys.path に入る)
+import helpers  # noqa: F401  (importing it puts scripts/ on sys.path, as a side effect)
 import verify
 from helpers import GitTestCase, VerifyTestCase, commit_all
 
 
 # ============================================================
-# SKIP 側 — .git が無い fixture
+# The SKIP side — a fixture with no .git
 # ============================================================
 class Meta01SkipTest(VerifyTestCase):
     def test_skip_without_git(self):
-        """SKIP 側: .git が無い fixture では META-01/02/03 とも commit metrics を飛ばす。"""
+        """SKIP side: with a fixture missing .git, META-01/02/03 all skip commit metrics."""
         res = self.check(verify.verify_meta)
         st1, msg1 = res["META-01"]
         st2, msg2 = res["META-02"]
@@ -41,11 +41,12 @@ class Meta01SkipTest(VerifyTestCase):
 
 
 # ============================================================
-# INFO 側 — サンプル不足（5 件未満）
+# The INFO side — too small a sample (fewer than 5 commits)
 # ============================================================
 class MetaSampleTooSmallTest(GitTestCase):
     def test_info_when_fewer_than_5_commits(self):
-        """INFO 側: commit が 5 件未満だと META-01/02/03 とも PASS/WARN 判定に昇格しない。"""
+        """INFO side: with fewer than 5 commits, none of META-01/02/03 is
+        promoted to a PASS/WARN verdict."""
         for i in range(3):
             commit_all(self.root, msg=f"chore: fixture {i} (#1)")
         res = self.check(verify.verify_meta)
@@ -56,16 +57,16 @@ class MetaSampleTooSmallTest(GitTestCase):
         self.assertEqual(st2, "INFO", msg2)
         self.assertEqual(st3, "INFO", msg3)
         self.assertIn("only 3 commit(s)", msg1)
-        self.assertIn("5 件以上になると", msg1)
+        self.assertIn("5+ commits", msg1)
         self.assertIn("only 3 commit(s)", msg3)
 
 
 # ============================================================
-# META-01 — Issue 参照率
+# META-01 — the Issue-reference rate
 # ============================================================
 class Meta01Test(GitTestCase):
     def test_pass_all_referenced_and_conventional(self):
-        """PASS 側（両方）: 5 件すべてが Conventional Commits + Issue 参照。"""
+        """PASS side (both): all 5 commits are Conventional Commits + reference an Issue."""
         for i in range(5):
             commit_all(self.root, msg=f"feat(verify): add check {i} (#{100 + i})")
         res = self.check(verify.verify_meta)
@@ -77,9 +78,10 @@ class Meta01Test(GitTestCase):
         self.assertIn("5/5", msg2)
 
     def test_warn_low_issue_ref_rate_keeps_meta02_pass(self):
-        """WARN 側(META-01)単独: subject は Conventional Commits を維持しつつ
-        Issue 参照だけを欠かせて META-01 のみを WARN に落とす（2 concern の分離）。"""
-        # 5 件中 1 件だけ Issue 参照あり → 1/5 = 0.2 < 0.8 → WARN。
+        """WARN side (META-01) alone: keep the subject Conventional-Commits-shaped
+        while dropping the Issue reference, so only META-01 falls to WARN
+        (separating the two concerns)."""
+        # only 1 of 5 references an Issue -> 1/5 = 0.2 < 0.8 -> WARN.
         commit_all(self.root, msg="feat(verify): add check 0 (#100)")
         offender_subjects = []
         for i in range(1, 5):
@@ -95,12 +97,13 @@ class Meta01Test(GitTestCase):
             any(s in msg1 for s in offender_subjects),
             f"expected an offender subject in: {msg1}",
         )
-        # META-02 は subject が全件 Conventional Commits のままなので PASS を維持。
+        # META-02 stays PASS since every subject is still Conventional Commits shaped.
         self.assertEqual(st2, "PASS", msg2)
 
-    def test_issue_mikakutei_counts_as_referenced(self):
-        """issue化予定 は Issue 参照とみなされる（issue-first.md §7.5 のオフライン代替）。"""
-        commit_all(self.root, msg="fix(verify): offline change (issue化予定)")
+    def test_issue_pending_counts_as_referenced(self):
+        """"issue pending" is treated as an Issue reference (the offline
+        fallback from issue-first.md §7.5)."""
+        commit_all(self.root, msg="fix(verify): offline change (issue pending)")
         for i in range(4):
             commit_all(self.root, msg=f"fix(verify): change {i} (#{200 + i})")
         res = self.check(verify.verify_meta)
@@ -110,12 +113,13 @@ class Meta01Test(GitTestCase):
 
 
 # ============================================================
-# META-02 — Conventional Commits 準拠率
+# META-02 — the Conventional Commits compliance rate
 # ============================================================
 class Meta02Test(GitTestCase):
     def test_warn_low_conventional_rate_keeps_meta01_pass(self):
-        """WARN 側(META-02)単独: Issue 参照は維持しつつ subject を Conventional
-        Commits から外して META-02 のみを WARN に落とす（2 concern の分離）。"""
+        """WARN side (META-02) alone: keep the Issue reference while taking the
+        subject out of Conventional Commits shape, so only META-02 falls to WARN
+        (separating the two concerns)."""
         commit_all(self.root, msg="feat(verify): conventional subject (#100)")
         offender_subjects = []
         for i in range(1, 5):
@@ -125,7 +129,7 @@ class Meta02Test(GitTestCase):
         res = self.check(verify.verify_meta)
         st1, msg1 = res["META-01"]
         st2, msg2 = res["META-02"]
-        # META-01 は全件 Issue 参照ありなので PASS を維持。
+        # META-01 stays PASS since every commit still references an Issue.
         self.assertEqual(st1, "PASS", msg1)
         self.assertEqual(st2, "WARN", msg2)
         self.assertIn("1/5", msg2)
@@ -135,7 +139,7 @@ class Meta02Test(GitTestCase):
         )
 
     def test_boundary_exactly_at_threshold_is_pass(self):
-        """境界: 4/5 = 0.8 ちょうどは >= 閾値なので PASS（WARN ではない）。"""
+        """Boundary: 4/5 = exactly 0.8 is >= the threshold, so PASS (not WARN)."""
         commit_all(self.root, msg="non-conventional subject (#100)")
         for i in range(4):
             commit_all(self.root, msg=f"chore(verify): fixture {i} (#{101 + i})")
@@ -147,16 +151,16 @@ class Meta02Test(GitTestCase):
 
 
 # ============================================================
-# META-03 — コミットあたり diff 行数
+# META-03 — diff lines per commit
 # ============================================================
 def _write_lines(tc, relpath, n):
-    """n 行の新規ファイルを書く（コミット時の insertions を確定させる）。"""
+    """Write a new file of n lines (fixes the number of insertions the commit will show)."""
     tc.write(relpath, "\n".join(f"line{i}" for i in range(n)) + "\n")
 
 
 class Meta03Test(GitTestCase):
     def test_pass_small_commits(self):
-        """PASS 側: 5 件すべて小さい変更 → PASS。メッセージに median を含む。"""
+        """PASS side: all 5 are small changes -> PASS. The message includes the median."""
         for i in range(5):
             _write_lines(self, f"f{i}.txt", 3)
             commit_all(self.root, msg=f"chore(verify): fixture {i} (#{100 + i})")
@@ -166,7 +170,7 @@ class Meta03Test(GitTestCase):
         self.assertIn("median", msg3)
 
     def test_warn_big_commit_ratio(self):
-        """WARN 側: 5 件中 2 件（40% > 30%）が 500 行超 → WARN。offender subject を含む。"""
+        """WARN side: 2 of 5 (40% > 30%) exceed 500 lines -> WARN. Includes an offender subject."""
         offender_subjects = []
         for i in range(2):
             _write_lines(self, f"big{i}.txt", 600)
@@ -185,7 +189,7 @@ class Meta03Test(GitTestCase):
         )
 
     def test_boundary_exactly_30_percent_is_pass(self):
-        """境界: 3/10 = 0.3 ちょうどは > 閾値ではないので PASS（WARN ではない）。"""
+        """Boundary: 3/10 = exactly 0.3 is not > the threshold, so PASS (not WARN)."""
         for i in range(3):
             _write_lines(self, f"big{i}.txt", 600)
             commit_all(self.root, msg=f"feat(verify): big {i} (#{300 + i})")
@@ -198,8 +202,8 @@ class Meta03Test(GitTestCase):
         self.assertIn("3/10", msg3)
 
     def test_empty_commit_does_not_crash(self):
-        """空コミット（--allow-empty で差分無し）は 0 行として扱われ、parser が
-        落ちないことを確認する。"""
+        """An empty commit (--allow-empty, no diff) is treated as 0 lines, and
+        confirms the parser doesn't crash on it."""
         _write_lines(self, "seed.txt", 3)
         commit_all(self.root, msg="chore(verify): seed (#400)")
         for i in range(4):

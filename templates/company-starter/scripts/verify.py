@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """
-AI 駆動経営合宿スターターテンプレの RQT (Requirements Traceability) 検証機構。
+The RQT (Requirements Traceability) verification mechanism for the AI-driven
+management retreat starter template.
 
-本 script は最小限の base RQT のみを持つ。参加者は自社向けの RQT を
-verify_*() 関数として追加してよい（追加時は main() の呼び出しリストにも
-追記すること）。
+This script carries only a minimal set of base RQTs. Participants may add their
+own company's RQTs as verify_*() functions (when you do, also add the call to
+main()'s call list).
 
-対象が存在しない RQT は FAIL ではなく SKIP（INFO ログ付き）として扱う。
-これはテンプレ配布直後にいきなり赤字だらけにしないための設計判断で、
-参加者がハーネスを段階的に育てていくことを前提にしている。
+An RQT whose target doesn't exist is treated as SKIP (with an INFO log) rather
+than FAIL. This is a deliberate design choice so the template doesn't come out
+covered in red the moment it's unpacked — it assumes participants grow the
+harness incrementally.
 
 Usage:
   python3 scripts/verify.py
@@ -34,7 +36,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class Report:
-    """PASS/WARN/FAIL/INFO を category 別に積み上げる薄いコンテナ。"""
+    """A thin container that accumulates PASS/WARN/FAIL/INFO rows by category."""
 
     def __init__(self):
         self.rows = []  # (category, id, status, message)
@@ -80,7 +82,7 @@ def load_yaml(path: Path):
 
 
 # ============================================================
-# Category: STRUCTURE — 最低限のリポジトリ骨格
+# Category: STRUCTURE — the minimal repository skeleton
 # ============================================================
 def verify_structure(r: Report):
     cat = "STRUCTURE"
@@ -91,12 +93,13 @@ def verify_structure(r: Report):
     else:
         r.add(cat, "STRUCTURE-01", "FAIL", "LICENSE.md not found")
 
-    # STRUCTURE-02: .gitignore が secrets/ と .env を「実効的に」遮断しているか。
-    # 部分文字列一致 ("secrets/" in body) だと secrets/** をコメントアウト
-    # (# secrets/**) しても否定行 (!secrets/**/) に文字列が残り PASS のまま
-    # という fake-green になる。そのため有効パターン行（コメント # / 空行 /
-    # 否定 ! を除いた行）で判定し、.git があれば git check-ignore による実効
-    # 確認も併用する（.git 無し環境では静的判定にフォールバック）。
+    # STRUCTURE-02: whether .gitignore EFFECTIVELY blocks secrets/ and .env.
+    # A substring match ("secrets/" in body) would fake-green: commenting out
+    # secrets/** (# secrets/**) still leaves the string present on a negated
+    # line (!secrets/**/), so it would keep PASSing. So this judges by active
+    # pattern lines only (excluding comment # / blank / negated ! lines), and
+    # where .git exists also cross-checks with git check-ignore for real
+    # (falling back to the static check in a .git-less environment).
     gitignore = REPO_ROOT / ".gitignore"
     if not gitignore.exists():
         r.add(cat, "STRUCTURE-02", "FAIL", ".gitignore not found")
@@ -111,7 +114,7 @@ def verify_structure(r: Report):
             unprotected.append("secrets/")
         if not any(".env" in ln for ln in effective):
             unprotected.append(".env")
-        # 静的判定が通った場合のみ git check-ignore で実効確認（裏取り）
+        # Only when the static check passes, corroborate with git check-ignore
         if not unprotected and (REPO_ROOT / ".git").exists():
             for probe, label in (("secrets/probe.txt", "secrets/"), (".env", ".env")):
                 try:
@@ -122,8 +125,8 @@ def verify_structure(r: Report):
                         timeout=10,
                     )
                 except (subprocess.SubprocessError, OSError):
-                    continue  # git 不在等は静的判定にフォールバック
-                if ci.returncode == 1:  # 1 = not ignored（遮断できていない）
+                    continue  # fall back to the static check if git etc. is unavailable
+                if ci.returncode == 1:  # 1 = not ignored (not effectively blocked)
                     unprotected.append(label)
         if unprotected:
             r.add(
@@ -154,17 +157,17 @@ def verify_structure(r: Report):
 
 
 # ============================================================
-# Category: HARNESS — .claude/settings.json の hooks 配線検証
+# Category: HARNESS — verifying the hook wiring in .claude/settings.json
 # ============================================================
 def _resolve_project_dir_vars(cmd: str) -> str:
-    """$CLAUDE_PROJECT_DIR / ${CLAUDE_PROJECT_DIR} を REPO_ROOT に解決する。"""
+    """Resolve $CLAUDE_PROJECT_DIR / ${CLAUDE_PROJECT_DIR} to REPO_ROOT."""
     resolved = cmd.replace("${CLAUDE_PROJECT_DIR}", str(REPO_ROOT))
     return resolved.replace("$CLAUDE_PROJECT_DIR", str(REPO_ROOT))
 
 
 def _iter_hook_commands(settings: dict):
-    """settings["hooks"]（event -> [{"matcher":..., "hooks":[{"type":"command",
-    "command":...}]}]）を走査し、command 文字列を列挙する。"""
+    """Walk settings["hooks"] (event -> [{"matcher":..., "hooks":[{"type":"command",
+    "command":...}]}]) and yield each command string."""
     hooks_cfg = settings.get("hooks")
     if not isinstance(hooks_cfg, dict):
         return
@@ -182,11 +185,13 @@ def _iter_hook_commands(settings: dict):
 
 
 def verify_harness(r: Report):
-    """HARNESS-01/02: .claude/settings.json の hooks 配線が「発火する状態」であることを検証する。
+    """HARNESS-01/02: verifies that the hook wiring in .claude/settings.json is
+    actually in a state where it will fire.
 
-    CLAUDE.md §6 の最頻出の詰まりどころ（hooks が発火しない: 実行権限 / 入力契約）を
-    RQT として構造化したもの。この検証機構は settings.json を読むだけで書き換えない
-    （配線の変更自体は別 concern）。
+    This structures CLAUDE.md §6's most common sticking point (hooks not firing:
+    execute permission / input contract) as an RQT. This checker only READS
+    settings.json and never rewrites it (changing the wiring itself is a
+    separate concern).
     """
     cat = "HARNESS"
     settings_path = REPO_ROOT / ".claude" / "settings.json"
@@ -197,7 +202,7 @@ def verify_harness(r: Report):
             "HARNESS-01",
             "INFO",
             f"{settings_path.relative_to(REPO_ROOT)} not found — "
-            "配置すると HARNESS-01 が PASS/FAIL 判定に昇格します",
+            "add one to promote HARNESS-01 to a PASS/FAIL verdict",
         )
         r.add(
             cat,
@@ -237,7 +242,7 @@ def verify_harness(r: Report):
         )
         return
 
-    # HARNESS-01: 静的検証（存在 / 実行権限 / shebang）
+    # HARNESS-01: static verification (exists / executable / shebang)
     problems = []
     bad_cmds = set()
     runnable = []  # [(command_str, resolved_path), ...]
@@ -247,7 +252,7 @@ def verify_harness(r: Report):
         path_token = tokens[0] if tokens else resolved_cmd
         p = Path(path_token)
         if not p.is_absolute() or not str(p).startswith(str(REPO_ROOT)):
-            continue  # repo 外（PATH 上のコマンド等）は対象外
+            continue  # out of scope: anything outside the repo (a command on PATH, etc.)
         if not p.exists():
             problems.append(f"{cmd}: file not found ({p})")
             bad_cmds.add(cmd)
@@ -279,17 +284,17 @@ def verify_harness(r: Report):
             f"{len(runnable)} hook command(s) exist, executable, and have a shebang",
         )
 
-    # HARNESS-02: hook スモークテスト（動的検証）。
+    # HARNESS-02: the hook smoke test (dynamic verification).
     #
-    # hook スクリプトはハードコードせず settings.json から動的に発見する
-    # （runnable は HARNESS-01 の走査結果）。これにより参加者が後から追加した
-    # hook も自動的にカバー対象になる。
+    # Hook scripts are not hard-coded — they are discovered dynamically from
+    # settings.json (runnable is HARNESS-01's scan result). This means a hook
+    # a participant adds later is automatically covered too.
     #
-    # サンプル入力は Bash-matcher / Edit・Write-matcher の両方を 1 発で
-    # カバーできるよう合成する: "git status" は git-ops-validator.sh の
-    # blocking/advisory どちらの分岐にも該当しない安全なコマンドで、
-    # file_path はわざと存在しないパスにして format-check.sh が
-    # 副作用なく exit 0 で抜けるようにしている。
+    # The sample input is composed so it exercises both the Bash-matcher and
+    # the Edit/Write-matcher path in one shot: "git status" is a safe command
+    # that doesn't match either the blocking or advisory branch of
+    # git-ops-validator.sh, and file_path is deliberately a non-existent path
+    # so format-check.sh exits 0 with no side effects.
     sample_input = json.dumps(
         {
             "tool_name": "Bash",
@@ -303,7 +308,7 @@ def verify_harness(r: Report):
     tested = 0
     for cmd, p in runnable:
         if cmd in bad_cmds:
-            continue  # HARNESS-01 で既に報告済み、二重報告を避ける
+            continue  # already reported by HARNESS-01 — avoid a duplicate report
         tested += 1
         try:
             proc = subprocess.run(
@@ -342,21 +347,22 @@ def verify_harness(r: Report):
 
 
 # ============================================================
-# Category: HYGIENE — コード衛生
+# Category: HYGIENE — code hygiene
 # ============================================================
 def verify_hygiene(r: Report):
     cat = "HYGIENE"
 
-    # HYGIENE-01: TODO(temp) マーカーが 30 日を超えて放置されていないか
-    # ベストエフォート: git blame が使えない環境（.git 無し等）では SKIP する
+    # HYGIENE-01: whether a TODO(temp) marker has been left for more than 30 days
+    # Best-effort: SKIP in an environment where git blame is unavailable (no .git, etc.)
     if not (REPO_ROOT / ".git").exists():
         r.add(
             cat, "HYGIENE-01", "SKIP", "not a git repository, skipping git-blame check"
         )
         return
 
-    # RQT 機構自身 (verify.py) と、TODO(temp) パターンを説明する doc は自己参照ヒット
-    # の time-bomb になるため除外する。参加者は自社コードのみを検査対象にしたい。
+    # The RQT mechanism itself (verify.py), and docs that explain the TODO(temp)
+    # pattern, are excluded — otherwise they become a self-reference time bomb.
+    # Participants want to scan only their own company's code.
     self_ref_paths = {
         "scripts/verify.py",
         ".claude/commands/verify.md",
@@ -427,7 +433,7 @@ def verify_hygiene(r: Report):
 
 
 # ============================================================
-# Category: ONTOLOGY — definitions/ontology/ の YAML 構文
+# Category: ONTOLOGY — the YAML syntax of definitions/ontology/
 # ============================================================
 def verify_ontology(r: Report):
     cat = "ONTOLOGY"
@@ -439,7 +445,7 @@ def verify_ontology(r: Report):
             "ONTOLOGY-01",
             "INFO",
             f"{ontology_dir.relative_to(REPO_ROOT)} not found — "
-            "yaml を配置すると ONTOLOGY-01 が PASS/FAIL 判定に昇格します "
+            "add a yaml to promote ONTOLOGY-01 to a PASS/FAIL verdict "
             "(cf. docs/templates/ontology-starter.yaml)",
         )
         return
@@ -453,14 +459,15 @@ def verify_ontology(r: Report):
             "ONTOLOGY-01",
             "INFO",
             "no yaml files under definitions/ontology/ — "
-            "yaml を配置すると ONTOLOGY-01 が PASS/FAIL 判定に昇格します "
+            "add a yaml to promote ONTOLOGY-01 to a PASS/FAIL verdict "
             "(cf. docs/templates/ontology-starter.yaml)",
         )
         return
 
-    # parse に加え、最低限のスキーマを検査する。分割ファイル運用（customer.yaml
-    # 等）を考慮し、各 yaml の top-level が mapping で customer / org / product の
-    # いずれか 1 つ以上を持てば OK とする（cf. docs/templates/ontology-starter.yaml）。
+    # Beyond just parsing, check a minimal schema. To allow a split-file setup
+    # (customer.yaml etc.), it's OK as long as each yaml's top level is a mapping
+    # containing at least one of customer / org / product
+    # (cf. docs/templates/ontology-starter.yaml).
     ontology_keys = ("customer", "org", "product")
     problems = []
     for f in yaml_files:
@@ -492,20 +499,24 @@ def verify_ontology(r: Report):
 
 
 # ============================================================
-# Category: HITL — HITL Gate トリガー定義
+# Category: HITL — HITL Gate trigger definitions
 # ============================================================
 def _load_approver_roles():
-    """definitions/hitl/approver-registry.yaml の role_assignments キー集合を返す。
+    """Return the set of role_assignments keys from
+    definitions/hitl/approver-registry.yaml.
 
-    ファイル不在 / 未記入（値側に <<TODO 残存）/ parse 不能 / role_assignments 不在の
-    いずれかなら None を返し、呼び出し側は approver_role の照合をスキップする（INFO 側に倒す）。
-    未記入のレジストリに対して trigger の役割を FAIL 扱いにすると、記入順序を強制して
-    しまい偽陰性の元になるため、照合はレジストリが記入済みのときだけ有効化する。"""
+    Returns None if the file is absent, unfilled (a value still contains
+    <<TODO), unparseable, or has no role_assignments — the caller then skips
+    matching approver_role (falling to the INFO side). Treating a trigger's
+    role as FAIL against an unfilled registry would force a specific fill-in
+    order and create false negatives, so matching is only enabled once the
+    registry has actually been filled in."""
     reg = REPO_ROOT / "definitions" / "hitl" / "approver-registry.yaml"
     if not reg.exists():
         return None
     body = reg.read_text(encoding="utf-8")
-    # 値側（YAML コメント # 以降を除く）に <<TODO が残るレジストリは未記入とみなす。
+    # A registry whose value side (excluding anything after a YAML # comment)
+    # still contains <<TODO is treated as unfilled.
     if any("<<TODO" in line.split("#", 1)[0] for line in body.splitlines()):
         return None
     data, err = load_yaml(reg)
@@ -517,19 +528,21 @@ def _load_approver_roles():
     return set(roles.keys())
 
 
-# Issue #50: HITL-01 の fake-green 修正。
-# 旧実装は body 中に "|" と "---" が 1 個でもあれば PASS していたため、
-# トリガー表を丸ごと削除しても「散在する | と thematic-break の --- 行」だけで
-# 誤って PASS していた（hitl-gate.md は両者を大量に含む）。本物の Markdown 表
-# ＝ ヘッダ行 + 区切り行 + 1 行以上のデータ行 が隣接して存在することを行単位で検出する。
-#   header: パイプの左右に文字を持つ（2 セル以上）行
-#   divider: | --- | --- | / |---|---| 系（区切りセルが 2 個以上、alignment colon 可）
+# Issue #50: fixes HITL-01's fake-green.
+# The old implementation PASSed as long as the body contained even one "|" and
+# one "---", so it wrongly PASSed on nothing more than scattered | characters
+# and a thematic-break --- line, even with the whole trigger table deleted
+# (hitl-gate.md contains plenty of both). This detects, line by line, that a
+# REAL Markdown table — a header row + a divider row + one or more data rows —
+# actually sits adjacent to each other.
+#   header: a line with a character on both sides of a pipe (2+ cells)
+#   divider: | --- | --- | / |---|---| style (2+ divider cells, alignment colons allowed)
 _MD_TABLE_HEADER_RE = re.compile(r"\S\s*\|\s*\S")
 _MD_TABLE_DIVIDER_RE = re.compile(r"^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$")
 
 
 def _count_md_table_rows(body: str) -> int:
-    """本物の Markdown 表を検出し、最初に見つかった表のデータ行数を返す（無ければ 0）。"""
+    """Detect a real Markdown table and return the data-row count of the first one found (0 if none)."""
     lines = body.splitlines()
     for i in range(len(lines) - 1):
         if _MD_TABLE_HEADER_RE.search(lines[i]) and _MD_TABLE_DIVIDER_RE.match(
@@ -560,7 +573,7 @@ def verify_hitl(r: Report):
         return
 
     body = hitl_rule.read_text(encoding="utf-8")
-    # トリガーテーブルの存在判定: 本物の Markdown 表（header+divider+データ行）を検出する（Issue #50）
+    # Whether a trigger table exists: detect a real Markdown table (header+divider+data rows) (Issue #50)
     data_rows = _count_md_table_rows(body)
     if data_rows >= 1:
         r.add(
@@ -572,18 +585,23 @@ def verify_hitl(r: Report):
     else:
         r.add(cat, "HITL-01", "FAIL", "hitl-gate.md exists but no trigger table found")
 
-    # HITL-02: definitions/hitl/triggers/*.yaml を検証する。
+    # HITL-02: verifies definitions/hitl/triggers/*.yaml.
     #
-    # 役割分担: .claude/rules/hitl-gate.md §2 の表は判断原則の「思想カテゴリ」一覧
-    # （人間と AI が読む全体像）、ここ (triggers/*.yaml) が個別トリガーの運用上の SSOT
-    # （機械検証の対象）。トリガーを追加・変更するときは yaml 側が正。
+    # Division of roles: the table in .claude/rules/hitl-gate.md §2 is the
+    # category list of judgement principles (the overview a human or AI reads),
+    # while here (triggers/*.yaml) is the operational SSOT of individual
+    # triggers (what machine verification checks). When adding or changing a
+    # trigger, the yaml side is authoritative.
     #
-    # 検証内容:
-    #   (a) 未記入雛形（値側に <<TODO 残存）は INFO。記入すると PASS/FAIL 判定に昇格。
-    #   (b) 記入済みは _schema.md §1 の必須キーを検証。
-    #   (c) 記入済みの approver_role は approver-registry.yaml の role_assignments と照合。
-    # _ で始まるファイル (_schema 等) は記法ガイドなので対象外。
-    # yaml 無し（未記入）は正常状態なので INFO。examples/ 側は EXAMPLE-01/02 がカバー。
+    # What is verified:
+    #   (a) An unfilled template (a value still contains <<TODO) is INFO.
+    #       Filling it in promotes it to a PASS/FAIL verdict.
+    #   (b) A filled one is checked against the required keys in _schema.md §1.
+    #   (c) A filled approver_role is matched against the role_assignments in
+    #       approver-registry.yaml.
+    # Files starting with _ (such as _schema) are notation guides, out of scope.
+    # No yaml (unfilled) is a normal state, so INFO. The examples/ side is
+    # covered by EXAMPLE-01/02.
     triggers_dir = REPO_ROOT / "definitions" / "hitl" / "triggers"
     if not triggers_dir.exists():
         r.add(
@@ -591,7 +609,7 @@ def verify_hitl(r: Report):
             "HITL-02",
             "INFO",
             "definitions/hitl/triggers/ not found — "
-            "trigger yaml を配置すると HITL-02 が PASS/FAIL 判定に昇格します "
+            "add a trigger yaml to promote HITL-02 to a PASS/FAIL verdict "
             "(cf. definitions/hitl/triggers/_schema.md §1)",
         )
         return
@@ -608,12 +626,12 @@ def verify_hitl(r: Report):
             "HITL-02",
             "INFO",
             "no trigger yaml under definitions/hitl/triggers/ — "
-            "trigger yaml を配置すると HITL-02 が PASS/FAIL 判定に昇格します "
+            "add a trigger yaml to promote HITL-02 to a PASS/FAIL verdict "
             "(cf. definitions/hitl/triggers/_schema.md §1)",
         )
         return
 
-    # _schema.md §1 の必須キーと一致させる（従来の 4 個から拡張）。
+    # Match the required keys in _schema.md §1 (expanded from the original 4).
     required_keys = (
         "id",
         "name",
@@ -623,10 +641,11 @@ def verify_hitl(r: Report):
         "notify",
         "on_timeout",
     )
-    # 承認者レジストリの役割集合（未記入 / 不在なら None → approver_role 照合はスキップ）。
+    # The set of roles from the approver registry (None if unfilled/absent -> approver_role matching is skipped).
     approver_roles = _load_approver_roles()
 
-    # 値側（YAML コメント # 以降を除く）に <<TODO が残るファイルは「未記入雛形」= INFO 扱い。
+    # A file whose value side (excluding anything after a YAML # comment) still
+    # contains <<TODO is treated as an "unfilled template" = INFO.
     filled, unfilled = [], []
     for f in trigger_files:
         body = f.read_text(encoding="utf-8")
@@ -660,7 +679,7 @@ def verify_hitl(r: Report):
             "HITL-02",
             "FAIL",
             f"definitions/hitl/triggers/ issues: {problems} "
-            "(記入内容を _schema.md §1 と approver-registry.yaml に合わせてください)",
+            "(please align the filled-in content with _schema.md §1 and approver-registry.yaml)",
         )
     elif filled:
         note = (
@@ -669,9 +688,9 @@ def verify_hitl(r: Report):
             else ""
         )
         role_note = (
-            "approver_role registry 照合済"
+            "approver_role matched against the registry"
             if approver_roles is not None
-            else "approver-registry.yaml 未記入のため役割照合はスキップ"
+            else "role matching skipped because approver-registry.yaml is not yet filled in"
         )
         r.add(
             cat,
@@ -686,20 +705,20 @@ def verify_hitl(r: Report):
             "HITL-02",
             "INFO",
             f"{len(unfilled)} trigger template(s) still contain <<TODO>> "
-            "placeholders — 記入すると HITL-02 が PASS/FAIL 判定に昇格します "
-            "(_schema.md §1 の必須キーに沿って記入してください)",
+            "placeholders — fill it in to promote HITL-02 to a PASS/FAIL verdict "
+            "(fill it in following the required keys in _schema.md §1)",
         )
 
 
 # ============================================================
-# Category: STRUCT-DEF — definitions/ 骨格の出荷時実体
+# Category: STRUCT-DEF — the shipped skeleton of definitions/
 # ============================================================
 def verify_struct_def(r: Report):
     cat = "STRUCT-DEF"
     defs = REPO_ROOT / "definitions"
 
-    # 各サブディレクトリは README.md または .gitkeep のどちらかで
-    # 「出荷物として存在する」ことを示せばよい。
+    # Each subdirectory only needs a README.md or a .gitkeep to show it
+    # "exists as shipped".
     def has_marker(d: Path):
         return d.is_dir() and ((d / "README.md").exists() or (d / ".gitkeep").exists())
 
@@ -732,7 +751,7 @@ def verify_struct_def(r: Report):
 
 
 # ============================================================
-# Category: STRUCT-DOC — 出荷時から実体化しているべき doc/引き継ぎ物
+# Category: STRUCT-DOC — docs/handover artefacts that should already exist as shipped
 # ============================================================
 def verify_struct_doc(r: Report):
     cat = "STRUCT-DOC"
@@ -750,7 +769,7 @@ def verify_struct_doc(r: Report):
 
 
 # ============================================================
-# Category: EXAMPLE — examples/ 記入済みサンプルの健全性
+# Category: EXAMPLE — the health of the filled-in samples under examples/
 # ============================================================
 def verify_examples(r: Report):
     cat = "EXAMPLE"
@@ -772,7 +791,7 @@ def verify_examples(r: Report):
         r.add(cat, "EXAMPLE-01", "INFO", "no yaml files under examples/")
         return
 
-    # EXAMPLE-01: 全 yaml が parse できること
+    # EXAMPLE-01: every yaml must parse
     bad = []
     for f in yaml_files:
         _, err = load_yaml(f)
@@ -788,7 +807,7 @@ def verify_examples(r: Report):
             f"{len(yaml_files)} example yaml file(s) parse OK",
         )
 
-    # EXAMPLE-02: 記入済み完成例なので placeholder <<TODO が残っていないこと
+    # EXAMPLE-02: since this is a filled-in complete example, no <<TODO placeholder should remain
     leftover = []
     for f in yaml_files:
         try:
@@ -808,9 +827,9 @@ def verify_examples(r: Report):
 
 
 def _verify_def_category(r: Report, cat: str, id_: str, subdir: str):
-    """definitions/<subdir>/ に yaml が置かれた場合のみ、
-    (a) parse / (b) <<TODO 残存ゼロ / (c) team_id または domain キーの存在 を検証する。
-    未記入（yaml 無し）は正常状態なので INFO/SKIP。"""
+    """Only when a yaml is placed under definitions/<subdir>/, verify
+    (a) it parses, (b) zero remaining <<TODO, and (c) the presence of a
+    team_id or domain key. Unfilled (no yaml) is a normal state, so INFO/SKIP."""
     target = REPO_ROOT / "definitions" / subdir
     if not target.exists():
         r.add(
@@ -818,7 +837,7 @@ def _verify_def_category(r: Report, cat: str, id_: str, subdir: str):
             id_,
             "INFO",
             f"definitions/{subdir}/ not found — "
-            f"yaml を配置すると {id_} が PASS/FAIL 判定に昇格します",
+            f"add a yaml to promote {id_} to a PASS/FAIL verdict",
         )
         return
 
@@ -829,7 +848,7 @@ def _verify_def_category(r: Report, cat: str, id_: str, subdir: str):
             id_,
             "INFO",
             f"no yaml files under definitions/{subdir}/ — "
-            f"yaml を配置すると {id_} が PASS/FAIL 判定に昇格します",
+            f"add a yaml to promote {id_} to a PASS/FAIL verdict",
         )
         return
 
@@ -840,8 +859,9 @@ def _verify_def_category(r: Report, cat: str, id_: str, subdir: str):
             problems.append(f"{f.name}: {err}")
             continue
         body = f.read_text(encoding="utf-8")
-        # YAML コメント部（# 以降）に書かれた <<TODO への言及は誤検知なので除外し、
-        # 値側に残った未記入プレースホルダのみを行番号付きで報告する。
+        # A mention of <<TODO written in a YAML comment (after #) is a false
+        # positive, so it's excluded — only an unfilled placeholder still on
+        # the value side is reported, with its line number.
         for ln_no, line in enumerate(body.splitlines(), start=1):
             if "<<TODO" in line.split("#", 1)[0]:
                 problems.append(f"{f.name}:{ln_no}: unfilled <<TODO placeholder")
@@ -865,7 +885,7 @@ def verify_definitions(r: Report):
     _verify_def_category(r, cat, "DEF-CYCLE-01", "cycles")
     _verify_def_category(r, cat, "DEF-RETRO-01", "retro")
 
-    # DEF-CLIENT-01: definitions/clients/<slug>/ があれば各 slug に profile.yaml
+    # DEF-CLIENT-01: if definitions/clients/<slug>/ exists, each slug should have a profile.yaml
     clients_dir = REPO_ROOT / "definitions" / "clients"
     if not clients_dir.exists():
         r.add(
@@ -873,8 +893,8 @@ def verify_definitions(r: Report):
             "DEF-CLIENT-01",
             "INFO",
             "definitions/clients/ not found — "
-            "client slug directory を作成し profile.yaml 等を配置すると "
-            "DEF-CLIENT-01 が PASS/FAIL 判定に昇格します (任意機能)",
+            "create a client slug directory and add a profile.yaml etc. to "
+            "promote DEF-CLIENT-01 to a PASS/FAIL verdict (an optional feature)",
         )
         return
     slugs = [
@@ -888,8 +908,8 @@ def verify_definitions(r: Report):
             "DEF-CLIENT-01",
             "INFO",
             "no client slug directory under definitions/clients/ — "
-            "slug ディレクトリを作成し profile.yaml 等を配置すると "
-            "DEF-CLIENT-01 が PASS/FAIL 判定に昇格します (任意機能)",
+            "create a slug directory and add a profile.yaml etc. to "
+            "promote DEF-CLIENT-01 to a PASS/FAIL verdict (an optional feature)",
         )
         return
     problems = []
@@ -913,19 +933,22 @@ def verify_definitions(r: Report):
 
 
 # ============================================================
-# Category: STOCK — Obsidian 互換規約（notes/ L2 記述層）の機械検証
+# Category: STOCK — machine verification of the Obsidian-compatible
+# conventions (the notes/ L2 description layer)
 # ============================================================
-# docs/decisions/2026-07-03-obsidian-context-stock.md（Decision RFC, accepted）§6 の
-# RQT 追加候補 STOCK-01〜05 を実装する（Phase C）。frontmatter 必須キー・wikilink 解決・
-# inbox 滞留・L1 への Obsidian 記法混入・market ノートの鮮度を検証する。
+# Implements the RQT candidates STOCK-01 through 05 proposed in
+# docs/decisions/2026-07-03-obsidian-context-stock.md (Decision RFC, accepted)
+# §6 (Phase C). Verifies mandatory frontmatter keys, wikilink resolution,
+# inbox backlog, Obsidian syntax leaking into L1, and the freshness of market
+# notes.
 _FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.DOTALL)
 _WIKILINK_RE = re.compile(r"(?<!!)\[\[([^\]|#^]+)")
-_INLINE_CODE_RE = re.compile(r"`[^`]*`")  # STOCK-06: コードスパン除去用（偽陽性回避）
+_INLINE_CODE_RE = re.compile(r"`[^`]*`")  # STOCK-06: strips code spans (avoids false positives)
 STOCK_L2_SHELF_DIRS = ("company", "market", "clients", "sops")
 STOCK_LEGACY_DOC_DIRS = (
     "decisions",
     "retros",
-)  # docs/ 配下。既存ファイルは遡及改変しない
+)  # under docs/. Existing files are never retroactively edited
 STOCK_REQUIRED_BASE = ("type", "status", "created", "updated", "tags")
 STOCK_TYPE_EXTRA_REQUIRED = {
     "market": ("source", "observed_at"),
@@ -947,10 +970,10 @@ STOCK_ALLOWED_TYPES = (
 
 
 def _parse_frontmatter(path: Path):
-    """L2 ノートの frontmatter を読む。戻り値は (data, err):
-    - (dict, None): 正常にパースできた
-    - (None, None): frontmatter ブロックが無い（旧形式ファイル等）
-    - (None, str): frontmatter はあるが parse できない/mapping でない
+    """Read an L2 note's frontmatter. Returns (data, err):
+    - (dict, None): parsed successfully
+    - (None, None): there is no frontmatter block (e.g. a legacy-format file)
+    - (None, str): there is frontmatter, but it fails to parse or isn't a mapping
     """
     try:
         text = path.read_text(encoding="utf-8")
@@ -969,8 +992,8 @@ def _parse_frontmatter(path: Path):
 
 
 def _git_file_last_commit_ts(path: Path):
-    """path の最新コミット時刻（epoch秒）。git 管理外/未コミットなら None
-    （呼び出し側が mtime にフォールバックする）。"""
+    """The timestamp (epoch seconds) of path's most recent commit. None if it
+    isn't tracked by git or hasn't been committed (the caller falls back to mtime)."""
     try:
         res = subprocess.run(
             [
@@ -1013,14 +1036,14 @@ def verify_stock(r: Report):
         if d.exists():
             legacy_files += [f for f in sorted(d.glob("*.md")) if f.name != "README.md"]
 
-    # --- STOCK-01: frontmatter 必須キー（type 別） ---
+    # --- STOCK-01: mandatory frontmatter keys (per type) ---
     if not notes_files and not legacy_files:
         r.add(
             cat,
             "STOCK-01",
             "INFO",
             "no L2 notes under notes/{company,market,clients,sops}/ or "
-            "docs/{decisions,retros}/ — ノートを作成すると STOCK-01 が PASS/FAIL 判定に昇格します",
+            "docs/{decisions,retros}/ — create a note to promote STOCK-01 to a PASS/FAIL verdict",
         )
     else:
         problems, checked = [], 0
@@ -1061,7 +1084,7 @@ def verify_stock(r: Report):
                 problems.append(f"{f.relative_to(REPO_ROOT)}: {err}")
                 continue
             if data is None or "type" not in data:
-                continue  # Phase A 以前の既存ファイルは遡及改変しないため対象外
+                continue  # out of scope — pre-Phase-A existing files are never retroactively edited
             checked += 1
             _check_required_keys(f, data)
 
@@ -1082,7 +1105,7 @@ def verify_stock(r: Report):
                 "no L2 note applies the extended frontmatter schema yet (legacy-only)",
             )
 
-    # --- STOCK-02: wikilink 解決可能性（notes/ 内のみ、ルート相対または一意なファイル名） ---
+    # --- STOCK-02: wikilink resolvability (notes/ only, root-relative or a unique filename) ---
     if not notes_files:
         r.add(cat, "STOCK-02", "INFO", "no notes/ files to scan for wikilinks")
     else:
@@ -1124,7 +1147,7 @@ def verify_stock(r: Report):
         else:
             r.add(cat, "STOCK-02", "PASS", "no wikilinks found")
 
-    # --- STOCK-03: notes/inbox/ 滞留（7 日超） ---
+    # --- STOCK-03: notes/inbox/ backlog (older than 7 days) ---
     inbox_dir = notes_dir / "inbox"
     if not inbox_dir.exists():
         r.add(cat, "STOCK-03", "INFO", "notes/inbox/ not found")
@@ -1150,7 +1173,7 @@ def verify_stock(r: Report):
                     "STOCK-03",
                     "WARN",
                     f"{len(stale)}/{len(inbox_files)} inbox note(s) stale "
-                    f"(>{STOCK_INBOX_STALE_DAYS} days, /ingest-context inbox 推奨): {stale}",
+                    f"(>{STOCK_INBOX_STALE_DAYS} days, /ingest-context inbox recommended): {stale}",
                 )
             else:
                 r.add(
@@ -1160,7 +1183,7 @@ def verify_stock(r: Report):
                     f"{len(inbox_files)} inbox note(s), none stale (>{STOCK_INBOX_STALE_DAYS} days)",
                 )
 
-    # --- STOCK-04: definitions/（L1）への Obsidian 記法混入 ---
+    # --- STOCK-04: Obsidian syntax leaking into definitions/ (L1) ---
     definitions_dir = REPO_ROOT / "definitions"
     if not definitions_dir.exists():
         r.add(cat, "STOCK-04", "INFO", "definitions/ not found")
@@ -1195,7 +1218,7 @@ def verify_stock(r: Report):
                     f"{len(yaml_files)} definitions/ yaml file(s) free of Obsidian syntax",
                 )
 
-    # --- STOCK-05: notes/market/ の鮮度（observed_at 90 日超）---
+    # --- STOCK-05: freshness of notes/market/ (observed_at older than 90 days) ---
     market_dir = notes_dir / "market"
     if not market_dir.exists():
         r.add(cat, "STOCK-05", "INFO", "notes/market/ not found")
@@ -1227,7 +1250,7 @@ def verify_stock(r: Report):
                 age = (today - observed_date).days
                 if age > STOCK_MARKET_STALE_DAYS:
                     stale.append(
-                        f"{f.relative_to(REPO_ROOT)} (observed_at {observed_date}, {age}日経過)"
+                        f"{f.relative_to(REPO_ROOT)} (observed_at {observed_date}, {age} days elapsed)"
                     )
             if stale:
                 r.add(
@@ -1245,9 +1268,11 @@ def verify_stock(r: Report):
                     f"{STOCK_MARKET_STALE_DAYS} days (or unset)",
                 )
 
-    # --- STOCK-06: L2 への Obsidian アプリ依存記法（embed / Dataview / Bases）の混入検査 ---
-    # 走査対象は notes/ L2 のみ。docs/decisions・docs/retros は対象外（Decision RFC 自身が
-    # 本文で ![[...]] 記法を解説しており偽陽性になるため — RFC SYNTAX-1 参照）。
+    # --- STOCK-06: check for Obsidian app-dependent syntax (embed / Dataview /
+    # Bases) leaking into L2 ---
+    # Scans notes/ L2 only. docs/decisions and docs/retros are out of scope
+    # (the Decision RFC itself explains the ![[...]] syntax in its body, which
+    # would be a false positive — see RFC SYNTAX-1).
     scan_files = list(notes_files)
     inbox_l2 = notes_dir / "inbox"
     if inbox_l2.exists():
@@ -1270,7 +1295,7 @@ def verify_stock(r: Report):
                 stripped = line.lstrip()
                 if stripped.startswith("```dataview") or stripped.startswith("```base"):
                     hits.add("dataview/base fence")
-                if "![[" in _INLINE_CODE_RE.sub("", line):  # コードスパン除去後にマッチ
+                if "![[" in _INLINE_CODE_RE.sub("", line):  # match after stripping code spans
                     hits.add("embed ![[")
             if hits:
                 violations.append(f"{f.relative_to(REPO_ROOT)} {sorted(hits)}")
@@ -1293,18 +1318,23 @@ def verify_stock(r: Report):
 
 
 # ============================================================
-# Category: GEN — 一般化ゲート（撤去済みドメイン用語の残存検知）
+# Category: GEN — the generalisation gate (detects residual traces of a
+# retired domain term)
 # ============================================================
 def verify_gen(r: Report):
-    """GEN-01: リポジトリ内に、Phase E の一般テンプレート化で撤去した旧ドメイン用語
-    （3 文字の略語）が残存しないことを検証し、再混入を構造的に防ぐ。
-    除外対象は .git / .github/workflows/verify.yml / .gitignore（どちらも defensive
-    な検出パターンとして当該用語を意図的に含む）。git 追跡下のファイルのみ対象、
-    大文字小文字は無視する。
+    """GEN-01: verifies that no residual trace remains in the repository of the
+    old domain term (a 3-letter abbreviation) retired during Phase E's
+    generalisation into a generic template, and structurally prevents it
+    creeping back in.
+    Excluded: .git / .github/workflows/verify.yml / .gitignore (both
+    deliberately contain the term as a defensive detection pattern). Only
+    git-tracked files are in scope; case is ignored.
 
-    実装ノート: 検索語はソースに literal で書かず部品から組み立てる。GEN-01 の grep
-    ゲートは verify.py 自身を除外せずゼロを要求するため、本ファイルが自分の検索語で
-    self-match しないようにするための措置（HYGIENE-01 の self-reference 対策と同趣旨）。"""
+    Implementation note: the search term is assembled from parts rather than
+    written as a literal in the source. GEN-01's grep gate requires zero hits
+    without excluding verify.py itself, so this is what stops this file
+    self-matching on its own search term (the same idea as HYGIENE-01's
+    self-reference guard)."""
     cat = "GEN"
 
     if not (REPO_ROOT / ".git").exists():
@@ -1358,28 +1388,32 @@ def verify_gen(r: Report):
 
 
 # ============================================================
-# Category: META — Issue-First / commit 規約の遵守度計測
+# Category: META — measuring adherence to Issue-First / commit conventions
 # ============================================================
-# 直近コミットの Issue 参照率・Conventional Commits 準拠率を計測する、初めての
-# メタ KPI（Issue #45）。issue-first.md §7 は事後起票・オフライン代替を明示的に
-# 許容しているため、これを FAIL でゲートすると正当な運用まで赤くしてしまう。
-# そのため WARN（非ブロッキング。exit code に影響しない）に倒す —
-# Report クラスに元々定義されていた WARN status の初の実使用。
-META_SAMPLE_SIZE = 20  # 直近何件の non-merge commit を対象にするか
-META_MIN_SAMPLE = 5  # これ未満は配布直後のサンプル不足とみなし INFO に倒す
-# 0.8: issue-first.md §7 の事後起票・例外運用を許容しつつ、怠慢（起票そのものを
-# しない状態）を検知するための緩めの初期値。閾値は自社の運用実態に合わせて
-# 引き上げてよい（本ファイル冒頭の設計コメント: 参加者は verify_*() を育てる）。
+# The first meta-KPI (Issue #45), measuring the Issue-reference rate and
+# Conventional Commits compliance rate of recent commits. issue-first.md §7
+# explicitly allows filing after the fact and an offline fallback, so gating
+# this with FAIL would flag legitimate practice as red. So it falls to WARN
+# (non-blocking, doesn't affect the exit code) — the first real use of the
+# WARN status that was already defined on the Report class.
+META_SAMPLE_SIZE = 20  # how many recent non-merge commits to sample
+META_MIN_SAMPLE = 5  # below this, treat it as too soon after unpacking and fall to INFO
+# 0.8: a loose initial value that allows the after-the-fact filing and
+# exceptions permitted by issue-first.md §7, while still catching outright
+# neglect (never filing at all). Raise the threshold to match your own
+# company's practice (see the design comment at the top of this file:
+# participants grow verify_*() over time).
 META_ISSUE_REF_THRESHOLD = 0.8
 META_CONVENTIONAL_THRESHOLD = 0.8
-# scope-contract.md §3 Feature（単一 concern）の「要分割検討」目安 500 行を、
-# docs/test 系も含む単一の緩い初期値として流用する（自社で厳格化してよい）。
+# Reuses scope-contract.md §3's 500-line "consider splitting" guideline for a
+# Feature (single concern) as one loose initial value covering docs/tests too
+# (tighten it for your own company).
 META_BIG_COMMIT_LINES = 500
 META_BIG_COMMIT_RATIO = 0.3
 _ISSUE_REF_RE = re.compile(r"#[0-9]+")
-# .claude/hooks/commit-msg-advisor.sh と同じ type 一覧・パターンを踏襲する
-# （表記ゆれを防ぐため、Conventional Commits 判定ロジックを 2 箇所に別々に
-# 実装しない）。
+# Follows the same type list and pattern as
+# .claude/hooks/commit-msg-advisor.sh (to avoid drift, the Conventional
+# Commits check logic is not implemented separately in two places).
 _CONVENTIONAL_RE = re.compile(
     r"^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)"
     r"(\([a-z0-9-]+\))?: .+"
@@ -1392,9 +1426,10 @@ _SHORTSTAT_RE = re.compile(
 
 
 def _parse_commit_stats(text):
-    """`git log --format=%h%x1f%s --shortstat` 出力を [(hash, subject,
-    changed_lines), ...] にパースする（META-03）。shortstat 行は空行の直後にのみ
-    現れ、差分の無いコミット（--allow-empty 等）では現れないため 0 行扱いにする。"""
+    """Parse the output of `git log --format=%h%x1f%s --shortstat` into
+    [(hash, subject, changed_lines), ...] (META-03). The shortstat line only
+    ever appears right after a blank line, and never for a commit with no diff
+    (e.g. --allow-empty), which is treated as 0 lines changed."""
     stats = []
     lines = text.splitlines()
     n = len(lines)
@@ -1424,13 +1459,14 @@ def _median(values):
 
 
 def verify_meta(r: Report):
-    """META-01/02: Issue-First（issue-first.md §5）と Conventional Commits
-    （同 §5）の遵守度、META-03: scope-contract.md §3 の diff budget 遵守度を、
-    直近コミット履歴から計測する。
+    """META-01/02: measures adherence to Issue-First (issue-first.md §5) and
+    Conventional Commits (same §5) from recent commit history; META-03:
+    adherence to the diff budget in scope-contract.md §3.
 
-    偽緑禁止の趣旨に沿って「隠れた不遵守」を可視化する一方、issue-first.md §7 /
-    scope-contract.md §5 はいずれも例外運用を明示的に許容しているため、遵守度
-    そのものを FAIL でゲートはしない（WARN=非ブロッキングな指標にとどめる）。
+    In the spirit of no-fake-green this surfaces "hidden non-compliance", but
+    since issue-first.md §7 and scope-contract.md §5 both explicitly allow for
+    exceptions, adherence itself is never gated with FAIL (WARN = a
+    non-blocking indicator).
     """
     cat = "META"
 
@@ -1477,19 +1513,19 @@ def verify_meta(r: Report):
     total = len(commits)
     if total < META_MIN_SAMPLE:
         msg = (
-            f"only {total} commit(s) found — 配布直後はサンプル不足。"
-            f"コミットが {META_MIN_SAMPLE} 件以上になると PASS/WARN 判定に昇格します"
+            f"only {total} commit(s) found — too soon after unpacking for a real sample. "
+            f"Once there are {META_MIN_SAMPLE}+ commits this is promoted to a PASS/WARN verdict"
         )
         r.add(cat, "META-01", "INFO", msg)
         r.add(cat, "META-02", "INFO", msg)
         r.add(cat, "META-03", "INFO", msg)
         return
 
-    # META-01: Issue 参照率（subject + body を対象、#N または issue化予定）
+    # META-01: the Issue-reference rate (checks subject + body, for #N or "issue pending")
     referenced, unreferenced = [], []
     for subject, body in commits:
         combined = subject + "\n" + body
-        if _ISSUE_REF_RE.search(combined) or "issue化予定" in combined:
+        if _ISSUE_REF_RE.search(combined) or "issue pending" in combined:
             referenced.append(subject)
         else:
             unreferenced.append(subject)
@@ -1510,7 +1546,7 @@ def verify_meta(r: Report):
             f"< {META_ISSUE_REF_THRESHOLD:.0%} — offenders: {unreferenced[:3]}",
         )
 
-    # META-02: Conventional Commits 準拠率（subject のみを対象）
+    # META-02: the Conventional Commits compliance rate (checks subject only)
     conventional, non_conventional = [], []
     for subject, _ in commits:
         if _CONVENTIONAL_RE.match(subject):
@@ -1536,7 +1572,7 @@ def verify_meta(r: Report):
             f"offenders: {non_conventional[:3]}",
         )
 
-    # META-03: コミットあたり diff サイズ（scope-contract.md §3 の diff budget を自己計測）
+    # META-03: diff size per commit (self-measures the diff budget from scope-contract.md §3)
     try:
         stat_log = subprocess.run(
             [
@@ -1564,13 +1600,13 @@ def verify_meta(r: Report):
     big = [(h, s, c) for h, s, c in stats if c > META_BIG_COMMIT_LINES]
     big_ratio = len(big) / len(stats) if stats else 0.0
     if big_ratio > META_BIG_COMMIT_RATIO:
-        offenders = [f"{h} {s} ({c} 行)" for h, s, c in big]
+        offenders = [f"{h} {s} ({c} lines)" for h, s, c in big]
         r.add(
             cat,
             "META-03",
             "WARN",
             f"big-commit ratio {len(big)}/{len(stats)} ({big_ratio:.0%}) "
-            f"> {META_BIG_COMMIT_RATIO:.0%} (>{META_BIG_COMMIT_LINES} 行/commit) — "
+            f"> {META_BIG_COMMIT_RATIO:.0%} (>{META_BIG_COMMIT_LINES} lines/commit) — "
             f"offenders: {offenders[:3]}",
         )
     else:
@@ -1584,27 +1620,34 @@ def verify_meta(r: Report):
 
 
 # ============================================================
-# Category: CONTEXT — 常駐コンテキスト予算（CLAUDE.md + `@` import 群の合計バイト数）
+# Category: CONTEXT — the resident context budget (the total byte size of
+# CLAUDE.md + its `@` imports)
 # ============================================================
-# 実測 ~30.6KB（日本語 UTF-8 ≈ 3 bytes/字、概算 8-12k トークン相当）に +20% の
-# 余裕で WARN、その約 1.8 倍を FAIL とする初期値。自社で予算を厳しくしてよい
-# （本ファイル冒頭の設計コメント: 参加者は verify_*() を育てる）。
+# An initial value of WARN at +20% headroom over the measured ~30.6KB
+# (Japanese UTF-8 is roughly 3 bytes/character, ~8-12k tokens), and FAIL at
+# about 1.8x that. Tighten the budget for your own company (see the design
+# comment at the top of this file: participants grow verify_*() over time).
 CONTEXT_WARN_BYTES = 36_000
 CONTEXT_FAIL_BYTES = 56_000
-# 「Rule imports」節は `@.claude/rules/scope-contract.md` のように行全体が @+パス
-# のみ。行頭 `@` の email 様トークン単体行を誤認するリスクは残るが、契約を単純に
-# 保つため意図的にそのままにする（`^@\S+$` on stripped lines が本チェックの契約）。
+# The "Rule imports" section is entirely lines of the form @+path, e.g.
+# `@.claude/rules/scope-contract.md`. There is a residual risk of misreading a
+# line that's just an email-like @token, but this is left deliberately as-is
+# to keep the contract simple (`^@\S+$` on stripped lines is this check's contract).
 _IMPORT_RE = re.compile(r"^@(\S+)$")
 
 
 def verify_context(r: Report):
-    """CONTEXT-01: 常駐コンテキスト予算（CLAUDE.md 本文 + `@` import 先の合計バイト数）。
+    """CONTEXT-01: the resident context budget (the total byte size of
+    CLAUDE.md's body + its `@` import targets).
 
-    docs/concepts/context-funnel.md の「necessary-only」思想を自己計測する RQT。
-    import 切れ（`@path` の実体が無い）は「読み込まれないルール」= 無言の harness
-    故障なので予算超過と同格の FAIL とする。PATHREF-01 は backtick 囲みの repo 相対
-    パス参照しか見ない（行頭 `@import` 構文はそもそも backtick で囲まれない）ため、
-    import 切れを機械的に検知できるのはこの CONTEXT-01 だけである。
+    An RQT that self-measures the "necessary-only" philosophy of
+    docs/concepts/context-funnel.md. A broken import (`@path` pointing at
+    nothing) means "a rule that never loads" — a silent harness failure — so
+    it's FAILed at the same level as exceeding the budget. PATHREF-01 only
+    looks at backtick-wrapped repo-relative path references (the `@import`
+    syntax at the start of a line is never backtick-wrapped in the first
+    place), so CONTEXT-01 is the only place a broken import is detected
+    mechanically.
     """
     cat = "CONTEXT"
     claude_md = REPO_ROOT / "CLAUDE.md"
@@ -1637,8 +1680,8 @@ def verify_context(r: Report):
     elif total < CONTEXT_FAIL_BYTES:
         status = "WARN"
         verdict = (
-            f"exceeds budget {CONTEXT_WARN_BYTES:,} — 詳細を docs/ へ追い出す余地が"
-            "あります (cf. CLAUDE.md §4/§4.5)"
+            f"exceeds budget {CONTEXT_WARN_BYTES:,} — there's room to push detail out "
+            "into docs/ (cf. CLAUDE.md §4/§4.5)"
         )
     else:
         status, verdict = "FAIL", f"far exceeds budget {CONTEXT_FAIL_BYTES:,}"
@@ -1651,11 +1694,15 @@ def verify_context(r: Report):
 
 
 # ============================================================
-# Category: PATHREF — ドキュメント内の repo 相対パス参照の実在検証
+# Category: PATHREF — verifies that repo-relative path references inside
+# documents actually exist
 # ============================================================
-# 対象を限定し、backtick で囲まれた repo 相対パス（下記 prefix で始まるもの）を抽出して
-# 実在検証する。placeholder（<...> / {...}）・glob（*）・生成物ホワイトリストはスキップし、
-# 誤検知を出さない保守的な実装にする。再発防止の構造化（PLAN-PHASE-E F-08 / Wave 2）。
+# Scoped to a limited target set: extracts backtick-wrapped repo-relative
+# paths (starting with one of the prefixes below) and verifies they exist.
+# Placeholders (<...> / {...}), globs (*), and a whitelist of generated
+# artefacts are skipped, keeping this a conservative implementation that
+# doesn't false-positive. A structural fix to prevent recurrence
+# (PLAN-PHASE-E F-08 / Wave 2).
 PATHREF_PREFIXES = (
     "definitions/",
     "docs/",
@@ -1665,7 +1712,7 @@ PATHREF_PREFIXES = (
     "secrets/",
     ".claude/",
 )
-# 生成物（コマンド/スクリプトが後から作る）— 実在しなくても FAIL にしない。
+# Generated artefacts (created later by a command/script) — not existing yet doesn't FAIL.
 PATHREF_GENERATED_PREFIXES = (
     "docs/decisions/",
     "docs/retros/",
@@ -1674,9 +1721,10 @@ PATHREF_GENERATED_PREFIXES = (
 )
 PATHREF_GENERATED_EXACT = {"definitions/ontology/company.yaml"}
 _BACKTICK_RE = re.compile(r"`([^`]+)`")
-# ``` フェンスコードブロックは backtick のペアリングを desync させ、後続の inline-code
-# 参照を検査対象から静かに取りこぼすため、抽出前に必ず除去する（フェンス内のツリー図・
-# コマンド例は「単一の実パス参照」ではないので検査対象外で正しい）。
+# A ``` fenced code block desyncs backtick pairing and silently drops
+# subsequent inline-code references from the check, so it must always be
+# stripped before extraction (a tree diagram or command example inside a
+# fence isn't a "single real path reference" anyway, so excluding it is correct).
 _FENCE_RE = re.compile(r"```.*?```", re.DOTALL)
 
 
@@ -1707,10 +1755,10 @@ def verify_pathref(r: Report):
             token = m.group(1).strip()
             if not token.startswith(PATHREF_PREFIXES):
                 continue
-            # placeholder / glob / multi-token は「単一の実パス」ではないのでスキップ
+            # skip placeholder / glob / multi-token — not a "single real path"
             if any(c in token for c in "<>{}*") or " " in token:
                 continue
-            # 生成物ホワイトリストはスキップ
+            # skip the generated-artefact whitelist
             if token in PATHREF_GENERATED_EXACT:
                 continue
             if token.startswith(PATHREF_GENERATED_PREFIXES):
@@ -1738,7 +1786,7 @@ def verify_pathref(r: Report):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="AI 駆動経営合宿スターターテンプレ RQT verify"
+        description="RQT verify for the AI-driven management retreat starter template"
     )
     parser.add_argument(
         "--json", action="store_true", help="Output JSON instead of text"

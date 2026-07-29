@@ -1,26 +1,31 @@
-"""verify.py テストスイート共通ヘルパ（Issue #42）。
+"""Shared test-suite helpers for verify.py (Issue #42).
 
-pytest ではなく標準ライブラリ unittest を採用する。本テンプレは
-「git と python3 だけで動く」ことを約束しており（README / CLAUDE.md §0）、
-検証器のテストが外部依存を持ち込むとその約束が崩れるため
-（実際、ネットワーク制限環境では pip install 自体ができない）。
+Uses the standard library's unittest rather than pytest. This template
+promises to run on "just git and python3" (README / CLAUDE.md §0), and the
+verifier's own tests bringing in an external dependency would break that
+promise (in practice, a network-restricted environment can't even run pip
+install).
 
-実行方法（repo root から）:
+How to run (from the repo root):
     python3 -m unittest discover -s tests -v
 
-契約（test_verify_*.py はこのモジュールだけに依存する）:
+Contract (test_verify_*.py depends only on this module):
 
-- ``VerifyTestCase``: 空の一時 fixture root を作り ``verify.REPO_ROOT`` を
-  そこへ差し替える基底クラス。各テストは自分のカテゴリが読むファイルだけを
-  ``self.write()`` で配置し、該当する ``verify_*()`` を ``self.check()`` で呼ぶ
-  （verify.py の各チェック関数は自カテゴリのパスしか読まないため全体骨格は不要）。
-- ``GitTestCase``: 上記 + ``git init`` とコミット identity 設定済み。
-- ``commit_all(root, msg, committer_date=None)``: 全ステージ + コミット。
-  ``committer_date``（例: "2020-01-01T00:00:00 +0000"）で日付を偽装でき、
-  HYGIENE-01 の「30 日超」判定を実時間を待たずにテストできる。
-- ``run_check(fn)``: 新しい Report で fn を実行し ``{RQT_ID: (status, message)}`` を返す。
+- ``VerifyTestCase``: a base class that creates an empty temporary fixture
+  root and points ``verify.REPO_ROOT`` at it. Each test places only the files
+  its own category reads via ``self.write()``, and calls the relevant
+  ``verify_*()`` via ``self.check()`` (each check function in verify.py only
+  reads its own category's paths, so the whole skeleton isn't needed).
+- ``GitTestCase``: the above, plus ``git init`` and commit identity already
+  configured.
+- ``commit_all(root, msg, committer_date=None)``: stage everything + commit.
+  ``committer_date`` (e.g. "2020-01-01T00:00:00 +0000") can fake the date, so
+  HYGIENE-01's "older than 30 days" check can be tested without waiting real time.
+- ``run_check(fn)``: runs fn against a fresh Report and returns
+  ``{RQT_ID: (status, message)}``.
 
-注意: verify.py 本体はテストのために改変しない（Issue #42 の制約）。
+Note: verify.py itself is never modified for the sake of a test (the
+constraint from Issue #42).
 """
 
 import os
@@ -73,7 +78,7 @@ def run_check(fn):
 
 
 class VerifyTestCase(unittest.TestCase):
-    """空の fixture root を作り verify.REPO_ROOT を差し替える基底クラス。"""
+    """Base class that creates an empty fixture root and points verify.REPO_ROOT at it."""
 
     init_git = False
 
@@ -102,6 +107,6 @@ class VerifyTestCase(unittest.TestCase):
 
 
 class GitTestCase(VerifyTestCase):
-    """git repo 化した fixture root（HYGIENE / GEN / STRUCTURE-02 裏取り等に使う）。"""
+    """A fixture root turned into a git repo (used for HYGIENE / GEN / corroborating STRUCTURE-02, etc.)."""
 
     init_git = True
