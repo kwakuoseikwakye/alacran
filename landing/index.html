@@ -371,7 +371,7 @@
     <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own Mac, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
     <p>There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
     <p>So we won&rsquo;t claim &ldquo;nothing ever leaves your Mac&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
-    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>Your prompts, to Anthropic, when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
+    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to Anthropic, when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
     <p style="margin-top:26px;font-size:1rem">That&rsquo;s the whole list. Everything else stays in a folder you picked, in plain text you can read without us.</p>
   </div>
 </section>
@@ -406,8 +406,9 @@
         <div class="ans">
           <p>Fair question, and here&rsquo;s the complete list rather than a vague reassurance:</p>
           <p><b>1. Your licence key</b> goes to Lemon Squeezy, the company that processes payments for us, to check your subscription is active. It sends the key and nothing else. No machine ID, no email, no hint of what you&rsquo;re working on. It happens at most once a day.</p>
-          <p><b>2. Your prompts go to Anthropic</b> when you press Run, exactly as they would if you typed into Claude yourself. That&rsquo;s the AI doing its job. Nothing is sent when you&rsquo;re just clicking around the app.</p>
-          <p><b>3. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
+          <p><b>2. A version number</b> is checked against GitHub&rsquo;s public releases page, at most once a day, so the app can tell you when an update is out. It&rsquo;s an anonymous read of a public page. Nothing is sent about you, and you can turn it off.</p>
+          <p><b>3. Your prompts go to Anthropic</b> when you press Run, exactly as they would if you typed into Claude yourself. That&rsquo;s the AI doing its job. Nothing is sent when you&rsquo;re just clicking around the app.</p>
+          <p><b>4. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
           <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all.</p>
         </div>
       </details>
@@ -449,7 +450,7 @@
         <div class="ans">
           <p>Today, you update it yourself, and it takes about twenty seconds. Download the latest version from this site, drag it into Applications the same way you did the first time, and say yes to replacing the old one.</p>
           <p><b>Your work is completely untouched by this.</b> Your workspaces live in your own folders and your settings live outside the app, so replacing the app is genuinely just swapping the program. Nothing to export, nothing to migrate.</p>
-          <p>We&rsquo;re working on having the app tell you when a new version is out, so you don&rsquo;t have to think about checking. Until then, the download button here always points at the newest release, and anything significant gets announced by email.</p>
+          <p>The app now tells you when a new version is out: a small strip appears at the top with a download link, and you can dismiss it. It won&rsquo;t pester you about the same version twice, and the check is an anonymous read of a public page, at most once a day.</p>
         </div>
       </details>
 
