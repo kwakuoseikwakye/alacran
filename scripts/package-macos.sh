@@ -8,6 +8,14 @@
 # Claude Code CLI needs Node too). If Node is missing, the launcher shows a
 # guided alert instead of failing silently.
 #
+# Also produces dist/<APP_NAME>.dmg — a standard drag-to-Applications disk
+# image, built with hdiutil (no extra dependencies). NOTE: this app is
+# UNSIGNED. The .dmg gives the familiar install gesture, but Gatekeeper will
+# still show a "cannot verify / may harm your Mac" warning on first launch
+# regardless of .dmg vs .zip — only a paid Apple Developer Program
+# enrollment + `codesign`/`notarytool` removes that warning. That's a
+# separate, not-yet-done step (see LAUNCH.md).
+#
 # Usage:  bash scripts/package-macos.sh [--no-selftest]
 #
 # The app name and default port are the two knobs; change APP_NAME once a
@@ -124,6 +132,19 @@ if [ "$RUN_SELFTEST" = "1" ]; then
   fi
 fi
 
+echo "==> Building the .dmg"
+DMG="$DIST/$APP_NAME.dmg"
+DMG_STAGING="$(mktemp -d)"
+trap 'rm -rf "$DMG_STAGING"' EXIT
+cp -R "$APP" "$DMG_STAGING/"
+ln -s /Applications "$DMG_STAGING/Applications"
+rm -f "$DMG"
+hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG" >/dev/null
+echo "==> Built: $DMG"
+
 echo ""
-echo "Done. To try it: open \"$APP\"  (or double-click it in Finder)."
-echo "Unsigned build — first launch: right-click the app -> Open -> Open."
+echo "Done. To try it: open \"$APP\"  (or double-click it in Finder),"
+echo "or mount \"$DMG\" and drag $APP_NAME to Applications."
+echo "Unsigned build — first launch will be blocked by Gatekeeper. Go to"
+echo "System Settings -> Privacy & Security -> \"Open Anyway\" next to the"
+echo "$APP_NAME warning, then try opening it again."
