@@ -112,6 +112,18 @@ PLIST
 
 echo "==> Built: $APP"
 
+# Ad-hoc sign (no Apple Developer account, no identity — signs with '-').
+# This does NOT remove Gatekeeper's "unidentified developer" warning (only a
+# real Developer ID signature + notarization does that), but a COMPLETELY
+# unsigned bundle can trip a stricter Gatekeeper path on current macOS that
+# reports the app as "damaged" with no override at all in System Settings.
+# An ad-hoc signature gives the bundle a valid signing structure so Gatekeeper
+# falls back to the milder "unidentified developer" prompt, which DOES have
+# an "Open Anyway" override in System Settings > Privacy & Security.
+echo "==> Ad-hoc signing (no Apple Developer identity — does not remove the Gatekeeper warning)"
+codesign --deep --force --sign - "$APP"
+codesign -dv "$APP" 2>&1 | head -3
+
 if [ "$RUN_SELFTEST" = "1" ]; then
   echo "==> Self-test: booting the packaged server headlessly"
   SELFTEST_PORT="4321"
