@@ -131,12 +131,16 @@ the whole coding-agent CLI per company), Linux packaging format (shipped
 
 - **[HIGH] macOS notarization.** Still ad-hoc signed only. See Current
   Position above for the exact blocker and what's needed to unblock it.
-- **[MED] Live-verify the Linux `.deb` on a real Debian/Ubuntu machine.**
-  `scripts/package-linux.sh` has been dry-run verified on this (macOS) dev
-  machine up through payload assembly and a real headless server self-test
-  (see Session handoff log) — but `dpkg-deb` isn't installed here, so the
-  actual `.deb` build and a real `apt install`/launch-from-app-menu pass
-  have not been run on real Debian. Needs a Linux machine or CI runner.
+- **[MED] Confirm the new `.github/workflows/package-linux.yml` CI run once
+  it actually fires.** It builds `scripts/package-linux.sh` on a real Ubuntu
+  runner (which this Mac can't do — no `dpkg-deb` here) and publishes the
+  `.deb` to the matching tag's release on `alacran-releases`, automatically
+  on every `vX.Y.Z` tag push, gated on `tsc`/`vitest` passing first. Set up
+  2026-07-30 but not yet exercised end-to-end — it hasn't fired on a real
+  tag push yet, so the actual `dpkg-deb` build, the cross-repo publish, and
+  a real `apt install`/launch-from-menu pass on Debian are all still
+  unconfirmed. Will self-verify (or fail loudly) the next time a version is
+  tagged and pushed.
 - **[MED] Run the OpenAI Codex CLI and Aider integrations against a real,
   authenticated account.** `lib/ai-executors.ts`'s `claude-code` flags are
   the pre-existing, already-proven behavior (moved, not rewritten). The
@@ -656,3 +660,37 @@ truthful.
   real Debian/Ubuntu machine or CI runner to finish verifying the `.deb`,
   and a machine with `codex`/`aider` installed to confirm their exact
   flags.
+- **2026-07-30 — corrected the Codex CLI flags, rewrote the landing page to
+  lead with multi-model, and added CI to actually build the `.deb`.** Before
+  putting multi-model on the landing page as a headline claim, installed
+  the real `codex`/`aider` CLIs here (`npx @openai/codex`, `uvx --from
+  aider-chat aider`) and read their real `--help` output instead of trusting
+  the docs-based guess from the previous entry. Found a real bug:
+  `--full-auto` isn't a real `codex exec` flag on the installed version
+  (0.146.0); fixed to the real one, `--sandbox workspace-write`. Aider's
+  flags checked out exactly as written. Rewrote the landing page's hero,
+  feature cards, Connect section, privacy-disclosure list, and FAQ to lead
+  with "Claude, ChatGPT, or your own model," per direction — including
+  correcting the privacy list, which used to claim prompts always go to
+  Anthropic (no longer true once a workspace can be pointed elsewhere).
+  Deliberately did not add a Linux download link, since no `.deb` exists
+  yet; mirrored the copy changes across `pricing/` and `integrations/`.
+  Then added `.github/workflows/package-linux.yml`: builds
+  `scripts/package-linux.sh` on a real `ubuntu-latest` runner (confirmed via
+  `gh repo view` that `alacran` is private source and `alacran-releases` is
+  the public binaries repo, with an existing `v0.1.0` release holding
+  `Alacran.dmg`/`Alacran.zip`), gated on `tsc`/`vitest` passing, triggered
+  automatically on any `vX.Y.Z` tag push (the user's explicit choice over a
+  manual-button trigger), and publishes the resulting `.deb` to the matching
+  tag's release via `gh release upload`/`create`. Set the required
+  `RELEASES_REPO_TOKEN` secret on the `alacran` repo by reusing the
+  already-authenticated `gh` CLI token (the user's explicit choice over a
+  separately-scoped dedicated token) — needed because the default
+  `GITHUB_TOKEN` can't write to a different repo. **Not yet exercised
+  end-to-end:** no version has been tagged and pushed since this workflow
+  was added, so the real `dpkg-deb` build, the cross-repo publish, and a
+  real `apt install` on Debian all remain unconfirmed until the next
+  release. **Next:** next time a version is bumped and tagged, watch this
+  workflow's first real run; once a `.deb` is actually published, add the
+  Linux download link/section to the landing page that was deliberately
+  held back this session.

@@ -1,0 +1,71 @@
+name: Package Linux (.deb)
+
+# Builds scripts/package-linux.sh's .deb on a real Ubuntu runner (this app's
+# own dev machine is macOS, which has no dpkg-deb) and publishes it to the
+# public kwakuoseikwakye/alacran-releases repo, alongside the existing
+# .dmg/.zip for the same version tag.
+#
+# Triggers automatically on any vX.Y.Z tag pushed to this repo — no manual
+# approval step, per the decision to automate this rather than gate it
+# behind a button. The tsc/vitest gate below is the safety net: a failing
+# build never reaches the packaging step, so nothing broken gets published
+# to a public repo unattended.
+#
+# Requires a repo secret RELEASES_REPO_TOKEN: a token with write access to
+# kwakuoseikwakye/alacran-releases (this workflow runs in the alacran repo,
+# a different one, so the default GITHUB_TOKEN — scoped only to the repo
+# the workflow runs in — can't publish there).
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-publish-deb:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify the pushed tag matches package.json's version
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION="$(node -p "require('./package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION — bump package.json first."
+            exit 1
+          fi
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build the .deb
+        run: bash scripts/package-linux.sh
+
+      - name: Publish to alacran-releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          DEB_PATH="$(ls dist/*.deb)"
+          if gh release view "$TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DEB_PATH" --repo kwakuoseikwakye/alacran-releases --clobber
+          else
+            gh release create "$TAG" "$DEB_PATH" --repo kwakuoseikwakye/alacran-releases --title "Alacrán $TAG"
+          fi
