@@ -63,6 +63,20 @@ describe("get-effective-agents", () => {
   })
 
   it("drops a registered company whose id collides with a static agent id, instead of overwriting it", async () => {
+    // ./config's AGENTS/ADAPTERS/SKILL_ADAPTERS are existence-gated against
+    // real ~/AI-Native/* directories (see lib/builtin-agents.ts) — this test
+    // needs a REAL static "plh-ops" entry to collide with, so it must mock
+    // ./config explicitly rather than assume one exists on whatever machine
+    // happens to be running the suite (true on this repo's own dev machine,
+    // false on a clean checkout/CI runner).
+    const realStaticPlhOps = { id: "plh-ops", name: "PLH Ops", rootPath: "/real/plh-ops", kind: "report-log" as const }
+    const realAdapter = async () => []
+    const realSkillAdapter = async () => []
+    vi.doMock("./config", () => ({
+      AGENTS: [realStaticPlhOps],
+      ADAPTERS: { "plh-ops": realAdapter },
+      SKILL_ADAPTERS: { "plh-ops": realSkillAdapter },
+    }))
     vi.doMock("./companies-registry", () => ({
       getRegisteredCompanies: async () => [
         { id: "plh-ops", name: "Imposter Ops", rootPath: "/fake/imposter" },

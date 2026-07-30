@@ -3,6 +3,7 @@ import { mkdtemp, writeFile, mkdir, rm, readFile, realpath } from "node:fs/promi
 import { tmpdir } from "node:os"
 import path from "node:path"
 import type { ExecFileFn } from "./git-commit-file"
+import { plhTakeshiAgentSkillsAdapter } from "./skills/plh-takeshi-agent"
 
 let root: string
 
@@ -15,12 +16,17 @@ afterEach(async () => {
   vi.resetModules()
 })
 
+// See resolve-known-skill.test.ts's mockAgents() comment: ./config's
+// SKILL_ADAPTERS must be mocked explicitly (not inherited via `...actual`),
+// since it's computed from real ~/AI-Native/* directories that only exist on
+// this repo's own dev machine, not a clean checkout/CI runner.
 async function mockAgents() {
   vi.doMock("./config", async (importOriginal) => {
     const actual = await importOriginal<typeof import("./config")>()
     return {
       ...actual,
       AGENTS: [{ id: "plh-takeshi-agent", name: "Takeshi Agent", rootPath: root, kind: "pipeline" }],
+      SKILL_ADAPTERS: { "plh-takeshi-agent": plhTakeshiAgentSkillsAdapter },
     }
   })
 }

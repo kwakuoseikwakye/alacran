@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, writeFile, mkdir, rm, realpath } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { plhTakeshiAgentSkillsAdapter } from "./skills/plh-takeshi-agent"
 
 let root: string
 
@@ -14,6 +15,13 @@ afterEach(async () => {
   vi.resetModules()
 })
 
+// `./config`'s AGENTS/ADAPTERS/SKILL_ADAPTERS are all computed at module-load
+// time from real ~/AI-Native/* directories (see lib/builtin-agents.ts) —
+// mocking only AGENTS and spreading `...actual` for the rest silently
+// inherits whatever those real directories resolve to on the machine running
+// the suite. That happened to be non-empty on this repo's own dev machine,
+// but is empty on a clean checkout/CI runner, so SKILL_ADAPTERS must be
+// mocked explicitly too rather than relying on the real, existence-gated map.
 async function mockAgents() {
   vi.doMock("./companies-registry", () => ({ getRegisteredCompanies: async () => [] }))
   vi.doMock("./config", async (importOriginal) => {
@@ -21,6 +29,7 @@ async function mockAgents() {
     return {
       ...actual,
       AGENTS: [{ id: "plh-takeshi-agent", name: "Takeshi Agent", rootPath: root, kind: "pipeline" }],
+      SKILL_ADAPTERS: { "plh-takeshi-agent": plhTakeshiAgentSkillsAdapter },
     }
   })
 }
