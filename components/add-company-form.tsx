@@ -93,6 +93,14 @@ export function AddCompanyForm({
     }
   }
 
+  const packsByCategory = COMPANY_STARTER_PACKS.reduce<Record<string, typeof COMPANY_STARTER_PACKS>>(
+    (acc, pack) => {
+      ;(acc[pack.category] ??= []).push(pack)
+      return acc
+    },
+    {}
+  )
+
   if (!open) {
     return prominent ? (
       <Button
@@ -128,33 +136,40 @@ export function AddCompanyForm({
         />
       </div>
       {!showRestore && (
-        <div className="space-y-1.5">
+        <div className="space-y-2.5">
           <label className="text-xs text-muted-foreground">
             Starter template <span className="text-muted-foreground/70">(only used if this path is new)</span>
           </label>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {COMPANY_STARTER_PACKS.map((pack) => (
-              <label
-                key={pack.id}
-                className={`cursor-pointer rounded-md border p-2.5 text-xs transition-colors ${
-                  packId === pack.id
-                    ? "border-primary bg-primary/5"
-                    : "border-border bg-transparent hover:border-muted-foreground/40"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="starter-pack"
-                  value={pack.id}
-                  checked={packId === pack.id}
-                  onChange={() => setPackId(pack.id)}
-                  className="sr-only"
-                />
-                <span className="block font-medium text-foreground">{pack.label}</span>
-                <span className="mt-0.5 block text-muted-foreground">{pack.description}</span>
-              </label>
-            ))}
-          </div>
+          {Object.entries(packsByCategory).map(([category, packs]) => (
+            <div key={category} className="space-y-1.5">
+              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
+                {category}
+              </p>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {packs.map((pack) => (
+                  <label
+                    key={pack.id}
+                    className={`cursor-pointer rounded-md border p-2.5 text-xs transition-colors ${
+                      packId === pack.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border bg-transparent hover:border-muted-foreground/40"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="starter-pack"
+                      value={pack.id}
+                      checked={packId === pack.id}
+                      onChange={() => setPackId(pack.id)}
+                      className="sr-only"
+                    />
+                    <span className="block font-medium text-foreground">{pack.label}</span>
+                    <span className="mt-0.5 block text-muted-foreground">{pack.description}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
       {showRestore && (
