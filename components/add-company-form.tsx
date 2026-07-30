@@ -145,7 +145,7 @@ export function AddCompanyForm({
               <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground/70">
                 {category}
               </p>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2">
                 {packs.map((pack) => (
                   <label
                     key={pack.id}
