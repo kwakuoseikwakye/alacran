@@ -71,10 +71,10 @@
     <p class="gstep-tag">Step 1</p>
     <h2>What you need before you start</h2>
     <ul>
-      <li><b>A Mac</b> running macOS 12 or later.</li>
+      <li><b>A Mac</b> running macOS 12 or later, or a <b>Debian/Ubuntu-based Linux</b> machine.</li>
       <li><b>A Claude subscription.</b> Alacr&aacute;n does not sell you AI. It borrows the Claude account you already pay Anthropic for, which is why there&rsquo;s no second AI bill here.</li>
       <li><b>Claude Code</b>, Anthropic&rsquo;s free command-line tool, installed and signed in. This is the piece that actually talks to Claude for you.</li>
-      <li><b>Node.js</b> installed. It&rsquo;s a free, standard piece of software many Mac apps rely on.</li>
+      <li><b>Node.js</b> installed. It&rsquo;s a free, standard piece of software many apps rely on.</li>
       <li><b>Optional:</b> the <code>gog</code> tool, only if you want Alacr&aacute;n to read your Gmail and calendar.</li>
     </ul>
     <div class="gnote"><b>Don&rsquo;t worry if you don&rsquo;t have these yet.</b> Alacr&aacute;n checks for all of them the first time you open it and tells you exactly what&rsquo;s missing, with a link for each one. You don&rsquo;t need to prepare anything in advance.</div>
@@ -91,6 +91,7 @@
       <li>Open Alacr&aacute;n from Applications, the same way you&rsquo;d open any other app.</li>
     </ol>
     <div class="gnote">The first time you open any app downloaded from the internet, macOS asks you to confirm. If you see a warning, right-click the app icon and choose <b>Open</b>, then confirm. You only do this once.</div>
+    <div class="gnote">On Linux (Debian/Ubuntu-based), download the <code>.deb</code> instead and run <code>sudo apt install ./Alacran.deb</code> in a terminal (or <code>sudo dpkg -i Alacran.deb &amp;&amp; sudo apt -f install</code>), then launch Alacr&aacute;n from your applications menu.</div>
   </div>
 
   <div class="gstep r" id="g3">
@@ -221,6 +222,7 @@
     <div class="gnote"><b>Your work is not affected by this.</b> Your workspaces live in folders you chose, and your settings live outside the app bundle, so replacing the program never touches either. You don&rsquo;t need to export anything first, and you won&rsquo;t be asked to set anything up again.</div>
     <p>To check which version you&rsquo;re on, find Alacr&aacute;n in Applications, press <b>Command-I</b>, and read the version at the top of the info window.</p>
     <div class="gnote"><b>Don&rsquo;t want to be told?</b> Dismiss the strip and it won&rsquo;t mention that version again, though it will still speak up for a later one. The check itself is an anonymous read of a public page, at most once a day, and it sends nothing about you.</div>
+    <div class="gnote">On Linux, download the latest <code>.deb</code> from the site and run <code>sudo apt install ./Alacran.deb</code> again &mdash; it updates in place, the same command as the first install.</div>
   </div>
 
   <div class="gstep r" id="g14">
