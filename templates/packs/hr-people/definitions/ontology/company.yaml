@@ -1,0 +1,48 @@
+# HR & People starter ontology — a filled-in starting point, not a blank
+# template. Replace the example values with your own; keep the shape
+# (customer / org / product, lowercase + dot-separated ids) since
+# templates/company-starter/scripts/verify.py's ONTOLOGY-01 check and the
+# rest of this starter both assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/hr-people/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: org
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Head of people
+
+  entities:
+    - id: org.role
+      type: role
+      name: Open role
+      description: A position the company is currently hiring for.
+      attributes:
+        name: string  # e.g. backend engineer, support agent
+        team: string
+        status: enum  # open / filled / on_hold
+      tags: [primary]
+
+    - id: org.candidate
+      type: person
+      name: Candidate
+      description: Someone being considered for an open role.
+      attributes:
+        name: string
+        role_id: string  # ref: org.role
+        stage: enum  # applied / screening / interview / offer / hired / rejected
+        applied_at: date
+      tags: [primary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 1 domain (org)
+  - Shaped for a hiring-and-onboarding business rather than a generic one
+  - Naming convention = lowercase + dot-separated, matching the base starter
