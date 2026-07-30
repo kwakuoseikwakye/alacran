@@ -70,7 +70,7 @@ describe("ai-executors", () => {
 
   it("openai-codex buildArgs uses non-interactive exec mode", () => {
     const args = AI_EXECUTORS["openai-codex"].buildArgs({ prompt: "do the thing", editScopePattern: "x/**", bashPatterns: [] })
-    expect(args).toEqual(["exec", "do the thing", "--full-auto", "--skip-git-repo-check"])
+    expect(args).toEqual(["exec", "do the thing", "--skip-git-repo-check", "--sandbox", "workspace-write"])
   })
 
   it("aider buildArgs uses non-interactive one-shot message mode", () => {
