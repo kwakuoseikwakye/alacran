@@ -8,6 +8,10 @@ import { getCompanyCommand } from "./registry"
 import type { CompanyCommand } from "./types"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
 import { acquireRunLock, releaseRunLock } from "./run-lock"
+import { resolveAiExecutorForAgent } from "../ai-executor-registry"
+import type { AiExecutor } from "../ai-executors"
+
+export type ResolveExecutorFn = (agentId: string) => Promise<AiExecutor>
 
 const execFileAsync = promisify(nodeExecFile)
 const MAX_FIELD_LENGTH = 4000
@@ -96,7 +100,8 @@ export async function runCompanyCommandImpl(
   agentId: string,
   spawnFn: SpawnFn = defaultSpawn,
   execFn: ExecFileFn = defaultExecFile,
-  dataDir: string = path.join(COMPANY_COMMANDS_DATA_DIR, agentId)
+  dataDir: string = path.join(COMPANY_COMMANDS_DATA_DIR, agentId),
+  resolveExecutor: ResolveExecutorFn = resolveAiExecutorForAgent
 ): Promise<{ started: boolean; message: string }> {
   const command = getCompanyCommand(commandId)
   if (!command) {
@@ -137,28 +142,12 @@ export async function runCompanyCommandImpl(
       command.outputKind === "new-file-in-dir" ? `${command.outputPath}/**` : command.outputPath
 
     const bashPatterns = command.bashPatterns ?? []
-    const allowedTools =
-      bashPatterns.length > 0
-        ? `Read,Grep,Glob,Edit(${editScopePattern}),${bashPatterns.map((p) => `Bash(${p})`).join(",")}`
-        : `Read,Grep,Glob,Edit(${editScopePattern})`
-    const spawnArgs = [
-      "-p",
-      prompt,
-      "--allowedTools",
-      allowedTools,
-      // Only commands that declare no bashPatterns get a blanket Bash
-      // disallow. A command with scoped Bash(...) patterns must NOT also
-      // pass --disallowedTools Bash, which would override the allow.
-      ...(bashPatterns.length > 0 ? [] : ["--disallowedTools", "Bash"]),
-      "--permission-mode",
-      "default",
-      "--output-format",
-      "text",
-    ]
+    const executor = await resolveExecutor(agent.id)
+    const spawnArgs = executor.buildArgs({ prompt, editScopePattern, bashPatterns })
 
     const logPath = path.join(dataDir, `${command.id}.log`)
     outFd = openSync(logPath, "a")
-    const child = spawnFn("claude", spawnArgs, {
+    const child = spawnFn(executor.binaryName, spawnArgs, {
       cwd: agent.rootPath,
       detached: true,
       stdio: ["ignore", outFd, outFd],

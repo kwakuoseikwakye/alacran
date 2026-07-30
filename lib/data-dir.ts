@@ -16,14 +16,21 @@ import { existsSync, cpSync } from "node:fs"
  * the dev machine's day-to-day state is unaffected and tests stay hermetic.
  */
 export function resolveDataDirFrom(
-  env: { ALACRAN_DATA_DIR?: string; NODE_ENV?: string },
+  env: { ALACRAN_DATA_DIR?: string; NODE_ENV?: string; XDG_DATA_HOME?: string },
   cwd: string,
-  home: string
+  home: string,
+  platform: NodeJS.Platform = process.platform
 ): string {
   const override = env.ALACRAN_DATA_DIR?.trim()
   if (override) return override
   if (env.NODE_ENV === "production") {
-    return path.join(home, "Library", "Application Support", "Alacrán")
+    if (platform === "darwin") {
+      return path.join(home, "Library", "Application Support", "Alacrán")
+    }
+    // Linux (and any other non-macOS target): XDG Base Directory spec —
+    // respect $XDG_DATA_HOME if the user's set it, else the standard default.
+    const xdgDataHome = env.XDG_DATA_HOME?.trim()
+    return path.join(xdgDataHome || path.join(home, ".local", "share"), "Alacrán")
   }
   return path.join(cwd, ".data")
 }

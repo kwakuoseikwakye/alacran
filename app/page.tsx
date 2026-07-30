@@ -10,6 +10,7 @@ import { companyOntologyExists } from "@/lib/company-ontology-exists"
 import { getIntegrationStatus } from "@/lib/get-integration-status"
 import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
 import { OnboardingWelcome } from "@/components/onboarding-welcome"
+import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
 
 export const dynamic = "force-dynamic"
 
@@ -64,6 +65,7 @@ export default async function AgentTreePage() {
               Boolean(plhOpsSource) &&
               result.agent.kind === "command-set" &&
               !(await dailyTeamLogInstalled(result.agent.rootPath))
+            const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
             return (
               <AgentCard
                 key={result.agent.id}
@@ -81,6 +83,8 @@ export default async function AgentTreePage() {
                 showBackupButton={isCommandSet}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
+                showAiExecutorPicker={isCommandSet}
+                aiExecutorId={aiExecutorId}
                 index={index}
               />
             )

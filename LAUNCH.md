@@ -63,14 +63,12 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
      see a result, without touching a terminal to unstick it) has not been run
      as a single recorded pass. Everything has been verified in pieces, not
      back-to-back as a first-time buyer would experience it.
-  3. **New feature asks from the user (2026-07-30), not yet scoped:**
-     pre-built starter templates for common company shapes (marketing/sales,
-     software engineering, referencing `~/AI-Native/plh-takeshi-agent`'s
-     skills for structure); multi-model support beyond Claude (ChatGPT, open-
-     source models); a Linux (Debian) installer. See new section below this
-     one — none of these are started, and each has real trade-offs against
-     what's already shipped (see that section for specifics) that are worth
-     resolving before code, not after.
+  3. **The three feature asks from 2026-07-30 are all now shipped:**
+     pre-built company starter templates, multi-model support (pluggable
+     coding-agent CLI per company), and Linux packaging. See the Session
+     handoff log for what each actually is and the two genuinely-remaining
+     live-verification gaps in Open decisions below (the `.deb` build on
+     real Debian, and the Codex/Aider CLIs' exact flags).
 - **Days elapsed / remaining:** past the original 2026-08-01 target; the plan
   has organically extended into a broader hardening + content pass. Treat the
   date math below as historical, not a live deadline, unless re-confirmed.
@@ -126,27 +124,28 @@ signing, app name (Alacrán), Lemon Squeezy price (¥5,127/mo, 14-day trial) +
 checkout URL (both live in `lib/branding.ts`, confirmed no longer
 placeholders), real logo (`landing/logo.png`, generated from
 `landing/scorpion.png`), domain (alacran.ai — contact@alacran.ai is live),
-pre-built company starter templates (shipped 2026-07-30 — see Session
-handoff log)._
+pre-built company starter templates (shipped 2026-07-30), multi-model
+support shape (shipped 2026-07-30 — bring-your-own-key per provider, swap
+the whole coding-agent CLI per company), Linux packaging format (shipped
+2026-07-30 — see Session handoff log for all three)._
 
 - **[HIGH] macOS notarization.** Still ad-hoc signed only. See Current
   Position above for the exact blocker and what's needed to unblock it.
-- **[MED] Multi-model support.** Requested 2026-07-30: ChatGPT + open-source
-  models alongside Claude. Not yet designed. Real tension to resolve first:
-  the entire shipped pitch — landing copy, pricing page, and the FAQ's privacy
-  answer — is built on "bring your own Claude, so there's no second AI bill
-  from us" and "your prompts go to Anthropic, that's the only AI in the loop."
-  Adding providers means either (a) users bring their own key per provider
-  (keeps the "no bill from us" story, adds real UI/settings surface), or
-  (b) Alacrán mediates/sells access to other models (breaks that story
-  outright and turns this into a very different, higher-liability product).
-  Needs a decision on which before any code.
-- **[MED] Linux (Debian) installer.** Requested 2026-07-30. `scripts/
-  package-macos.sh` is macOS-specific (`.app` bundle, `hdiutil`, `codesign`).
-  A `.deb` is a different packaging format end to end (systemd service or
-  desktop launcher instead of a `launcher` binary + Info.plist), not a port of
-  the existing script. Standalone Next.js output should run unmodified on
-  Linux; the packaging shell around it does not exist yet.
+- **[MED] Live-verify the Linux `.deb` on a real Debian/Ubuntu machine.**
+  `scripts/package-linux.sh` has been dry-run verified on this (macOS) dev
+  machine up through payload assembly and a real headless server self-test
+  (see Session handoff log) — but `dpkg-deb` isn't installed here, so the
+  actual `.deb` build and a real `apt install`/launch-from-app-menu pass
+  have not been run on real Debian. Needs a Linux machine or CI runner.
+- **[MED] Live-verify the OpenAI Codex CLI and Aider executor integrations.**
+  `lib/ai-executors.ts`'s `claude-code` flags are the pre-existing, already-
+  proven behavior (moved, not rewritten). The `openai-codex` and `aider`
+  `buildArgs` are best-effort from their public non-interactive/scripted-mode
+  docs — neither CLI is installed on this machine, so their exact flags are
+  unverified against a real run. Needs a machine with `codex`/`aider`
+  installed and authenticated to confirm before advertising them as fully
+  supported (today they're wired up and swappable per company, but untested
+  end-to-end).
 ---
 
 ## Deadline math (targets, adjust as needed)
@@ -583,3 +582,70 @@ truthful.
   **Next:** commit and push this work, then pick a next step from the two
   explicitly-deferred asks (multi-model support, Linux/.deb installer) or
   the still-open macOS notarization / Day 4 end-to-end walkthrough items.
+- **2026-07-30 — multi-model support + Linux packaging shipped.** User
+  resolved both open forks up front: multi-model = bring-your-own-key per
+  provider (each CLI manages its own auth; Alacrán never sees a key or a
+  bill), and the mechanism = swap the whole coding-agent CLI per company,
+  not just a few narrow features. Investigation (two parallel Explore
+  passes) found only two real spawn sites hardcoding `"claude"` —
+  `lib/company-commands/run-company-command-impl.ts` (every Skills-page
+  Run-tab command) and `lib/daily-team-log/trigger-daily-team-log-impl.ts`
+  — and confirmed prompt text itself has no Claude-specific coupling; only
+  the surrounding CLI flags/permission syntax do.
+  Built `lib/ai-executors.ts`: a small `AiExecutorId` → `{ binaryName,
+  buildArgs, installHint }` registry with three executors — `claude-code`
+  (flags moved verbatim from the old hardcoded spawn, byte-identical
+  behavior, unit-tested against the exact old assertions), `openai-codex`
+  (`codex exec <prompt> --full-auto --skip-git-repo-check`), and `aider`
+  (`aider --message <prompt> --yes-always --no-auto-commits` — chosen
+  specifically because Aider already supports Anthropic, OpenAI, and
+  local/open-source models including Ollama through its own `--model`
+  config, so it covers "other open source models" without a fourth
+  executor). Per-company assignment lives in its own small registry file
+  (`lib/ai-executor-registry.ts`, `dataPath("ai-executors.json")`),
+  mirroring the existing `avatars-registry.ts` pattern exactly rather than
+  touching `RegisteredCompany`'s schema. `run-company-command-impl.ts` now
+  resolves and spawns whichever executor a company is assigned (default
+  `claude-code`, unchanged for everyone who hasn't picked one); a native
+  `<select>` (`components/ai-executor-picker.tsx`, no new UI primitive)
+  shows on every `command-set` agent card. daily-team-log was deliberately
+  left on Claude Code only — it's already a global, single-machine,
+  single-scheduled-job feature (a known limitation since v20), not a
+  per-company one, so generalizing it further didn't fit this slice.
+  check-dependencies/onboarding's claude+gog gate was also left untouched
+  on purpose — that's the app's base requirement to run at all, independent
+  of which executor a given company later picks.
+  **Honest gap:** only `claude-code`'s flags are live-proven (they're the
+  pre-existing behavior). `openai-codex`/`aider`'s exact flags are best-
+  effort from public docs — neither CLI is installed on this machine to
+  test against, so treat them as wired-up-but-unverified until a real run
+  confirms them (tracked in Open decisions).
+  For Linux: investigation found no Electron anywhere in this repo — it was
+  spiked and explicitly rejected (LAUNCH.md's own v26 history), and what
+  shipped instead ("browser-runner") is already just a bash launcher +
+  Next.js standalone server, no compiled/OS-specific binary. `next.config.ts`
+  already sets `output: "standalone"`, so the payload itself needed zero
+  changes for Linux. Wrote `scripts/package-linux.sh`: assembles the same
+  standalone payload under `usr/lib/alacran/app`, a bash launcher using
+  `xdg-open` (falls back to printing the URL) instead of macOS's `open`, a
+  `.desktop` entry + reused `app/icon.png`, and a `DEBIAN/control` file
+  (`Architecture: all`, `Depends: nodejs (>= 18)`), built with
+  `dpkg-deb --build`. Also fixed `lib/data-dir.ts`, which hardcoded macOS's
+  `~/Library/Application Support` even for a hypothetical Linux build —
+  it now branches on an injectable `platform` param, using the XDG Base
+  Directory default (`~/.local/share`, or `$XDG_DATA_HOME` if set) for
+  anything non-macOS.
+  **Honest gap:** `dpkg-deb` isn't installed on this (macOS) dev machine, so
+  the script dry-run-verified everything up through real payload assembly
+  and a real headless server self-test (booted the packaged `server.js`,
+  curled it, got HTTP 200) using a stubbed `dpkg-deb` on `PATH` — but the
+  actual `.deb` build and an `apt install`/launch-from-menu pass on real
+  Debian have not been run (tracked in Open decisions).
+  Verified for real: a live Playwright pass changed a company's executor
+  from Claude Code to Aider through the real UI, confirmed the write
+  landed in an isolated `ai-executors.json`, and confirmed it survives a
+  full page reload. `npx tsc --noEmit`, `npx vitest run` (365 tests, 68
+  files), and `npm run build` all clean. **Next:** commit this work; get a
+  real Debian/Ubuntu machine or CI runner to finish verifying the `.deb`,
+  and a machine with `codex`/`aider` installed to confirm their exact
+  flags.
