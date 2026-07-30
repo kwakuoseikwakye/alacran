@@ -47,7 +47,7 @@ describe("resolveDataDirFrom", () => {
 
   it("ignores a blank or whitespace-only override", () => {
     const env = { ALACRAN_DATA_DIR: "   ", NODE_ENV: "production" }
-    expect(resolveDataDirFrom(env, CWD, HOME)).toBe(
+    expect(resolveDataDirFrom(env, CWD, HOME, "darwin")).toBe(
       path.join(HOME, "Library", "Application Support", "Alacrán")
     )
   })
