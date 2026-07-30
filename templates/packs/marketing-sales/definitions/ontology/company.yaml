@@ -1,0 +1,110 @@
+# Marketing & Sales starter ontology — a filled-in starting point, not a
+# blank template. Replace the example values with your own; keep the shape
+# (customer / org / product, lowercase + dot-separated ids) since
+# scripts/verify.py's ONTOLOGY-01 check and the rest of this starter both
+# assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/marketing-sales/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: customer
+# ============================================================
+customer:
+  domain: customer
+  primary_owner_candidates:
+    - Sales rep
+
+  entities:
+    - id: customer.lead
+      type: lead
+      name: Lead
+      description: Someone who showed interest but hasn't signed yet.
+      attributes:
+        name: string
+        source: enum  # inbound / outbound / referral / event
+        stage: enum  # new / contacted / qualified / proposal_sent / won / lost
+        last_contacted_at: date
+      tags: [primary, gtm-target]
+
+    - id: customer.account
+      type: account
+      name: Customer account
+      description: A lead that converted — an active or past paying customer.
+      attributes:
+        name: string
+        plan: string
+        started_at: date
+        status: enum  # active / paused / churned
+      tags: [primary]
+
+    - id: customer.contact
+      type: person
+      name: Contact
+      description: A specific person at a lead's or customer's organization.
+      attributes:
+        name: string
+        role: string
+        email: string
+        preferred_channel: enum  # email / call / chat
+      tags: [primary]
+
+# ============================================================
+# Domain 2: org
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Head of marketing
+    - Head of sales
+
+  entities:
+    - id: org.role
+      type: role
+      name: Role
+      description: A marketing or sales function.
+      attributes:
+        name: string  # e.g. sales rep, campaign manager
+        responsibilities: list
+      tags: [primary]
+
+# ============================================================
+# Domain 3: product
+# ============================================================
+product:
+  domain: product
+  primary_owner_candidates:
+    - Head of marketing
+
+  entities:
+    - id: product.campaign
+      type: campaign
+      name: Campaign
+      description: A time-boxed push around one message, offer, or channel.
+      attributes:
+        name: string
+        channel: enum  # email / social / paid_ads / content / event
+        goal: string
+        status: enum  # planned / running / done
+        starts_at: date
+        ends_at: date
+      tags: [primary]
+
+    - id: product.offering
+      type: offering
+      name: Offering
+      description: What's actually being sold.
+      attributes:
+        name: string
+        pricing_model: enum  # one_time / monthly / annual / usage
+      tags: [primary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 3 domains (customer + org + product)
+  - Shaped for a leads-and-campaigns business rather than a generic one
+  - Naming convention = lowercase + dot-separated, matching the base starter

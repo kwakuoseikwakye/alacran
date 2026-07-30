@@ -44,6 +44,7 @@ export async function createCompanyFromTemplateImpl(
   name: string,
   rootPath: string,
   templateSourcePath: string,
+  packSourcePath?: string,
   registryPath?: string,
   execFn: ExecFileFn = defaultExecFile
 ): Promise<{ ok: true; company: RegisteredCompany } | { ok: false; message: string }> {
@@ -59,6 +60,21 @@ export async function createCompanyFromTemplateImpl(
 
     for (const relativePath of TEMPLATE_MANIFEST) {
       await copyManifestEntry(templateSourcePath, rootPath, relativePath)
+    }
+
+    // A starter pack is a small overlay (a tailored ontology, a couple of
+    // shape-specific commands) on top of the base skeleton above — never a
+    // second full tree, and never anything outside the manifest's own shape.
+    // Copied after the manifest so a pack file (e.g.
+    // definitions/ontology/company.yaml, which the base skeleton never
+    // ships filled-in) lands into a directory the manifest copy already
+    // created.
+    if (packSourcePath && (await pathExists(packSourcePath))) {
+      await cp(packSourcePath, rootPath, {
+        recursive: true,
+        force: true,
+        filter: (src) => path.basename(src) !== ".DS_Store",
+      })
     }
 
     await writeFile(path.join(rootPath, "HANDOFF.md"), FRESH_HANDOFF_CONTENT, "utf-8")

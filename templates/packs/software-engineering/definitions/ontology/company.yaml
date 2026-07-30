@@ -1,0 +1,117 @@
+# Software Engineering starter ontology — a filled-in starting point, not a
+# blank template. Replace the example values with your own; keep the shape
+# (customer / org / product, lowercase + dot-separated ids) since
+# scripts/verify.py's ONTOLOGY-01 check and the rest of this starter both
+# assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/software-engineering/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: customer
+# ============================================================
+customer:
+  domain: customer
+  primary_owner_candidates:
+    - Product owner
+    - Support engineer
+
+  entities:
+    - id: customer.account
+      type: account
+      name: Customer account
+      description: A company or user with an active subscription or support relationship.
+      attributes:
+        name: string
+        plan: enum  # free / pro / enterprise
+        tier: enum  # trial / paying / churned
+      tags: [primary]
+
+    - id: customer.issue
+      type: issue
+      name: Reported issue
+      description: A bug report or feature request that came in from a customer.
+      attributes:
+        title: string
+        severity: enum  # low / medium / high / critical
+        status: enum  # open / in_progress / shipped / wont_fix
+        reported_at: date
+      tags: [primary]
+
+# ============================================================
+# Domain 2: org
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Engineering lead
+
+  entities:
+    - id: org.role
+      type: role
+      name: Role
+      description: An engineering function — the same person may hold more than one.
+      attributes:
+        name: string  # e.g. engineer, reviewer, on-call
+        responsibilities: list
+      tags: [primary]
+
+    - id: org.engineer
+      type: person
+      name: Engineer
+      description: A person (or an AI agent acting on their behalf) who writes and reviews code.
+      attributes:
+        name: string
+        role_ids: list  # ref: org.role
+        focus_area: string  # e.g. backend, frontend, infra
+      tags: [primary]
+
+# ============================================================
+# Domain 3: product
+# ============================================================
+product:
+  domain: product
+  primary_owner_candidates:
+    - Engineering lead
+    - Product owner
+
+  entities:
+    - id: product.repo
+      type: repo
+      name: Repository
+      description: A codebase this company maintains.
+      attributes:
+        name: string
+        language: string
+        visibility: enum  # private / public
+      tags: [primary]
+
+    - id: product.feature
+      type: feature
+      name: Feature
+      description: A discrete unit of work being built, reviewed, or shipped.
+      attributes:
+        title: string
+        repo_id: string  # ref: product.repo
+        status: enum  # planned / in_progress / in_review / shipped
+      tags: [primary]
+
+    - id: product.release
+      type: release
+      name: Release
+      description: A version shipped to customers.
+      attributes:
+        version: string
+        repo_id: string  # ref: product.repo
+        shipped_at: date
+      tags: [secondary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 3 domains (customer + org + product)
+  - Shaped for a codebase-and-releases business rather than a generic one
+  - Naming convention = lowercase + dot-separated, matching the base starter

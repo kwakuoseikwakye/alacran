@@ -19,6 +19,7 @@ import { registerCompany } from "@/lib/register-company"
 import { getCompanyPathStatus } from "@/lib/get-company-path-status"
 import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 import { restoreCompany } from "@/lib/github/github-actions"
+import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "@/lib/company-starter-packs"
 
 export function AddCompanyForm({
   /** Onboarding shows this as the step's primary action; the dashboard keeps it quiet. */
@@ -28,6 +29,7 @@ export function AddCompanyForm({
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [rootPath, setRootPath] = useState("")
+  const [packId, setPackId] = useState(DEFAULT_COMPANY_STARTER_PACK_ID)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
@@ -77,11 +79,12 @@ export function AddCompanyForm({
     setConfirmCreateOpen(false)
     setPending(true)
     setMessage(null)
-    const result = await createCompanyFromTemplate(name, rootPath)
+    const result = await createCompanyFromTemplate(name, rootPath, packId)
     setPending(false)
     if (result.ok) {
       setName("")
       setRootPath("")
+      setPackId(DEFAULT_COMPANY_STARTER_PACK_ID)
       setMessage(`Created and registered "${result.company.name}"`)
       setOpen(false)
       router.refresh()
@@ -124,6 +127,36 @@ export function AddCompanyForm({
           placeholder="/Users/you/AI-Native/second-co"
         />
       </div>
+      {!showRestore && (
+        <div className="space-y-1.5">
+          <label className="text-xs text-muted-foreground">
+            Starter template <span className="text-muted-foreground/70">(only used if this path is new)</span>
+          </label>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {COMPANY_STARTER_PACKS.map((pack) => (
+              <label
+                key={pack.id}
+                className={`cursor-pointer rounded-md border p-2.5 text-xs transition-colors ${
+                  packId === pack.id
+                    ? "border-primary bg-primary/5"
+                    : "border-border bg-transparent hover:border-muted-foreground/40"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="starter-pack"
+                  value={pack.id}
+                  checked={packId === pack.id}
+                  onChange={() => setPackId(pack.id)}
+                  className="sr-only"
+                />
+                <span className="block font-medium text-foreground">{pack.label}</span>
+                <span className="mt-0.5 block text-muted-foreground">{pack.description}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
       {showRestore && (
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">GitHub repository URL</label>
@@ -172,8 +205,8 @@ export function AddCompanyForm({
           <AlertDialogHeader>
             <AlertDialogTitle>Create this company?</AlertDialogTitle>
             <AlertDialogDescription>
-              <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the
-              company starter template?
+              <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the{" "}
+              <strong>{getCompanyStarterPack(packId).label}</strong> starter?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
