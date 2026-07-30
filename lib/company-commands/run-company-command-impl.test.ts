@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+import { AI_EXECUTORS } from "../ai-executors"
 
 let root: string
 let dataDir: string
@@ -9,6 +10,13 @@ let dataDir: string
 beforeEach(async () => {
   root = await mkdtemp(path.join(tmpdir(), "run-company-command-test-"))
   dataDir = await mkdtemp(path.join(tmpdir(), "run-company-command-data-"))
+  // Every pre-existing test below asserts on Claude Code's exact flags and
+  // expects the "claude" binary — this keeps that behavior byte-identical
+  // now that the executor is resolved through a new, real (fs-touching)
+  // dependency instead of being hardcoded.
+  vi.doMock("../ai-executor-registry", () => ({
+    resolveAiExecutorForAgent: async () => AI_EXECUTORS["claude-code"],
+  }))
 })
 
 afterEach(async () => {
@@ -323,5 +331,61 @@ describe("runCompanyCommandImpl", () => {
       "Read,Grep,Glob,Edit(notes/company/email-checks/**),Bash(gog -a auto gmail search*),Bash(gog -a auto gmail get*)"
     )
     expect(calls[0].args).not.toContain("--disallowedTools")
+  })
+
+  it("spawns the resolved executor's binary and args instead of a hardcoded 'claude', when a company is assigned a different one", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const fakeExecutor = {
+      id: "aider" as const,
+      label: "Aider",
+      binaryName: "aider",
+      installHint: "pipx install aider-chat",
+      installLink: "https://aider.chat/docs/install.html",
+      buildArgs: ({ prompt }: { prompt: string }) => ["--message", prompt, "--yes-always"],
+    }
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir,
+      async () => fakeExecutor
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls[0].command).toBe("aider")
+    expect(calls[0].args[0]).toBe("--message")
+    expect(calls[0].args).toContain("--yes-always")
+    expect(calls[0].args).not.toContain("--allowedTools")
+  })
+
+  it("passes the resolved agent's id (not a hardcoded one) to resolveExecutor", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "second-co", name: "Second Co", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const resolvedFor: string[] = []
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "second-co",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir,
+      async (agentId: string) => {
+        resolvedFor.push(agentId)
+        return AI_EXECUTORS["claude-code"]
+      }
+    )
+
+    expect(resolvedFor).toEqual(["second-co"])
   })
 })

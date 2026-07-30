@@ -14,6 +14,7 @@ import { CompanySetupWizard } from "@/components/company-setup-wizard"
 import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
 import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
+import { AiExecutorPicker } from "@/components/ai-executor-picker"
 
 type AgentCardProps = {
   agent: Agent
@@ -30,6 +31,8 @@ type AgentCardProps = {
   showBackupButton?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
+  showAiExecutorPicker?: boolean
+  aiExecutorId?: string
   /** Position in the grid — drives the staggered entrance animation. */
   index?: number
 }
@@ -57,6 +60,8 @@ export function AgentCard({
   showBackupButton,
   integrationStatus,
   showInstallDailyTeamLogButton,
+  showAiExecutorPicker,
+  aiExecutorId,
   index = 0,
 }: AgentCardProps) {
   // getIntegrationStatus returns prose; anything other than the "none" sentinel
@@ -121,6 +126,9 @@ export function AgentCard({
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
+          {showAiExecutorPicker && (
+            <AiExecutorPicker agentId={agent.id} currentExecutorId={aiExecutorId ?? "claude-code"} />
+          )}
           {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
           <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
         </div>
