@@ -11,6 +11,17 @@ name: Package Linux (.deb)
 # build never reaches the packaging step, so nothing broken gets published
 # to a public repo unattended.
 #
+# Also runnable on demand (workflow_dispatch) against an EXISTING release
+# tag — used to backfill a .deb onto a release that predates this workflow,
+# without needing a new version bump/tag (which would risk the "latest"
+# download links pointing at a release missing the macOS assets, since
+# those are still built/uploaded manually).
+#
+# The published asset is always named Alacran.deb (not the versioned
+# alacran_X.Y.Z_all.deb the script produces locally) so the landing page's
+# .../releases/latest/download/Alacran.deb link stays stable across
+# versions — same convention as the existing Alacran.dmg/Alacran.zip.
+#
 # Requires a repo secret RELEASES_REPO_TOKEN: a token with write access to
 # kwakuoseikwakye/alacran-releases (this workflow runs in the alacran repo,
 # a different one, so the default GITHUB_TOKEN — scoped only to the repo
@@ -20,6 +31,11 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing alacran-releases tag to attach the .deb to (e.g. v0.1.0). Must match this checkout's package.json version."
+        required: true
 
 permissions:
   contents: read
@@ -39,12 +55,15 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Verify the pushed tag matches package.json's version
+      - name: Resolve the target tag
+        run: echo "TARGET_TAG=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_ENV"
+
+      - name: Verify the target tag matches package.json's version
         run: |
-          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          TAG_VERSION="${TARGET_TAG#v}"
           PKG_VERSION="$(node -p "require('./package.json').version")"
           if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $PKG_VERSION — bump package.json first."
+            echo "::error::Tag $TARGET_TAG does not match package.json version $PKG_VERSION — bump package.json first, or dispatch with the matching tag."
             exit 1
           fi
 
@@ -62,10 +81,10 @@ jobs:
           GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: |
           set -euo pipefail
-          TAG="${GITHUB_REF_NAME}"
           DEB_PATH="$(ls dist/*.deb)"
-          if gh release view "$TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then
-            gh release upload "$TAG" "$DEB_PATH" --repo kwakuoseikwakye/alacran-releases --clobber
+          cp "$DEB_PATH" "Alacran.deb"
+          if gh release view "$TARGET_TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then
+            gh release upload "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --clobber
           else
-            gh release create "$TAG" "$DEB_PATH" --repo kwakuoseikwakye/alacran-releases --title "Alacrán $TAG"
+            gh release create "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --title "Alacrán $TARGET_TAG"
           fi
