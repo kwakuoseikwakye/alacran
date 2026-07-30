@@ -19,6 +19,8 @@ export type CompanyStarterPack = {
   description: string
   /** Directory name under templates/packs/, or null for no overlay. */
   dirName: string | null
+  /** Groups the picker + landing page into sections (e.g. "Engineering", "Sales"). */
+  category: string
 }
 
 export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
@@ -27,24 +29,49 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
     label: "General purpose",
     description: "The plain starter. A blank ontology and the core commands — good for any shape of business.",
     dirName: null,
+    category: "General",
   },
   {
     id: "software-engineering",
     label: "Software engineering",
     description: "Ships an ontology for repos, features, and releases, plus a /code-review and /plan-feature command.",
     dirName: "software-engineering",
+    category: "Engineering",
   },
   {
-    id: "marketing-sales",
-    label: "Marketing & sales",
-    description: "Ships an ontology for leads and campaigns, plus a /draft-campaign and /follow-up-lead command.",
-    dirName: "marketing-sales",
+    id: "sales",
+    label: "Sales",
+    description: "Ships an ontology for leads and accounts, plus a /follow-up-lead command.",
+    dirName: "sales",
+    category: "Sales",
+  },
+  {
+    id: "marketing",
+    label: "Marketing",
+    description: "Ships an ontology for campaigns and offerings, plus a /draft-campaign command.",
+    dirName: "marketing",
+    category: "Marketing",
+  },
+  {
+    id: "customer-support",
+    label: "Customer support",
+    description: "Ships an ontology for tickets and contacts, plus a /triage-ticket and /draft-response command.",
+    dirName: "customer-support",
+    category: "Support",
+  },
+  {
+    id: "hr-people",
+    label: "HR & People",
+    description: "Ships an ontology for open roles and candidates, plus a /screen-candidate and /draft-offer command.",
+    dirName: "hr-people",
+    category: "HR & People",
   },
   {
     id: "leadership-team",
     label: "Leadership team",
     description: "A generalist, cross-functional ontology (finance, ops, people) plus a /weekly-briefing command.",
     dirName: "leadership-team",
+    category: "Leadership",
   },
 ]
 

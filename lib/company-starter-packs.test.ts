@@ -17,6 +17,12 @@ describe("COMPANY_STARTER_PACKS", () => {
     const dirNames = COMPANY_STARTER_PACKS.map((p) => p.dirName).filter((d): d is string => d !== null)
     expect(new Set(dirNames).size).toBe(dirNames.length)
   })
+
+  it("gives every pack a non-empty category", () => {
+    for (const pack of COMPANY_STARTER_PACKS) {
+      expect(pack.category.trim().length).toBeGreaterThan(0)
+    }
+  })
 })
 
 describe("getCompanyStarterPack", () => {
