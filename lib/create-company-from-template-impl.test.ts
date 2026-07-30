@@ -44,7 +44,14 @@ afterEach(async () => {
 describe("createCompanyFromTemplateImpl", () => {
   it("copies manifest entries, excludes .DS_Store, and never copies non-manifest paths", async () => {
     const target = path.join(targetParentDir, "new-co")
-    const result = await createCompanyFromTemplateImpl("New Co", target, templateSourceDir, registryPath, fakeExecFn)
+    const result = await createCompanyFromTemplateImpl(
+      "New Co",
+      target,
+      templateSourceDir,
+      undefined,
+      registryPath,
+      fakeExecFn
+    )
 
     expect(result.ok).toBe(true)
     expect(await readFile(path.join(target, ".claude", "commands", "decision.md"), "utf-8")).toBe("# /decision\n")
@@ -56,14 +63,14 @@ describe("createCompanyFromTemplateImpl", () => {
 
   it("writes a fresh HANDOFF.md rather than copying one from the source", async () => {
     const target = path.join(targetParentDir, "new-co-2")
-    await createCompanyFromTemplateImpl("New Co 2", target, templateSourceDir, registryPath, fakeExecFn)
+    await createCompanyFromTemplateImpl("New Co 2", target, templateSourceDir, undefined, registryPath, fakeExecFn)
     const handoff = await readFile(path.join(target, "HANDOFF.md"), "utf-8")
-    expect(handoff).toContain("はじめての方へ")
+    expect(handoff).toContain("New here?")
   })
 
   it("runs git init, add, and commit via the injected exec function, scoped to the new directory", async () => {
     const target = path.join(targetParentDir, "new-co-3")
-    await createCompanyFromTemplateImpl("New Co 3", target, templateSourceDir, registryPath, fakeExecFn)
+    await createCompanyFromTemplateImpl("New Co 3", target, templateSourceDir, undefined, registryPath, fakeExecFn)
     expect(execCalls).toEqual([
       { command: "git", args: ["-C", target, "init"] },
       { command: "git", args: ["-C", target, "add", "-A"] },
@@ -76,7 +83,14 @@ describe("createCompanyFromTemplateImpl", () => {
 
   it("registers the new company after scaffolding it", async () => {
     const target = path.join(targetParentDir, "new-co-4")
-    const result = await createCompanyFromTemplateImpl("New Co 4", target, templateSourceDir, registryPath, fakeExecFn)
+    const result = await createCompanyFromTemplateImpl(
+      "New Co 4",
+      target,
+      templateSourceDir,
+      undefined,
+      registryPath,
+      fakeExecFn
+    )
     expect(result.ok).toBe(true)
     if (!result.ok) return
     expect(result.company.name).toBe("New Co 4")
@@ -86,15 +100,100 @@ describe("createCompanyFromTemplateImpl", () => {
   it("fails cleanly without touching disk if the target path already exists", async () => {
     const target = path.join(targetParentDir, "already-exists")
     await mkdir(target)
-    const result = await createCompanyFromTemplateImpl("Dup", target, templateSourceDir, registryPath, fakeExecFn)
+    const result = await createCompanyFromTemplateImpl(
+      "Dup",
+      target,
+      templateSourceDir,
+      undefined,
+      registryPath,
+      fakeExecFn
+    )
     expect(result.ok).toBe(false)
     expect(execCalls).toEqual([])
   })
 
   it("fails cleanly if the parent directory doesn't exist either", async () => {
     const target = path.join(targetParentDir, "missing-parent", "new-co")
-    const result = await createCompanyFromTemplateImpl("Dup2", target, templateSourceDir, registryPath, fakeExecFn)
+    const result = await createCompanyFromTemplateImpl(
+      "Dup2",
+      target,
+      templateSourceDir,
+      undefined,
+      registryPath,
+      fakeExecFn
+    )
     expect(result.ok).toBe(false)
     expect(execCalls).toEqual([])
+  })
+
+  describe("with a starter pack", () => {
+    let packSourceDir: string
+
+    beforeEach(async () => {
+      packSourceDir = await mkdtemp(path.join(tmpdir(), "template-pack-"))
+      // A pack only ever adds files inside directories the base manifest
+      // already creates (definitions/ontology/) or a brand-new command file
+      // — never a path outside the base skeleton's own shape.
+      await mkdir(path.join(packSourceDir, "definitions", "ontology"), { recursive: true })
+      await writeFile(
+        path.join(packSourceDir, "definitions", "ontology", "company.yaml"),
+        "version: 1\ncustomer: {}\n"
+      )
+      await mkdir(path.join(packSourceDir, ".claude", "commands"), { recursive: true })
+      await writeFile(path.join(packSourceDir, ".claude", "commands", "code-review.md"), "# /code-review\n")
+    })
+
+    afterEach(async () => {
+      await rm(packSourceDir, { recursive: true, force: true })
+    })
+
+    it("overlays the pack's files on top of the base skeleton", async () => {
+      const target = path.join(targetParentDir, "packed-co")
+      const result = await createCompanyFromTemplateImpl(
+        "Packed Co",
+        target,
+        templateSourceDir,
+        packSourceDir,
+        registryPath,
+        fakeExecFn
+      )
+      expect(result.ok).toBe(true)
+      expect(await readFile(path.join(target, "definitions", "ontology", "company.yaml"), "utf-8")).toContain(
+        "customer:"
+      )
+      expect(await readFile(path.join(target, ".claude", "commands", "code-review.md"), "utf-8")).toBe(
+        "# /code-review\n"
+      )
+      // The base skeleton's own files must still be there too — a pack adds, it never replaces.
+      expect(await readFile(path.join(target, ".claude", "commands", "decision.md"), "utf-8")).toBe("# /decision\n")
+      expect(await readFile(path.join(target, "README.md"), "utf-8")).toBe("# Starter\n")
+    })
+
+    it("scaffolds identically to the base template when no pack is given", async () => {
+      const target = path.join(targetParentDir, "unpacked-co")
+      const result = await createCompanyFromTemplateImpl(
+        "Unpacked Co",
+        target,
+        templateSourceDir,
+        undefined,
+        registryPath,
+        fakeExecFn
+      )
+      expect(result.ok).toBe(true)
+      await expect(stat(path.join(target, "definitions", "ontology", "company.yaml"))).rejects.toThrow()
+    })
+
+    it("does not fail when the pack path does not exist", async () => {
+      const target = path.join(targetParentDir, "missing-pack-co")
+      const result = await createCompanyFromTemplateImpl(
+        "Missing Pack Co",
+        target,
+        templateSourceDir,
+        path.join(packSourceDir, "nonexistent"),
+        registryPath,
+        fakeExecFn
+      )
+      expect(result.ok).toBe(true)
+    })
   })
 })

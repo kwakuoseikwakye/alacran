@@ -33,24 +33,47 @@ Status values: `NOT STARTED` · `IN PROGRESS` · `BLOCKED` · `DONE` · `CUT`.
 
 ## Current position  ⬅️ resume here
 
-- **Active stage:** Days 1-3 app-side all **BUILT** (v23-v27 + landing page),
-  **plus v28 Connect page** (closes the one in-app golden-path gap: users can now
-  see + get guided through connecting their Claude agent and Google, in-app).
-  Two things still sit with the **user**: (a) verify the packaged `.app` on your
-  Mac (done once already), (b) set up Lemon Squeezy + pick the price and swap the
-  placeholders. Day 4 (end-to-end + demo) can't fully run until those land.
-- **Overall:** Day 1 DONE (v23-v25). Day 2 build DONE (v26, browser-runner
-  `.app`, server verified). Day 3 app-side DONE (v27 license gate + landing
-  page); external LS setup + branding pending user.
-- **Single next actions (user):** (1) `bash scripts/package-macos.sh` →
-  right-click `dist/AI Company Panel.app` → Open → report. (2) Set up Lemon
-  Squeezy, pick name+price, swap placeholders (see Day 3 "What YOU need to do").
-  **Single next action (me):** Day 4 prep / whatever you point me at — most of
-  Day 4 (real end-to-end buy→key→unlock, demo video) needs the LS + Mac steps
-  above first.
-- **Still-open (now user-blocking):** app name/brand/domain; exact price/trial;
-  Lemon Squeezy account setup.
-- **Days elapsed / remaining:** ~2 / 4.
+- **Active stage:** Days 1-4 of the original plan are functionally **DONE**.
+  Name, price, and checkout are real and live (not placeholders) — see Locked
+  decisions. `.dmg` builds, is ad-hoc signed, and a user has verified it opens.
+  A public `alacran-releases` GitHub repo serves the download, with the site's
+  download link now tracking `/releases/latest` instead of a pinned tag. The
+  license gate, Connect page, and an update-notification banner (checks GitHub
+  once a day, dismissible, never phones home beyond that) are all merged. The
+  landing site was fully rebuilt since the last handoff entry below: clean URLs
+  (no `.html`), an org-chart "Orchestrate" diagram (replacing one with a real
+  10px node-overlap bug), a live "Execute" board simulating the actual
+  runner/diff/commit flow, a plain-English explainer section, a 12-question FAQ
+  audited against the actual codebase (not aspirational claims), and a full
+  15-section "How to use" guide. The bundled `templates/company-starter/` was
+  also fully translated to English (previously partly Japanese).
+- **What a fresh session should NOT assume:** this doc's Day 1-4 checkboxes
+  below are stale (written 2026-07-28, before most of the above). Trust this
+  Current Position block and the Session handoff log over the checkboxes.
+- **Genuinely still open:**
+  1. **macOS notarization.** The app is only ad-hoc signed
+     (`codesign --sign -`), not Developer-ID-signed or notarized — confirmed
+     via `security find-identity`, no Developer ID cert on this machine. Every
+     download still hits Gatekeeper's "cannot verify" wall. Needs the user's
+     own Apple Developer Program enrollment ($99/yr) — I can wire real signing
+     + `notarytool` + stapling into `scripts/package-macos.sh` same-day once a
+     cert exists, but can't obtain the cert myself.
+  2. **Day 4's actual end-to-end walkthrough** (buy → download → install →
+     license unlocks → create a company → connect Google → run `check-inbox` →
+     see a result, without touching a terminal to unstick it) has not been run
+     as a single recorded pass. Everything has been verified in pieces, not
+     back-to-back as a first-time buyer would experience it.
+  3. **New feature asks from the user (2026-07-30), not yet scoped:**
+     pre-built starter templates for common company shapes (marketing/sales,
+     software engineering, referencing `~/AI-Native/plh-takeshi-agent`'s
+     skills for structure); multi-model support beyond Claude (ChatGPT, open-
+     source models); a Linux (Debian) installer. See new section below this
+     one — none of these are started, and each has real trade-offs against
+     what's already shipped (see that section for specifics) that are worth
+     resolving before code, not after.
+- **Days elapsed / remaining:** past the original 2026-08-01 target; the plan
+  has organically extended into a broader hardening + content pass. Treat the
+  date math below as historical, not a live deadline, unless re-confirmed.
 
 Keep this block honest and current — it is the fastest way for a fresh session
 to know where things stand.
@@ -98,19 +121,32 @@ These were decided with the user on 2026-07-28. Don't relitigate without them.
 
 ## Open decisions (resolve before they block the relevant day)
 
-_Resolved 2026-07-28 → moved to Locked decisions: target audience, pricing
-model, template delivery, macOS signing._
+_Resolved: target audience, pricing model, template delivery, macOS ad-hoc
+signing, app name (Alacrán), Lemon Squeezy price (¥5,127/mo, 14-day trial) +
+checkout URL (both live in `lib/branding.ts`, confirmed no longer
+placeholders), real logo (`landing/logo.png`, generated from
+`landing/scorpion.png`), domain (alacran.ai — contact@alacran.ai is live),
+pre-built company starter templates (shipped 2026-07-30 — see Session
+handoff log)._
 
-- **[MED] Exact price + trial length.** The model is locked (free trial →
-  monthly). Still need the actual number(s): monthly price and trial length
-  (e.g. 7 or 14 days). Blocks: Day 3 Lemon Squeezy setup + landing page copy.
-- **[RESOLVED 2026-07-28] App name = Alacrán** (see Locked decisions). Still to
-  pick: a domain, and a real logo asset (the landing uses an inline SVG mark +
-  🦂 favicon for now).
-- **[MED] Lemon Squeezy checkout URL + real price** — the landing page and
-  license gate use placeholders (`REPLACE-ME`, `$29/mo`) until the LS product
-  exists. Blocks going live.
-
+- **[HIGH] macOS notarization.** Still ad-hoc signed only. See Current
+  Position above for the exact blocker and what's needed to unblock it.
+- **[MED] Multi-model support.** Requested 2026-07-30: ChatGPT + open-source
+  models alongside Claude. Not yet designed. Real tension to resolve first:
+  the entire shipped pitch — landing copy, pricing page, and the FAQ's privacy
+  answer — is built on "bring your own Claude, so there's no second AI bill
+  from us" and "your prompts go to Anthropic, that's the only AI in the loop."
+  Adding providers means either (a) users bring their own key per provider
+  (keeps the "no bill from us" story, adds real UI/settings surface), or
+  (b) Alacrán mediates/sells access to other models (breaks that story
+  outright and turns this into a very different, higher-liability product).
+  Needs a decision on which before any code.
+- **[MED] Linux (Debian) installer.** Requested 2026-07-30. `scripts/
+  package-macos.sh` is macOS-specific (`.app` bundle, `hdiutil`, `codesign`).
+  A `.deb` is a different packaging format end to end (systemd service or
+  desktop launcher instead of a `launcher` binary + Info.plist), not a port of
+  the existing script. Standalone Next.js output should run unmodified on
+  Linux; the packaging shell around it does not exist yet.
 ---
 
 ## Deadline math (targets, adjust as needed)
@@ -480,3 +516,70 @@ truthful.
   a **scroll-animated "02 — Orchestrate" diagram** (You → Alacrán → companies →
   workflows, links draw + nodes reveal on scroll) modeled on fleece.ai. Preview
   URL unchanged. Nav links are on-page anchors for now.
+- **2026-07-30 — runbook brought current + three new feature asks scoped.**
+  This doc had not been updated since 2026-07-28 despite ~15 more shipped
+  commits (clean URLs, the Execute board, a full copy rewrite after a human
+  reviewer couldn't tell what the app does, a plain-English explainer + FAQ +
+  15-section how-to-use guide, a privacy audit that caught 3 overclaimed
+  statements on the site, an update-notification banner, and a stale
+  "placeholder price" label left on an already-final price). Rewrote Current
+  Position and Open Decisions to match reality rather than 2026-07-28's state.
+  **Three new feature requests logged, none started, each needs a decision
+  before code:** (1) pre-built company templates (marketing/sales, software
+  engineering) — checked `~/AI-Native/plh-takeshi-agent` (read-only, per the
+  standing rule) as the requested reference: it has exactly one skill,
+  `plh-dev-team`, a 6-role software-engineering pipeline (requirements
+  analyst → architect → senior engineer → QA → code reviewer → release
+  engineer). Confirmed via full-repo grep: **no marketing/sales content
+  exists there at all** — a "sales" hit in `state/routing/` was an unrelated
+  routing note about a copy-edit email. So a software-engineering template
+  has real, strong reference material to draw from; a marketing/sales
+  template would be designed fresh, not adapted from this repo. (2) Multi-
+  model support (ChatGPT + open-source models) — flagged the real conflict:
+  it contradicts the shipped "bring your own Claude, no second AI bill from
+  us" pitch baked into pricing copy and the FAQ's privacy answer, and the
+  fix depends on which of two very different shapes (user brings each
+  provider's own key, vs. Alacrán mediates access) is chosen. (3) Linux
+  (.deb) installer — `scripts/package-macos.sh` is macOS-specific top to
+  bottom (`.app`/`hdiutil`/`codesign`); the Next.js standalone server
+  underneath should run on Linux unmodified, but the packaging shell is a
+  new build, not a port. **Next:** present this scoping back to the user and
+  get direction on sequencing/decisions before writing any code for the
+  three asks.
+- **2026-07-30 — pre-built company starter templates shipped.** User chose
+  to sequence templates first, deferring multi-model and the Linux
+  installer. Built 3 new starter packs on top of the existing generic
+  template, using an "overlay" architecture (one shared base skeleton
+  copied via the existing generic `TEMPLATE_MANIFEST`, plus a small
+  per-pack "pack" directory — just a filled-in ontology + 1-2 new
+  `.claude/commands/*.md` files — copied on top) rather than duplicating 4
+  full template trees, matching this codebase's own SSOT discipline.
+  Packs: **Software engineering** (grounded in `plh-takeshi-agent`'s
+  `plh-dev-team` pattern — repo/feature/release ontology, `/code-review` +
+  `/plan-feature`); **Marketing & sales** (built fresh — that repo has no
+  such content — lead/account/campaign ontology, `/draft-campaign` +
+  `/follow-up-lead`); **Leadership team** (deliberately generalist
+  CEO/COO/CFO-style ontology, positioned as the easiest pick for someone
+  running day-to-day cross-functional operations, per the user's own
+  framing — `/weekly-briefing`). New pack commands need zero registry
+  wiring to show up on the Skills page — confirmed
+  `lib/skills/generic-command-set.ts` already scans each company's own
+  `.claude/commands/` dynamically. "Add a company" now shows a 4-card
+  picker (native radio inputs styled as cards, no new UI primitive).
+  Verified for real, not just unit tests: a throwaway `tsx` script exercised
+  the real impl against real `templates/packs/*` dirs in disposable
+  `mkdtemp` directories (all 3 packs land correctly, base "general" pack
+  unaffected, one clean git commit per company); `scripts/verify.py`'s
+  `ONTOLOGY-01` check flips from `INFO` to `PASS` for all 3 packed
+  variants with zero new FAILs (the 2 pre-existing FAILs — missing
+  `definitions/clients/` marker, unresolved `examples/harukaze-ec/`
+  references — are the same known baseline gap in every case, unrelated to
+  this work); and a full live Playwright pass against a throwaway dev
+  server confirmed the real UI path end-to-end (picker renders, confirm
+  dialog names the chosen pack, "Create & register" produces a real
+  company directory on disk with the SE pack's ontology and both new
+  commands present, one clean initial commit). `npx tsc --noEmit`, `npx
+  vitest run` (341 tests passing, 66 files), and `npm run build` all clean.
+  **Next:** commit and push this work, then pick a next step from the two
+  explicitly-deferred asks (multi-model support, Linux/.deb installer) or
+  the still-open macOS notarization / Day 4 end-to-end walkthrough items.

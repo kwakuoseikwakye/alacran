@@ -1,0 +1,90 @@
+# Leadership Team starter ontology — a filled-in starting point, not a blank
+# template. This one is deliberately generalist (cross-functional exec roles
+# rather than one department) — for someone running the whole business
+# day-to-day rather than one function of it. Replace the example values with
+# your own; keep the shape (customer / org / product, lowercase +
+# dot-separated ids) since scripts/verify.py's ONTOLOGY-01 check and the rest
+# of this starter both assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/leadership-team/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: customer
+# ============================================================
+customer:
+  domain: customer
+  primary_owner_candidates:
+    - Owner / CEO
+
+  entities:
+    - id: customer.account
+      type: account
+      name: Customer account
+      description: A paying customer or client.
+      attributes:
+        name: string
+        segment: string
+        acv: number  # Annual Contract Value, or an order-of-magnitude band if exact figures are sensitive
+        status: enum  # active / at_risk / churned
+      tags: [primary]
+
+# ============================================================
+# Domain 2: org — the exec/leadership roles this template is built around
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Owner / CEO
+
+  entities:
+    - id: org.role
+      type: role
+      name: Leadership role
+      description: >
+        A cross-functional leadership role. At a small company these are often the same one or
+        two people wearing several hats at once — that's expected, not a gap to fill.
+      attributes:
+        name: string  # e.g. CEO, COO, CFO, Head of People
+        focus: string  # e.g. "strategy and fundraising", "day-to-day ops", "cash and runway"
+        held_by: string  # a person's name, or "vacant" if genuinely unfilled — see approver-registry.yaml's sole-owner pattern
+      tags: [primary]
+
+    - id: org.team
+      type: team
+      name: Team
+      description: A functional group reporting into one of the roles above.
+      attributes:
+        name: string
+        lead_role_id: string  # ref: org.role
+        headcount: integer
+      tags: [secondary]
+
+# ============================================================
+# Domain 3: product
+# ============================================================
+product:
+  domain: product
+  primary_owner_candidates:
+    - Owner / CEO
+
+  entities:
+    - id: product.offering
+      type: offering
+      name: Offering
+      description: What the company sells.
+      attributes:
+        name: string
+        pricing_model: enum  # one_time / monthly / annual / usage
+        status: enum  # active / sunset
+      tags: [primary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 3 domains (customer + org + product)
+  - org.role is deliberately generalist (CEO/COO/CFO-style), not one department
+  - Naming convention = lowercase + dot-separated, matching the base starter

@@ -13,6 +13,12 @@
 // this entry needs to move to the file-level list below (see
 // notes/company/.gitkeep for why: that folder holds real generated
 // digests alongside its placeholder, so only the placeholder is listed).
+//
+// This same manifest is shared by every starter pack (see
+// lib/company-starter-packs.ts): the packs only ever add files on top of
+// this base skeleton (a tailored ontology, a couple of shape-specific
+// commands), never a different folder shape — so one manifest still
+// covers all of them.
 export const TEMPLATE_MANIFEST: string[] = [
   ".claude/hooks",
   ".claude/commands",
@@ -58,28 +64,32 @@ export const TEMPLATE_MANIFEST: string[] = [
   "notes/company/.gitkeep",
 ]
 
-export const FRESH_HANDOFF_CONTENT = `# HANDOFF — セッション引き継ぎ
+export const FRESH_HANDOFF_CONTENT = `# HANDOFF — session handover
 
-このファイルは、セッションを跨いで「今どこにいるか・次に何をやるか」を伝えるための
-引き継ぎノートです。\`CLAUDE.md\` §2.6「セッション引き継ぎ」の実装で、セッション終了時に
-\`/handoff\` コマンドで追記していきます。
+This file carries "where things stand and what's next" across sessions. It
+implements \`CLAUDE.md\` §2.6 ("Session handover") — the \`/handoff\` command
+appends to it at the end of each session.
 
-> **配布直後の状態です。** まだ運用セッションの実績はありません。
-> 最初のセッションでは、下記「Next up」に沿って着手してください。
+> **This is the state right after distribution.** No working session has run
+> yet. For the first session, start from "Next up" below.
 
 ---
 
-## はじめての方へ（最初のセッションの進め方）
+## New here? (how to run the first session)
 
-1. \`CLAUDE.md\` §5「セッションフロー」の開始手順を読む（本ファイルと CLAUDE.md で現在地を把握）。
-2. \`exercises/01\`（合宿当日の演習 1 本目）から着手する。
-3. 自社コンテキストを入れ始めるなら \`/define-company\` → \`definitions/ontology/company.yaml\` を生成。
-4. まとまった変更のあとは \`python3 scripts/verify.py\`（または \`/verify\`）で検証する（偽緑禁止）。
-5. セッション終了時に \`/handoff\` で本ファイルを更新し、\`/decision\` \`/retro\` で記録を残す。
+1. Read the start-of-session steps in \`CLAUDE.md\` §5 ("Session flow") — this
+   file plus \`CLAUDE.md\` tell you where things currently stand.
+2. Start with \`exercises/01\` (the first hands-on exercise).
+3. When you're ready to fill in your own company's context, run
+   \`/define-company\` to generate \`definitions/ontology/company.yaml\`.
+4. After any substantial change, verify with \`python3 scripts/verify.py\`
+   (or \`/verify\`) — no fake green.
+5. At the end of a session, update this file with \`/handoff\`, and leave a
+   record with \`/decision\` or \`/retro\` for anything decided.
 
 ---
 
 ## Next up
 
-- \`/define-company\` で自社コンテキストを記入する。
+- Run \`/define-company\` to fill in your own company's context.
 `
