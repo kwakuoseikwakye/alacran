@@ -1,0 +1,67 @@
+# Customer support starter ontology — a filled-in starting point, not a
+# blank template. Replace the example values with your own; keep the shape
+# (customer / org / product, lowercase + dot-separated ids) since
+# templates/company-starter/scripts/verify.py's ONTOLOGY-01 check and the
+# rest of this starter both assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/customer-support/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: customer
+# ============================================================
+customer:
+  domain: customer
+  primary_owner_candidates:
+    - Support agent
+
+  entities:
+    - id: customer.contact
+      type: person
+      name: Contact
+      description: The person who raised a support ticket.
+      attributes:
+        name: string
+        email: string
+        preferred_channel: enum  # email / chat / phone
+      tags: [primary]
+
+    - id: customer.ticket
+      type: ticket
+      name: Support ticket
+      description: One reported issue or question from a customer.
+      attributes:
+        subject: string
+        channel: enum  # email / chat / phone / social
+        priority: enum  # low / medium / high / urgent
+        status: enum  # open / pending / resolved
+        opened_at: date
+      tags: [primary]
+
+# ============================================================
+# Domain 2: org
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Head of support
+
+  entities:
+    - id: org.role
+      type: role
+      name: Role
+      description: A support function.
+      attributes:
+        name: string  # e.g. support agent, escalation lead
+        responsibilities: list
+      tags: [primary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 2 domains (customer + org)
+  - Shaped for a tickets-and-responses business rather than a generic one
+  - Naming convention = lowercase + dot-separated, matching the base starter

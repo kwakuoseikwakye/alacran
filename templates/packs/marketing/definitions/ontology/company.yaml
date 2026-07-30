@@ -1,0 +1,68 @@
+# Marketing starter ontology — a filled-in starting point, not a blank
+# template. Split out from the original combined Marketing & Sales pack —
+# this half covers campaigns and what's being offered. Replace the example
+# values with your own; keep the shape (customer / org / product, lowercase
+# + dot-separated ids) since templates/company-starter/scripts/verify.py's
+# ONTOLOGY-01 check and the rest of this starter both assume it.
+
+version: 1
+schema_version: "2026-07-30-template"
+template_origin: templates/packs/marketing/definitions/ontology/company.yaml
+status: draft
+
+# ============================================================
+# Domain 1: org
+# ============================================================
+org:
+  domain: org
+  primary_owner_candidates:
+    - Head of marketing
+
+  entities:
+    - id: org.role
+      type: role
+      name: Role
+      description: A marketing function.
+      attributes:
+        name: string  # e.g. campaign manager, content lead
+        responsibilities: list
+      tags: [primary]
+
+# ============================================================
+# Domain 2: product
+# ============================================================
+product:
+  domain: product
+  primary_owner_candidates:
+    - Head of marketing
+
+  entities:
+    - id: product.campaign
+      type: campaign
+      name: Campaign
+      description: A time-boxed push around one message, offer, or channel.
+      attributes:
+        name: string
+        channel: enum  # email / social / paid_ads / content / event
+        goal: string
+        status: enum  # planned / running / done
+        starts_at: date
+        ends_at: date
+      tags: [primary]
+
+    - id: product.offering
+      type: offering
+      name: Offering
+      description: What's actually being sold.
+      attributes:
+        name: string
+        pricing_model: enum  # one_time / monthly / annual / usage
+      tags: [primary]
+
+# ============================================================
+# Template Acceptance
+# ============================================================
+template_acceptance:
+  - Defines 2 domains (org + product)
+  - Shaped for a campaigns-and-offerings business rather than a generic one
+  - Naming convention = lowercase + dot-separated, matching the base starter

@@ -1,4 +1,6 @@
 import { describe, it, expect } from "vitest"
+import { existsSync } from "node:fs"
+import path from "node:path"
 import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "./company-starter-packs"
 
 describe("COMPANY_STARTER_PACKS", () => {
@@ -16,6 +18,20 @@ describe("COMPANY_STARTER_PACKS", () => {
   it("gives every non-default pack its own distinct directory name", () => {
     const dirNames = COMPANY_STARTER_PACKS.map((p) => p.dirName).filter((d): d is string => d !== null)
     expect(new Set(dirNames).size).toBe(dirNames.length)
+  })
+
+  it("gives every pack a non-empty category", () => {
+    for (const pack of COMPANY_STARTER_PACKS) {
+      expect(pack.category.trim().length).toBeGreaterThan(0)
+    }
+  })
+
+  it("has a templates/packs/<dirName> directory on disk for every pack that declares one", () => {
+    for (const pack of COMPANY_STARTER_PACKS) {
+      if (pack.dirName === null) continue
+      const dir = path.join(process.cwd(), "templates", "packs", pack.dirName)
+      expect(existsSync(dir), `expected ${dir} to exist for pack "${pack.id}"`).toBe(true)
+    }
   })
 })
 

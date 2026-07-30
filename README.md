@@ -774,3 +774,26 @@ the art is 600x626, so the old fixed squares would have squashed it ~4%
 The Three.js hero emblem was replaced by the artwork, and the now-unreferenced
 `landing/vendor/three.min.js` (656 KB) and `landing/logo3d.js` were deleted —
 both recoverable from git history if you want the 3D version back.
+
+## v30: starter template expansion — 7 categorized packs + real landing copy
+
+Expanded the starter-pack system from 4 packs to 7, organized into
+categories (General / Engineering / Sales / Marketing / Support / HR &
+People / Leadership) modeled on fleeceai.app/templates' category set.
+`marketing-sales` was split into separate **Sales** (`/follow-up-lead`) and
+**Marketing** (`/draft-campaign`) packs — their ontology and commands moved
+over unchanged, just partitioned by domain (`customer` → Sales, `product` →
+Marketing). Two new packs were built fresh: **Customer support**
+(`customer.ticket` ontology, `/triage-ticket` + `/draft-response`) and **HR &
+People** (`org.candidate` ontology, `/screen-candidate` + `/draft-offer` —
+`/draft-offer` explicitly routes through `.claude/rules/hitl-gate.md` since
+compensation/contract terms are named triggers there). `lib/company-starter-packs.ts`
+gained a `category` field; the "Add a company" picker
+(`components/add-company-form.tsx`) now groups its radio-card grid under
+category headings instead of one flat list — no new page or filter UI, per
+the deliberate choice to keep this app's plain-dashboard aesthetic rather
+than build Fleece's full tabbed gallery. `landing/templates/index.html`,
+previously stale (it said "more starters soon" while packs already
+shipped), now names all 7 real packs with real descriptions, grouped the
+same way. See
+`docs/superpowers/specs/2026-07-30-control-panel-starter-template-expansion-design.md`.
