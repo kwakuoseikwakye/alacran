@@ -7,12 +7,15 @@
  * "Bring your own key" just means "point this company at a different already-
  * authenticated CLI," the same shape Claude Code already used before this.
  *
- * Only Claude Code's flags below are verified against real, previously-shipped
- * behavior (moved here unchanged from run-company-command-impl.ts). The
- * OpenAI Codex CLI and Aider invocations are best-effort from their public
- * non-interactive/scripted-mode docs — this repo has neither installed to
- * test against, so treat their exact flags as unverified until a live run
- * confirms them (see LAUNCH.md).
+ * Claude Code's flags are verified against real, previously-shipped behavior
+ * (moved here unchanged from run-company-command-impl.ts). The OpenAI Codex
+ * CLI and Aider flags were confirmed against the real installed CLIs'
+ * `--help` output (`npx @openai/codex exec --help`, `uvx --from aider-chat
+ * aider --help`) — notably, `codex exec`'s real non-interactive/no-approval
+ * flag is `--sandbox workspace-write`, not the `--full-auto` this started
+ * with, which doesn't exist on the installed version (0.146.0). Neither has
+ * been run end-to-end against a live model account from this app yet (see
+ * LAUNCH.md) — only the flag names/shapes are confirmed real.
  *
  * Permission scoping is only as granular as each CLI's own model: Claude
  * Code's fine-grained `Edit(pattern)`/`Bash(pattern)` allowlist is unique to
@@ -73,7 +76,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     binaryName: "codex",
     installHint: "npm install -g @openai/codex",
     installLink: "https://developers.openai.com/codex/cli",
-    buildArgs: ({ prompt }) => ["exec", prompt, "--full-auto", "--skip-git-repo-check"],
+    buildArgs: ({ prompt }) => ["exec", prompt, "--skip-git-repo-check", "--sandbox", "workspace-write"],
   },
   aider: {
     id: "aider",

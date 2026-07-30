@@ -137,15 +137,22 @@ the whole coding-agent CLI per company), Linux packaging format (shipped
   (see Session handoff log) — but `dpkg-deb` isn't installed here, so the
   actual `.deb` build and a real `apt install`/launch-from-app-menu pass
   have not been run on real Debian. Needs a Linux machine or CI runner.
-- **[MED] Live-verify the OpenAI Codex CLI and Aider executor integrations.**
-  `lib/ai-executors.ts`'s `claude-code` flags are the pre-existing, already-
-  proven behavior (moved, not rewritten). The `openai-codex` and `aider`
-  `buildArgs` are best-effort from their public non-interactive/scripted-mode
-  docs — neither CLI is installed on this machine, so their exact flags are
-  unverified against a real run. Needs a machine with `codex`/`aider`
-  installed and authenticated to confirm before advertising them as fully
-  supported (today they're wired up and swappable per company, but untested
-  end-to-end).
+- **[MED] Run the OpenAI Codex CLI and Aider integrations against a real,
+  authenticated account.** `lib/ai-executors.ts`'s `claude-code` flags are
+  the pre-existing, already-proven behavior (moved, not rewritten). The
+  `openai-codex`/`aider` flags were upgraded from best-effort docs guesses
+  to confirmed-real: both CLIs were actually installed here (`npx
+  @openai/codex`, `uvx --from aider-chat aider`) and their `--help` output
+  was checked directly. That caught a real bug before it shipped —
+  `--full-auto` isn't a real `codex exec` flag on the installed version
+  (0.146.0); the actual non-interactive/no-approval flag is `--sandbox
+  workspace-write`, now fixed. Aider's assumed flags (`--message`,
+  `--yes-always`, `--no-auto-commits`) all checked out exactly as written.
+  What's still unverified: neither CLI has been run end-to-end against a
+  real authenticated model account from inside this app (no API
+  key/subscription configured here) — the flag *shapes* are now confirmed
+  real, but a live run's actual behavior (does the edit land, does the
+  sandbox mode allow what a command needs) is not yet proven.
 ---
 
 ## Deadline math (targets, adjust as needed)

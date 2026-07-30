@@ -32,7 +32,7 @@
         <div class="hero-logo">
       <img class="mark mark-glow" src="/logo.png" alt="Alacrán" width="600" height="626" fetchpriority="high" />
     </div>
-    <p class="eyebrow">Mac app · works with your own Claude</p>
+    <p class="eyebrow">Mac app · Claude, ChatGPT, or your own model</p>
     <h1>
       <span class="reveal-word" style="animation-delay:.05s">Your</span>
       <span class="reveal-word" style="animation-delay:.12s">AI</span>
@@ -45,7 +45,7 @@
       <a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free trial</a>
       <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS</a>
     </div>
-    <p class="hero-trust"><b>14 days free</b> · bring your own Claude · no analytics, no tracking, ever</p>
+    <p class="hero-trust"><b>14 days free</b> · bring your own AI &mdash; Claude, ChatGPT, or open source · no analytics, no tracking, ever</p>
   </div>
 </header>
 
@@ -193,7 +193,7 @@
     <div class="grid r">
       <div class="card"><div class="dot"></div><h3>A workspace in one click</h3><p>Everything your AI needs to know about a business, in one tidy folder on your Mac.</p></div>
       <div class="card"><div class="dot"></div><h3>Setup that writes itself</h3><p>Answer four plain questions, or let your AI take a first pass and just correct it.</p></div>
-      <div class="card"><div class="dot"></div><h3>Your Claude, your account</h3><p>No second AI bill. Alacr&aacute;n runs on the Claude subscription you already pay for.</p></div>
+      <div class="card"><div class="dot"></div><h3>Your AI, your account</h3><p>No second AI bill. Runs on Claude by default, or point a workspace at ChatGPT or an open-source model instead.</p></div>
       <div class="card"><div class="dot"></div><h3>Your inbox, summarised</h3><p>What came in, what needs a reply. It only reads, so it can never send or delete by mistake.</p></div>
       <div class="card"><div class="dot"></div><h3>Teach it once, reuse forever</h3><p>Turn any routine job into a skill, then drop it onto another workspace in one click.</p></div>
       <div class="card"><div class="dot"></div><h3>An undo button for everything</h3><p>Every change is saved as a checkpoint you approved, so you can always walk it back.</p></div>
@@ -252,7 +252,14 @@
           <span class="pill live"><i></i>Live</span>
         </div>
         <h3>Your own Claude</h3>
-        <p>Your subscription, your keys, no second AI bill from us. More providers are on the roadmap.</p>
+        <p>Your subscription, your keys, no second AI bill from us. The default, and the one we&rsquo;ve run longest.</p>
+      </div>
+      <div class="card">
+        <div class="cardmark">
+          <span class="pill live"><i></i>New</span>
+        </div>
+        <h3>Or ChatGPT / open source</h3>
+        <p>Point any workspace at OpenAI&rsquo;s Codex CLI instead &mdash; or at Aider, which itself runs on Anthropic, OpenAI, or a local open-source model. Same deal as Claude: your own account, your own key, nothing routed through us.</p>
       </div>
       <div class="card">
         <div class="cardmark">
@@ -371,7 +378,7 @@
     <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own Mac, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
     <p>There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
     <p>So we won&rsquo;t claim &ldquo;nothing ever leaves your Mac&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
-    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to Anthropic, when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
+    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to whichever AI that workspace is set to &mdash; Anthropic by default &mdash; when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
     <p style="margin-top:26px;font-size:1rem">That&rsquo;s the whole list. Everything else stays in a folder you picked, in plain text you can read without us.</p>
   </div>
 </section>
@@ -407,7 +414,7 @@
           <p>Fair question, and here&rsquo;s the complete list rather than a vague reassurance:</p>
           <p><b>1. Your licence key</b> goes to Lemon Squeezy, the company that processes payments for us, to check your subscription is active. It sends the key and nothing else. No machine ID, no email, no hint of what you&rsquo;re working on. It happens at most once a day.</p>
           <p><b>2. A version number</b> is checked against GitHub&rsquo;s public releases page, at most once a day, so the app can tell you when an update is out. It&rsquo;s an anonymous read of a public page. Nothing is sent about you, and you can turn it off.</p>
-          <p><b>3. Your prompts go to Anthropic</b> when you press Run, exactly as they would if you typed into Claude yourself. That&rsquo;s the AI doing its job. Nothing is sent when you&rsquo;re just clicking around the app.</p>
+          <p><b>3. Your prompts go to whichever AI that workspace is set to</b> when you press Run &mdash; Anthropic by default, or OpenAI / wherever Aider is pointed if you&rsquo;ve switched it. Either way, that&rsquo;s the AI doing its job, exactly as if you&rsquo;d typed into it yourself. Nothing is sent when you&rsquo;re just clicking around the app.</p>
           <p><b>4. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
           <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all.</p>
         </div>
@@ -416,8 +423,16 @@
       <details>
         <summary><span>Do I have to pay for AI on top of this?</span></summary>
         <div class="ans">
-          <p>You need your own Claude subscription from Anthropic, which many people already have. Alacr&aacute;n uses that.</p>
-          <p>We deliberately don&rsquo;t resell AI usage, so there&rsquo;s no metered bill from us that creeps up the more you use it. You pay Anthropic for the AI and us for the app, and both are predictable.</p>
+          <p>You need an account with whichever AI a workspace uses. By default that&rsquo;s your own Claude subscription from Anthropic, which many people already have, and it&rsquo;s the option we&rsquo;ve run the longest.</p>
+          <p>We deliberately don&rsquo;t resell AI usage, so there&rsquo;s no metered bill from us that creeps up the more you use it, whichever AI you&rsquo;re on. You pay your AI provider for the AI and us for the app, and both are predictable.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>Can I use ChatGPT, or my own open-source model, instead of Claude?</span></summary>
+        <div class="ans">
+          <p>Yes. Every workspace has a &ldquo;Runs commands with&rdquo; setting on its card: Claude Code by default, or OpenAI&rsquo;s Codex CLI, or Aider. Aider itself can run on Anthropic, OpenAI, or a local model you host yourself, so it&rsquo;s the one to reach for if you want to keep everything off the big providers entirely.</p>
+          <p>Whichever you pick, the deal stays the same as Claude: your own account, your own key, nothing routed through us. Claude Code is the one we&rsquo;ve run longest and trust most by default; the others are newer here, so if something looks off, email us and tell us what happened.</p>
         </div>
       </details>
 
@@ -505,7 +520,7 @@
       <p class="muted" style="font-size:.95rem">14-day free trial · cancel anytime</p>
       <ul class="plist">
         <li>As many workspaces as you want</li>
-        <li>Runs on your own Claude, so no second AI bill</li>
+        <li>Runs on your own Claude, ChatGPT, or open-source setup &mdash; no second AI bill</li>
         <li>Guided setup, or let your AI draft it</li>
         <li>Connect your tools and reuse your saved jobs</li>
         <li>Every change recorded and approved by you</li>
