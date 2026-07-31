@@ -154,6 +154,40 @@ If a new feature's live test would need to touch either of those two
 repos specifically, stop and ask the user how to verify instead of
 improvising a workaround.
 
+## Standing release rule — rebuild + republish on every shipped change
+
+**Linux packaging is CI-automated** (`.github/workflows/package-linux.yml`,
+triggered on a `vX.Y.Z` tag push, publishes `Alacran.deb` to the public
+`alacran-releases` release). **macOS packaging has no CI** — it's a manual
+local build (`bash scripts/package-macos.sh`) and a manual upload. This gap
+caused a real incident: the public `Alacran.dmg`/`Alacran.zip` sat stale for
+~2 days (built 2026-07-29) while multi-model support, the Linux `.deb`, and
+the v30 starter-template expansion all shipped to `master` — a user
+downloaded the app from the live site and got none of it.
+
+**The rule going forward:** whenever a merged change is the kind a user
+would notice (a new feature, a UI change, updated templates — not an
+internal refactor or a docs-only commit), rebuild the macOS app
+(`bash scripts/package-macos.sh`) from current `master`, self-test it
+(the script already does this headlessly), and spot-check that the new
+change is actually present in the built payload (e.g. grep
+`dist/Alacrán.app/Contents/Resources/app/.next` for a string unique to the
+change) before proposing to publish.
+
+**Always ask the user for explicit confirmation before the actual publish
+step** (`gh release upload` to the public `alacran-releases` repo) — this
+overwrites a live artifact real users are already downloading, so it
+follows the same "ask before shared-state, hard-to-reverse actions" rule as
+everything else in this project. Building and self-testing locally needs no
+confirmation; only the upload does.
+
+Until this becomes a `.github/workflows/package-macos.yml` (not yet
+written — would need a signing/notarization story to be worth the same tag
+-triggered automation as Linux), this is a manual step that's easy to
+forget after a merge. Treat "did the macOS release get rebuilt" as a
+standing question at the end of any session that merged a user-visible
+change.
+
 ## Workflow (how every slice gets built)
 
 1. **Brainstorm** (`superpowers:brainstorming`) — explore real current
