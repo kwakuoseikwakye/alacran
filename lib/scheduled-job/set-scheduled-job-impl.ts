@@ -29,19 +29,37 @@ export async function defaultExecFile(command: string, args: string[]) {
 const defaultCheck: CheckFn = (label) => checkLaunchdJob(label)
 
 /**
- * Loads or unloads the Owner agent's LaunchAgent.
+ * Loads or unloads the Owner agent's LaunchAgent, always with `-w` so "off"
+ * is durable — not just for this login session.
  *
- * The exit code is NOT the source of truth — the resulting state is. Measured
- * on macOS 26.2: a redundant `unload` on an already-unloaded plist prints
- * `Unload failed: 5: Input/output error` to stderr but exits 0, so
- * `promisify(execFile)` never rejects and a stderr-only failure would pass
- * silently. We also catch a thrown error so an unobserved failure mode
- * (missing plist, permissions) can't turn into a rejected Server Action — a
- * non-zero exit there would be *correct* signalling, not unreliability; the
- * catch exists for safety, not because exit codes can't be trusted. Either
- * way, we read the real state back via `checkLaunchdJob` and compare it
- * against what was requested. That single check covers both cases without
- * needing to know in advance which exit code any given failure produces.
+ * Measured on macOS 26.2: a bare `unload` (no `-w`) writes no persistent
+ * disable override at all — the label stays absent from `launchctl
+ * print-disabled gui/$UID` — so the previous bare-`unload` design had nothing
+ * backing "off" across a logout or reboot. Only `unload -w` writes a `=>
+ * disabled` entry there, which is why Stop now uses it. Start therefore has
+ * to clear that same override, and `launchctl load -w` was measured (v31,
+ * macOS 26.2, two independent round-trips against a disposable job) to
+ * reliably do exactly that: the override read back as `=> enabled` and the
+ * job reappeared in `launchctl list` both times.
+ *
+ * The exit code is NOT the source of truth — the resulting state is, and
+ * this matters in two independent, unrelated ways, both measured on macOS
+ * 26.2. First: a redundant `unload` on an already-unloaded plist prints
+ * `Unload failed: 5: Input/output error` to stderr but exits 0. Second: a
+ * bare `load` (no `-w`) while the disable override is set does not load the
+ * job — it stays absent from `launchctl list` — while *also* exiting 0 and
+ * reporting `Load failed: 5: Input/output error` on stderr only. That is a
+ * second, independent instance of the same exit-code-lies pattern, on the
+ * opposite verb. `promisify(execFile)` only rejects on a non-zero exit, so
+ * neither of these ever throws — a stderr-only failure would pass silently
+ * in both directions without the state re-check below. We also catch a
+ * thrown error so an unobserved failure mode (missing plist, permissions)
+ * can't turn into a rejected Server Action — a non-zero exit there would be
+ * *correct* signalling, not unreliability; the catch exists for safety, not
+ * because exit codes can't be trusted. Either way, we read the real state
+ * back via `checkLaunchdJob` and compare it against what was requested. That
+ * single check covers all of the above without needing to know in advance
+ * which exit code any given failure produces.
  */
 export async function setScheduledJobImpl(
   enabled: boolean,
@@ -52,6 +70,7 @@ export async function setScheduledJobImpl(
   try {
     await execFileFn("launchctl", [
       enabled ? "load" : "unload",
+      "-w",
       PIPELINE_LAUNCHD_PLIST_PATH,
     ])
   } catch (error) {
@@ -66,7 +85,7 @@ export async function setScheduledJobImpl(
       enabled: health.loaded,
       message: enabled
         ? "Scheduled runs enabled — the agent polls every 5 minutes."
-        : "Scheduled runs stopped. A run already in progress was stopped too.",
+        : "Scheduled runs stopped, including any run already in progress — off persists across logout and reboot until you start it again.",
     }
   }
 

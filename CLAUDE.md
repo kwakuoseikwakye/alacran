@@ -355,6 +355,23 @@ can't be trusted even in the apparent-success case; a thrown error is
 still handled defensively for failure modes that were never actually
 observed. Bespoke to one agent id, like v2/v9/v19.
 See `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
+**Same-day follow-up made "off" persistent:** a bare `unload` was found to
+write no disable override at all (label absent from `launchctl
+print-disabled gui/$UID`, macOS 26.2), so the shipped "off" had nothing
+backing it across a logout or reboot. Stop and Start now use `-w` in both
+directions (`unload -w` / `load -w`). Because only `launchctl enable` had
+ever been proven to clear that override, `load -w` doing the same was
+measured — not assumed — before any code changed: two independent
+round-trips against a disposable job (macOS 26.2, build 25C56) both
+cleared the override and reloaded the job. A second exit-code lie, on the
+opposite verb from the one already documented, surfaced during that
+measurement: a bare `load` while the override is set silently no-ops
+*and* exits 0 (stderr-only `Load failed: 5: Input/output error`).
+**Documented trap:** `email-pipeline-agent`'s own `install.sh` uses a bare
+`load`, so re-running it while this toggle is off will appear to succeed
+without actually starting the job — only this toggle's own Start path
+clears the override. That repo can't be modified by this project, so it's
+a caveat, not a fix.
 
 **Standing context for the coming slices that retire the daemon:**
 `~/AI-Native/email-pipeline-agent/claude-agent-settings.json` lines 26-27

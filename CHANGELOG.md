@@ -812,3 +812,30 @@ the toggle's confirm dialog was opened and cancelled against the real
 card, never confirmed. The real button is left for the maintainer to
 click. See
 `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
+
+### Follow-up: make "off" persistent (same day)
+
+The bare `unload`/`load` above turned out to have a gap: a bare `unload`
+writes no persistent disable override at all (measured, macOS 26.2 —
+the label stays absent from `launchctl print-disabled gui/$UID`), so
+"off" had nothing backing it across a logout or reboot. The maintainer
+decided Stop and Start now use `-w` in both directions: `unload -w`
+writes a `=> disabled` entry, and `load -w` clears it. That second half
+was the risk — only `launchctl enable` was previously proven to clear
+an override, not `load -w` — so it was measured before being written
+down: a disposable `com.alacran.wtest` job (macOS 26.2, build 25C56) was
+taken through `unload -w` → `load -w` twice, and both round-trips
+reliably cleared the override (`=> enabled`) and reloaded the job. A
+second, independent exit-code lie was found along the way and is now
+documented in the impl's doc comment: a bare `load` while the override
+is set silently no-ops (job never loads) while still exiting 0, stderr
+reporting `Load failed: 5: Input/output error` — the same
+exit-code-lies pattern the resulting-state check already existed to
+handle, on the opposite verb. This is a real trap for
+`email-pipeline-agent`'s own `install.sh`, which uses a bare `load`: running
+it while the toggle is off will appear to succeed and not actually start
+the job, since only the toggle's own Start path clears the override.
+That repo is out of scope to modify, so this is a documented caveat, not
+a fix. Verification repeated the same disposable-job discipline as
+above, plus confirming the disable override itself was cleared and
+`print-disabled` returned to baseline before cleanup.
