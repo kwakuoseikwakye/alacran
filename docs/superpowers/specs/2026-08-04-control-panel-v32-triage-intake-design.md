@@ -103,10 +103,27 @@ any newly created company inherits them.
 
 Three, and they are the reason this shape was chosen over the alternatives.
 
-**The agent gets no `Bash` at all.** `bashPatterns` stays empty, because every
-external call happens control-panel-side in prefetch. This is *tighter* than
-`check-inbox`, which needs scoped `Bash(gog ...)`. The agent receives data, not
-tool access.
+**The agent gets no `Bash` at all — on Claude Code.** `bashPatterns` stays empty,
+because every external call happens control-panel-side in prefetch. This is
+*tighter* than `check-inbox`, which needs scoped `Bash(gog ...)`. The agent
+receives data, not tool access.
+
+**Qualified, honestly:** this property is executor-dependent. Only
+`AI_EXECUTORS["claude-code"].buildArgs` consumes `editScopePattern` and
+`bashPatterns`; the `openai-codex` entry passes `--sandbox workspace-write` and
+`aider` passes `--yes-always --no-auto-commits`, both ignoring those inputs
+entirely. So on those two executors the no-Bash and scoped-Edit guarantees do
+**not** hold — their sandboxes are whatever those tools implement, which this
+project neither sets nor verifies.
+
+This is pre-existing and affects every command including `check-inbox`, but v32 is
+the first command whose input is attacker-influenced, so it must not be papered
+over. Two mitigations, both cheap: the untrusted-content framing below is in the
+*prompt*, so it applies on every executor; and the commands' generated
+documentation states plainly that the confinement guarantees are Claude
+Code-specific. Gating the triage commands to Claude Code outright was considered
+and rejected as out of scope — it would be a change to the executor-selection
+feature, not to this slice — but it is recorded as a follow-up.
 
 **Every `gog` invocation carries `--readonly` and `--gmail-no-send`.** Belt and
 braces: the allowlist governs what may be invoked, these flags govern what the
@@ -236,4 +253,9 @@ lost is interactive typing, and the UI was the explicitly stated goal.
   `english-camp-portal` and `PLH_Daily_Media`. Out of scope — that repo must not
   be mutated by this project — but recorded because it is now known to be wrong.
 - No dashboard editor for `definitions/triage/senders.yaml`.
+- **Whether the triage commands should be gated to Claude Code**, given that the
+  no-Bash and scoped-Edit confinement is executor-specific (see "Security
+  properties"). Deciding it properly means deciding it for all nine commands, not
+  just these two, which is a change to the executor-selection feature rather than
+  to this slice.
 - Retiring the daemon itself, which is what this arc is ultimately for.
