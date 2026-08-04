@@ -8,7 +8,7 @@ const configReader = async (p: string) => {
   throw Object.assign(new Error("ENOENT"), { code: "ENOENT" })
 }
 
-const goodExec: PrefetchExecFileFn = async (file, args) => {
+const goodExec: PrefetchExecFileFn = async (file, _args) => {
   if (file === "gh") return { stdout: "title: login 500s\nbody: tapping login returns 500", stderr: "" }
   if (file === "git") return { stdout: "main", stderr: "" }
   return { stdout: "", stderr: "" }
@@ -75,6 +75,24 @@ describe("buildTriageIssuePrefetch", () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.message).toContain("gh")
+  })
+
+  it("refuses when gh returns empty issue output, and never proceeds to repo context", async () => {
+    const gitCalls: string[][] = []
+    const emptyExec: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gh") return { stdout: "   \n", stderr: "" }
+      if (file === "git") gitCalls.push(args)
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageIssuePrefetch(ctx(emptyExec, { issue: "o/plh-mobile#42" }))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    // Exact match (not just toContain) so this can only pass via the
+    // `issueText === ""` refusal branch — the gh-unavailable catch block
+    // produces a differently-worded message ("Could not read ... with gh:"),
+    // so a false pass from the wrong branch is not possible here.
+    expect(result.message).toBe("o/plh-mobile#42 returned nothing — check the reference.")
+    expect(gitCalls).toHaveLength(0)
   })
 
   it("never invokes a mutating gh subcommand", async () => {
