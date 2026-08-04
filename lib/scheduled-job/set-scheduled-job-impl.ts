@@ -31,13 +31,17 @@ const defaultCheck: CheckFn = (label) => checkLaunchdJob(label)
 /**
  * Loads or unloads the Owner agent's LaunchAgent.
  *
- * The exit code is NOT the source of truth — the resulting state is. On macOS
- * (observed on 26.2), `launchctl` is unreliable in both directions: redundant
- * `unload` exits 0 while printing a failure to stderr, and other failure modes
- * may exit non-zero. Exit codes are therefore untrustworthy signals. We run the
- * command, catch any thrown error, then read the real state back via
- * `checkLaunchdJob` and compare it against what was requested — the resulting
- * state is the only trustworthy signal.
+ * The exit code is NOT the source of truth — the resulting state is. Measured
+ * on macOS 26.2: a redundant `unload` on an already-unloaded plist prints
+ * `Unload failed: 5: Input/output error` to stderr but exits 0, so
+ * `promisify(execFile)` never rejects and a stderr-only failure would pass
+ * silently. We also catch a thrown error so an unobserved failure mode
+ * (missing plist, permissions) can't turn into a rejected Server Action — a
+ * non-zero exit there would be *correct* signalling, not unreliability; the
+ * catch exists for safety, not because exit codes can't be trusted. Either
+ * way, we read the real state back via `checkLaunchdJob` and compare it
+ * against what was requested. That single check covers both cases without
+ * needing to know in advance which exit code any given failure produces.
  */
 export async function setScheduledJobImpl(
   enabled: boolean,
@@ -62,7 +66,7 @@ export async function setScheduledJobImpl(
       enabled: health.loaded,
       message: enabled
         ? "Scheduled runs enabled — the agent polls every 5 minutes."
-        : "Scheduled runs stopped. A run already in progress will still finish.",
+        : "Scheduled runs stopped. A run already in progress was stopped too.",
     }
   }
 
