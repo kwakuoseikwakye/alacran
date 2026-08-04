@@ -1,4 +1,5 @@
 import { buildRepoStatusPrefetch } from "./repo-status"
+import { buildTriageEmailPrefetch } from "./triage-email"
 import type { PrefetchContext, PrefetchKind, PrefetchResult } from "./types"
 
 export type { PrefetchKind, PrefetchContext, PrefetchResult, PrefetchExecFileFn } from "./types"
@@ -12,6 +13,8 @@ export async function runPrefetch(
       return { ok: true, text: "" }
     case "repo-status":
       return buildRepoStatusPrefetch(ctx)
+    case "triage-email":
+      return buildTriageEmailPrefetch(ctx)
     default:
       // Tasks 4 and 5 add the two triage cases. Do NOT write a `never`
       // exhaustiveness assertion here: `PrefetchKind` already names those kinds,
