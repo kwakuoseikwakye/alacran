@@ -778,13 +778,16 @@ actual state back via the existing `checkLaunchdJob()` and comparing it
 to what was requested, rather than trusting the command's exit code.
 
 That resulting-state check turned out to be necessary, not merely
-defensive. Live verification found `launchctl`'s exit code genuinely
-untrustworthy in *both* directions on macOS (observed on 26.2): a
-redundant `unload` on an already-unloaded plist prints a failure to
-stderr but exits 0, so `promisify(execFile)` — which only rejects on a
-non-zero exit — never throws; other failure modes may exit non-zero on
-their own. Reading the state back via `checkLaunchdJob()` is the only
-signal in either direction that can be trusted.
+defensive. Live verification found one exit-code anomaly on macOS
+(observed on 26.2): a redundant `unload` on an already-unloaded plist
+prints a failure to stderr but exits 0, so `promisify(execFile)` —
+which only rejects on a non-zero exit — never throws. No case of
+`launchctl` exiting non-zero was ever observed; the impl still catches
+a thrown error as a defensive fallback for failure modes that weren't
+triggered in this test (a missing plist, a permissions error), not
+because any of them is known to exit non-zero. Reading the state back
+via `checkLaunchdJob()` is the one check that covers both without
+needing to know in advance which exit code a given failure produces.
 
 Unload does not kill an in-flight run — it stops future scheduled runs;
 a `poll.sh` already executing finishes normally, and the confirm dialog
@@ -803,6 +806,8 @@ Live verification used a disposable `com.alacran.testjob` (running
 `/usr/bin/true`), never the real Owner job, per the standing safety
 rule: toggled through the real `launchctl` code path, confirmed via
 `launchctl list` before and after, then deleted. The real Owner job's
-state was read-only-confirmed unchanged throughout; the real button is
-left for the maintainer to click. See
+state was confirmed unchanged at three checkpoints during the session;
+the toggle's confirm dialog was opened and cancelled against the real
+card, never confirmed. The real button is left for the maintainer to
+click. See
 `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.

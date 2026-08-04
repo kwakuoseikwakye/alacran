@@ -349,9 +349,11 @@ before this slice the dashboard could start a poll (v2) and observe it,
 but stopping the recurring 5-minute schedule needed `launchctl unload`
 in a terminal. New `lib/scheduled-job/` decides success by reading the
 job's actual state back via `checkLaunchdJob()` rather than trusting
-`launchctl`'s exit code — live verification found that exit code
-genuinely untrustworthy in both directions on this machine (macOS
-26.2), not just defensively so. Bespoke to one agent id, like v2/v9/v19.
+`launchctl`'s exit code — live verification found a redundant `unload`
+exits 0 while reporting failure on stderr (macOS 26.2), so exit code
+can't be trusted even in the apparent-success case; a thrown error is
+still handled defensively for failure modes that were never actually
+observed. Bespoke to one agent id, like v2/v9/v19.
 See `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
 
 **Standing context for the coming slices that retire the daemon:**
