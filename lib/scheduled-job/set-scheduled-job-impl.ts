@@ -31,11 +31,13 @@ const defaultCheck: CheckFn = (label) => checkLaunchdJob(label)
 /**
  * Loads or unloads the Takeshi agent's LaunchAgent.
  *
- * The exit code is NOT the source of truth — the resulting state is. `launchctl
- * unload` on an already-unloaded plist (and `load` on an already-loaded one)
- * exits non-zero even though the job ends up in exactly the requested state, so
- * naive exit-code handling reports a spurious failure. We run the command, then
- * read the real state back and compare it against what was asked for.
+ * The exit code is NOT the source of truth — the resulting state is. On macOS
+ * (observed on 26.2), `launchctl` is unreliable in both directions: redundant
+ * `unload` exits 0 while printing a failure to stderr, and other failure modes
+ * may exit non-zero. Exit codes are therefore untrustworthy signals. We run the
+ * command, catch any thrown error, then read the real state back via
+ * `checkLaunchdJob` and compare it against what was requested — the resulting
+ * state is the only trustworthy signal.
  */
 export async function setScheduledJobImpl(
   enabled: boolean,
