@@ -1412,7 +1412,7 @@ git commit -m "Document v31: gated template delivery supersedes bundled-template
 
 ### Task 8: Scaffold the `alacran-template-server` repo
 
-**Files (new repo at `/Users/nanaosei/AI-Native/alacran-template-server`):**
+**Files (new repo at `/Users/example/AI-Native/alacran-template-server`):**
 - Create: `package.json`
 - Create: `tsconfig.json`
 - Create: `lib/template-manifest.ts`
@@ -1427,8 +1427,8 @@ git commit -m "Document v31: gated template delivery supersedes bundled-template
 - [ ] **Step 1: Create the directory and initialize**
 
 ```bash
-mkdir -p /Users/nanaosei/AI-Native/alacran-template-server
-cd /Users/nanaosei/AI-Native/alacran-template-server
+mkdir -p /Users/example/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 git init
 ```
 
@@ -1482,14 +1482,14 @@ dist/
 - [ ] **Step 5: Copy the template content verbatim from `control-panel`**
 
 ```bash
-cp -R /Users/nanaosei/AI-Native/control-panel/templates/company-starter \
-      /Users/nanaosei/AI-Native/alacran-template-server/templates/company-starter
-cp -R /Users/nanaosei/AI-Native/control-panel/templates/packs \
-      /Users/nanaosei/AI-Native/alacran-template-server/templates/packs
-diff -r /Users/nanaosei/AI-Native/control-panel/templates/company-starter \
-        /Users/nanaosei/AI-Native/alacran-template-server/templates/company-starter
-diff -r /Users/nanaosei/AI-Native/control-panel/templates/packs \
-        /Users/nanaosei/AI-Native/alacran-template-server/templates/packs
+cp -R /Users/example/AI-Native/control-panel/templates/company-starter \
+      /Users/example/AI-Native/alacran-template-server/templates/company-starter
+cp -R /Users/example/AI-Native/control-panel/templates/packs \
+      /Users/example/AI-Native/alacran-template-server/templates/packs
+diff -r /Users/example/AI-Native/control-panel/templates/company-starter \
+        /Users/example/AI-Native/alacran-template-server/templates/company-starter
+diff -r /Users/example/AI-Native/control-panel/templates/packs \
+        /Users/example/AI-Native/alacran-template-server/templates/packs
 ```
 
 Expected: both `diff -r` commands produce no output (byte-identical copies).
@@ -1592,7 +1592,7 @@ npm test
 - [ ] **Step 8: Commit**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 git add -A
 git commit -m "Scaffold alacran-template-server: package.json, tsconfig, copied templates, manifest"
 ```
@@ -1601,7 +1601,7 @@ git commit -m "Scaffold alacran-template-server: package.json, tsconfig, copied 
 
 ### Task 9: `lib/validate-license.ts` (alacran-template-server)
 
-**Files (in `/Users/nanaosei/AI-Native/alacran-template-server`):**
+**Files (in `/Users/example/AI-Native/alacran-template-server`):**
 - Create: `lib/validate-license.ts`
 - Test: `lib/validate-license.test.ts`
 
@@ -1686,7 +1686,7 @@ Expected: PASS (4/4).
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 git add lib/validate-license.ts lib/validate-license.test.ts
 git commit -m "Add validateLicense: Lemon Squeezy license check"
 ```
@@ -1695,7 +1695,7 @@ git commit -m "Add validateLicense: Lemon Squeezy license check"
 
 ### Task 10: `lib/read-template-files.ts` (alacran-template-server)
 
-**Files (in `/Users/nanaosei/AI-Native/alacran-template-server`):**
+**Files (in `/Users/example/AI-Native/alacran-template-server`):**
 - Create: `lib/read-template-files.ts`
 - Test: `lib/read-template-files.test.ts`
 
@@ -1859,7 +1859,7 @@ Expected: PASS (4/4).
 - [ ] **Step 5: Commit**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 git add lib/read-template-files.ts lib/read-template-files.test.ts
 git commit -m "Add readTemplateFiles: manifest-driven directory-to-file-map flattening"
 ```
@@ -1868,7 +1868,7 @@ git commit -m "Add readTemplateFiles: manifest-driven directory-to-file-map flat
 
 ### Task 11: `api/get-template.ts` (alacran-template-server)
 
-**Files (in `/Users/nanaosei/AI-Native/alacran-template-server`):**
+**Files (in `/Users/example/AI-Native/alacran-template-server`):**
 - Create: `api/get-template.ts`
 - Test: `api/get-template.test.ts`
 
@@ -1991,7 +1991,7 @@ Expected: all tests across the repo pass (Tasks 9, 10, 11's tests).
 - [ ] **Step 6: Commit**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 git add api/get-template.ts api/get-template.test.ts
 git commit -m "Add /api/get-template: license-gated template file endpoint"
 ```
@@ -2013,7 +2013,7 @@ publishing macOS builds this session).
 - [ ] **Step 2: On confirmation, create and push**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 gh repo create alacran-template-server --private --source=. --remote=origin
 git push -u origin master
 ```
@@ -2036,7 +2036,7 @@ actions — ask first.
 - [ ] **Step 2: On confirmation, deploy**
 
 ```bash
-cd /Users/nanaosei/AI-Native/alacran-template-server
+cd /Users/example/AI-Native/alacran-template-server
 npm install
 vercel --prod
 ```
@@ -2066,7 +2066,7 @@ scripts executable).
 - [ ] **Step 5: Commit the real URL in `control-panel`**
 
 ```bash
-cd /Users/nanaosei/AI-Native/control-panel
+cd /Users/example/AI-Native/control-panel
 git add lib/branding.ts
 git commit -m "Point TEMPLATE_SERVER_URL at the deployed alacran-template-server"
 ```

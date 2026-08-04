@@ -90,7 +90,7 @@ message; full suite green.
   populated by copying **exactly the `TEMPLATE_MANIFEST` paths** from the live
   `~/AI-Native/ai-company-starter-main` (a one-time snapshot). v17 already
   audited this manifest as containing zero company-specific data; re-verify with
-  a scrub grep (`plh`, `takeshi`, `kirirom`, `nana@plh.life`, real absolute
+  a scrub grep (`plh`, `takeshi`, `kirirom`, `owner@example.com`, real absolute
   paths) over the snapshot before committing it.
 - Change the public action `lib/create-company-from-template.ts` to pass the
   bundled path (resolved from the app root, e.g.

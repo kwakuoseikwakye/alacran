@@ -20,7 +20,7 @@ real, already-installed (`/opt/homebrew/bin/gog`), general-purpose
 Google API CLI — Gmail, **Calendar**, Chat, Drive, Contacts, Tasks,
 Sheets, Docs, and more — with its own multi-account OAuth store
 (confirmed via `gog auth list`: one account currently connected,
-`nana@plh.life`, scopes `calendar,contacts,docs,drive,gmail,sheets,tasks`).
+`owner@example.com`, scopes `calendar,contacts,docs,drive,gmail,sheets,tasks`).
 Invocation is simple and already demonstrated in
 `plh-takeshi-agent/bin/poll.sh`/`process.sh`:
 `gog -a "$ACCOUNT" gmail search "..." --plain --max 50`,
@@ -115,7 +115,7 @@ invented for `check-inbox` specifically.
 - No calendar command in this slice (the user chose "check inbox" over
   "check calendar" specifically to keep this narrow).
 - No changes to `plh-takeshi-agent`'s own pipeline, config, or its real
-  `nana@plh.life`/`takeshi@plh.life` account usage.
+  `owner@example.com`/`sender@example.com` account usage.
 - No retrofit mechanism for already-registered companies created before
   this command existed in the template — same limitation the 5 existing
   commands already have (a company registered before a command was added

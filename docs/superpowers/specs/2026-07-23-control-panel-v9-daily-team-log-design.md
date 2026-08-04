@@ -10,7 +10,7 @@ for this slice is unit-tests-only — no automated real end-to-end run.**
 `plh-ops`'s `workflow/daily-team-log/` is a Claude Code skill, already
 registered as a local scheduled task (daily 22:00) via
 `~/.claude/daily-team-log/config.json` (bootstrapped on this machine:
-`person: "Nana"`, `output_repo: "/Users/nanaosei/plh-ops/reports"` — a
+`person: "Nana"`, `output_repo: "/Users/example/plh-ops/reports"` — a
 symlink to this app's already-configured `plh-ops` agent root). The routine
 (documented in `workflow/daily-team-log/Setup.md`'s "Routine prompt
 template") reads the operator's own `~/.claude/projects/*.jsonl` session

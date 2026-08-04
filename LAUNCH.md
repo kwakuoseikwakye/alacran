@@ -223,8 +223,8 @@ app is a clean product, not your personal Kirirom dashboard.
       with links/commands. v1 does NOT auto-install — it guides CLI-comfortable
       users through it.
 - [ ] Scrub for any other PLH/Kirirom hardcoding that would leak into a shipped
-      build (grep `plh`, `takeshi`, `kirirom`, `nana@plh.life`, absolute
-      `~/AI-Native/...` / `/Users/nanaosei/...` paths across `lib/` `app/`
+      build (grep `plh`, `takeshi`, `kirirom`, `owner@example.com`, absolute
+      `~/AI-Native/...` / `/Users/example/...` paths across `lib/` `app/`
       `components/`).
 
 **Definition of done:** on a machine with an empty `.data/`, launching the app

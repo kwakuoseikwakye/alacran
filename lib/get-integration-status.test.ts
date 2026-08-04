@@ -21,8 +21,8 @@ function takeshiAgent(rootPath: string): Agent {
 
 describe("getIntegrationStatus", () => {
   it("reports the connected email account for plh-takeshi-agent when config.json has one", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "nana@plh.life" }))
-    expect(await getIntegrationStatus(takeshiAgent(root))).toBe("Email connected (nana@plh.life)")
+    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "owner@example.com" }))
+    expect(await getIntegrationStatus(takeshiAgent(root))).toBe("Email connected (owner@example.com)")
   })
 
   it("reports none configured when config.json is missing", async () => {
@@ -35,7 +35,7 @@ describe("getIntegrationStatus", () => {
   })
 
   it("reports none configured when the account field is missing", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ sender: "takeshi@plh.life" }))
+    await writeFile(path.join(root, "config.json"), JSON.stringify({ sender: "sender@example.com" }))
     expect(await getIntegrationStatus(takeshiAgent(root))).toBe("none configured yet")
   })
 

@@ -13,7 +13,7 @@ means concretely, against real state (not assumption):
   this dashboard could store — it's the `gog` CLI tool, authenticated
   once at the OS level entirely outside any repo. The only thing
   visible in-repo is `config.json`'s plain, non-secret `account` field
-  (`nana@plh.life`) — tracked in git, not a secrets file.
+  (`owner@example.com`) — tracked in git, not a secrets file.
 - New connections (to any service) already have a careful, purpose-built
   process: `ai-company-starter-main`'s `api-connect` Claude Code skill.
   It has strict security rules (never let a secret appear in chat,
@@ -48,7 +48,7 @@ that depends on v20 existing first.
 A new "Integrations" line on `AgentCard`, in the same place and style as
 the existing `launchdHealth` line (`launchd: loaded (last exit 0)`):
 
-- `plh-takeshi-agent`: `Integrations: Email connected (nana@plh.life)` —
+- `plh-takeshi-agent`: `Integrations: Email connected (owner@example.com)` —
   read from `config.json`'s `account` field at that agent's `rootPath`.
 - Every other agent (`ai-company-starter-main`, `plh-ops`, and any
   registered company): `Integrations: none configured yet`.
