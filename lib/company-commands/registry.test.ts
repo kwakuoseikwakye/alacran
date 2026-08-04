@@ -2,9 +2,9 @@ import { describe, it, expect } from "vitest"
 import { COMPANY_COMMANDS, getCompanyCommand } from "./registry"
 
 describe("COMPANY_COMMANDS registry", () => {
-  it("has exactly the 6 in-scope commands", () => {
+  it("has exactly the 7 in-scope commands", () => {
     expect(COMPANY_COMMANDS.map((c) => c.id).sort()).toEqual(
-      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro"].sort()
+      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro", "triage-email"].sort()
     )
   })
 
@@ -21,9 +21,9 @@ describe("COMPANY_COMMANDS registry", () => {
     }
   })
 
-  it("only handoff declares a prefetchKind", () => {
+  it("only handoff and triage-email declare a prefetchKind", () => {
     const withPrefetch = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
-    expect(withPrefetch).toEqual(["handoff"])
+    expect(withPrefetch).toEqual(["handoff", "triage-email"])
   })
 
   it("only check-inbox declares bashPatterns, and exactly the two read-only gog commands", () => {
