@@ -1,4 +1,6 @@
+import fs from "node:fs"
 import { PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
+import { PIPELINE_LAUNCHD_PLIST_PATH } from "@/lib/scheduled-job/paths"
 import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
@@ -40,6 +42,10 @@ export default async function AgentTreePage() {
       : Promise.resolve({ running: false, lockAgeSeconds: null }),
   ])
 
+  // The toggle needs a plist to load/unload. A fresh install has neither the
+  // agent nor the plist, so it sees nothing.
+  const pipelinePlistExists = Boolean(pipelineAgent) && fs.existsSync(PIPELINE_LAUNCHD_PLIST_PATH)
+
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-8 pt-2 pb-12">
       <div className="a-rise">
@@ -73,6 +79,7 @@ export default async function AgentTreePage() {
                 latestActivity={latest}
                 error={result.error}
                 launchdHealth={ispipelineAgent ? launchdHealth : undefined}
+                showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
                 pollStatus={ispipelineAgent ? pollStatus : undefined}
                 showVerifyButton={isAiCompanyStarterMain}
                 showDailyTeamLogButton={isPlhOps}
