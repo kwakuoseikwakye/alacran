@@ -59,11 +59,25 @@ of ours your data could reach. It runs as a local Next.js server on
 | macOS (Apple Silicon / Intel) | `Alacran.dmg` | [Download](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg) |
 | Debian / Ubuntu | `Alacran.deb` | [Download](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb) |
 
-**macOS.** Open the `.dmg` and drag Alacrán to Applications. The build is
-ad-hoc signed but **not notarized**, so the first launch is blocked by
-Gatekeeper: right-click the app icon → **Open** → **Open**. You only do this
-once. (Notarization needs a paid Apple Developer account; contributions of a
-signed build pipeline are welcome — see [issue tracker](https://github.com/kwakuoseikwakye/alacran/issues).)
+**macOS.** Open the `.dmg` and drag Alacrán to Applications. Then — before the
+first launch — run this once in Terminal:
+
+```bash
+xattr -cr "/Applications/Alacrán.app"
+```
+
+The build is ad-hoc signed but **not notarized**, because that requires a paid
+Apple Developer account. Without the command above, macOS quarantines the
+download and refuses to open it — often with *"Alacrán is damaged and can't be
+opened"*, which is misleading: the app is fine, it just isn't signed by a
+registered developer. `xattr -cr` clears the quarantine flag macOS attaches to
+anything downloaded from the internet. Right-click → **Open** alone is **not**
+enough for an ad-hoc-signed app on current macOS.
+
+You only do this once, per install. Repeat it after each update.
+
+*A signed and notarized pipeline is welcome as a contribution — it needs the
+certificate, not the code. See the [issue tracker](https://github.com/kwakuoseikwakye/alacran/issues).*
 
 **Linux.**
 
@@ -244,7 +258,9 @@ That's it. The source is right here — verify it rather than trusting it.
 Alacrán is genuinely used daily by its author, but it is a young project
 maintained by one person. Known rough edges, stated plainly:
 
-- **macOS builds aren't notarized.** Gatekeeper will warn on first launch.
+- **macOS builds aren't notarized.** You must run `xattr -cr` on the installed
+  app before the first launch, and again after each update. See
+  [Install](#install).
 - **Windows isn't built.** Only macOS and Debian/Ubuntu.
 - **`gog` and `daily-team-log` are per-machine global.** Only one company can
   have an active Google account or bootstrapped daily-log config at a time.
@@ -262,7 +278,7 @@ Bug reports, feature requests and pull requests are welcome. Start with
 
 ## License
 
-[MIT](LICENSE) © Nana Osei Kwakye
+[MIT](LICENSE) © Kwaku Osei Kwakye
 
 Brand icons are official [Simple Icons](https://simpleicons.org/) (CC0),
 extracted by `scripts/generate-brand-icons.mjs` — never hand-drawn.

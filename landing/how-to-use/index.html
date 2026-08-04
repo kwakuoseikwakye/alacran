@@ -88,9 +88,12 @@
       <li>Download the <code>.dmg</code> file from the download button on this site.</li>
       <li>Open it. A window appears with the Alacr&aacute;n icon and a shortcut to your Applications folder.</li>
       <li>Drag the icon onto Applications. That&rsquo;s the install.</li>
-      <li>Open Alacr&aacute;n from Applications, the same way you&rsquo;d open any other app.</li>
+      <li><b>Run one command before you open it.</b> Open the <b>Terminal</b> app (press Command-Space, type &ldquo;Terminal&rdquo;, press Enter), paste the line below, and press Enter. Nothing visible happens &mdash; that means it worked.
+        <pre class="gcode"><code>xattr -cr "/Applications/Alacrán.app"</code></pre>
+      </li>
+      <li>Now open Alacr&aacute;n from Applications, the same way you&rsquo;d open any other app.</li>
     </ol>
-    <div class="gnote">The first time you open any app downloaded from the internet, macOS asks you to confirm. If you see a warning, right-click the app icon and choose <b>Open</b>, then confirm. You only do this once.</div>
+    <div class="gnote"><b>Why that command?</b> Alacr&aacute;n isn&rsquo;t signed with a paid Apple Developer certificate, so macOS quarantines it like anything else downloaded from the internet and refuses to open it &mdash; sometimes saying the app is &ldquo;damaged&rdquo;. It isn&rsquo;t. That line clears the quarantine flag and nothing else. Right-clicking and choosing <b>Open</b> is <i>not</i> enough for this kind of app on current macOS. You&rsquo;ll need to run it once more after each update.</div>
     <div class="gnote">On Linux (Debian/Ubuntu-based), download the <code>.deb</code> instead and run <code>sudo apt install ./Alacran.deb</code> in a terminal (or <code>sudo dpkg -i Alacran.deb &amp;&amp; sudo apt -f install</code>), then launch Alacr&aacute;n from your applications menu.</div>
   </div>
 
@@ -217,6 +220,9 @@
       <li>Download the latest <code>.dmg</code> from the site. That link always points at the newest release.</li>
       <li>Quit Alacr&aacute;n if it&rsquo;s running.</li>
       <li>Open the <code>.dmg</code> and drag the icon onto Applications, exactly as you did the first time. macOS asks whether to replace the existing app. Say yes.</li>
+      <li>Run the same Terminal command as the first install &mdash; the new copy is a fresh download, so it&rsquo;s quarantined too:
+        <pre class="gcode"><code>xattr -cr "/Applications/Alacrán.app"</code></pre>
+      </li>
       <li>Open it again. That&rsquo;s the whole update.</li>
     </ol>
     <div class="gnote"><b>Your work is not affected by this.</b> Your workspaces live in folders you chose, and your settings live outside the app bundle, so replacing the program never touches either. You don&rsquo;t need to export anything first, and you won&rsquo;t be asked to set anything up again.</div>

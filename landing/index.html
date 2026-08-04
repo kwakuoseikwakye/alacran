@@ -464,7 +464,7 @@
       <details>
         <summary><span>How do I get updates?</span></summary>
         <div class="ans">
-          <p>Today, you update it yourself, and it takes about twenty seconds. Download the latest version from this site, drag it into Applications the same way you did the first time, and say yes to replacing the old one.</p>
+          <p>Today, you update it yourself, and it takes about twenty seconds. Download the latest version from this site, drag it into Applications the same way you did the first time, say yes to replacing the old one, then re-run the same <code>xattr -cr</code> command you ran on the first install &mdash; the new copy is a fresh download, so macOS quarantines it too.</p>
           <p><b>Your work is completely untouched by this.</b> Your workspaces live in your own folders and your settings live outside the app, so replacing the app is genuinely just swapping the program. Nothing to export, nothing to migrate.</p>
           <p>The app now tells you when a new version is out: a small strip appears at the top with a download link, and you can dismiss it. It won&rsquo;t pester you about the same version twice, and the check is an anonymous read of a public page, at most once a day.</p>
         </div>
@@ -498,6 +498,16 @@
         <summary><span>Is there a Windows or Linux version?</span></summary>
         <div class="ans">
           <p>Linux, yes &mdash; there&rsquo;s a <code>.deb</code> for Debian/Ubuntu-based distros, right alongside the Mac download above. Windows isn&rsquo;t built yet. If you&rsquo;d like it, email us, because that&rsquo;s genuinely how we&rsquo;re deciding what to build next.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>macOS says Alacr&aacute;n is damaged, or won&rsquo;t open it. What now?</span></summary>
+        <div class="ans">
+          <p><b>It isn&rsquo;t damaged.</b> Alacr&aacute;n isn&rsquo;t signed with a paid Apple Developer certificate, so macOS quarantines it the way it does anything downloaded from the internet, and then refuses to open it. Drag the app into Applications, then open <b>Terminal</b> (Command-Space, type &ldquo;Terminal&rdquo;, Enter), paste this line and press Enter:</p>
+          <p class="gcode"><code>xattr -cr "/Applications/Alacrán.app"</code></p>
+          <p>Nothing visible happens, which means it worked. Now open the app normally. You&rsquo;ll need to run it once more after each update, since every new download gets quarantined again.</p>
+          <p>That command clears the quarantine flag and does nothing else. Right-clicking and choosing <b>Open</b>, which works for some unsigned apps, is not enough for this one on current macOS. The real fix is notarization, which needs a paid Apple developer account &mdash; it&rsquo;s an open item, not a permanent state of affairs.</p>
         </div>
       </details>
 
