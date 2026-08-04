@@ -21,8 +21,8 @@ describe("COMPANY_COMMANDS registry", () => {
     }
   })
 
-  it("only handoff declares needsPrefetch", () => {
-    const withPrefetch = COMPANY_COMMANDS.filter((c) => c.needsPrefetch).map((c) => c.id)
+  it("only handoff declares a prefetchKind", () => {
+    const withPrefetch = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
     expect(withPrefetch).toEqual(["handoff"])
   })
 
@@ -40,7 +40,7 @@ describe("COMPANY_COMMANDS registry", () => {
     expect(cmd?.fields).toEqual([])
     expect(cmd?.outputKind).toBe("new-file-in-dir")
     expect(cmd?.outputPath).toBe("notes/company/email-checks")
-    expect(cmd?.needsPrefetch).toBe(false)
+    expect(cmd?.prefetchKind).toBeUndefined()
   })
 
   it("check-inbox's buildPrompt is read-only: it names the two gog reads and explicitly forbids send/modify", () => {

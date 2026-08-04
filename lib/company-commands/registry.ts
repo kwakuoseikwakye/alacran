@@ -16,7 +16,6 @@ export const COMPANY_COMMANDS: CompanyCommand[] = [
     ],
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/digests",
-    needsPrefetch: false,
     buildPrompt: (fields, today) => `Run this repository's /digest command as described in .claude/commands/digest.md.
 
 Today's date is ${today}. Aggregate scope: ${fields.period?.trim() || "the last 7 days"}.
@@ -38,7 +37,6 @@ Write the result to notes/company/digests/${today}-digest.md following the exact
     ],
     outputKind: "new-file-in-dir",
     outputPath: "docs/decisions",
-    needsPrefetch: false,
     buildPrompt: (fields, today) => `Run this repository's /decision command as described in .claude/commands/decision.md.
 
 Today's date is ${today}. Generate a short slug (alphanumeric and hyphens only, 2-4 words) summarizing the decision below, and write docs/decisions/${today}-<slug>.md with this frontmatter and structure:
@@ -87,7 +85,6 @@ Leave status as "proposed" — there is no user available in this run to confirm
     ],
     outputKind: "new-file-in-dir",
     outputPath: "docs/retros",
-    needsPrefetch: false,
     buildPrompt: (fields, today) => `Run this repository's /retro command as described in .claude/commands/retro.md.
 
 Today's date is ${today}. If docs/templates/retrospective-template.yaml exists, read it for structure context, but proceed even if it doesn't. Write docs/retros/${today}-retro.md (creating docs/retros/ first if needed) with this frontmatter and structure:
@@ -132,7 +129,6 @@ Be honest in Problem — don't varnish over what didn't work. Write exactly one 
     ],
     outputKind: "known-file",
     outputPath: "definitions/ontology/company.yaml",
-    needsPrefetch: false,
     buildPrompt: (fields, today) => `Run this repository's /define-company command as described in .claude/commands/define-company.md.
 
 Read docs/templates/ontology-starter.yaml first for the customer/org/product 3-domain structure this file should follow. Do not edit that template — only write definitions/ontology/company.yaml.
@@ -153,7 +149,7 @@ Today's date is ${today}. Write definitions/ontology/company.yaml following the 
     ],
     outputKind: "known-file",
     outputPath: "HANDOFF.md",
-    needsPrefetch: true,
+    prefetchKind: "repo-status",
     buildPrompt: (fields, today, prefetch) => `Run this repository's /handoff command as described in .claude/commands/handoff.md.
 
 Today's date is ${today}. You have no Bash access in this run, so here is the pre-fetched context you'd otherwise gather yourself:
@@ -187,7 +183,6 @@ Do not move or archive older sections to a separate file even if there are more 
     fields: [],
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/email-checks",
-    needsPrefetch: false,
     bashPatterns: ["gog -a auto gmail search*", "gog -a auto gmail get*"],
     buildPrompt: (fields, today) => `Run this repository's /check-inbox command as described in .claude/commands/check-inbox.md.
 
