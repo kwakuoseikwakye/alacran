@@ -38,8 +38,9 @@ of ours your data could reach. It runs as a local Next.js server on
   value flow, bottleneck) that writes a structured ontology file. Or let the
   AI draft the domain entities for you.
 - **Run jobs** — `digest`, `decision`, `retro`, `handoff`, `define-company`,
-  `check-inbox`. Each spawns a headless agent session scoped to exactly one
-  output directory, then shows you the diff before anything is committed.
+  `check-inbox`, `triage-email`, `triage-issue`. Each spawns a headless agent
+  session scoped to exactly one output directory, then shows you the diff
+  before anything is committed.
 - **Edit and version skills** — browse every skill and slash-command across
   your companies, edit them in-app, and get real git history, per-commit
   diffs, and one-click revert. Every write is a single-file-scoped git commit
