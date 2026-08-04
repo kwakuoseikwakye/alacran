@@ -13,17 +13,24 @@ README.md). Built entirely via
 `brainstorm → spec → plan → subagent-driven-development`, one versioned
 slice at a time, each merged to `master` before the next starts.
 
-For the full chronological changelog of every shipped slice (v1–v16), see
-`README.md`. This file is the *standing* project context — conventions,
+For the full chronological changelog of every shipped slice, see
+`CHANGELOG.md`. `README.md` is the public front page (what it is, how to
+install it, prerequisites). This file is the *standing* project context — conventions,
 safety rules, and workflow — that every slice must follow. It doesn't
-change per-slice; `README.md` and this repo's git history do.
+change per-slice; `CHANGELOG.md` and this repo's git history do.
 
-> **Active epic:** as of 2026-07-28 the project is in a 4-day push to
-> ship this as a downloadable product (login/download gate, payments,
-> onboarding, desktop packaging, landing page). The cross-session tracker
-> for that push is **`LAUNCH.md`** at the repo root — read its "Current
-> position" block first when picking up launch work. `LAUNCH.md` is the
-> living runbook; this file remains the standing engineering guide.
+> **This is a public, MIT-licensed open source repository** as of
+> 2026-08-04. There is no license gate, no paid tier and no checkout — that
+> code was deleted, not disabled. `LAUNCH.md` documents the commercial
+> launch that was planned and abandoned; it is kept as history and carries a
+> banner saying so. Don't reintroduce licensing, telemetry, or a phone-home
+> of any kind without an explicit decision from the maintainer: the README,
+> SECURITY.md and the landing site all make specific promises about what
+> leaves a user's machine, and those promises are now checkable by anyone.
+>
+> Contributor-facing docs — `README.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+> `CODE_OF_CONDUCT.md`, `CHANGELOG.md` — are part of the product now. A
+> change that makes one of them wrong isn't finished.
 
 ## What this app actually is (and isn't) today
 
@@ -219,8 +226,9 @@ change.
    tests on the target branch, fast-forward merge to `master`, remove
    the worktree, delete the branch.
 6. **Document** — append a dated `## vNN: <title>` section to
-   `README.md`'s changelog (this is the durable, chronological record —
-   don't duplicate it here).
+   `CHANGELOG.md` (this is the durable, chronological record — don't
+   duplicate it here). If the change is user-visible, check whether
+   `README.md` still tells the truth.
 
 Each slice runs in its own git worktree at
 `.claude/worktrees/control-panel-vNN-<slug>/` (created via `EnterWorktree`
@@ -228,14 +236,14 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v25** (see `README.md` for the full per-slice changelog).
+**Shipped: v1–v30** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
 (`templates/company-starter/`, sourced by `create-company-from-template.ts`
 instead of `~/AI-Native/...`), and an empty install shows an
 `OnboardingWelcome` with `checkDependencies()` (claude + gog) detection.
-See `LAUNCH.md` for the launch runbook and `docs/superpowers/specs/2026-07-28-control-panel-day1-productize-design.md`.
+See `docs/superpowers/specs/2026-07-28-control-panel-day1-productize-design.md` (and `LAUNCH.md`, now historical).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic

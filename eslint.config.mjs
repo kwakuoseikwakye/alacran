@@ -5,8 +5,20 @@ const compat = new FlatCompat({
 })
 
 const eslintConfig = [
-  { ignores: [".next/**", "node_modules/**", "next-env.d.ts"] },
+  // `.claude/**` covers local git worktrees, which are full copies of this
+  // repo — without it, a local `npm run lint` reports every finding twice.
+  { ignores: [".next/**", "node_modules/**", "next-env.d.ts", ".claude/**", "dist/**"] },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
+  {
+    rules: {
+      // `const { omitMe: _omitMe, ...rest } = obj` is the idiomatic way to drop
+      // a key; the binding is deliberately unused. An `_` prefix opts out.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
+    },
+  },
 ]
 
 export default eslintConfig

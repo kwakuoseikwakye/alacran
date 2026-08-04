@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 5
+    groups:
+      # One PR per ecosystem-ish cluster rather than a dozen — this is a
+      # one-maintainer project and per-package PRs go unread.
+      dev-dependencies:
+        dependency-type: development
+      production-dependencies:
+        dependency-type: production
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
