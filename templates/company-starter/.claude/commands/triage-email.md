@@ -14,6 +14,9 @@ Prerequisite: `definitions/triage/senders.yaml` (the allowlist of who this comma
 `definitions/triage/repos.yaml` (the repos it may route a request to) must both exist in this company.
 If either is missing, the run refuses before doing anything else.
 
+The sender allowlist is checked on both paths — including when you supply a specific Gmail message ID
+directly, the control panel still verifies that message's real sender before fetching its body.
+
 ## How this command actually runs
 
 Unlike `/check-inbox`, this command does **not** call `gog` itself. The control panel fetches the target
