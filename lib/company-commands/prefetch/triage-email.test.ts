@@ -192,6 +192,22 @@ describe("buildTriageEmailPrefetch", () => {
     expect(result.message).toContain("abc123")
   })
 
+  it("refuses when the body fetch returns an empty body, after the sender check already passed", async () => {
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog" && args.includes("get") && args.includes("full")) {
+        return { stdout: "   \n", stderr: "" }
+      }
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageEmailPrefetch(ctx(spy, { messageId: "abc123" }))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    // Exact match so this can only pass via the `body === ""` refusal branch —
+    // the metadata-failure and body-fetch-throw branches produce differently
+    // worded messages, so a false pass from the wrong branch isn't possible.
+    expect(result.message).toBe("Message abc123 returned an empty body — nothing to analyse.")
+  })
+
   it("refuses when the body fetch itself fails (metadata check already passed)", async () => {
     const spy: PrefetchExecFileFn = async (file, args) => {
       if (file === "gog" && args.includes("get") && args.includes("full")) {
