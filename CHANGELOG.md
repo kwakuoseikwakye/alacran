@@ -761,3 +761,48 @@ previously stale (it said "more starters soon" while packs already
 shipped), now names all 7 real packs with real descriptions, grouped the
 same way. See
 `docs/superpowers/specs/2026-07-30-control-panel-starter-template-expansion-design.md`.
+
+## v31: scheduled-runs toggle for the Owner agent
+
+The `email-pipeline-agent` card's launchd status line becomes an interactive
+on/off control for the job's recurring schedule
+(`com.example.email-pipeline`, `StartInterval` 300s). Before this slice the
+dashboard could start a poll (v2's "Run now") and observe it, but
+stopping the schedule needed `launchctl unload` in a terminal. New
+`lib/scheduled-job/`: `set-scheduled-job-impl.ts` shells `launchctl
+load`/`unload` against a hardcoded plist path
+(`PIPELINE_LAUNCHD_PLIST_PATH`, never a parameter — the Server Action is
+browser-reachable, and a caller-supplied path would let it unload
+arbitrary launchd jobs), then decides success by reading the job's
+actual state back via the existing `checkLaunchdJob()` and comparing it
+to what was requested, rather than trusting the command's exit code.
+
+That resulting-state check turned out to be necessary, not merely
+defensive. Live verification found `launchctl`'s exit code genuinely
+untrustworthy in *both* directions on macOS (observed on 26.2): a
+redundant `unload` on an already-unloaded plist prints a failure to
+stderr but exits 0, so `promisify(execFile)` — which only rejects on a
+non-zero exit — never throws; other failure modes may exit non-zero on
+their own. Reading the state back via `checkLaunchdJob()` is the only
+signal in either direction that can be trusted.
+
+Unload does not kill an in-flight run — it stops future scheduled runs;
+a `poll.sh` already executing finishes normally, and the confirm dialog
+(required in both directions) discloses this before turning the
+schedule off. "Run now" (v2) stays independent of the schedule either
+way. The control renders only when `email-pipeline-agent` is a present
+existence-gated built-in AND its plist file exists, so a fresh install
+sees nothing. The displayed state always comes from a real
+`checkLaunchdJob()` read taken after the attempt, never an optimistic
+guess, so a failed unload can never render as "off". Like v2 (Run now),
+v9 (daily-team-log trigger) and v19 (integration status), this is
+deliberately bespoke to one agent id — the population is one; generalise
+if a second scheduled agent ever exists.
+
+Live verification used a disposable `com.alacran.testjob` (running
+`/usr/bin/true`), never the real Owner job, per the standing safety
+rule: toggled through the real `launchctl` code path, confirmed via
+`launchctl list` before and after, then deleted. The real Owner job's
+state was read-only-confirmed unchanged throughout; the real button is
+left for the maintainer to click. See
+`docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
