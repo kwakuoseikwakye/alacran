@@ -236,7 +236,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v30** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v31** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -343,7 +343,26 @@ whole-folder copy. **Known, disclosed limitation:** `gog`'s auth store
 is global per-machine and `check-inbox` uses `-a auto`, so only one
 company can have its own connected account active at a time — same
 shape as v20's limitation, documented not fixed. See
-`...v22-check-inbox-design.md`.
+`...v22-check-inbox-design.md`. v31 gave the `plh-takeshi-agent` card an
+on/off control for its launchd schedule (`com.plh.takeshi-agent`) —
+before this slice the dashboard could start a poll (v2) and observe it,
+but stopping the recurring 5-minute schedule needed `launchctl unload`
+in a terminal. New `lib/scheduled-job/` decides success by reading the
+job's actual state back via `checkLaunchdJob()` rather than trusting
+`launchctl`'s exit code — live verification found that exit code
+genuinely untrustworthy in both directions on this machine (macOS
+26.2), not just defensively so. Bespoke to one agent id, like v2/v9/v19.
+See `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
+
+**Standing context for the coming slices that retire the daemon:**
+`~/AI-Native/plh-takeshi-agent/claude-agent-settings.json` lines 26-27
+point their `PreToolUse` guardrail hook at
+`/Users/nanaosei/Kirirom/plh-takeshi-agent/bin/guardrail.sh`, a
+pre-reorg path that stopped existing when that repo moved to
+`~/AI-Native/` on 2026-07-22. The guardrail has therefore been inactive
+since then — found while investigating v31, out of scope to fix (that
+repo must not be mutated by this project), but relevant when the daemon
+itself is eventually retired.
 
 ## Roadmap (named, not yet designed)
 

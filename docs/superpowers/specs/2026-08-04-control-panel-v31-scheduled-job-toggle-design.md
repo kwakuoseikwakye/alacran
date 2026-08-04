@@ -93,16 +93,21 @@ agent ever exists, generalise then.
 running the command, re-check `checkLaunchdJob()` and compare `loaded` against
 the requested state. Success means the job ended up in the state asked for,
 regardless of exit code; failure means it did not, and then the message carries
-the command's stderr.
+the command's stderr when the command itself threw, or a mismatched-state
+description otherwise.
 
-This resolves a case that exit-code-based logic gets wrong: `launchctl unload` on
-a plist that is present but already unloaded exits non-zero, which naive handling
-would report as a hard error even though the job is in exactly the requested
-state. Reading the resulting state instead makes that correctly report as
-"already stopped". A genuine failure — bad plist, permissions — leaves `loaded`
-mismatched and is reported as such. The displayed state always comes from
-`checkLaunchdJob()`, never from an assumption about what the command did, so a
-failed unload can never render as "off".
+This is not merely defensive — live verification (see Testing, below) showed it
+is necessary. On macOS (observed on 26.2, via `sw_vers`), `launchctl`'s exit
+code is unreliable in *both* directions: a redundant `unload` on an
+already-unloaded plist prints `Unload failed: 5: Input/output error` to stderr
+but **exits 0**, so `promisify(execFile)` — which only rejects on a non-zero
+exit — never throws and a stderr-only failure would otherwise pass silently;
+other failure modes may exit non-zero even when nothing is actually wrong.
+Because the exit code can't be trusted to signal failure *or* success, reading
+the resulting state back via `checkLaunchdJob()` is the only trustworthy
+signal available, not a fallback for one known-bad case. The displayed state
+always comes from that read, never from an assumption about what the command
+did, so a failed unload can never render as "off".
 
 ## Testing
 
@@ -117,6 +122,18 @@ delete it. This proves the real launchctl path works **without touching the
 Takeshi job**, honouring the standing safety rule that
 `~/AI-Native/plh-takeshi-agent` is never mutated for verification. The real
 button against the real job is left for the user to click.
+
+**What the live verification actually found:** the "Error handling" section
+above originally predicted that a redundant `unload` would exit non-zero. It
+does not. The disposable job's already-unloaded `unload` exited **0** while
+printing `Unload failed: 5: Input/output error` to stderr — the opposite of
+the predicted direction, and a case a naive `promisify(execFile)` rejection
+check would silently miss rather than misreport. This is why "Error handling"
+above now describes the resulting-state check as necessary rather than
+defensive: it is the only signal that survives both known failure shapes. The
+real Takeshi job's `checkLaunchdJob()` output was confirmed unchanged at three
+checkpoints during the session; the toggle's confirm dialog was opened and
+cancelled against the real card, never confirmed.
 
 ## Backup (done before this slice)
 
