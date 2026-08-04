@@ -3,8 +3,6 @@ import { Nunito, Nunito_Sans } from "next/font/google"
 import "./globals.css"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { Nav } from "@/components/nav"
-import { getLicenseStatus } from "@/lib/license/license-actions"
-import { LicenseGate } from "@/components/license-gate"
 import { getUpdateStatus } from "@/lib/updates/update-actions"
 import { UpdateBanner } from "@/components/update-banner"
 
@@ -30,25 +28,16 @@ export const metadata: Metadata = {
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const license = await getLicenseStatus()
-  // Only checked once the user is past the gate: someone who can't get in
-  // doesn't need to hear about a newer build they also can't use.
-  const update = license.licensed ? await getUpdateStatus() : { available: false as const }
+  const update = await getUpdateStatus()
   return (
     <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`}>
       <body>
-        {license.licensed ? (
-          <>
-            <AutoRefresh />
-            {update.available && update.latestVersion ? (
-              <UpdateBanner latestVersion={update.latestVersion} currentVersion={update.currentVersion} />
-            ) : null}
-            <Nav />
-            {children}
-          </>
-        ) : (
-          <LicenseGate reason={license.message} />
-        )}
+        <AutoRefresh />
+        {update.available && update.latestVersion ? (
+          <UpdateBanner latestVersion={update.latestVersion} currentVersion={update.currentVersion} />
+        ) : null}
+        <Nav />
+        {children}
       </body>
     </html>
   )

@@ -3,14 +3,14 @@ import path from "node:path"
 import { existsSync, cpSync } from "node:fs"
 
 /**
- * Where this app keeps the user's own data (company registry, license, avatars,
+ * Where this app keeps the user's own data (company registry, avatars,
  * command-run state).
  *
  * This MUST NOT live inside the .app bundle. The packaged launcher `cd`s into
  * Contents/Resources/app, so a `process.cwd()`-relative ".data" wrote the
- * registry and the license key *inside the application itself* — and dragging a
- * new version into /Applications replaces that bundle wholesale, silently
- * destroying both on every update.
+ * registry *inside the application itself* — and dragging a new version into
+ * /Applications replaces that bundle wholesale, silently destroying it on
+ * every update.
  *
  * Development deliberately keeps using the repo's own .data (gitignored), so
  * the dev machine's day-to-day state is unaffected and tests stay hermetic.
@@ -52,8 +52,8 @@ function migrateLegacyData(): void {
   try {
     cpSync(LEGACY_DIR, DATA_DIR, { recursive: true, force: false, errorOnExist: false })
   } catch {
-    // Losing the migration is recoverable (the user re-enters their key);
-    // crashing on startup is not.
+    // Losing the migration is recoverable (the user re-registers their
+    // companies); crashing on startup is not.
   }
 }
 

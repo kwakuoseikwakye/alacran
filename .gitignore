@@ -8,3 +8,4 @@ page-*.png
 .data/
 .superpowers/
 dist/
+.claude/worktrees/
