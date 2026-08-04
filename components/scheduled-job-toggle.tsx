@@ -64,7 +64,7 @@ export function ScheduledJobToggle({ health }: { health: LaunchdHealth }) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {loaded
-                  ? "This stops a run already in progress, not just future ones, and the schedule stays off across logout and reboot until you turn it back on."
+                  ? "Stops a run already in progress, not just future ones, and records a persistent launchd disable override so it stays off until you turn it back on (expected to survive logout and reboot, but that boundary hasn't been tested). Run now keeps working either way."
                   : "The agent will resume polling for new email every 5 minutes, unattended."}
               </AlertDialogDescription>
             </AlertDialogHeader>

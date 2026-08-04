@@ -29,15 +29,18 @@ export async function defaultExecFile(command: string, args: string[]) {
 const defaultCheck: CheckFn = (label) => checkLaunchdJob(label)
 
 /**
- * Loads or unloads the Takeshi agent's LaunchAgent, always with `-w` so "off"
- * is durable — not just for this login session.
+ * Loads or unloads the Takeshi agent's LaunchAgent, always with `-w` so the
+ * resulting on/off state is recorded as a persistent launchd disable
+ * override, not just held for this login session (whether that record
+ * actually survives a logout or reboot was never tested — see the design
+ * doc's Follow-up section).
  *
- * Measured on macOS 26.2: a bare `unload` (no `-w`) writes no persistent
- * disable override at all — the label stays absent from `launchctl
- * print-disabled gui/$UID` — so the previous bare-`unload` design had nothing
- * backing "off" across a logout or reboot. Only `unload -w` writes a `=>
- * disabled` entry there, which is why Stop now uses it. Start therefore has
- * to clear that same override, and `launchctl load -w` was measured (v31,
+ * Measured on macOS 26.2: a bare `unload` (no `-w`) never writes a `=>
+ * disabled` entry to `launchctl print-disabled gui/$UID` at all — so the
+ * previous bare-`unload` design left "off" with nothing persisted once the
+ * command returned. Only `unload -w` writes that `=> disabled` entry, which
+ * is why Stop now uses it. Start therefore has to clear that same override,
+ * and `launchctl load -w` was measured (v31,
  * macOS 26.2, two independent round-trips against a disposable job) to
  * reliably do exactly that: the override read back as `=> enabled` and the
  * job reappeared in `launchctl list` both times.
@@ -85,7 +88,7 @@ export async function setScheduledJobImpl(
       enabled: health.loaded,
       message: enabled
         ? "Scheduled runs enabled — the agent polls every 5 minutes."
-        : "Scheduled runs stopped, including any run already in progress — off persists across logout and reboot until you start it again.",
+        : "Scheduled runs stopped, including any run already in progress — recorded as a persistent launchd disable override, so it stays off until you start it again.",
     }
   }
 

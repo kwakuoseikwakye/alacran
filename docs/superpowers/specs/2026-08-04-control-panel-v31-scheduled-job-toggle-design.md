@@ -35,11 +35,21 @@ control to other agents; anything touching the email/GitHub triage workflow
 New `lib/scheduled-job/`:
 
 - `set-scheduled-job-impl.ts` — `setScheduledJobImpl(enabled: boolean,
-  execFileFn?: ExecFileFn)`. Shells `launchctl unload <plist>` when disabling
-  and `launchctl load <plist>` when enabling. These are the exact commands the
-  agent repo's own `install.sh` and `uninstall.sh` already use, so the toggle
-  cannot drift from how that job was installed. Returns
-  `{ ok: boolean; message: string }`; never throws.
+  execFileFn?: ExecFileFn, checkFn?: CheckFn)`.
+
+  **[Superseded same day — see the "Follow-up" section below.]**
+  Shells `launchctl unload -w <plist>` when disabling and `launchctl load -w
+  <plist>` when enabling. The original design (this paragraph, as first
+  written) shelled the *bare* commands and argued that matching
+  `install.sh`/`uninstall.sh` exactly meant the toggle "cannot drift" from how
+  that job was installed. That turned out to be backwards: a bare `unload`
+  writes no persistent disable override at all, so the toggle now
+  deliberately *diverges* from `install.sh`'s bare commands in order to make
+  "off" durable beyond this login session — and that same divergence is
+  exactly what creates the trap documented in the Follow-up section
+  (`install.sh`'s own bare `load` silently no-ops while this toggle's
+  override is still set). Returns `{ ok: boolean; enabled: boolean; message:
+  string }`; never throws.
 - `set-scheduled-job.ts` — the `"use server"` wrapper, taking only
   `enabled: boolean`.
 
@@ -153,11 +163,12 @@ process running under a specific PID. `launchctl unload` was run against
 that plist, and the PID was gone from `ps -p <PID>` immediately afterward,
 and still gone on a second check ~2s later (ruling out a slow SIGTERM being
 mistaken for survival). So on macOS 26.2, `unload` does stop a run already
-in progress — it is not a "future runs only" switch. This matches launchd's
-documented model (`unload` maps to `bootout`, which removes the service
-definition from the domain, and running instances are signalled when their
-job goes away), so this is expected to generalise, though only this one
-program (`sleep`) was actually measured.
+in progress — it is not a "future runs only" switch. This matches the
+mechanism documented in the `launchctl(1)` man page (`unload` maps to
+`bootout`, which removes the service definition from the domain, and
+running instances are signalled when their job goes away), so this is
+expected to generalise, though only this one program (`sleep`) was
+actually measured.
 
 ## Backup (done before this slice)
 
@@ -170,11 +181,14 @@ since this slice's whole purpose is manipulating that file's loaded state.
 ## Follow-up: make "off" persistent (`-w`, same day)
 
 Maintainer review of the shipped bare `unload`/`load` design found a gap: a
-bare `unload` writes no persistent disable override at all. Measured (macOS
-26.2): after `launchctl unload <plist>`, the label stays **absent** from
-`launchctl print-disabled gui/$UID` — only `unload -w` writes a `=> disabled`
-entry there. So the shipped "off" had nothing backing it across a logout or
-reboot; a login would silently bring the schedule back.
+bare `unload` never writes a `=> disabled` entry to `launchctl
+print-disabled gui/$UID` — measured (macOS 26.2) on a disposable job with no
+prior override history, where the label read back **absent** afterward;
+only `unload -w` writes that entry. So the shipped "off" had no
+launchd-persisted record behind it. The expectation is that a later login
+or reboot would then silently bring the schedule back, but that boundary
+was never actually crossed — only the override's presence in the database
+was read.
 
 **Decision:** Stop becomes `launchctl unload -w <plist>`, Start becomes
 `launchctl load -w <plist>`. The `health.loaded === enabled` resulting-state
@@ -219,8 +233,10 @@ it" report.
 
 **Dialog copy updated to match:** the Stop confirmation now says the
 in-flight run is stopped (measured previously, unchanged from the original
-slice) *and* that off persists across logout and reboot until Start is
-clicked (new, reflecting `-w`). The Start confirmation is unchanged — it
+slice) *and* that off is recorded as a persistent launchd disable override
+until Start is clicked, so it should survive logout and reboot too — flagged
+as expected-but-untested rather than asserted, since that boundary was never
+crossed (new, reflecting `-w`). The Start confirmation is unchanged — it
 was already accurate (`RunAtLoad` is `false` in the real plist, so loading
 resumes the 5-minute schedule rather than firing an immediate run).
 
