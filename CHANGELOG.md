@@ -789,11 +789,12 @@ because any of them is known to exit non-zero. Reading the state back
 via `checkLaunchdJob()` is the one check that covers both without
 needing to know in advance which exit code a given failure produces.
 
-Unload does not kill an in-flight run — it stops future scheduled runs;
-a `poll.sh` already executing finishes normally, and the confirm dialog
-(required in both directions) discloses this before turning the
-schedule off. "Run now" (v2) stays independent of the schedule either
-way. The control renders only when `plh-takeshi-agent` is a present
+Unload also stops a run already in progress, not only future scheduled
+runs — measured directly (a disposable long-running LaunchAgent's PID
+was gone immediately after `launchctl unload`, confirmed again ~2s
+later), not assumed. The confirm dialog (required in both directions)
+discloses this before turning the schedule off. "Run now" (v2) stays
+independent of the schedule either way. The control renders only when `plh-takeshi-agent` is a present
 existence-gated built-in AND its plist file exists, so a fresh install
 sees nothing. The displayed state always comes from a real
 `checkLaunchdJob()` read taken after the attempt, never an optimistic

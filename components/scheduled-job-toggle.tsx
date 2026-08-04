@@ -27,15 +27,21 @@ export function ScheduledJobToggle({ health }: { health: LaunchdHealth }) {
   async function handleConfirm() {
     setBusy(true)
     setMessage(null)
-    const result = await setScheduledJob(!loaded)
-    // Always render the state launchctl actually reports, never an optimistic
-    // guess — a failed unload must not render as "off".
-    const fresh = await getScheduledJobStatus()
-    setLoaded(fresh.loaded)
-    setLastExitStatus(fresh.lastExitStatus)
-    setMessage(result.message)
-    setFailed(!result.ok)
-    setBusy(false)
+    try {
+      const result = await setScheduledJob(!loaded)
+      // Always render the state launchctl actually reports, never an optimistic
+      // guess — a failed unload must not render as "off".
+      const fresh = await getScheduledJobStatus()
+      setLoaded(fresh.loaded)
+      setLastExitStatus(fresh.lastExitStatus)
+      setMessage(result.message)
+      setFailed(!result.ok)
+    } catch {
+      setMessage("Could not reach the server — reload and check the status.")
+      setFailed(true)
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -58,7 +64,7 @@ export function ScheduledJobToggle({ health }: { health: LaunchdHealth }) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {loaded
-                  ? "This stops future scheduled runs. A run already in progress will still finish — this is not a hard stop. “Run now” keeps working either way."
+                  ? "This stops future scheduled runs and stops a run already in progress. “Run now” keeps working either way."
                   : "The agent will resume polling for new email every 5 minutes, unattended."}
               </AlertDialogDescription>
             </AlertDialogHeader>

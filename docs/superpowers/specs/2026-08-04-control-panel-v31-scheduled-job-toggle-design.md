@@ -1,7 +1,7 @@
 # v31 — Scheduled-runs toggle for the Takeshi agent
 
 **Date:** 2026-08-04
-**Status:** approved, not yet implemented
+**Status:** implemented (shipped in v31)
 
 ## Problem
 
@@ -65,8 +65,8 @@ The existing static status line on the Takeshi card becomes an interactive
 control. Both directions confirm before acting, since both change whether real
 automation runs unattended:
 
-- **Turning off:** disclose that this stops *future* scheduled runs and that a
-  run already in progress will finish normally.
+- **Turning off:** disclose that this stops *future* scheduled runs and
+  stops a run already in progress.
 - **Turning on:** disclose that the agent will resume polling every 5 minutes
   unattended.
 
@@ -114,9 +114,13 @@ did, so a failed unload can never render as "off".
 
 ## Testing
 
-Unit tests with an injected `execFileFn`: enable, disable, non-zero exit,
-thrown-error path, and an assertion that the argv contains the hardcoded plist
-path (guarding the constant against accidental parameterisation).
+Unit tests with an injected `execFileFn`, covering the real 2×2 that matters —
+(command threw / didn't throw) × (resulting state matches the request /
+doesn't) — plus enable, disable, and an assertion that the argv contains the
+hardcoded plist path (guarding the constant against accidental
+parameterisation). Note `promisify(execFile)` makes "non-zero exit" and
+"thrown error" the same path, not two: a non-zero exit is exactly what makes
+it reject.
 
 Live verification, per the user's explicit choice: create a disposable launchd
 job (`com.alacran.testjob`, running `/usr/bin/true`), toggle it through the real
@@ -140,6 +144,20 @@ measured, while still covering the unobserved one defensively. The real
 Takeshi job's `checkLaunchdJob()` output was confirmed unchanged at three
 checkpoints during the session; the toggle's confirm dialog was opened and
 cancelled against the real card, never confirmed.
+
+**Whether `unload` kills an in-flight run was also measured, not assumed**
+(fix-wave follow-up, same standing safety rule). A second disposable job,
+`com.alacran.testjob-longrun` (`/bin/sleep 300`, `RunAtLoad true`), was
+loaded; `launchctl list` and `pgrep -f "sleep 300"` confirmed a real child
+process running under a specific PID. `launchctl unload` was run against
+that plist, and the PID was gone from `ps -p <PID>` immediately afterward,
+and still gone on a second check ~2s later (ruling out a slow SIGTERM being
+mistaken for survival). So on macOS 26.2, `unload` does stop a run already
+in progress — it is not a "future runs only" switch. This matches launchd's
+documented model (`unload` maps to `bootout`, which removes the service
+definition from the domain, and running instances are signalled when their
+job goes away), so this is expected to generalise, though only this one
+program (`sleep`) was actually measured.
 
 ## Backup (done before this slice)
 

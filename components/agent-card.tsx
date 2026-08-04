@@ -103,13 +103,15 @@ export function AgentCard({
             </p>
           </div>
         )}
-        {launchdHealth && showScheduledJobToggle && <ScheduledJobToggle health={launchdHealth} />}
-        {launchdHealth && !showScheduledJobToggle && (
-          <p className="text-xs text-muted-foreground">
-            launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
-            {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
-          </p>
-        )}
+        {launchdHealth &&
+          (showScheduledJobToggle ? (
+            <ScheduledJobToggle health={launchdHealth} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
+              {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
+            </p>
+          ))}
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {hasIntegration ? (
             <BrandIcon id="gmail" tone="brand" className="size-3.5" />
