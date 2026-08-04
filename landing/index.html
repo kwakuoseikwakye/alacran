@@ -19,11 +19,11 @@
     <a href="/integrations">Integrations</a>
     <a href="/docs">Docs</a>
     <a href="/how-to-use">How to use</a>
-    <a href="/pricing">Pricing</a>
+    <a href="https://github.com/kwakuoseikwakye/alacran">GitHub</a>
   </div>
   <div class="nav-right">
     <button class="theme-toggle" id="tt" type="button" aria-label="Toggle day / night">&#9680;</button>
-    <a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free</a>
+    <a class="btn btn-primary" href="#download">Download</a>
   </div>
 </nav>
 <header class="hero" id="top">
@@ -42,11 +42,11 @@
     </h1>
     <p class="hero-sub">Alacr&aacute;n is an AI-native framework for organizing and running your AI company &mdash; entirely on your own machine. Every file it touches lives in a folder you own: nothing uploaded, nothing kept anywhere else. It hands your AI the jobs you repeat every week, the inbox summary, the weekly update, the client follow-up, and nothing gets saved until you approve it.</p>
     <div class="hero-cta">
-      <a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free trial</a>
-      <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS</a>
+      <a class="btn btn-primary" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS</a>
       <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download>Download for Linux (.deb)</a>
+      <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran">View source</a>
     </div>
-    <p class="hero-trust"><b>14 days free</b> · bring your own AI &mdash; Claude, ChatGPT, or open source · no analytics, no tracking, ever</p>
+    <p class="hero-trust"><b>Free and open source</b> (MIT) &middot; bring your own AI &mdash; Claude, ChatGPT, or open source &middot; no analytics, no tracking, ever</p>
   </div>
 </header>
 
@@ -298,7 +298,7 @@
       </div>
       <div class="card">
         <div class="cardmark">
-          <span class="brandtile" style="--brand:#ff2e43"><svg class="bi"><use href="#b-lemonsqueezy"/></svg></span>
+          <span class="brandtile" style="--brand:#ff2e43"><svg class="bi"><use href="#b-git"/></svg></span>
           <span class="pill next"><i></i>Soon</span>
         </div>
         <h3>Build your own jobs</h3>
@@ -379,7 +379,8 @@
     <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own Mac, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
     <p>There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
     <p>So we won&rsquo;t claim &ldquo;nothing ever leaves your Mac&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
-    <div class="row"><span>Your licence key, to our payment processor, at most once a day</span><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to whichever AI that workspace is set to &mdash; Anthropic by default &mdash; when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
+    <p>And you don&rsquo;t have to take our word for any of it. <a href="https://github.com/kwakuoseikwakye/alacran">The whole source is public</a> &mdash; go read it.</p>
+    <div class="row"><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to whichever AI that workspace is set to &mdash; Anthropic by default &mdash; when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
     <p style="margin-top:26px;font-size:1rem">That&rsquo;s the whole list. Everything else stays in a folder you picked, in plain text you can read without us.</p>
   </div>
 </section>
@@ -413,11 +414,10 @@
         <summary><span>Alright, so what <i>does</i> leave my Mac?</span></summary>
         <div class="ans">
           <p>Fair question, and here&rsquo;s the complete list rather than a vague reassurance:</p>
-          <p><b>1. Your licence key</b> goes to Lemon Squeezy, the company that processes payments for us, to check your subscription is active. It sends the key and nothing else. No machine ID, no email, no hint of what you&rsquo;re working on. It happens at most once a day.</p>
-          <p><b>2. A version number</b> is checked against GitHub&rsquo;s public releases page, at most once a day, so the app can tell you when an update is out. It&rsquo;s an anonymous read of a public page. Nothing is sent about you, and you can turn it off.</p>
-          <p><b>3. Your prompts go to whichever AI that workspace is set to</b> when you press Run &mdash; Anthropic by default, or OpenAI / wherever Aider is pointed if you&rsquo;ve switched it. Either way, that&rsquo;s the AI doing its job, exactly as if you&rsquo;d typed into it yourself. Nothing is sent when you&rsquo;re just clicking around the app.</p>
-          <p><b>4. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
-          <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all.</p>
+          <p><b>1. A version number</b> is checked against GitHub&rsquo;s public releases page, at most once a day, so the app can tell you when an update is out. It&rsquo;s an anonymous read of a public page. Nothing is sent about you, and you can turn it off.</p>
+          <p><b>2. Your prompts go to whichever AI that workspace is set to</b> when you press Run &mdash; Anthropic by default, or OpenAI / wherever Aider is pointed if you&rsquo;ve switched it. Either way, that&rsquo;s the AI doing its job, exactly as if you&rsquo;d typed into it yourself. Nothing is sent when you&rsquo;re just clicking around the app.</p>
+          <p><b>3. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
+          <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all &mdash; and since the source is public, that&rsquo;s a claim you can check rather than trust.</p>
         </div>
       </details>
 
@@ -425,7 +425,7 @@
         <summary><span>Do I have to pay for AI on top of this?</span></summary>
         <div class="ans">
           <p>You need an account with whichever AI a workspace uses. By default that&rsquo;s your own Claude subscription from Anthropic, which many people already have, and it&rsquo;s the option we&rsquo;ve run the longest.</p>
-          <p>We deliberately don&rsquo;t resell AI usage, so there&rsquo;s no metered bill from us that creeps up the more you use it, whichever AI you&rsquo;re on. You pay your AI provider for the AI and us for the app, and both are predictable.</p>
+          <p>We deliberately don&rsquo;t resell AI usage, so there is no bill from us at all &mdash; the app itself is free and open source. You pay your AI provider for the AI, and nothing to us, ever.</p>
         </div>
       </details>
 
@@ -457,7 +457,7 @@
         <summary><span>Does it work without internet?</span></summary>
         <div class="ans">
           <p>Partly, and here&rsquo;s the honest split. The app itself, your files and your whole history are local, so you can open it and read everything on a plane.</p>
-          <p>Anything that asks the AI to do something needs a connection, because that request goes to Anthropic. The licence check also needs to reach the internet occasionally, though it keeps working offline for a week between checks so a normal trip won&rsquo;t lock you out.</p>
+          <p>Anything that asks the AI to do something needs a connection, because that request goes to Anthropic. Nothing else does &mdash; there&rsquo;s no licence check, no account, and no sign-in, so the app never locks you out for being offline.</p>
         </div>
       </details>
 
@@ -502,9 +502,18 @@
       </details>
 
       <details>
-        <summary><span>Can I cancel?</span></summary>
+        <summary><span>What does it cost?</span></summary>
         <div class="ans">
-          <p>Any time, and the 14-day trial is there so you can find out whether this fits how you work before you pay anything. If you cancel, your files stay exactly where they are on your Mac.</p>
+          <p>Nothing. Alacr&aacute;n is free and open source under the MIT licence. There is no account, no licence key, no trial clock and no paid tier &mdash; download it and it works.</p>
+          <p>You do still pay whoever provides your AI (an Anthropic or OpenAI subscription, or nothing at all if you point it at a local model). That bill is between you and them; we never see it.</p>
+        </div>
+      </details>
+
+      <details>
+        <summary><span>It&rsquo;s open source &mdash; can I change it?</span></summary>
+        <div class="ans">
+          <p>Yes. The MIT licence lets you use, modify, fork and even sell it. The <a href="https://github.com/kwakuoseikwakye/alacran">source lives on GitHub</a>, along with the design specs for every feature that shipped, so you can see not just what the code does but why it&rsquo;s shaped that way.</p>
+          <p>Bug reports and pull requests are genuinely welcome &mdash; see <code>CONTRIBUTING.md</code> in the repository.</p>
         </div>
       </details>
 
@@ -512,22 +521,25 @@
   </div>
 </section>
 
-<section class="section" id="pricing">
+<section class="section" id="download">
   <div class="wrap">
-    <div class="sec-head center r"><p class="eyebrow">Pricing</p><h2>One plan. No surprises.</h2></div>
+    <div class="sec-head center r"><p class="eyebrow">Download</p><h2>Free, and yours to keep.</h2></div>
     <div class="price-card r">
       <p class="tag">Alacrán</p>
-      <div class="amt">¥5,127<span>/mo</span></div>
-      <p class="muted" style="font-size:.95rem">14-day free trial · cancel anytime</p>
+      <div class="amt">Free<span>&nbsp;&middot; MIT</span></div>
+      <p class="muted" style="font-size:.95rem">No account, no licence key, no trial clock</p>
       <ul class="plist">
         <li>As many workspaces as you want</li>
         <li>Runs on your own Claude, ChatGPT, or open-source setup &mdash; no second AI bill</li>
         <li>Guided setup, or let your AI draft it</li>
         <li>Connect your tools and reuse your saved jobs</li>
         <li>Every change recorded and approved by you</li>
+        <li>Full source on GitHub &mdash; fork it, audit it, change it</li>
       </ul>
-      <a class="btn btn-primary" style="width:100%;justify-content:center" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free trial</a>
-      <p class="ph">Prices shown in Japanese yen.</p>
+      <a class="btn btn-primary" style="width:100%;justify-content:center" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS (.dmg)</a>
+      <a class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download>Download for Linux (.deb)</a>
+      <a class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px" href="https://github.com/kwakuoseikwakye/alacran">Build from source on GitHub</a>
+      <p class="ph">Requires the Claude Code CLI (or another supported agent CLI). Setup takes about five minutes &mdash; see <a href="/how-to-use">How to use</a>.</p>
     </div>
   </div>
 </section>
@@ -537,7 +549,7 @@
     <img class="mark mark-glow" src="/logo.png" alt="" width="600" height="626" />
     <h2>An AI-native framework that never leaves your machine.</h2>
     <p>Every file your AI company touches stays in a folder you own &mdash; organized, versioned, never uploaded anywhere. Set it up once this afternoon, and the routine work is already done by the time you sit down next week.</p>
-    <div class="cta"><a class="btn btn-primary" href="https://alacran.lemonsqueezy.com/checkout/buy/8ead8b93-6c9d-46bb-9a0f-c05297d504eb">Start free trial</a></div>
+    <div class="cta"><a class="btn btn-primary" href="#download">Download free</a></div>
   </div>
 </section>
 <footer>
@@ -545,7 +557,7 @@
     <span>Alacr&aacute;n. Your business, remembered. On your own Mac.</span>
     <span class="foot-nav">
       <a href="/use-cases">Use cases</a><a href="/integrations">Integrations</a>
-      <a href="/docs">Docs</a><a href="/#faq">FAQ</a><a href="/pricing">Pricing</a>
+      <a href="/docs">Docs</a><a href="/#faq">FAQ</a><a href="https://github.com/kwakuoseikwakye/alacran">GitHub</a>
       <a href="mailto:contact@alacran.ai" style="color:var(--red)">contact@alacran.ai</a>
     </span>
   </div>
