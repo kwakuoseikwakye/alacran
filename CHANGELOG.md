@@ -800,9 +800,20 @@ is neither — so for now, filling them in is a terminal-only step.
 
 **Every `gog` call in this slice carries `--readonly` and
 `--gmail-no-send`**, on top of whatever the allowlist already restricts;
-fetching the email body additionally passes `--wrap-untrusted`, and the
-prompt frames everything inside those markers as untrusted data describing
-a request, never as instructions. `triage-issue` mirrors this with `gh
+fetching the email body additionally passes `--wrap-untrusted`. On top of
+that, the control panel emits **its own** fence around every byte of
+attacker-influenced text — `--- UNTRUSTED:<nonce> ---` … `--- END
+UNTRUSTED:<nonce> ---`, a fresh `crypto.randomUUID()`-derived nonce per run
+— and both prompts frame everything inside it as data describing a request,
+never as instructions. Two reasons it is the control panel's fence and not
+`gog`'s: the framing layer is only *independent* of `gog` (as the spec's
+three-layers claim requires) if it doesn't depend on a flag prefetch never
+verifies arrived; and the nonce is what stops the wrapped content closing
+its own region, since a fixed marker can be forged by a body containing
+`</external-untrusted>`. **The fence holds the sender's headers too**, not
+just the body: `From`, `Date` and `Subject` are as sender-controlled as the
+body, so only the message id the control panel resolved itself sits outside.
+`triage-issue` mirrors this with `gh
 issue view` and nothing else — never `create`, `comment`, `edit`, or
 `close`. **Filing an issue is deliberately not this slice** — it's deferred
 to v33 behind a second, separate confirmation gate on top of the existing
@@ -817,7 +828,11 @@ sender's mail could be fetched and analysed by ID. Fixed by moving the
 check to run once, unconditionally, after the `messageId` is resolved —
 via a metadata-only `From` fetch, deliberately outside the untrusted body
 wrapper, so the trust decision is never made by reading the content it's
-meant to gate.
+meant to gate. **Named for what it is, not what it sounds like:** the
+allowlist is a From-header filter, not sender authentication — nothing here
+checks SPF, DKIM or DMARC — and a header resolving to more than one address
+(`Evil <evil@attacker.com> owner@example.com`) is refused rather than resolved
+to whichever address happens to be on the list.
 
 **The numbers behind the design**, measured on 2026-08-04 rather than
 assumed: `from:example.com` over the previous 30 days returned 29 messages —

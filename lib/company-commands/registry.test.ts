@@ -58,6 +58,24 @@ describe("COMPANY_COMMANDS registry", () => {
     expect(prompt).toMatch(/Do NOT run gog gmail send, gog gmail messages modify/)
   })
 
+  it("both triage commands' prompts carry the untrusted-content framing, naming the nonced fence", () => {
+    // The spec names this framing the slice's primary injection defence, and it is
+    // the one layer that applies on every executor (the no-Bash and scoped-Edit
+    // layers are Claude Code-specific). Asserted on short distinctive phrases, not
+    // the whole paragraph, so rewording the prose stays green but deleting the
+    // defence does not.
+    for (const id of ["triage-email", "triage-issue"]) {
+      const prompt = getCompanyCommand(id)!.buildPrompt(
+        { messageId: "", issue: "owner/repo#1" },
+        "2026-08-04",
+        "TEST_PREFETCH"
+      )
+      expect(prompt).toMatch(/UNTRUSTED:<nonce>/)
+      expect(prompt).toMatch(/not instructions for you/i)
+      expect(prompt).toMatch(/injection attempt/i)
+    }
+  })
+
   it("getCompanyCommand returns undefined for an unknown id", () => {
     expect(getCompanyCommand("create-epic")).toBeUndefined()
     expect(getCompanyCommand("nonexistent")).toBeUndefined()

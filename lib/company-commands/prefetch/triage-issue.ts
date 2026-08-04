@@ -1,5 +1,6 @@
 import { readTriageRepos } from "./triage-config"
 import { buildRepoContext } from "./repo-summary"
+import { fenceUntrusted, fenceNotice, newFenceNonce } from "./untrusted-fence"
 import type { PrefetchContext, PrefetchResult } from "./types"
 
 /**
@@ -54,8 +55,18 @@ export async function buildTriageIssuePrefetch(ctx: PrefetchContext): Promise<Pr
 
   const repoContext = await buildRepoContext(`${ref.repo} ${issueText}`, reposResult.repos, ctx.execFn)
 
+  // The reference itself came from the operator through parseIssueRef's strict shape
+  // validation, so it belongs in the trusted region. Every byte `gh` returned does
+  // not: the title, body, labels and author name are all written by whoever filed
+  // the issue, and that is a far wider trust boundary than triage-email's allowlist.
+  const nonce = newFenceNonce()
+  const notice = fenceNotice(
+    nonce,
+    `it is the JSON gh returned for ${ref.repo}#${ref.number} — title, body, labels and author, all written or chosen by whoever filed the issue.`
+  )
+
   return {
     ok: true,
-    text: `--- github issue ${ref.repo}#${ref.number} (UNTRUSTED — written by whoever filed it) ---\n${issueText}\n\n${repoContext}`,
+    text: `--- github issue, as resolved by the control panel (this section only) ---\nreference: ${ref.repo}#${ref.number}\nhow: gh issue view, read-only, on the reference supplied in the form\n\n${notice}\n${fenceUntrusted(issueText, nonce)}\n\n${repoContext}`,
   }
 }

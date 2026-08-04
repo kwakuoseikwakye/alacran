@@ -3,6 +3,7 @@ import {
   readTriageSenders,
   readTriageRepos,
   isAllowlistedSender,
+  extractSenderAddress,
   SENDERS_RELATIVE_PATH,
   REPOS_RELATIVE_PATH,
 } from "./triage-config"
@@ -41,6 +42,37 @@ describe("readTriageSenders", () => {
   })
 })
 
+describe("extractSenderAddress", () => {
+  it("reads a bare address", () => {
+    expect(extractSenderAddress("owner@example.com")).toBe("owner@example.com")
+  })
+
+  it("prefers the bracketed address over anything in the display name", () => {
+    expect(extractSenderAddress("Owner Sato <owner@example.com>")).toBe("owner@example.com")
+  })
+
+  it("lowercases and trims", () => {
+    expect(extractSenderAddress("  Owner@Example.com  ")).toBe("owner@example.com")
+  })
+
+  it("refuses a header carrying more than one address rather than picking one", () => {
+    // An ambiguous From is an unverified From. Picking either address means this
+    // module and an RFC 5322 parser can disagree about who sent the message, and
+    // the disagreement fails open if the picked one happens to be allowlisted.
+    expect(extractSenderAddress("Evil <evil@attacker.com> owner@example.com")).toBeNull()
+    expect(extractSenderAddress('"owner@example.com" <evil@attacker.com>')).toBeNull()
+  })
+
+  it("refuses a header with no address at all", () => {
+    expect(extractSenderAddress("(no From header)")).toBeNull()
+    expect(extractSenderAddress("")).toBeNull()
+  })
+
+  it("refuses when the bracketed part is not the address the header contains", () => {
+    expect(extractSenderAddress("Owner <no-address-here> owner@example.com")).toBeNull()
+  })
+})
+
 describe("isAllowlistedSender", () => {
   const senders = ["owner@example.com", "teammate@example.com"]
 
@@ -62,6 +94,10 @@ describe("isAllowlistedSender", () => {
 
   it("rejects an empty from header", () => {
     expect(isAllowlistedSender("", senders)).toBe(false)
+  })
+
+  it("rejects a header that pairs an allowlisted address with an unallowlisted one", () => {
+    expect(isAllowlistedSender("Evil <evil@attacker.com> owner@example.com", senders)).toBe(false)
   })
 })
 
