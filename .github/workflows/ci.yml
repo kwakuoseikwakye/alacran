@@ -27,8 +27,16 @@ jobs:
           node-version: 20
           cache: npm
 
+      # `npm ci` cannot be used here, and this is not laziness — it's the same
+      # constraint package-linux.yml already documents. package-lock.json is
+      # generated on macOS, where npm never resolves the wasm32-wasi optional
+      # variant's own subtree, so the lock is permanently missing
+      # @emnapi/core and @emnapi/runtime. `npm ci` requires an exact match and
+      # hard-fails on Linux; `npm install` reconciles. Regenerating the lock
+      # with --package-lock-only, with or without --os=linux --cpu=x64, does
+      # not add them — both were tried against npm 11.6.2.
       - name: Install dependencies
-        run: npm ci
+        run: npm install
 
       - name: Lint
         run: npm run lint
