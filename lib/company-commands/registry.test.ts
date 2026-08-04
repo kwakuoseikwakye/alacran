@@ -2,28 +2,33 @@ import { describe, it, expect } from "vitest"
 import { COMPANY_COMMANDS, getCompanyCommand } from "./registry"
 
 describe("COMPANY_COMMANDS registry", () => {
-  it("has exactly the 7 in-scope commands", () => {
+  it("has exactly the 8 in-scope commands", () => {
     expect(COMPANY_COMMANDS.map((c) => c.id).sort()).toEqual(
-      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro", "triage-email"].sort()
+      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro", "triage-email", "triage-issue"].sort()
     )
   })
 
-  it("every command's required fields are all present in its own buildPrompt output", () => {
+  it("every command's required fields are all present in its own buildPrompt output, except fields a prefetchKind consumes before buildPrompt ever runs", () => {
+    // triage-issue's `issue` field is parsed by prefetch (parseIssueRef) before buildPrompt is
+    // called — the prefetched issue text is what reaches the prompt template, not the raw field
+    // value, so it has nothing to assert here the way a directly-templated field does.
+    const CONSUMED_BY_PREFETCH: Record<string, string[]> = { "triage-issue": ["issue"] }
     for (const command of COMPANY_COMMANDS) {
       const values: Record<string, string> = {}
       for (const field of command.fields) {
         values[field.key] = field.required ? `TEST_VALUE_${field.key}` : ""
       }
       const prompt = command.buildPrompt(values, "2026-07-23", "TEST_PREFETCH")
-      for (const field of command.fields.filter((f) => f.required)) {
+      const skip = CONSUMED_BY_PREFETCH[command.id] ?? []
+      for (const field of command.fields.filter((f) => f.required && !skip.includes(f.key))) {
         expect(prompt).toContain(`TEST_VALUE_${field.key}`)
       }
     }
   })
 
-  it("only handoff and triage-email declare a prefetchKind", () => {
+  it("only handoff, triage-email, and triage-issue declare a prefetchKind", () => {
     const withPrefetch = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
-    expect(withPrefetch).toEqual(["handoff", "triage-email"])
+    expect(withPrefetch).toEqual(["handoff", "triage-email", "triage-issue"])
   })
 
   it("only check-inbox declares bashPatterns, and exactly the two read-only gog commands", () => {

@@ -7,9 +7,9 @@ const execFn: PrefetchExecFileFn = async () => ({ stdout: "", stderr: "" })
 const ctx = (): PrefetchContext => ({ agentRootPath: "/tmp/x", fieldValues: {}, execFn })
 
 describe("prefetchKind migration", () => {
-  it("leaves exactly handoff and triage-email declaring a prefetch kind", () => {
+  it("leaves exactly handoff, triage-email, and triage-issue declaring a prefetch kind", () => {
     const withKind = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
-    expect(withKind).toEqual(["handoff", "triage-email"])
+    expect(withKind).toEqual(["handoff", "triage-email", "triage-issue"])
   })
 
   it("gives handoff the repo-status kind", () => {
@@ -34,9 +34,11 @@ describe("runPrefetch", () => {
     if (result.ok) expect(result.text).toContain("git log")
   })
 
-  it("refuses triage-issue with no handler yet, naming the kind in the message", async () => {
+  it("dispatches triage-issue to its real handler (which refuses without an issue reference, since ctx() has no fieldValues.issue)", async () => {
     const result = await runPrefetch("triage-issue", ctx())
-    expect(result).toEqual({ ok: false, message: "No prefetch handler for kind: triage-issue" })
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.message).not.toBe("No prefetch handler for kind: triage-issue")
   })
 
   it("dispatches triage-email to its real handler (which refuses without allowlist config, since ctx() has no readFileFn)", async () => {
