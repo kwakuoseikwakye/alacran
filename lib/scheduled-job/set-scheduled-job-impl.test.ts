@@ -46,12 +46,12 @@ describe("setScheduledJobImpl", () => {
 
   it("reports failure with the command's error when the state did not change", async () => {
     const execFn: ExecFileFn = async () => {
-      throw new Error("Load failed: 5: Input/output error")
+      throw new Error("ENOENT: no such file or directory, open '/Users/x/Library/LaunchAgents/com.example.email-pipeline.plist'")
     }
     const result = await setScheduledJobImpl(false, execFn, loaded)
     expect(result.ok).toBe(false)
     expect(result.enabled).toBe(true)
-    expect(result.message).toContain("Input/output error")
+    expect(result.message).toContain("ENOENT")
   })
 
   it("reports failure when the command succeeds but the state did not change", async () => {

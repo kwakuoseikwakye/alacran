@@ -794,9 +794,9 @@ runs — measured directly (a disposable long-running LaunchAgent's PID
 was gone immediately after `launchctl unload`, confirmed again ~2s
 later), not assumed. The confirm dialog (required in both directions)
 discloses this before turning the schedule off. "Run now" (v2) stays
-independent of the schedule either way. The control renders only when `email-pipeline-agent` is a present
-existence-gated built-in AND its plist file exists, so a fresh install
-sees nothing. The displayed state always comes from a real
+independent of the schedule either way. The control renders only when
+`email-pipeline-agent` is a present existence-gated built-in AND its plist
+file exists, so a fresh install sees nothing. The displayed state always comes from a real
 `checkLaunchdJob()` read taken after the attempt, never an optimistic
 guess, so a failed unload can never render as "off". Like v2 (Run now),
 v9 (daily-team-log trigger) and v19 (integration status), this is
