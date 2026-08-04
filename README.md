@@ -207,7 +207,7 @@ npm run dev          # http://localhost:3000
 | Command | What it does |
 |---|---|
 | `npm run dev` | Dev server with Fast Refresh |
-| `npm test` | Full vitest suite (353 tests, no network, no real subprocesses) |
+| `npm test` | Full vitest suite (no network, no real subprocesses) |
 | `npm run lint` | ESLint |
 | `npx tsc --noEmit` | Type check |
 | `npm run build` | Production build |

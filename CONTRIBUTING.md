@@ -54,8 +54,8 @@ bug. Read this section before your first PR.
   otherwise they're attacker-controllable.
 - **Every function that shells out, touches the filesystem, or reads the clock
   takes an injectable `ExecFn` / `SpawnFn` / `nowSeconds` with a real
-  default.** This is how the suite runs 353 tests in ~3 seconds with no
-  network, no subprocesses, and no dependence on today's date.
+  default.** This is how the suite runs in ~3 seconds with no network, no
+  subprocesses, and no dependence on today's date.
 - **`export const dynamic = "force-dynamic"` on every page.** This app reads
   live filesystem and git state; nothing is safely cacheable.
 
