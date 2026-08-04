@@ -49,7 +49,7 @@ describe("readDailyTeamLogConfig", () => {
       JSON.stringify({
         person: "Nana",
         projects: ["example-project"],
-        output_repo: "/Users/nanaosei/plh-ops/reports",
+        output_repo: "/Users/example/plh-ops/reports",
         timezone: "Asia/Tokyo",
         lookback_days: 3,
         bootstrapped: true,
@@ -60,10 +60,10 @@ describe("readDailyTeamLogConfig", () => {
       ok: true,
       config: {
         person: "Nana",
-        outputRepo: "/Users/nanaosei/plh-ops/reports",
-        clone: "/Users/nanaosei/plh-ops",
-        gatherPath: "/Users/nanaosei/plh-ops/workflow/daily-team-log/gather.py",
-        skillMdPath: "/Users/nanaosei/plh-ops/workflow/daily-team-log/SKILL.md",
+        outputRepo: "/Users/example/plh-ops/reports",
+        clone: "/Users/example/plh-ops",
+        gatherPath: "/Users/example/plh-ops/workflow/daily-team-log/gather.py",
+        skillMdPath: "/Users/example/plh-ops/workflow/daily-team-log/SKILL.md",
       },
     })
   })

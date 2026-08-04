@@ -21,8 +21,8 @@ function pipelineAgent(rootPath: string): Agent {
 
 describe("getIntegrationStatus", () => {
   it("reports the connected email account for email-pipeline-agent when config.json has one", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "user@example.com" }))
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("Email connected (user@example.com)")
+    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "owner@example.com" }))
+    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("Email connected (owner@example.com)")
   })
 
   it("reports none configured when config.json is missing", async () => {
@@ -35,7 +35,7 @@ describe("getIntegrationStatus", () => {
   })
 
   it("reports none configured when the account field is missing", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ sender: "owner@example.com" }))
+    await writeFile(path.join(root, "config.json"), JSON.stringify({ sender: "sender@example.com" }))
     expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
   })
 
