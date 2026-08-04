@@ -535,7 +535,7 @@ Note the output. It must be identical at the end of this task.
 
 - [ ] **Step 3: Exercise the real code path against the disposable job**
 
-Write `/tmp/v31-live-check.mjs` — it calls the SAME functions the app calls, with only the label/path swapped for the disposable job, to prove the real `launchctl` argv shape works:
+Write `/tmp/v31-live-check.mjs`. Note what this does and does not prove: it **cannot** call `setScheduledJobImpl` directly, because that function's plist path is a hardcoded constant pointing at the real Takeshi job (deliberately — see Global Constraints), and pointing it elsewhere would defeat the reason the constant exists. So the script reproduces the same argv shape against the disposable job to verify the **OS-level contract the impl depends on**: that `launchctl load`/`unload` move the job as expected, and that a redundant `unload` exits non-zero while still leaving the job in the requested state. Task 1's unit tests cover the impl's own logic; this covers the assumption underneath it.
 
 ```js
 import { execFile } from "node:child_process"
