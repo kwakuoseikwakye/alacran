@@ -1,5 +1,12 @@
 # Gated Template Delivery Implementation Plan
 
+> **SUPERSEDED — NEVER SHIPPED.** This document describes a plan to gate the
+> starter templates behind a paid license check. On 2026-08-04 Alacrán was
+> released as free, MIT-licensed open source instead, and the license gate it
+> depended on was deleted entirely. The templates ship in the open, on purpose.
+> This file is kept only as a record of a direction that was considered and
+> abandoned — nothing here is implemented, and none of it should be built.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. **Tasks 12-13 are CONTROLLER-ONLY — do not dispatch them to a subagent.** They touch a real GitHub account and a real Vercel deployment and must only run after the controller explicitly asks the human partner for confirmation, per this project's standing safety rules.
 
 **Goal:** Move the reusable template source (`templates/company-starter/` +

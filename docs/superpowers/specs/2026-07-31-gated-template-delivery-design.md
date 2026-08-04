@@ -1,5 +1,12 @@
 # Gated template delivery — design spec
 
+> **SUPERSEDED — NEVER SHIPPED.** This document describes a plan to gate the
+> starter templates behind a paid license check. On 2026-08-04 Alacrán was
+> released as free, MIT-licensed open source instead, and the license gate it
+> depended on was deleted entirely. The templates ship in the open, on purpose.
+> This file is kept only as a record of a direction that was considered and
+> abandoned — nothing here is implemented, and none of it should be built.
+
 ## Problem
 
 The packaged macOS `.app` (and Linux `.deb`) ship `templates/company-starter/`

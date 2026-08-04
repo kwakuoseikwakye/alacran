@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, mkdir, writeFile, readFile, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AI_EXECUTORS } from "../ai-executors"

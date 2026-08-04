@@ -1,5 +1,16 @@
 # LAUNCH.md — 4-Day Launch Runbook
 
+> **HISTORICAL — the commercial launch this document plans did not happen.**
+> On 2026-08-04 Alacrán was released as free, MIT-licensed open source instead.
+> The license gate, the Lemon Squeezy checkout, the subscription price and the
+> planned server-side template gating are all gone from the codebase. Read this
+> file as a record of how the product was built and what was decided along the
+> way — not as a live runbook. Anything below about payments, trials, licence
+> keys or gated templates no longer describes the software.
+>
+> The parts still worth reading: the packaging decisions (browser-runner over
+> Electron), the macOS notarization gap, and the honest open-items list.
+
 Living tracker for turning `control-panel` from a personal local tool into a
 **downloadable product**. This is the cross-session source of truth for the
 launch push — read **Current position** first, do the work, then update the
