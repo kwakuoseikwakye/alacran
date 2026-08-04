@@ -108,13 +108,6 @@ export async function runCompanyCommandImpl(
 
   let outFd: number | undefined
   try {
-    const before = await takeBeforeSnapshot(agent.rootPath, command)
-    await writeFile(
-      path.join(dataDir, `${command.id}.run.json`),
-      JSON.stringify({ commandId: command.id, outputKind: command.outputKind, outputPath: command.outputPath, before }),
-      "utf-8"
-    )
-
     const today = new Date().toISOString().slice(0, 10)
     const prefetchResult = await runPrefetch(command.prefetchKind, {
       agentRootPath: agent.rootPath,
@@ -124,10 +117,27 @@ export async function runCompanyCommandImpl(
     if (!prefetchResult.ok) {
       // Refuse before spawning: a doomed run must not cost an API call. Release
       // the lock we already hold, or the feature wedges until the next restart.
-      await releaseRunLock(dataDir)
+      // The `.catch` matters as much as the release: without it a failure to
+      // release would replace the refusal reason with a filesystem error in the
+      // outer catch, hiding exactly the information this seam exists to surface.
+      await releaseRunLock(dataDir).catch(() => {})
       return { started: false, message: prefetchResult.message }
     }
     const prefetch = prefetchResult.text
+
+    // Snapshot only once the run is actually going to happen. A refusal is the
+    // first way (v32) to reach the end of a run without spawning, and taking a
+    // fresh snapshot on that path would fold a previous run's still-unconfirmed
+    // output file into `before` — after which the result reader reports "No
+    // changes produced." and the operator's pending review is gone, even though
+    // the file is still sitting on disk.
+    const before = await takeBeforeSnapshot(agent.rootPath, command)
+    await writeFile(
+      path.join(dataDir, `${command.id}.run.json`),
+      JSON.stringify({ commandId: command.id, outputKind: command.outputKind, outputPath: command.outputPath, before }),
+      "utf-8"
+    )
+
     const prompt = command.buildPrompt(fieldValues, today, prefetch)
 
     const editScopePattern =

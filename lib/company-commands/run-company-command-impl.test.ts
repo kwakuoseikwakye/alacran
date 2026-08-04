@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AI_EXECUTORS } from "../ai-executors"
@@ -223,6 +223,45 @@ describe("runCompanyCommandImpl", () => {
     expect(result).toEqual({ started: false, message: "No matching email found" })
     expect(calls).toHaveLength(0)
     expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
+  })
+
+  it("leaves an existing .run.json untouched when prefetch refuses", async () => {
+    // A refusal is the first way (new in v32) to reach the end of a run without
+    // spawning. If it still took a fresh before-snapshot, that snapshot would
+    // include a previous run's still-unconfirmed output file — so the result
+    // reader would report "No changes produced." and the operator's pending
+    // review would be destroyed even though the file is still on disk.
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    vi.doMock("./prefetch", () => ({
+      runPrefetch: async () => ({ ok: false, message: "No matching email found" }),
+    }))
+    const pending = JSON.stringify({
+      commandId: "digest",
+      outputKind: "new-file-in-dir",
+      outputPath: "notes/company/digests",
+      before: [],
+    })
+    await writeFile(path.join(dataDir, "digest.run.json"), pending, "utf-8")
+    // The unconfirmed result the operator is still reviewing.
+    await mkdir(path.join(root, "notes", "company", "digests"), { recursive: true })
+    await writeFile(path.join(root, "notes", "company", "digests", "2026-08-04-digest.md"), "draft", "utf-8")
+
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir
+    )
+
+    expect(result).toEqual({ started: false, message: "No matching email found" })
+    expect(calls).toHaveLength(0)
+    expect(await readFile(path.join(dataDir, "digest.run.json"), "utf-8")).toBe(pending)
   })
 
   it("prefetches git log and gh issue list for handoff and embeds them in the prompt", async () => {
