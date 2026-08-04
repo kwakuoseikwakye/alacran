@@ -13,20 +13,38 @@ const defaultReadFile: ReadFileFn = (filePath) => readFile(filePath, "utf-8")
 export type SendersResult = { ok: true; senders: string[] } | { ok: false; message: string }
 export type ReposResult = { ok: true; repos: TriageRepo[] } | { ok: false; message: string }
 
+const ADDRESS_PATTERN = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/g
+
 /**
- * Extracts the bare address from a From header, which may be either a plain
- * address or `Display Name <addr@host>`. Anchored on the closing bracket so a
- * lookalike suffix (`takeshi@plh.life.evil.com`) cannot pass the equality check
- * downstream.
+ * Resolves a From header to the one address it claims to be from, lowercased.
+ * Handles both a bare `addr@host` and `Display Name <addr@host>`, reading the
+ * bracketed form when there is one — that is the address an RFC 5322 parser
+ * resolves, so this module and the mail system agree.
+ *
+ * Returns null rather than guessing in three cases: no address at all, **more than
+ * one** address, and a bracketed part that isn't the address the header contains.
+ * An ambiguous From is an unverified From — `From: Evil <evil@attacker.com>
+ * takeshi@plh.life` must not resolve to whichever of the two happens to be
+ * allowlisted, because that would fail open while everything else in this feature
+ * fails closed.
+ *
+ * This is the single extractor for both the cheap search-row pre-filter and the
+ * authoritative allowlist gate; there is deliberately no second one. Note that it
+ * does no anchoring and provides no lookalike rejection of its own — a header of
+ * `takeshi@plh.life.evil.com` resolves to exactly that, and it is the
+ * exact-equality comparison in `isAllowlistedSender` below that rejects it.
  */
-function bareAddress(from: string): string {
-  const bracketed = /<([^>]+)>/.exec(from)
-  return (bracketed ? bracketed[1] : from).trim().toLowerCase()
+export function extractSenderAddress(from: string): string | null {
+  const matches = from.match(ADDRESS_PATTERN)
+  if (!matches || matches.length !== 1) return null
+  const bracketed = /<([^>]*)>/.exec(from)
+  const address = (bracketed ? bracketed[1] : matches[0]).trim().toLowerCase()
+  return address === matches[0].trim().toLowerCase() ? address : null
 }
 
 export function isAllowlistedSender(from: string, senders: string[]): boolean {
-  const address = bareAddress(from)
-  if (address === "") return false
+  const address = extractSenderAddress(from)
+  if (address === null) return false
   return senders.some((s) => s.trim().toLowerCase() === address)
 }
 

@@ -13,6 +13,27 @@ const configReader = async (p: string) => {
 
 const SEARCH_ROW = "ID\tDATE\tFROM\tSUBJECT\n19f0\t2026-08-04\ttakeshi@plh.life\tplh-mobile login broken"
 
+/**
+ * Splits prefetch output on the control-panel-emitted fence. Deliberately not
+ * exported from the module under test: the tests should break if the emitted
+ * shape changes, rather than silently following it.
+ */
+function splitOnFence(text: string): { nonce: string; before: string; inside: string; after: string } | null {
+  const open = /--- UNTRUSTED:([0-9a-f]{16}) ---\n/.exec(text)
+  if (!open) return null
+  const nonce = open[1]
+  const closer = `\n--- END UNTRUSTED:${nonce} ---`
+  const start = open.index + open[0].length
+  const end = text.indexOf(closer, start)
+  if (end === -1) return null
+  return {
+    nonce,
+    before: text.slice(0, open.index),
+    inside: text.slice(start, end),
+    after: text.slice(end + closer.length),
+  }
+}
+
 function ctx(
   execFn: PrefetchExecFileFn,
   fieldValues: Record<string, string> = {},
@@ -206,6 +227,78 @@ describe("buildTriageEmailPrefetch", () => {
     // the metadata-failure and body-fetch-throw branches produce differently
     // worded messages, so a false pass from the wrong branch isn't possible.
     expect(result.message).toBe("Message abc123 returned an empty body — nothing to analyse.")
+  })
+
+  // --- framing fixes (round 2) ---
+
+  it("refuses a From header carrying more than one address, and never fetches the body", async () => {
+    // `From: Evil <evil@attacker.com> takeshi@plh.life` — the old last-match
+    // extractor resolved this to the allowlisted address and accepted it, while an
+    // RFC 5322 parser resolves the real sender to evil@attacker.com. Ambiguous
+    // now means refused, on the authoritative gate.
+    const bodyCalls: string[][] = []
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog" && args.includes("get") && args.includes("metadata")) {
+        return { stdout: "Evil <evil@attacker.com> takeshi@plh.life", stderr: "" }
+      }
+      if (file === "gog" && args.includes("get") && args.includes("full")) bodyCalls.push(args)
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageEmailPrefetch(ctx(spy, { messageId: "abc123" }))
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.message).toContain("abc123")
+    expect(bodyCalls).toHaveLength(0)
+  })
+
+  it("fences every sender-supplied field — from, date, subject and body — inside control-panel-emitted markers", async () => {
+    const result = await buildTriageEmailPrefetch(ctx(goodExec))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const parts = splitOnFence(result.text)
+    expect(parts).not.toBeNull()
+    if (!parts) return
+
+    // Everything the sender controls is inside the fence.
+    expect(parts.inside).toContain("takeshi@plh.life")
+    expect(parts.inside).toContain("2026-08-04")
+    expect(parts.inside).toContain("plh-mobile login broken")
+    expect(parts.inside).toContain("the login button 500s")
+
+    // The region the prompt presents as trustworthy carries only what the control
+    // panel itself resolved — the message id — and none of the sender's text.
+    expect(parts.before).toContain("19f0")
+    expect(parts.before).not.toContain("takeshi@plh.life")
+    expect(parts.before).not.toContain("plh-mobile login broken")
+    expect(parts.before).not.toContain("the login button 500s")
+
+    // Repo context stays outside, after the close marker.
+    expect(parts.after).toContain("repo context")
+  })
+
+  it("uses a fresh nonce on each run, so wrapped content cannot have learned it", async () => {
+    const a = await buildTriageEmailPrefetch(ctx(goodExec))
+    const b = await buildTriageEmailPrefetch(ctx(goodExec))
+    expect(a.ok && b.ok).toBe(true)
+    if (!a.ok || !b.ok) return
+    const nonceA = splitOnFence(a.text)?.nonce
+    const nonceB = splitOnFence(b.text)?.nonce
+    expect(nonceA).toBeTruthy()
+    expect(nonceB).toBeTruthy()
+    expect(nonceA).not.toBe(nonceB)
+  })
+
+  it("fences the sender's headers on the direct-messageId path too", async () => {
+    const result = await buildTriageEmailPrefetch(ctx(goodExec, { messageId: "abc123" }))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const parts = splitOnFence(result.text)
+    expect(parts).not.toBeNull()
+    if (!parts) return
+    expect(parts.inside).toContain("takeshi@plh.life")
+    expect(parts.inside).toContain("the login button 500s")
+    expect(parts.before).toContain("abc123")
+    expect(parts.before).not.toContain("takeshi@plh.life")
   })
 
   it("refuses when the body fetch itself fails (metadata check already passed)", async () => {

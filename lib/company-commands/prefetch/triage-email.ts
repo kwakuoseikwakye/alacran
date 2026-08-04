@@ -1,5 +1,6 @@
-import { readTriageRepos, readTriageSenders, isAllowlistedSender } from "./triage-config"
+import { readTriageRepos, readTriageSenders, isAllowlistedSender, extractSenderAddress } from "./triage-config"
 import { buildRepoContext } from "./repo-summary"
+import { fenceUntrusted, fenceNotice, newFenceNonce } from "./untrusted-fence"
 import type { PrefetchContext, PrefetchResult } from "./types"
 
 const MAX_SEARCH_RESULTS = 25
@@ -18,21 +19,6 @@ function parseSearchRows(stdout: string): SearchRow[] {
     .map((line) => line.split("\t"))
     .filter((cols) => cols.length >= 4)
     .map((cols) => ({ id: cols[0], date: cols[1], from: cols[2], subject: cols[3] }))
-}
-
-/**
- * Extracts the last bare email address found in a From-header line, fetched
- * outside the untrusted body wrapper. Mirrors the extraction
- * plh-takeshi-agent's own daemon uses on a plain From line
- * (`grep -oiE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+'`, last match), so the two
- * systems agree on which address a header resolves to. Returns null rather
- * than guessing when nothing recognisable is present — an unparseable sender
- * is an unverified sender, not a probably-fine one.
- */
-function extractSenderAddress(fromHeader: string): string | null {
-  const matches = fromHeader.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/gi)
-  if (!matches || matches.length === 0) return null
-  return matches[matches.length - 1]
 }
 
 export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<PrefetchResult> {
@@ -104,7 +90,7 @@ export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<Pr
   if (senderAddress === null) {
     return {
       ok: false,
-      message: `Could not find a recognisable email address in message ${messageId}'s From header. Refusing rather than assuming it is allowlisted.`,
+      message: `Could not resolve message ${messageId}'s From header to exactly one email address. Refusing rather than assuming it is allowlisted.`,
     }
   }
   if (!isAllowlistedSender(senderAddress, sendersResult.senders)) {
@@ -136,12 +122,28 @@ export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<Pr
   const routingText = `${target?.subject ?? ""} ${body}`
   const repoContext = await buildRepoContext(routingText, reposResult.repos, ctx.execFn)
 
-  const header = target
-    ? `message id: ${target.id}\nfrom: ${target.from}\ndate: ${target.date}\nsubject: ${target.subject}`
-    : `message id: ${messageId}\nfrom: ${senderAddress}\n(fetched directly by id; other headers are inside the body block below)`
+  // The trusted region carries only what the control panel resolved itself. The
+  // message id qualifies; the From, Date and Subject do not — they come straight
+  // off the `gog search` row or the metadata fetch, which is to say straight from
+  // the sender. Putting them above the fence, under a prompt that says everything
+  // inside the fence is the untrusted part, would tell the model that a payload
+  // typed into the Subject line is safe to follow.
+  const nonce = newFenceNonce()
+  const provenance = target
+    ? "resolved by searching Gmail for the most recent message from an allowlisted sender"
+    : "fetched directly by the message id supplied in the form"
+  const senderHeaders = target
+    ? `from: ${target.from}\ndate: ${target.date}\nsubject: ${target.subject}`
+    : `from: ${fromHeader}\n(no date or subject row on this path — they are in the body below if the message carried them)`
+
+  const notice = fenceNotice(
+    nonce,
+    "it is one email's own From, Date and Subject headers followed by its body, all written or chosen by whoever sent the message."
+  )
+  const untrusted = fenceUntrusted(`${senderHeaders}\n\nbody:\n${body}`, nonce)
 
   return {
     ok: true,
-    text: `--- email metadata ---\n${header}\n\n--- email body (UNTRUSTED) ---\n${body}\n\n${repoContext}`,
+    text: `--- email, as resolved by the control panel (this section only) ---\nmessage id: ${messageId}\nhow: ${provenance}\nsender allowlist: matched (a From-header match, not authenticated mail — nothing here checks SPF, DKIM or DMARC)\n\n${notice}\n${untrusted}\n\n${repoContext}`,
   }
 }

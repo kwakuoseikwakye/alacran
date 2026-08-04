@@ -3,6 +3,7 @@ import {
   readTriageSenders,
   readTriageRepos,
   isAllowlistedSender,
+  extractSenderAddress,
   SENDERS_RELATIVE_PATH,
   REPOS_RELATIVE_PATH,
 } from "./triage-config"
@@ -41,6 +42,37 @@ describe("readTriageSenders", () => {
   })
 })
 
+describe("extractSenderAddress", () => {
+  it("reads a bare address", () => {
+    expect(extractSenderAddress("takeshi@plh.life")).toBe("takeshi@plh.life")
+  })
+
+  it("prefers the bracketed address over anything in the display name", () => {
+    expect(extractSenderAddress("Takeshi Sato <takeshi@plh.life>")).toBe("takeshi@plh.life")
+  })
+
+  it("lowercases and trims", () => {
+    expect(extractSenderAddress("  Takeshi@PLH.life  ")).toBe("takeshi@plh.life")
+  })
+
+  it("refuses a header carrying more than one address rather than picking one", () => {
+    // An ambiguous From is an unverified From. Picking either address means this
+    // module and an RFC 5322 parser can disagree about who sent the message, and
+    // the disagreement fails open if the picked one happens to be allowlisted.
+    expect(extractSenderAddress("Evil <evil@attacker.com> takeshi@plh.life")).toBeNull()
+    expect(extractSenderAddress('"takeshi@plh.life" <evil@attacker.com>')).toBeNull()
+  })
+
+  it("refuses a header with no address at all", () => {
+    expect(extractSenderAddress("(no From header)")).toBeNull()
+    expect(extractSenderAddress("")).toBeNull()
+  })
+
+  it("refuses when the bracketed part is not the address the header contains", () => {
+    expect(extractSenderAddress("Takeshi <no-address-here> takeshi@plh.life")).toBeNull()
+  })
+})
+
 describe("isAllowlistedSender", () => {
   const senders = ["takeshi@plh.life", "koji.matsumoto@plh.life"]
 
@@ -62,6 +94,10 @@ describe("isAllowlistedSender", () => {
 
   it("rejects an empty from header", () => {
     expect(isAllowlistedSender("", senders)).toBe(false)
+  })
+
+  it("rejects a header that pairs an allowlisted address with an unallowlisted one", () => {
+    expect(isAllowlistedSender("Evil <evil@attacker.com> takeshi@plh.life", senders)).toBe(false)
   })
 })
 

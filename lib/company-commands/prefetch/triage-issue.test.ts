@@ -95,6 +95,36 @@ describe("buildTriageIssuePrefetch", () => {
     expect(gitCalls).toHaveLength(0)
   })
 
+  it("fences the whole issue payload inside control-panel-emitted markers, with the reference outside", async () => {
+    // Same fence as triage-email: the issue title and body are written by whoever
+    // filed the issue, so they can forge an `</external-untrusted>` or a plausible
+    // `--- repo context ... ---` line. Only the per-run nonce they cannot guess
+    // closes the region.
+    const result = await buildTriageIssuePrefetch(ctx(goodExec, { issue: "o/plh-mobile#42" }))
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const open = /--- UNTRUSTED:([0-9a-f]{16}) ---\n/.exec(result.text)
+    expect(open).not.toBeNull()
+    if (!open) return
+    const nonce = open[1]
+    const closer = `\n--- END UNTRUSTED:${nonce} ---`
+    const start = open.index + open[0].length
+    const end = result.text.indexOf(closer, start)
+    expect(end).toBeGreaterThan(start)
+
+    const before = result.text.slice(0, open.index)
+    const inside = result.text.slice(start, end)
+    const after = result.text.slice(end + closer.length)
+
+    expect(inside).toContain("tapping login returns 500")
+    expect(before).not.toContain("tapping login returns 500")
+    // The reference itself came from the operator through parseIssueRef's strict
+    // shape validation, so it is control-panel-resolved and may stay outside.
+    expect(before).toContain("o/plh-mobile#42")
+    expect(after).toContain("repo context")
+  })
+
   it("never invokes a mutating gh subcommand", async () => {
     const calls: string[][] = []
     const spy: PrefetchExecFileFn = async (file, args) => {
