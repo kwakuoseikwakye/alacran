@@ -236,7 +236,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v30** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v32** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -344,6 +344,26 @@ is global per-machine and `check-inbox` uses `-a auto`, so only one
 company can have its own connected account active at a time — same
 shape as v20's limitation, documented not fixed. See
 `...v22-check-inbox-design.md`.
+
+v32 added two more read-only commands, `triage-email` and
+`triage-issue`, and the machinery neither could exist without: a
+per-command **prefetch seam** (`lib/company-commands/prefetch/`) that
+runs control-panel-side, before any agent spawns, and can refuse —
+aborting the run with no spawn at all. This exists because the spawned
+session's `cwd` is the company's own root with no `--add-dir`; it
+cannot read a product repo to route a request into, so the control
+panel has to gather that context itself. Config
+(`definitions/triage/senders.yaml` and `definitions/triage/repos.yaml`,
+in the company's own repo) is fail-closed — missing or empty means
+accept nothing — and isn't editable from the dashboard, since
+`lib/resolve-known-skill.ts`'s membership check only recognizes
+discovered skill/command files, not arbitrary `definitions/` data.
+Every `gog` call carries `--readonly --gmail-no-send`; the email body
+fetch adds `--wrap-untrusted`. Issue *filing* is deliberately deferred
+to v33, behind its own confirmation gate on top of the existing
+diff-and-commit one — the same reasoning that kept `create-epic` out of
+v8. See
+`docs/superpowers/specs/2026-08-04-control-panel-v32-triage-intake-design.md`.
 
 ## Roadmap (named, not yet designed)
 

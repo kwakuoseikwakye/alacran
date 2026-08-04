@@ -54,6 +54,8 @@ export const TEMPLATE_MANIFEST: string[] = [
   "definitions/kpi/README.md",
   "definitions/cycles/README.md",
   "definitions/retro/README.md",
+  "definitions/triage/senders.example.yaml",
+  "definitions/triage/repos.example.yaml",
   "secrets",
   "state/README.md",
   "notes/README.md",
