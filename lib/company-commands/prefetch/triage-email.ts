@@ -20,6 +20,21 @@ function parseSearchRows(stdout: string): SearchRow[] {
     .map((cols) => ({ id: cols[0], date: cols[1], from: cols[2], subject: cols[3] }))
 }
 
+/**
+ * Extracts the last bare email address found in a From-header line, fetched
+ * outside the untrusted body wrapper. Mirrors the extraction
+ * email-pipeline-agent's own daemon uses on a plain From line
+ * (`grep -oiE '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+'`, last match), so the two
+ * systems agree on which address a header resolves to. Returns null rather
+ * than guessing when nothing recognisable is present — an unparseable sender
+ * is an unverified sender, not a probably-fine one.
+ */
+function extractSenderAddress(fromHeader: string): string | null {
+  const matches = fromHeader.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+/gi)
+  if (!matches || matches.length === 0) return null
+  return matches[matches.length - 1]
+}
+
 export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<PrefetchResult> {
   const sendersResult = await readTriageSenders(ctx.agentRootPath, ctx.readFileFn)
   if (!sendersResult.ok) return { ok: false, message: sendersResult.message }
@@ -47,6 +62,11 @@ export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<Pr
       }
     }
 
+    // Cheap pre-filter only, so a search full of strangers doesn't even
+    // reach the metadata round-trip below. It is NOT the authoritative
+    // check — that's the metadata fetch after messageId resolution, which
+    // runs on this path too, so a search-row filter that were somehow wrong
+    // still can't let an unallowlisted sender through.
     const rows = parseSearchRows(stdout).filter((r) => isAllowlistedSender(r.from, sendersResult.senders))
     if (rows.length === 0) {
       return {
@@ -58,6 +78,41 @@ export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<Pr
   }
 
   const messageId = requestedId === "" ? (target as SearchRow).id : requestedId
+
+  // Authoritative allowlist check. Runs once, here, after messageId is
+  // resolved — identically whether resolution came from search or was
+  // supplied directly — so neither path can route around it. Fetched with a
+  // metadata-only call, deliberately outside the untrusted body wrapper:
+  // the decision of whether to trust the body must not be made by reading
+  // the body.
+  let fromHeader: string
+  try {
+    const result = await ctx.execFn(
+      "gog",
+      ["-a", "auto", ...GOG_SAFETY, "gmail", "get", messageId, "--format", "metadata", "--headers", "From", "--plain"],
+      { cwd: ctx.agentRootPath }
+    )
+    fromHeader = result.stdout.trim()
+  } catch (err) {
+    return {
+      ok: false,
+      message: `Could not verify the sender of message ${messageId}: ${err instanceof Error ? err.message : String(err)}. Refusing rather than assuming it is allowlisted.`,
+    }
+  }
+
+  const senderAddress = extractSenderAddress(fromHeader)
+  if (senderAddress === null) {
+    return {
+      ok: false,
+      message: `Could not find a recognisable email address in message ${messageId}'s From header. Refusing rather than assuming it is allowlisted.`,
+    }
+  }
+  if (!isAllowlistedSender(senderAddress, sendersResult.senders)) {
+    return {
+      ok: false,
+      message: `Message ${messageId}'s sender is not allowlisted. Refusing to fetch or analyse it.`,
+    }
+  }
 
   let body: string
   try {
@@ -83,7 +138,7 @@ export async function buildTriageEmailPrefetch(ctx: PrefetchContext): Promise<Pr
 
   const header = target
     ? `message id: ${target.id}\nfrom: ${target.from}\ndate: ${target.date}\nsubject: ${target.subject}`
-    : `message id: ${messageId}\n(fetched directly by id; headers are inside the body block below)`
+    : `message id: ${messageId}\nfrom: ${senderAddress}\n(fetched directly by id; other headers are inside the body block below)`
 
   return {
     ok: true,
