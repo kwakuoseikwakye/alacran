@@ -33,4 +33,11 @@ describe("runPrefetch", () => {
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.text).toContain("git log")
   })
+
+  it("refuses kinds with no handler yet, naming the kind in the message", async () => {
+    for (const kind of ["triage-email", "triage-issue"] as const) {
+      const result = await runPrefetch(kind, ctx())
+      expect(result).toEqual({ ok: false, message: `No prefetch handler for kind: ${kind}` })
+    }
+  })
 })

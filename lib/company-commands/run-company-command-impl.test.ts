@@ -22,6 +22,10 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(root, { recursive: true, force: true })
   await rm(dataDir, { recursive: true, force: true })
+  // vi.doMock registrations outlive resetModules() and, unlike a cleanup line
+  // at the end of a test body, this runs even if that test's own assertions
+  // throw first — so a single mocked ./prefetch never leaks into later tests.
+  vi.doUnmock("./prefetch")
   vi.resetModules()
 })
 
@@ -193,6 +197,31 @@ describe("runCompanyCommandImpl", () => {
     )
 
     expect(result).toEqual({ started: false, message: "spawn claude ENOENT" })
+    expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
+  })
+
+  it("refuses before spawning when prefetch refuses, releasing the lock and never calling spawnFn", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    vi.doMock("./prefetch", () => ({
+      runPrefetch: async () => ({ ok: false, message: "No matching email found" }),
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const { checkRunLockStatus } = await import("./run-lock")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir
+    )
+
+    expect(result).toEqual({ started: false, message: "No matching email found" })
+    expect(calls).toHaveLength(0)
     expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
   })
 
