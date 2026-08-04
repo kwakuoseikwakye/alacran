@@ -64,7 +64,7 @@ export function ScheduledJobToggle({ health }: { health: LaunchdHealth }) {
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {loaded
-                  ? "This stops future scheduled runs and stops a run already in progress. “Run now” keeps working either way."
+                  ? "This stops a run already in progress, not just future ones, and the schedule stays off across logout and reboot until you turn it back on."
                   : "The agent will resume polling for new email every 5 minutes, unattended."}
               </AlertDialogDescription>
             </AlertDialogHeader>

@@ -167,6 +167,63 @@ are restorable. Verified: 557 archive entries matching 557 on disk. The live
 plist is alongside it as `com.plh.takeshi-agent.plist.20260804` (lints clean),
 since this slice's whole purpose is manipulating that file's loaded state.
 
+## Follow-up: make "off" persistent (`-w`, same day)
+
+Maintainer review of the shipped bare `unload`/`load` design found a gap: a
+bare `unload` writes no persistent disable override at all. Measured (macOS
+26.2): after `launchctl unload <plist>`, the label stays **absent** from
+`launchctl print-disabled gui/$UID` — only `unload -w` writes a `=> disabled`
+entry there. So the shipped "off" had nothing backing it across a logout or
+reboot; a login would silently bring the schedule back.
+
+**Decision:** Stop becomes `launchctl unload -w <plist>`, Start becomes
+`launchctl load -w <plist>`. The `health.loaded === enabled` resulting-state
+check (see "Error handling" above) is unchanged — it is still the sole
+source of truth, `-w` only changes which two `launchctl` verbs feed it.
+
+**The unverified assumption, measured before writing any code:** that
+`load -w` actually clears the disable override and loads the job, since
+only `launchctl enable` had ever been proven to do that. A disposable job
+(`com.alacran.wtest`, `/usr/bin/true`, `RunAtLoad false`) was taken through
+`unload -w` → `load -w` twice, on macOS 26.2 build 25C56:
+
+- Round 1: `unload -w` → job absent from `launchctl list`, `print-disabled`
+  shows `com.alacran.wtest => disabled`. `load -w` → exit 0, job **present**
+  in `launchctl list`, `print-disabled` now shows `=> enabled`.
+- Round 2: repeated identically, same result both times.
+
+So `load -w` reliably clears the override and loads the job — the plan's
+premise held, and the maintainer's `-w`-in-both-directions decision is
+implemented as specified.
+
+**A second, independent exit-code lie was found in the same session,** on
+the opposite verb from the one already documented: a **bare** `load` (no
+`-w`) while the disable override is set does not load the job — it stays
+absent from `launchctl list` — while it *also* exits 0, with stderr reading
+`Load failed: 5: Input/output error`. This was confirmed directly (not
+just cited from background) against the same disposable job. It is now
+recorded in `set-scheduled-job-impl.ts`'s doc comment as a second instance
+of the exit-code-lies pattern the resulting-state check already exists to
+handle — it does not change the code (the check already covers it), only
+the rationale.
+
+**Documented trap, not fixed (out of scope):** `plh-takeshi-agent`'s own
+`install.sh` uses a bare `launchctl load`. If someone runs that script
+while the toggle is off, it will silently no-op and report success (exit
+0) without actually starting the job — the override is only cleared by
+this toggle's own Start path (`load -w`), never by a bare `load`. That
+repo must not be modified by this project, so this is called out here and
+in `CLAUDE.md`/`CHANGELOG.md` as a caveat for whoever next touches that
+script or investigates a "the agent didn't come back after I reinstalled
+it" report.
+
+**Dialog copy updated to match:** the Stop confirmation now says the
+in-flight run is stopped (measured previously, unchanged from the original
+slice) *and* that off persists across logout and reboot until Start is
+clicked (new, reflecting `-w`). The Start confirmation is unchanged — it
+was already accurate (`RunAtLoad` is `false` in the real plist, so loading
+resumes the 5-minute schedule rather than firing an immediate run).
+
 ## Note found while investigating
 
 `plh-takeshi-agent/claude-agent-settings.json` lines 26-27 point their

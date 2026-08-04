@@ -15,7 +15,7 @@ describe("setScheduledJobImpl", () => {
       return { stdout: "", stderr: "" }
     }
     const result = await setScheduledJobImpl(true, execFn, loaded)
-    expect(calls).toEqual([["launchctl", ["load", TAKESHI_LAUNCHD_PLIST_PATH]]])
+    expect(calls).toEqual([["launchctl", ["load", "-w", TAKESHI_LAUNCHD_PLIST_PATH]]])
     expect(result.ok).toBe(true)
     expect(result.enabled).toBe(true)
   })
@@ -27,7 +27,7 @@ describe("setScheduledJobImpl", () => {
       return { stdout: "", stderr: "" }
     }
     const result = await setScheduledJobImpl(false, execFn, notLoaded)
-    expect(calls).toEqual([["launchctl", ["unload", TAKESHI_LAUNCHD_PLIST_PATH]]])
+    expect(calls).toEqual([["launchctl", ["unload", "-w", TAKESHI_LAUNCHD_PLIST_PATH]]])
     expect(result.ok).toBe(true)
     expect(result.enabled).toBe(false)
   })
@@ -67,7 +67,9 @@ describe("setScheduledJobImpl", () => {
       return { stdout: "", stderr: "" }
     }
     await setScheduledJobImpl(true, execFn, loaded)
-    expect(calls[0][1]).toBe(TAKESHI_LAUNCHD_PLIST_PATH)
-    expect(calls[0]).toHaveLength(2)
+    expect(calls[0][0]).toBe("load")
+    expect(calls[0][1]).toBe("-w")
+    expect(calls[0][2]).toBe(TAKESHI_LAUNCHD_PLIST_PATH)
+    expect(calls[0]).toHaveLength(3)
   })
 })
