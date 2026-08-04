@@ -32,9 +32,12 @@ describe("setScheduledJobImpl", () => {
     expect(result.enabled).toBe(false)
   })
 
-  // The case exit-code-based logic gets wrong: `launchctl unload` on a plist
-  // that is present but already unloaded exits non-zero, yet the job IS in the
-  // requested state. Resulting state is the source of truth, not the exit code.
+  // Defensive for when execFileFn throws (missing plist, permissions error,
+  // different macOS version, etc.) but the state happens to already match the
+  // request. This can occur because exit-code handling is unreliable: on macOS,
+  // `launchctl` may report a failure on stderr while exiting 0, or may exit
+  // non-zero on other failure modes. The only trustworthy signal is the state
+  // read back after the attempt.
   it("reports success when the command fails but the job is already in the requested state", async () => {
     const execFn: ExecFileFn = async () => {
       throw new Error("Unload failed: 113: Could not find specified service")
