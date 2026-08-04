@@ -96,16 +96,19 @@ regardless of exit code; failure means it did not, and then the message carries
 the command's stderr when the command itself threw, or a mismatched-state
 description otherwise.
 
-This is not merely defensive — live verification (see Testing, below) showed it
-is necessary. On macOS (observed on 26.2, via `sw_vers`), `launchctl`'s exit
-code is unreliable in *both* directions: a redundant `unload` on an
-already-unloaded plist prints `Unload failed: 5: Input/output error` to stderr
-but **exits 0**, so `promisify(execFile)` — which only rejects on a non-zero
-exit — never throws and a stderr-only failure would otherwise pass silently;
-other failure modes may exit non-zero even when nothing is actually wrong.
-Because the exit code can't be trusted to signal failure *or* success, reading
-the resulting state back via `checkLaunchdJob()` is the only trustworthy
-signal available, not a fallback for one known-bad case. The displayed state
+This is not merely defensive — live verification (see Testing, below) showed
+one direction of it is necessary. On macOS (observed on 26.2, via `sw_vers`),
+a redundant `unload` on an already-unloaded plist prints `Unload failed: 5:
+Input/output error` to stderr but **exits 0**, so `promisify(execFile)` —
+which only rejects on a non-zero exit — never throws, and a stderr-only
+failure would otherwise pass silently. That is the one exit-code anomaly
+actually measured. The impl also tolerates a thrown error from `execFileFn`
+(a missing plist, a permissions error, a different macOS version) as a
+defensive catch-all for failure modes that were never observed to occur, not
+because any of them is known to exit non-zero. Either way — the command
+throws, or it exits 0 while failing — reading the resulting state back via
+`checkLaunchdJob()` is the one check that covers both without needing to know
+in advance which exit code a given failure produces. The displayed state
 always comes from that read, never from an assumption about what the command
 did, so a failed unload can never render as "off".
 
@@ -128,10 +131,13 @@ above originally predicted that a redundant `unload` would exit non-zero. It
 does not. The disposable job's already-unloaded `unload` exited **0** while
 printing `Unload failed: 5: Input/output error` to stderr — the opposite of
 the predicted direction, and a case a naive `promisify(execFile)` rejection
-check would silently miss rather than misreport. This is why "Error handling"
-above now describes the resulting-state check as necessary rather than
-defensive: it is the only signal that survives both known failure shapes. The
-real Takeshi job's `checkLaunchdJob()` output was confirmed unchanged at three
+check would silently miss rather than misreport. No case of `launchctl`
+exiting non-zero was ever observed in this test; the impl's handling of a
+thrown error remains a defensive catch-all for that possibility, not a
+documented behaviour. This is why "Error handling" above now treats the
+resulting-state check as necessary for the one failure shape actually
+measured, while still covering the unobserved one defensively. The real
+Takeshi job's `checkLaunchdJob()` output was confirmed unchanged at three
 checkpoints during the session; the toggle's confirm dialog was opened and
 cancelled against the real card, never confirmed.
 
