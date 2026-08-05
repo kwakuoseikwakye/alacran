@@ -148,14 +148,22 @@ marker can be closed early by a body containing `</external-untrusted>` or a
 plausible `--- repo context (routed to X) ---` line, whereas a token its author
 never saw cannot be forged.
 
-**Only control-panel-authored text sits outside the fence.** For `triage-email`
-that means the resolved message id and how it was resolved — *not* the `From`,
-`Date` or `Subject`, which come straight off the `gog` row and are as
-sender-controlled as the body. Presenting them as trustworthy metadata above a
-fence, under a prompt saying the fenced part is the untrusted part, would have made
-a payload in the Subject line land in a region the prompt had just implied was
-safe. For `triage-issue` it means the operator-supplied reference, which
-`parseIssueRef` has already validated to an exact shape.
+**Every sender-supplied field sits inside the fence.** For `triage-email` that
+means the `From`, `Date` and `Subject` — which come straight off the `gog` row
+and are as sender-controlled as the body — join the body inside it. Presenting
+them as trustworthy metadata above a fence, under a prompt saying the fenced
+part is the untrusted part, would have made a payload in the Subject line land
+in a region the prompt had just implied was safe. For `triage-issue` the whole
+`gh` payload (title, body, labels, author) is inside.
+
+What legitimately sits outside the fence is narrower than "control-panel-authored,"
+though: the operator-supplied reference `parseIssueRef` has already validated
+to an exact shape, the resolved message id and how it was resolved, and the
+repo-context block (branch, `git status` output, recent commit subjects, up to
+200 tracked file paths). That last one is git-derived, not literally
+control-panel-authored — it comes from the operator's own repos, not from the
+sender, so it isn't attacker-influenced in the sense this fence defends
+against, but it is real text the control panel didn't write.
 
 ### The sender allowlist
 

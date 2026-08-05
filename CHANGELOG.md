@@ -890,8 +890,10 @@ verifies arrived; and the nonce is what stops the wrapped content closing
 its own region, since a fixed marker can be forged by a body containing
 `</external-untrusted>`. **The fence holds the sender's headers too**, not
 just the body: `From`, `Date` and `Subject` are as sender-controlled as the
-body, so only the message id the control panel resolved itself sits outside.
-`triage-issue` mirrors this with `gh
+body. The message id the control panel resolved itself sits outside, and so
+does the repo-context block (branch, `git status`, recent commits, file
+list) — git-derived rather than attacker-influenced, but worth naming rather
+than folding into "everything but the fence." `triage-issue` mirrors this with `gh
 issue view` and nothing else — never `create`, `comment`, `edit`, or
 `close`. **Filing an issue is deliberately not this slice** — it's deferred
 to v33 behind a second, separate confirmation gate on top of the existing
