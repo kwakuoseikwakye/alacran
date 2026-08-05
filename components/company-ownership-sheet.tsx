@@ -5,13 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { CopyButton } from "@/components/copy-button"
 import { getCompanyOwnership } from "@/lib/ownership/ownership-actions"
+import { getAiExecutor } from "@/lib/ai-executors"
 import type { CompanyOwnership } from "@/lib/ownership/get-company-ownership-impl"
-
-const AI_EXECUTOR_LABEL: Record<string, string> = {
-  "claude-code": "Claude Code",
-  "openai-codex": "OpenAI Codex CLI",
-  aider: "Aider",
-}
 
 export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: string; companyName: string }) {
   const [open, setOpen] = useState(false)
@@ -20,10 +15,15 @@ export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: strin
 
   async function handleOpen() {
     setPending(true)
-    const result = await getCompanyOwnership(agentId)
-    setPending(false)
-    setOwnership(result)
-    setOpen(true)
+    try {
+      const result = await getCompanyOwnership(agentId)
+      setOwnership(result)
+    } catch {
+      setOwnership({ ok: false, message: "Couldn't read ownership info." })
+    } finally {
+      setPending(false)
+      setOpen(true)
+    }
   }
 
   return (
@@ -53,9 +53,7 @@ export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: strin
               </section>
               <section className="space-y-1.5">
                 <h3 className="font-medium">AI provider</h3>
-                <p className="text-muted-foreground">
-                  {AI_EXECUTOR_LABEL[ownership.aiExecutorId] ?? ownership.aiExecutorId}
-                </p>
+                <p className="text-muted-foreground">{getAiExecutor(ownership.aiExecutorId).label}</p>
               </section>
               <section className="space-y-1.5">
                 <h3 className="font-medium">Integrations</h3>

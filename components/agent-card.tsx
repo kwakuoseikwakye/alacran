@@ -17,6 +17,7 @@ import { BackupCompanyButton } from "@/components/backup-company-button"
 import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
+import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
 
 type AgentCardProps = {
   agent: Agent
@@ -72,7 +73,7 @@ export function AgentCard({
 }: AgentCardProps) {
   // getIntegrationStatus returns prose; anything other than the "none" sentinel
   // means a real Google account is wired up, so show the product mark.
-  const hasIntegration = integrationStatus !== "none configured yet"
+  const hasIntegration = integrationStatus !== NO_INTEGRATION_STATUS
 
   return (
     <Card
