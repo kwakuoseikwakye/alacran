@@ -839,3 +839,95 @@ That repo is out of scope to modify, so this is a documented caveat, not
 a fix. Verification repeated the same disposable-job discipline as
 above, plus confirming the disable override itself was cleared and
 `print-disabled` returned to baseline before cleanup.
+
+## v32 (2026-08-04): read-only triage intake — email and GitHub issues
+
+Two new commands, `triage-email` and `triage-issue`, each take one inbound
+item — an allowlisted colleague's email, or a GitHub issue reference — and
+write a single analysis file to `notes/company/triage/`: what's being
+asked, which repo it likely concerns, where in that repo it probably
+lives, how to tackle it, and any risks or injection-attempt concerns.
+Neither command touches anything else; both go through the existing
+diff-then-commit gate before any write is real.
+
+**Why this needed new machinery, not just a new command.** The headless
+session a company command spawns is given `cwd: agent.rootPath` and no
+`--add-dir` — it cannot read any repository except the company's own. That
+made a triage command that needs to look at *product* repos (to route "the
+signup flow is broken" to the right codebase) structurally impossible to
+build as a prompt alone. So this slice adds a **prefetch seam**
+(`lib/company-commands/prefetch/`) that runs control-panel-side, before any
+agent spawns: it reads the target message or issue, reads the candidate
+repos' branch/dirty-state/recent-commits, and can **refuse** — aborting the
+run with no spawn at all, so a doomed run costs no API call. `handoff`'s
+existing v8 git-log gathering was extracted into this same seam unchanged,
+byte-identical output, so refactoring it wasn't a second bug surface.
+
+**Config is fail-closed, on purpose.** Each command reads two YAML files
+from the company's own repo: `definitions/triage/senders.yaml` (who
+`triage-email` will act on) and `definitions/triage/repos.yaml` (which
+repos either command may route into, name/path/description each). A
+missing or empty file means "accept nothing," never "accept anything" —
+the run refuses and names the exact path to create. These files ship as
+`.example.yaml` in the template, specifically so a fresh company fails
+closed until an operator deliberately renames and fills them in. They are
+**not editable from the dashboard**: the skills editor only writes paths
+already in the discovered skill/command set
+(`lib/resolve-known-skill.ts`), and a `definitions/triage/*.yaml` data file
+is neither — so for now, filling them in is a terminal-only step.
+
+**Every `gog` call in this slice carries `--readonly` and
+`--gmail-no-send`**, on top of whatever the allowlist already restricts;
+fetching the email body additionally passes `--wrap-untrusted`. On top of
+that, the control panel emits **its own** fence around every byte of
+attacker-influenced text — `--- UNTRUSTED:<nonce> ---` … `--- END
+UNTRUSTED:<nonce> ---`, a fresh `crypto.randomUUID()`-derived nonce per run
+— and both prompts frame everything inside it as data describing a request,
+never as instructions. Two reasons it is the control panel's fence and not
+`gog`'s: the framing layer is only *independent* of `gog` (as the spec's
+three-layers claim requires) if it doesn't depend on a flag prefetch never
+verifies arrived; and the nonce is what stops the wrapped content closing
+its own region, since a fixed marker can be forged by a body containing
+`</external-untrusted>`. **The fence holds the sender's headers too**, not
+just the body: `From`, `Date` and `Subject` are as sender-controlled as the
+body, so only the message id the control panel resolved itself sits outside.
+`triage-issue` mirrors this with `gh
+issue view` and nothing else — never `create`, `comment`, `edit`, or
+`close`. **Filing an issue is deliberately not this slice** — it's deferred
+to v33 behind a second, separate confirmation gate on top of the existing
+diff-and-commit one, the same reasoning that excluded `create-epic` back in
+v8: a public write with no local artifact to review first needs its own
+explicit human step, not just the local diff gate.
+
+**A bug caught mid-slice, not by accident:** the sender allowlist was
+originally checked only on the auto-search path (no `messageId` supplied);
+supplying a specific `messageId` directly skipped it entirely, so any
+sender's mail could be fetched and analysed by ID. Fixed by moving the
+check to run once, unconditionally, after the `messageId` is resolved —
+via a metadata-only `From` fetch, deliberately outside the untrusted body
+wrapper, so the trust decision is never made by reading the content it's
+meant to gate. **Named for what it is, not what it sounds like:** the
+allowlist is a From-header filter, not sender authentication — nothing here
+checks SPF, DKIM or DMARC — and a header resolving to more than one address
+(`Evil <evil@attacker.com> takeshi@plh.life`) is refused rather than resolved
+to whichever address happens to be on the list.
+
+**The numbers behind the design**, measured on 2026-08-04 rather than
+assumed: `from:plh.life` over the previous 30 days returned 29 messages —
+19 from `takeshi@plh.life`, 9 from the operator's own address, 1 from
+`koji.matsumoto@plh.life` — about one a day. That volume is exactly what a
+manual, one-at-a-time triage command is for; it's also why the allowlist
+defaults to nobody rather than guessing.
+
+**The no-`Bash`, scoped-write confinement this relies on is specific to
+the Claude Code executor.** `lib/ai-executors.ts`'s `openai-codex` entry
+passes only `--sandbox workspace-write` and `aider` passes only
+`--yes-always --no-auto-commits` — neither reads `editScopePattern` or
+`bashPatterns` at all. Run either of these two commands through a company
+configured for Codex or Aider, and the guarantees above do not hold: this
+app does not set, and cannot verify, either executor's own sandbox. Stated
+plainly in both commands' `.md` files, not just here.
+
+See
+`docs/superpowers/specs/2026-08-04-control-panel-v32-triage-intake-design.md`
+and `docs/superpowers/plans/2026-08-04-control-panel-v32-triage-intake.md`.

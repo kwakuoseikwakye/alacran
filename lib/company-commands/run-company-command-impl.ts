@@ -8,6 +8,7 @@ import { getCompanyCommand } from "./registry"
 import type { CompanyCommand } from "./types"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
 import { acquireRunLock, releaseRunLock } from "./run-lock"
+import { runPrefetch } from "./prefetch"
 import { resolveAiExecutorForAgent } from "../ai-executor-registry"
 import type { AiExecutor } from "../ai-executors"
 
@@ -56,26 +57,6 @@ function validateFields(command: CompanyCommand, fieldValues: Record<string, str
     if (value.length > MAX_FIELD_LENGTH) return `Field "${field.label}" exceeds ${MAX_FIELD_LENGTH} characters`
   }
   return null
-}
-
-async function buildPrefetch(agentRootPath: string, execFn: ExecFileFn): Promise<string> {
-  let gitLog: string
-  try {
-    const { stdout } = await execFn("git", ["log", "--since=24 hours ago", "--oneline"], { cwd: agentRootPath })
-    gitLog = stdout.trim() || "(no commits in the last 24 hours)"
-  } catch (err) {
-    gitLog = `(unable to read git log: ${err instanceof Error ? err.message : String(err)})`
-  }
-
-  let issues: string
-  try {
-    const { stdout } = await execFn("gh", ["issue", "list", "--state", "open", "--limit", "10"], { cwd: agentRootPath })
-    issues = stdout.trim() || "(no open issues)"
-  } catch {
-    issues = "(gh unavailable or not authenticated — issue status not confirmed this run)"
-  }
-
-  return `--- git log (last 24 hours) ---\n${gitLog}\n\n--- open issues (gh issue list, up to 10) ---\n${issues}`
 }
 
 async function takeBeforeSnapshot(agentRootPath: string, command: CompanyCommand): Promise<string[] | string | null> {
@@ -127,6 +108,29 @@ export async function runCompanyCommandImpl(
 
   let outFd: number | undefined
   try {
+    const today = new Date().toISOString().slice(0, 10)
+    const prefetchResult = await runPrefetch(command.prefetchKind, {
+      agentRootPath: agent.rootPath,
+      fieldValues,
+      execFn,
+    })
+    if (!prefetchResult.ok) {
+      // Refuse before spawning: a doomed run must not cost an API call. Release
+      // the lock we already hold, or the feature wedges until the next restart.
+      // The `.catch` matters as much as the release: without it a failure to
+      // release would replace the refusal reason with a filesystem error in the
+      // outer catch, hiding exactly the information this seam exists to surface.
+      await releaseRunLock(dataDir).catch(() => {})
+      return { started: false, message: prefetchResult.message }
+    }
+    const prefetch = prefetchResult.text
+
+    // Snapshot only once the run is actually going to happen. A refusal is the
+    // first way (v32) to reach the end of a run without spawning, and taking a
+    // fresh snapshot on that path would fold a previous run's still-unconfirmed
+    // output file into `before` — after which the result reader reports "No
+    // changes produced." and the operator's pending review is gone, even though
+    // the file is still sitting on disk.
     const before = await takeBeforeSnapshot(agent.rootPath, command)
     await writeFile(
       path.join(dataDir, `${command.id}.run.json`),
@@ -134,8 +138,6 @@ export async function runCompanyCommandImpl(
       "utf-8"
     )
 
-    const today = new Date().toISOString().slice(0, 10)
-    const prefetch = command.needsPrefetch ? await buildPrefetch(agent.rootPath, execFn) : ""
     const prompt = command.buildPrompt(fieldValues, today, prefetch)
 
     const editScopePattern =
