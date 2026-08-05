@@ -933,3 +933,46 @@ plainly in both commands' `.md` files, not just here.
 See
 `docs/superpowers/specs/2026-08-04-control-panel-v32-triage-intake-design.md`
 and `docs/superpowers/plans/2026-08-04-control-panel-v32-triage-intake.md`.
+
+## v34 (2026-08-05): ownership dashboard — what leaves this machine, per company
+
+Every real company (a `command-set` agent) now has a "View ownership"
+button on its card, opening a Sheet with five things: where its data lives
+(the local root path, copyable), which AI provider runs its commands,
+what's connected (the existing integration-status line), whether it's
+backed up (the existing GitHub remote check), and a synthesized "external
+network access" summary tying the previous three together.
+
+**Named v34, not v33** — v33 is the still-unshipped "file as GitHub issue"
+follow-up named in v32's writeup; this slice is unrelated to it and takes
+the next free number instead of colliding with that reservation.
+
+**Nothing new was measured or tracked — this slice only surfaces signals
+that were already real.** `getCompanyRemoteImpl` (the backup button's own
+check), `getIntegrationStatus`, and `getAiExecutorIdForAgent` already
+existed and were already tested; the new `lib/ownership/` module composes
+them into one `CompanyOwnership` object and adds one pure function,
+`summarizeNetworkAccess`, that derives the network-access summary from the
+other three rather than tracking anything independently.
+
+**The one place this is deliberately less certain than the rest: Aider.**
+Claude Code and OpenAI Codex are both a real call to a cloud API under the
+user's own account, so their line says so. Aider's model backend (cloud or
+local) is the user's own Aider config, invisible to this app — so its line
+says exactly that, rather than guessing. Overclaiming there would make the
+dashboard less trustworthy than saying nothing.
+
+Scoped to `command-set` agents only, same as the existing backup button and
+AI-executor picker — `plh-takeshi-agent` and `plh-ops` don't get the
+button, since they aren't company-shaped (no per-company backup remote or
+AI-executor choice in the same sense).
+
+This came out of `addition.md`'s "Ownership Dashboard" as the most
+immediately buildable piece of that longer-range vision (that file is a
+draft vision doc at the repo root, not yet relocated to a permanent
+`docs/` home): the marketplace, multi-AI-framework, and cloud-sync threads
+in it are unrelated to this slice and each need their own maintainer
+decision before any design work starts.
+
+See `docs/superpowers/specs/2026-08-05-ownership-dashboard-design.md` and
+`docs/superpowers/plans/2026-08-05-ownership-dashboard.md`.
