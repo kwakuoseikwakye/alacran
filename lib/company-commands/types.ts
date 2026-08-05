@@ -1,3 +1,5 @@
+import type { PrefetchKind } from "./prefetch/types"
+
 export type CompanyCommandField = {
   key: string
   label: string
@@ -15,7 +17,7 @@ export type CompanyCommand = {
   fields: CompanyCommandField[]
   outputKind: CompanyCommandOutputKind
   outputPath: string
-  needsPrefetch: boolean
+  prefetchKind?: PrefetchKind
   bashPatterns?: string[]
   buildPrompt: (fieldValues: Record<string, string>, today: string, prefetch: string) => string
 }
