@@ -14,6 +14,7 @@ import { CompanySetupWizard } from "@/components/company-setup-wizard"
 import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
 import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
+import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 
@@ -31,6 +32,7 @@ type AgentCardProps = {
   showSetupCompanyButton?: boolean
   showEditCompanyButton?: boolean
   showBackupButton?: boolean
+  showOwnershipButton?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
   showAiExecutorPicker?: boolean
@@ -61,6 +63,7 @@ export function AgentCard({
   showSetupCompanyButton,
   showEditCompanyButton,
   showBackupButton,
+  showOwnershipButton,
   integrationStatus,
   showInstallDailyTeamLogButton,
   showAiExecutorPicker,
@@ -132,6 +135,7 @@ export function AgentCard({
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
+          {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}
           {showAiExecutorPicker && (
             <AiExecutorPicker agentId={agent.id} currentExecutorId={aiExecutorId ?? "claude-code"} />
           )}

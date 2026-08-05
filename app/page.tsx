@@ -88,6 +88,7 @@ export default async function AgentTreePage() {
                 showSetupCompanyButton={needsCompanySetup}
                 showEditCompanyButton={hasOntology}
                 showBackupButton={isCommandSet}
+                showOwnershipButton={isCommandSet}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                 showAiExecutorPicker={isCommandSet}
