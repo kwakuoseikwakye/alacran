@@ -505,6 +505,8 @@ git commit -m "Add scheduled-runs toggle to the Takeshi agent card"
 
 Proves the real `launchctl` code path works end-to-end **without touching `com.plh.takeshi-agent`**, per the standing safety rule and the user's explicit choice.
 
+> **Outcome (recorded after the fact, fix wave 2026-08-04):** the prediction below — that a redundant `unload` exits non-zero — was wrong. Live measurement showed it exits **0** while printing `Unload failed: 5: Input/output error` to stderr. See the spec's Testing section (`docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`) for the corrected account. This plan is left as-written below as the historical record of what was predicted before measuring; the "Expected output" block a few steps down is marked superseded rather than edited.
+
 - [ ] **Step 1: Create the disposable job**
 
 ```bash
@@ -568,6 +570,8 @@ Run: `node /tmp/v31-live-check.mjs`
 
 Expected output — note the third line is the key case, where the command errors but the state matches, which the impl must treat as success:
 
+**[SUPERSEDED — this predicted output was not what live measurement found. See the "Outcome" note above Step 1 and the spec's Testing section. Left below unedited as the historical record of the prediction.]**
+
 ```
 load -> loaded=true want=true match=true err=no
 unload -> loaded=false want=false match=true err=no
@@ -575,6 +579,8 @@ unload -> loaded=false want=false match=true err=yes
 ```
 
 - [ ] **Step 4: Confirm the resulting-state logic agrees**
+
+**[SUPERSEDED — see the note above. The real third line read `err=no` (redundant `unload` exited 0), not `err=yes` as predicted here; the resulting-state check turned out to matter for a different reason than expected — see the spec.]**
 
 Confirm all three lines report `match=true`, and that the third has `err=yes` alongside it. That is the exact combination `setScheduledJobImpl` maps to `ok: true` — real evidence for the behaviour Task 1's third test asserts with a mock.
 

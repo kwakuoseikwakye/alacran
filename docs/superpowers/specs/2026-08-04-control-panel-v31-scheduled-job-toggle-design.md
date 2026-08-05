@@ -1,7 +1,7 @@
 # v31 — Scheduled-runs toggle for the Takeshi agent
 
 **Date:** 2026-08-04
-**Status:** approved, not yet implemented
+**Status:** implemented (shipped in v31)
 
 ## Problem
 
@@ -35,11 +35,21 @@ control to other agents; anything touching the email/GitHub triage workflow
 New `lib/scheduled-job/`:
 
 - `set-scheduled-job-impl.ts` — `setScheduledJobImpl(enabled: boolean,
-  execFileFn?: ExecFileFn)`. Shells `launchctl unload <plist>` when disabling
-  and `launchctl load <plist>` when enabling. These are the exact commands the
-  agent repo's own `install.sh` and `uninstall.sh` already use, so the toggle
-  cannot drift from how that job was installed. Returns
-  `{ ok: boolean; message: string }`; never throws.
+  execFileFn?: ExecFileFn, checkFn?: CheckFn)`.
+
+  **[Superseded same day — see the "Follow-up" section below.]**
+  Shells `launchctl unload -w <plist>` when disabling and `launchctl load -w
+  <plist>` when enabling. The original design (this paragraph, as first
+  written) shelled the *bare* commands and argued that matching
+  `install.sh`/`uninstall.sh` exactly meant the toggle "cannot drift" from how
+  that job was installed. That turned out to be backwards: a bare `unload`
+  writes no persistent disable override at all, so the toggle now
+  deliberately *diverges* from `install.sh`'s bare commands in order to make
+  "off" durable beyond this login session — and that same divergence is
+  exactly what creates the trap documented in the Follow-up section
+  (`install.sh`'s own bare `load` silently no-ops while this toggle's
+  override is still set). Returns `{ ok: boolean; enabled: boolean; message:
+  string }`; never throws.
 - `set-scheduled-job.ts` — the `"use server"` wrapper, taking only
   `enabled: boolean`.
 
@@ -65,8 +75,8 @@ The existing static status line on the Takeshi card becomes an interactive
 control. Both directions confirm before acting, since both change whether real
 automation runs unattended:
 
-- **Turning off:** disclose that this stops *future* scheduled runs and that a
-  run already in progress will finish normally.
+- **Turning off:** disclose that this stops *future* scheduled runs and
+  stops a run already in progress.
 - **Turning on:** disclose that the agent will resume polling every 5 minutes
   unattended.
 
@@ -93,22 +103,34 @@ agent ever exists, generalise then.
 running the command, re-check `checkLaunchdJob()` and compare `loaded` against
 the requested state. Success means the job ended up in the state asked for,
 regardless of exit code; failure means it did not, and then the message carries
-the command's stderr.
+the command's stderr when the command itself threw, or a mismatched-state
+description otherwise.
 
-This resolves a case that exit-code-based logic gets wrong: `launchctl unload` on
-a plist that is present but already unloaded exits non-zero, which naive handling
-would report as a hard error even though the job is in exactly the requested
-state. Reading the resulting state instead makes that correctly report as
-"already stopped". A genuine failure — bad plist, permissions — leaves `loaded`
-mismatched and is reported as such. The displayed state always comes from
-`checkLaunchdJob()`, never from an assumption about what the command did, so a
-failed unload can never render as "off".
+This is not merely defensive — live verification (see Testing, below) showed
+one direction of it is necessary. On macOS (observed on 26.2, via `sw_vers`),
+a redundant `unload` on an already-unloaded plist prints `Unload failed: 5:
+Input/output error` to stderr but **exits 0**, so `promisify(execFile)` —
+which only rejects on a non-zero exit — never throws, and a stderr-only
+failure would otherwise pass silently. That is the one exit-code anomaly
+actually measured. The impl also tolerates a thrown error from `execFileFn`
+(a missing plist, a permissions error, a different macOS version) as a
+defensive catch-all for failure modes that were never observed to occur, not
+because any of them is known to exit non-zero. Either way — the command
+throws, or it exits 0 while failing — reading the resulting state back via
+`checkLaunchdJob()` is the one check that covers both without needing to know
+in advance which exit code a given failure produces. The displayed state
+always comes from that read, never from an assumption about what the command
+did, so a failed unload can never render as "off".
 
 ## Testing
 
-Unit tests with an injected `execFileFn`: enable, disable, non-zero exit,
-thrown-error path, and an assertion that the argv contains the hardcoded plist
-path (guarding the constant against accidental parameterisation).
+Unit tests with an injected `execFileFn`, covering the real 2×2 that matters —
+(command threw / didn't throw) × (resulting state matches the request /
+doesn't) — plus enable, disable, and an assertion that the argv contains the
+hardcoded plist path (guarding the constant against accidental
+parameterisation). Note `promisify(execFile)` makes "non-zero exit" and
+"thrown error" the same path, not two: a non-zero exit is exactly what makes
+it reject.
 
 Live verification, per the user's explicit choice: create a disposable launchd
 job (`com.alacran.testjob`, running `/usr/bin/true`), toggle it through the real
@@ -118,6 +140,36 @@ Takeshi job**, honouring the standing safety rule that
 `~/AI-Native/plh-takeshi-agent` is never mutated for verification. The real
 button against the real job is left for the user to click.
 
+**What the live verification actually found:** the "Error handling" section
+above originally predicted that a redundant `unload` would exit non-zero. It
+does not. The disposable job's already-unloaded `unload` exited **0** while
+printing `Unload failed: 5: Input/output error` to stderr — the opposite of
+the predicted direction, and a case a naive `promisify(execFile)` rejection
+check would silently miss rather than misreport. No case of `launchctl`
+exiting non-zero was ever observed in this test; the impl's handling of a
+thrown error remains a defensive catch-all for that possibility, not a
+documented behaviour. This is why "Error handling" above now treats the
+resulting-state check as necessary for the one failure shape actually
+measured, while still covering the unobserved one defensively. The real
+Takeshi job's `checkLaunchdJob()` output was confirmed unchanged at three
+checkpoints during the session; the toggle's confirm dialog was opened and
+cancelled against the real card, never confirmed.
+
+**Whether `unload` kills an in-flight run was also measured, not assumed**
+(fix-wave follow-up, same standing safety rule). A second disposable job,
+`com.alacran.testjob-longrun` (`/bin/sleep 300`, `RunAtLoad true`), was
+loaded; `launchctl list` and `pgrep -f "sleep 300"` confirmed a real child
+process running under a specific PID. `launchctl unload` was run against
+that plist, and the PID was gone from `ps -p <PID>` immediately afterward,
+and still gone on a second check ~2s later (ruling out a slow SIGTERM being
+mistaken for survival). So on macOS 26.2, `unload` does stop a run already
+in progress — it is not a "future runs only" switch. This matches the
+mechanism documented in the `launchctl(1)` man page (`unload` maps to
+`bootout`, which removes the service definition from the domain, and
+running instances are signalled when their job goes away), so this is
+expected to generalise, though only this one program (`sleep`) was
+actually measured.
+
 ## Backup (done before this slice)
 
 `~/AI-Native/.backups/plh-takeshi-agent-20260804.tar.gz` — the whole 1.8M
@@ -125,6 +177,68 @@ directory including `.git`, so all history plus `logs/`, `state/` and `reports/`
 are restorable. Verified: 557 archive entries matching 557 on disk. The live
 plist is alongside it as `com.plh.takeshi-agent.plist.20260804` (lints clean),
 since this slice's whole purpose is manipulating that file's loaded state.
+
+## Follow-up: make "off" persistent (`-w`, same day)
+
+Maintainer review of the shipped bare `unload`/`load` design found a gap: a
+bare `unload` never writes a `=> disabled` entry to `launchctl
+print-disabled gui/$UID` — measured (macOS 26.2) on a disposable job with no
+prior override history, where the label read back **absent** afterward;
+only `unload -w` writes that entry. So the shipped "off" had no
+launchd-persisted record behind it. The expectation is that a later login
+or reboot would then silently bring the schedule back, but that boundary
+was never actually crossed — only the override's presence in the database
+was read.
+
+**Decision:** Stop becomes `launchctl unload -w <plist>`, Start becomes
+`launchctl load -w <plist>`. The `health.loaded === enabled` resulting-state
+check (see "Error handling" above) is unchanged — it is still the sole
+source of truth, `-w` only changes which two `launchctl` verbs feed it.
+
+**The unverified assumption, measured before writing any code:** that
+`load -w` actually clears the disable override and loads the job, since
+only `launchctl enable` had ever been proven to do that. A disposable job
+(`com.alacran.wtest`, `/usr/bin/true`, `RunAtLoad false`) was taken through
+`unload -w` → `load -w` twice, on macOS 26.2 build 25C56:
+
+- Round 1: `unload -w` → job absent from `launchctl list`, `print-disabled`
+  shows `com.alacran.wtest => disabled`. `load -w` → exit 0, job **present**
+  in `launchctl list`, `print-disabled` now shows `=> enabled`.
+- Round 2: repeated identically, same result both times.
+
+So `load -w` reliably clears the override and loads the job — the plan's
+premise held, and the maintainer's `-w`-in-both-directions decision is
+implemented as specified.
+
+**A second, independent exit-code lie was found in the same session,** on
+the opposite verb from the one already documented: a **bare** `load` (no
+`-w`) while the disable override is set does not load the job — it stays
+absent from `launchctl list` — while it *also* exits 0, with stderr reading
+`Load failed: 5: Input/output error`. This was confirmed directly (not
+just cited from background) against the same disposable job. It is now
+recorded in `set-scheduled-job-impl.ts`'s doc comment as a second instance
+of the exit-code-lies pattern the resulting-state check already exists to
+handle — it does not change the code (the check already covers it), only
+the rationale.
+
+**Documented trap, not fixed (out of scope):** `plh-takeshi-agent`'s own
+`install.sh` uses a bare `launchctl load`. If someone runs that script
+while the toggle is off, it will silently no-op and report success (exit
+0) without actually starting the job — the override is only cleared by
+this toggle's own Start path (`load -w`), never by a bare `load`. That
+repo must not be modified by this project, so this is called out here and
+in `CLAUDE.md`/`CHANGELOG.md` as a caveat for whoever next touches that
+script or investigates a "the agent didn't come back after I reinstalled
+it" report.
+
+**Dialog copy updated to match:** the Stop confirmation now says the
+in-flight run is stopped (measured previously, unchanged from the original
+slice) *and* that off is recorded as a persistent launchd disable override
+until Start is clicked, so it should survive logout and reboot too — flagged
+as expected-but-untested rather than asserted, since that boundary was never
+crossed (new, reflecting `-w`). The Start confirmation is unchanged — it
+was already accurate (`RunAtLoad` is `false` in the real plist, so loading
+resumes the 5-minute schedule rather than firing an immediate run).
 
 ## Note found while investigating
 

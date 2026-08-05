@@ -761,3 +761,81 @@ previously stale (it said "more starters soon" while packs already
 shipped), now names all 7 real packs with real descriptions, grouped the
 same way. See
 `docs/superpowers/specs/2026-07-30-control-panel-starter-template-expansion-design.md`.
+
+## v31: scheduled-runs toggle for the Takeshi agent
+
+The `plh-takeshi-agent` card's launchd status line becomes an interactive
+on/off control for the job's recurring schedule
+(`com.plh.takeshi-agent`, `StartInterval` 300s). Before this slice the
+dashboard could start a poll (v2's "Run now") and observe it, but
+stopping the schedule needed `launchctl unload` in a terminal. New
+`lib/scheduled-job/`: `set-scheduled-job-impl.ts` shells `launchctl
+load`/`unload` against a hardcoded plist path
+(`TAKESHI_LAUNCHD_PLIST_PATH`, never a parameter — the Server Action is
+browser-reachable, and a caller-supplied path would let it unload
+arbitrary launchd jobs), then decides success by reading the job's
+actual state back via the existing `checkLaunchdJob()` and comparing it
+to what was requested, rather than trusting the command's exit code.
+
+That resulting-state check turned out to be necessary, not merely
+defensive. Live verification found one exit-code anomaly on macOS
+(observed on 26.2): a redundant `unload` on an already-unloaded plist
+prints a failure to stderr but exits 0, so `promisify(execFile)` —
+which only rejects on a non-zero exit — never throws. No case of
+`launchctl` exiting non-zero was ever observed; the impl still catches
+a thrown error as a defensive fallback for failure modes that weren't
+triggered in this test (a missing plist, a permissions error), not
+because any of them is known to exit non-zero. Reading the state back
+via `checkLaunchdJob()` is the one check that covers both without
+needing to know in advance which exit code a given failure produces.
+
+Unload also stops a run already in progress, not only future scheduled
+runs — measured directly (a disposable long-running LaunchAgent's PID
+was gone immediately after `launchctl unload`, confirmed again ~2s
+later), not assumed. The confirm dialog (required in both directions)
+discloses this before turning the schedule off. "Run now" (v2) stays
+independent of the schedule either way. The control renders only when
+`plh-takeshi-agent` is a present existence-gated built-in AND its plist
+file exists, so a fresh install sees nothing. The displayed state always comes from a real
+`checkLaunchdJob()` read taken after the attempt, never an optimistic
+guess, so a failed unload can never render as "off". Like v2 (Run now),
+v9 (daily-team-log trigger) and v19 (integration status), this is
+deliberately bespoke to one agent id — the population is one; generalise
+if a second scheduled agent ever exists.
+
+Live verification used a disposable `com.alacran.testjob` (running
+`/usr/bin/true`), never the real Takeshi job, per the standing safety
+rule: toggled through the real `launchctl` code path, confirmed via
+`launchctl list` before and after, then deleted. The real Takeshi job's
+state was confirmed unchanged at three checkpoints during the session;
+the toggle's confirm dialog was opened and cancelled against the real
+card, never confirmed. The real button is left for the maintainer to
+click. See
+`docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
+
+### Follow-up: make "off" persistent (same day)
+
+The bare `unload`/`load` above turned out to have a gap: a bare `unload`
+writes no persistent disable override at all (measured, macOS 26.2 —
+the label stays absent from `launchctl print-disabled gui/$UID`), so
+"off" had nothing backing it across a logout or reboot. The maintainer
+decided Stop and Start now use `-w` in both directions: `unload -w`
+writes a `=> disabled` entry, and `load -w` clears it. That second half
+was the risk — only `launchctl enable` was previously proven to clear
+an override, not `load -w` — so it was measured before being written
+down: a disposable `com.alacran.wtest` job (macOS 26.2, build 25C56) was
+taken through `unload -w` → `load -w` twice, and both round-trips
+reliably cleared the override (`=> enabled`) and reloaded the job. A
+second, independent exit-code lie was found along the way and is now
+documented in the impl's doc comment: a bare `load` while the override
+is set silently no-ops (job never loads) while still exiting 0, stderr
+reporting `Load failed: 5: Input/output error` — the same
+exit-code-lies pattern the resulting-state check already existed to
+handle, on the opposite verb. This is a real trap for
+`plh-takeshi-agent`'s own `install.sh`, which uses a bare `load`: running
+it while the toggle is off will appear to succeed and not actually start
+the job, since only the toggle's own Start path clears the override.
+That repo is out of scope to modify, so this is a documented caveat, not
+a fix. Verification repeated the same disposable-job discipline as
+above, plus confirming the disable override itself was cleared and
+`print-disabled` returned to baseline before cleanup.

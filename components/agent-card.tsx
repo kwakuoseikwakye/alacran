@@ -15,12 +15,14 @@ import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-b
 import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
+import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 
 type AgentCardProps = {
   agent: Agent
   latestActivity: Activity | null
   error: string | null
   launchdHealth?: LaunchdHealth
+  showScheduledJobToggle?: boolean
   pollStatus?: PollLockStatus
   showVerifyButton?: boolean
   showDailyTeamLogButton?: boolean
@@ -50,6 +52,7 @@ export function AgentCard({
   latestActivity,
   error,
   launchdHealth,
+  showScheduledJobToggle,
   pollStatus,
   showVerifyButton,
   showDailyTeamLogButton,
@@ -100,12 +103,15 @@ export function AgentCard({
             </p>
           </div>
         )}
-        {launchdHealth && (
-          <p className="text-xs text-muted-foreground">
-            launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
-            {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
-          </p>
-        )}
+        {launchdHealth &&
+          (showScheduledJobToggle ? (
+            <ScheduledJobToggle health={launchdHealth} />
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
+              {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
+            </p>
+          ))}
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {hasIntegration ? (
             <BrandIcon id="gmail" tone="brand" className="size-3.5" />
