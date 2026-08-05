@@ -2,8 +2,9 @@ import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { getCompanyRemoteImpl } from "../github/backup-company-impl"
-import { getIntegrationStatus } from "../get-integration-status"
+import { getIntegrationStatus, NO_INTEGRATION_STATUS } from "../get-integration-status"
 import { getAiExecutorIdForAgent } from "../ai-executor-registry"
+import { getConnectStatusImpl } from "../connect/connect-status-impl"
 import { summarizeNetworkAccess } from "./summarize-network-access"
 import type { ExecFileFn } from "../git-commit-file"
 import type { AiExecutorId } from "../ai-executors"
@@ -38,8 +39,25 @@ export async function getCompanyOwnershipImpl(
   const remoteResult = await getCompanyRemoteImpl(agentId, execFn)
   const remoteUrl = remoteResult.ok ? remoteResult.remoteUrl : null
 
-  const integrationStatus = await getIntegrationStatus(agent)
-  const hasIntegration = integrationStatus !== "none configured yet"
+  const perCompanyStatus = await getIntegrationStatus(agent)
+  const connectStatus = await getConnectStatusImpl(execFn)
+  const googleConnected = connectStatus.google.connected
+
+  // getIntegrationStatus only ever reports a real per-company connection for
+  // email-pipeline-agent (which can never reach this Sheet — it isn't a
+  // command-set agent). For every company that CAN open this Sheet, fall
+  // back to the machine-wide Google connection: gog's auth is per-machine,
+  // not per-company, so if it's connected at all, any company's commands
+  // could use it, and this dashboard should say so rather than a blanket
+  // "none configured yet" that isn't true.
+  const integrationStatus =
+    perCompanyStatus !== NO_INTEGRATION_STATUS
+      ? perCompanyStatus
+      : googleConnected
+        ? `${connectStatus.google.detail} (Google is connected on this machine — any company's commands can use it.)`
+        : NO_INTEGRATION_STATUS
+
+  const hasIntegration = perCompanyStatus !== NO_INTEGRATION_STATUS || googleConnected
 
   const aiExecutorId = await getAiExecutorIdForAgent(agentId, aiExecutorRegistryPath)
 

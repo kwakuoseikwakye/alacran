@@ -78,4 +78,30 @@ describe("getCompanyOwnershipImpl", () => {
       ],
     })
   })
+
+  it("falls back to the machine-wide Google connection when no per-company integration exists", async () => {
+    const { getCompanyOwnershipImpl } = await import("./get-company-ownership-impl")
+    const exec: ExecFileFn = async (command, args) => {
+      if (command === "gog" && args[0] === "auth" && args[1] === "status") {
+        return { stdout: JSON.stringify({ account: { email: "me@example.com", credentials_exists: true } }), stderr: "" }
+      }
+      if (command === "which") {
+        return { stdout: `/usr/local/bin/${args[0]}\n`, stderr: "" }
+      }
+      throw new Error(`unexpected command: ${command} ${args.join(" ")}`)
+    }
+    const result = await getCompanyOwnershipImpl("acme", exec, aiExecutorRegistryPath)
+    expect(result).toEqual({
+      ok: true,
+      rootPath: root,
+      remoteUrl: null,
+      integrationStatus:
+        "Connected as me@example.com. (Google is connected on this machine — any company's commands can use it.)",
+      aiExecutorId: "claude-code",
+      networkAccess: [
+        { label: "Anthropic (Claude Code) — your own account" },
+        { label: "Google, via gog — your own account" },
+      ],
+    })
+  })
 })

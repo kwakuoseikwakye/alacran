@@ -2,9 +2,11 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import type { Agent } from "./adapters/types"
 
+export const NO_INTEGRATION_STATUS = "none configured yet"
+
 export async function getIntegrationStatus(agent: Agent): Promise<string> {
   if (agent.id !== "email-pipeline-agent") {
-    return "none configured yet"
+    return NO_INTEGRATION_STATUS
   }
 
   try {
@@ -14,8 +16,8 @@ export async function getIntegrationStatus(agent: Agent): Promise<string> {
       return `Email connected (${config.account})`
     }
   } catch {
-    return "none configured yet"
+    return NO_INTEGRATION_STATUS
   }
 
-  return "none configured yet"
+  return NO_INTEGRATION_STATUS
 }
