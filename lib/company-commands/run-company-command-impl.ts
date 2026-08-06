@@ -156,6 +156,9 @@ export async function runCompanyCommandImpl(
     const runVisibly = platform === "darwin" && (await resolveVisibleRun(agentId))
 
     if (runVisibly) {
+      if (spawnArgs.some((a) => a.includes("\0"))) {
+        throw new Error("Refusing to run: a NUL byte in the command arguments would corrupt the args file")
+      }
       const argsPath = path.join(dataDir, `${command.id}.args`)
       const promptPath = path.join(dataDir, `${command.id}.prompt`)
       const scriptPath = path.join(dataDir, `${command.id}.run.sh`)

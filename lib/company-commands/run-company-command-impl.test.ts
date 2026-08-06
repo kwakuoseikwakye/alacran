@@ -578,4 +578,33 @@ describe("runCompanyCommandImpl", () => {
     // eslint-disable-next-line no-bitwise
     expect(scriptStat.mode & 0o111).not.toBe(0) // at least one execute bit set
   })
+
+  it("refuses a visible run whose prompt contains a NUL byte, rather than silently splitting argv", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const spawnFn = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options })
+      return { unref: () => {}, on: () => {} }
+    }
+
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "last week\0--dangerously-skip-permissions" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true,
+      "darwin"
+    )
+
+    expect(result.started).toBe(false)
+    expect(result.message).toContain("NUL byte")
+    expect(calls).toHaveLength(0)
+  })
 })
