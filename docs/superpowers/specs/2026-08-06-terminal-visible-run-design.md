@@ -106,13 +106,31 @@ child.unref()
 ```
 
 **Visible (new):** the args array and the prompt are never interpolated
-into shell text — both go into files, read into a bash array with
-NUL-delimited `mapfile`, specifically because `triage-email`'s prompt
-contains attacker-influenced email content that v32 built a whole fencing
-mechanism around. String-interpolating that into a generated script would
-reopen exactly the injection surface v32 closed.
+into shell text — both go into files, read back inside the script,
+specifically because `triage-email`'s prompt contains attacker-influenced
+email content that v32 built a whole fencing mechanism around.
+String-interpolating that into a generated script would reopen exactly the
+injection surface v32 closed.
 
-1. Write `spawnArgs` to `${dataDir}/${command.id}.args`, NUL-delimited.
+**Measured, not assumed, before writing this: macOS's `/bin/bash` is 3.2.57
+(Apple ships the last GPLv2 release; there is no newer system bash, and no
+Homebrew bash can be assumed present).** An earlier draft of this script
+used `mapfile -d ''` to read the NUL-delimited args file into an array —
+`mapfile` doesn't exist in bash 3.2 at all (`mapfile: command not found`,
+confirmed by running it). Bash 3.2 does have `read -d`, and a `while read
+-d ""` loop was verified in this session to round-trip a 4-element
+NUL-delimited array correctly, **including an empty-string element**,
+under `/bin/bash` specifically. That loop is what the script below
+actually uses.
+
+Every path is assigned to a shell variable once, quoted with a standard
+`'...'`-with-embedded-`'\''`-escaping helper, and referenced by variable
+thereafter — avoiding the nested-quoting bugs that come from splicing
+quoted path literals directly into `trap`'s own single-quoted body.
+
+1. Write `spawnArgs` to `${dataDir}/${command.id}.args`, NUL-delimited
+   (`args.join("\0") + "\0"` — a trailing NUL after the last element too,
+   confirmed necessary for the read loop below to see it).
 2. Write the prompt text to `${dataDir}/${command.id}.prompt` (same content
    already embedded in `spawnArgs`, duplicated here only so the gate can
    `cat` it before the run, without parsing the args file).
@@ -120,23 +138,36 @@ reopen exactly the injection surface v32 closed.
 
 ```bash
 #!/bin/bash
-trap 'rm -f "<lockPath>"' EXIT        # fires on run, abort, or window close —
-                                        # a leaked lock wedges the company
-cd '<agent.rootPath>'
-mapfile -d '' ARGS < '<argsFile>'
+BINARY='<binaryName>'
+ARGSFILE='<argsFile>'
+PROMPTFILE='<promptFile>'
+LOGPATH='<logPath>'
+LOCKPATH='<lockPath>'
+CWD='<agent.rootPath>'
+# (each of the above produced by a shQuote() helper — see Task detail —
+# so a value containing a single quote is still embedded safely)
 
-echo "About to run: <binaryName> (in <agent.rootPath>)"
+trap 'rm -f "$LOCKPATH"' EXIT          # fires on run, abort, or window close —
+                                         # a leaked lock wedges the company
+cd "$CWD"
+
+ARGS=()
+while IFS= read -r -d "" item; do
+  ARGS+=("$item")
+done < "$ARGSFILE"
+
+echo "About to run: $BINARY (in $CWD)"
 echo "--- prompt ---"
-cat -v '<promptFile>'                 # -v renders control chars visibly —
-                                        # see "Why cat -v, not echo" below
+cat -v "$PROMPTFILE"                   # -v renders control chars visibly —
+                                         # see "Why cat -v, not echo" below
 echo "--- end prompt ---"
 read -p "Press Enter to run, or Ctrl-C to abort: "
 
-"<binaryName>" "${ARGS[@]}" 2>&1 | tee -a '<logPath>'
-rm -f "<lockPath>"
+"$BINARY" "${ARGS[@]}" 2>&1 | tee -a "$LOGPATH"
+rm -f "$LOCKPATH"
 echo "Finished — review and commit the diff in Alacrán."
 read -p "Press Enter for an interactive session, or close this window: "
-exec "<binaryName>" -c
+exec "$BINARY" -c
 ```
 
 4. `spawnFn("open", ["-a", "Terminal", scriptPath], { cwd: agent.rootPath, detached: true, stdio: [...] })`.
@@ -157,7 +188,8 @@ Three properties this preserves on purpose:
   know or care whether the process producing that log is headless or in a
   visible window.
 - **Nothing sender- or user-supplied is ever shell-interpolated.** The
-  prompt and args exist only as file content read by `mapfile`/`cat`.
+  prompt and args exist only as file content read by the loop above and
+  `cat`, never spliced into the script's own text.
 
 **Why `cat -v`, not `echo "$PROMPT"` or a plain `cat`:** the gate's entire
 value is that the user can trust what they're reading before approving a
@@ -230,11 +262,19 @@ on for that company in the wizard.
 
 - The script-generation function is pure (inputs: binary name, args-file
   path, prompt-file path, log path, lock path, cwd → output: script text),
-  so it's directly unit-testable: assert the `trap ... EXIT` line, the
-  `cat -v` (not `cat` or `echo`) on the prompt file, the `tee -a` target
-  matching the real log path, the `mapfile -d ''` args read, and —
-  explicitly, as a regression guard — that no prompt text or field value
-  ever appears literally in the generated script, only file *paths*.
+  so it's directly unit-testable: assert the `trap 'rm -f "$LOCKPATH"'
+  EXIT` line, the `cat -v` (not `cat` or `echo`) on the prompt file, the
+  `tee -a` target matching the real log path, the `while IFS= read -r -d
+  ""` args-reading loop, and — explicitly, as a regression guard — that no
+  prompt text or field value ever appears literally in the generated
+  script, only file *paths* (structurally guaranteed here, since the
+  function's input type has no prompt-text field at all — only a path to
+  it). A separate integration-style test, run against a real `/bin/bash`
+  (no `claude`, no API call, no network — just the shell reading a file),
+  should exercise the actual args round-trip this session measured:
+  write a NUL-delimited array containing an empty-string element, run the
+  generated read loop against it, and assert every element — including
+  the empty one — comes back intact.
 - `runCompanyCommandImpl`'s branch is testable through the existing
   injected `SpawnFn`: assert that visible mode invokes `open` with `-a
   Terminal` and the script path, and that no `exit` listener is attached
