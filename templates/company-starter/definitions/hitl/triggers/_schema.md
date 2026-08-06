@@ -108,4 +108,4 @@ examples:
 
 ---
 
-*ai-retreat-starter — HITL trigger notation guide*
+*company-starter — HITL trigger notation guide*

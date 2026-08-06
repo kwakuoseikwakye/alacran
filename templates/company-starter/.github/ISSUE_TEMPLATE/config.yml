@@ -1,5 +1,1 @@
 blank_issues_enabled: true
-contact_links:
-  - name: Contact the retreat organizers
-    url: https://example.invalid/retreat-support
-    about: For individual consultations or confidential inquiries, contact the organizers directly instead of filing an Issue (the URL is provided by the organizers individually)

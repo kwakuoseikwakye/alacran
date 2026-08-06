@@ -117,4 +117,4 @@ Do not call Edit while you cannot answer all 5 immediately.
 
 ---
 
-*ai-retreat-starter — Scope Contract Rule*
+*company-starter — Scope Contract Rule*

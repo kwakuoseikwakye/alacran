@@ -82,4 +82,4 @@ Design reference: docs/templates/common-retro-pattern.yaml (the shape of KPT + p
 
 ---
 
-*ai-retreat-starter — weekly retrospective template (retro-weekly.md)*
+*company-starter — weekly retrospective template (retro-weekly.md)*

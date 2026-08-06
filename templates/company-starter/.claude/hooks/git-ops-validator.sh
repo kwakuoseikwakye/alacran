@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===================================================================
-# Git Ops Validator Hook (ai-retreat-starter)
+# Git Ops Validator Hook (company-starter)
 # ===================================================================
 # Purpose: of git operations, mechanically blocks the irreversible ones with
 #          exit 2 (the Blocking layer), and separately defers reset --hard

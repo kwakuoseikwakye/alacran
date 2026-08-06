@@ -12,7 +12,7 @@ exists at distribution time.
 The shape right after cloning the template, before anything has been filled in.
 
 ```
-ai-retreat-starter/
+company-starter/
 ├── CLAUDE.md                       # the operating constitution
 ├── README.md
 ├── LICENSE.md
@@ -40,9 +40,6 @@ ai-retreat-starter/
 ├── docs/
 │   ├── directory-map.md            # this file
 │   ├── starter-manual.md
-│   ├── participant-guide.md        # pre-retreat guidance for participants
-│   ├── retreat-day-flow.md         # the retreat day's run-of-show
-│   ├── feedback-collection.md      # how feedback collection is operated
 │   ├── ai-company-explainer.md     # background on the "AI autonomous management harness"
 │   ├── concepts/                   # explanations of the design thinking (context-funnel / hitl-async-approval)
 │   ├── simulations/                # onboarding-verification records (read-only)
@@ -53,7 +50,6 @@ ai-retreat-starter/
 ├── scripts/
 │   ├── verify.py                   # the RQT-based verification runner
 │   └── (cycle-operations helper scripts)
-├── exercises/
 └── secrets/                        # confidential data only (gitignored, structure kept via .gitkeep)
     ├── customers/
     └── contracts/
@@ -68,7 +64,7 @@ under `definitions/` now holds your own company's real data (`company.yaml`,
 `<team>-*.yaml`), and operational records start accumulating.
 
 ```
-ai-retreat-starter/
+company-starter/
 ├── HANDOFF.md                      # the file itself already existed at (a). Content: /handoff appends session results
 ├── definitions/
 │   ├── ontology/
@@ -106,7 +102,7 @@ information grows under `definitions/clients/<slug>/`, one directory per company
 Confidential data goes to `secrets/customers/<slug>/` instead.
 
 ```
-ai-retreat-starter/
+company-starter/
 ├── definitions/
 │   └── clients/
 │       ├── README.md

@@ -1,10 +1,10 @@
-# ai-retreat-starter — operating constitution
+# company-starter — operating constitution
 
 > **This template is self-contained with plain Claude Code + GitHub.** All you need is a GitHub account,
 > a plan that lets you use Claude Code, `git` and `python3`.
 > MCP servers, external SDKs and additional tools are **optional**. Connect whatever you want to connect
 > (freee / Notion / Slack and so on — anything that helps your own business is actively encouraged).
-> That said, this template's verification (`scripts/verify.py`), hooks and retreat exercises are designed to be
+> That said, this template's verification (`scripts/verify.py`) and hooks are designed to be
 > self-contained with plain Claude Code, and every feature works with no MCP connected.
 
 This file is the operating constitution for standing up an "AI autonomous management harness" at your company.
@@ -95,7 +95,7 @@ Tampering to "just make it green" is forbidden.
 
 ### 2.6 Session handover
 
-A retreat spans multiple days and multiple sessions. At the end of a session, update `HANDOFF.md` so whoever
+Running a company spans multiple days and multiple sessions. At the end of a session, update `HANDOFF.md` so whoever
 picks it up next (including your future self) isn't left guessing. The `/handoff` command helps with this.
 
 ---
@@ -122,7 +122,7 @@ They are not delegation stubs for external tools — they all run as-is on plain
 ## 4. Directory structure
 
 ```
-ai-retreat-starter/
+company-starter/
 ├── CLAUDE.md                # this file — the operating constitution
 ├── README.md                # setup instructions
 ├── LICENSE.md                # participant-only licence
@@ -153,8 +153,7 @@ ai-retreat-starter/
 ├── state/                     # git-tracked location for business cycle logs (state/cycles/<team-id>/)
 ├── scripts/
 │   ├── verify.py               # the RQT-based verification runner
-│   └── cycle/                  # business cycle operation scripts (advanced, outside the scope of the retreat exercises; see scripts/cycle/README.md)
-├── exercises/                  # the 3 exercises for the day of the retreat
+│   └── cycle/                  # business cycle operation scripts (advanced; see scripts/cycle/README.md)
 ├── secrets/                    # always gitignored. Do not put credentials anywhere else
 └── HANDOFF.md                  # session handover (updated in Phase 5)
 ```
@@ -222,18 +221,17 @@ When an agent needs information, it Reads the paths below directly (pull, not pu
   see Issue #26).
 - **`/verify` FAILs**: follow the no-fake-green principle, read the FAIL as written and fix it.
   Editing to weaken an existing check so it passes is forbidden (no fake green). On the other hand,
-  **adding** your own RQTs to `scripts/verify.py` is welcome (see `exercises/03-run-verify-loop.md`).
+  **adding** your own RQTs to `scripts/verify.py` is welcome.
 - **You started implementing without creating an Issue**: file the Issue even after the fact, and leave the
   reference in the commit message and PR. Issue-First ideally means "create it first", but
   "leaving a record" has the higher priority.
 
 ---
 
-## 7. Terms of use
+## 7. License
 
-This template is provided exclusively to registered participants of the AI-driven management retreat.
-Redistribution, commercial redistribution, and publishing derivatives in a public repository are prohibited.
-See [LICENSE.md](./LICENSE.md) for details.
+This template is MIT-licensed — see [LICENSE.md](./LICENSE.md). Freely
+reusable, redistributable, and modifiable.
 
 ---
 
@@ -245,4 +243,4 @@ See [LICENSE.md](./LICENSE.md) for details.
 
 ---
 
-*ai-retreat-starter — template for participants of the AI-driven management retreat*
+*company-starter — Alacrán's default new-company template*

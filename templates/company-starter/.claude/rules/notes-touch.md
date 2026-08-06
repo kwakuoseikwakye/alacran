@@ -106,4 +106,4 @@ Changes in `notes/` need less care than in `definitions/`, but avoid the followi
 
 ---
 
-*ai-retreat-starter — notes/ path-scoped rule (the L2 counterpart to definitions-touch.md)*
+*company-starter — notes/ path-scoped rule (the L2 counterpart to definitions-touch.md)*

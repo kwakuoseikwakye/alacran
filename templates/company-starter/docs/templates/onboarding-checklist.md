@@ -65,12 +65,6 @@ Work through each step top to bottom. If you get stuck, re-read `docs/starter-ma
 - [ ] It's normal for an unfilled shelf to show up as INFO/SKIP (the design assumes you grow
       this incrementally)
 
-## Step 8. Do the retreat exercises
-
-- [ ] `exercises/01-define-your-company.md`
-- [ ] `exercises/02-first-hitl-gate.md`
-- [ ] `exercises/03-run-verify-loop.md`
-
 ## Step 9. Leave a handover (Phase 5)
 
 - [ ] Update `HANDOFF.md` with `/handoff` (what you did this time, what's next)

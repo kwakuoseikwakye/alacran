@@ -22,7 +22,7 @@ Today's date is ${today}. Aggregate scope: ${fields.period?.trim() || "the last 
 
 Scan notes/company/**/*.md (excluding notes/company/digests/), notes/market/**/*.md, notes/clients/**/*.md, notes/sops/**/*.md, docs/decisions/*.md, and docs/retros/*.md for frontmatter created:/updated: dates within the aggregate scope. Count unprocessed notes in notes/inbox/ (excluding README.md) and flag any older than 7 days. Flag any notes/market/**/*.md whose observed_at: is more than 90 days old.
 
-Write the result to notes/company/digests/${today}-digest.md following the exact template structure in .claude/commands/digest.md's "進め方" step 5 (frontmatter with type: digest, status: active, created/updated: ${today}, tags: []; a warning banner that this file is aggregated output, not source of truth; sections for new/updated notes by category, inbox backlog, market freshness warnings, and suggested next actions). Create notes/company/digests/ first if it doesn't exist. Write exactly one file and stop — do not run any other commands.`,
+Write the result to notes/company/digests/${today}-digest.md following the exact template structure in .claude/commands/digest.md's "How to proceed" step 5 (frontmatter with type: digest, status: active, created/updated: ${today}, tags: []; a warning banner that this file is aggregated output, not source of truth; sections for new/updated notes by category, inbox backlog, market freshness warnings, and suggested next actions). Create notes/company/digests/ first if it doesn't exist. Write exactly one file and stop — do not run any other commands.`,
   },
   {
     id: "decision",

@@ -51,7 +51,7 @@ jobs:
           echo "G1 PASS"
       - name: G2 — detect own infrastructure/brand terms
         run: |
-          if grep -rniE "aidreams-factory|ai-company-prod|customercloud|customer\.cloud|カスタマークラウド|op://" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .; then
+          if grep -rniE "aidreams-factory|ai-company-prod|customercloud|customer\.cloud|op://" --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=.github .; then
             echo "::error::G2 FAIL — infrastructure/brand term detected"
             exit 1
           fi

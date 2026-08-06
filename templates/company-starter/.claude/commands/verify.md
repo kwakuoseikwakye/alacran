@@ -67,6 +67,6 @@ principle: do not hide a FAIL, and do not try to make it pass by weakening the v
 - Rewriting `scripts/verify.py` itself "to make it pass" is forbidden (the no-fake-green principle, `CLAUDE.md` §2.5).
   What you fix is the implementation or configuration being verified.
 - If the user wants to add their own RQT, guide them to add a `verify_*()` function to `scripts/verify.py`
-  and to also add it to the call list in `main()` (see `exercises/03-run-verify-loop.md`).
+  and to also add it to the call list in `main()`.
 - Do not speculatively fill in explanations about RQT categories that don't exist or checks that aren't
   implemented, when the user hasn't even asked. If it isn't in the output, say plainly that it isn't there.

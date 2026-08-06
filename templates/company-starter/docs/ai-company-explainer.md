@@ -1,8 +1,8 @@
-# Reading ai-retreat-starter through the "AI company" lens — an explainer for non-engineers
+# Reading company-starter through the "AI company" lens — an explainer for non-engineers
 
 > A document for anyone who's read "Building an AI Company with Claude Code — the concepts
-> edition" (the retreat's pre-reading material), letting you see at a glance **which file in
-> this template corresponds to which idea from the concepts edition**.
+> edition," letting you see at a glance **which file in this template corresponds to which
+> idea from the concepts edition**.
 > Written so it's readable even if you're not an engineer — explained through "what the
 > folders mean," not through code.
 
@@ -36,13 +36,12 @@ still works if you haven't, but "why this structure" will land less. In particul
 |---|---|---|
 | The company's map (the core) | `CLAUDE.md` | repo root |
 | A drawer (per-area rules) | `.claude/rules/*.md` | 3 files (issue-first / scope-contract / hitl-gate) |
-| A drawer (per-area documents) | `docs/*.md` | starter-manual / participant-guide / retreat-day-flow etc. |
+| A drawer (per-area documents) | `docs/*.md` | starter-manual / directory-map / concepts etc. |
 | A template (the shape of a folder layout) | `docs/templates/*.yaml` | ontology-starter / kpi / cycle-plan / retrospective |
 | The company's real data | `definitions/*` | ontology / hitl-triggers (filled in via `/define-company`) |
 | The skill equivalent (a callable procedure) | `.claude/commands/*.md` | 6 files (define-company / create-epic / verify / handoff / decision / retro) |
 | A script (deterministic processing) | `scripts/verify.py`, `scripts/cycle/` | verification and cycle operations |
 | Session handover | `HANDOFF.md`, `docs/decisions/` | Phase 5's record |
-| Exercises (what you do on retreat day) | `exercises/*.md` | 3 files |
 | Where confidential data lives (a box that must never leave) | `secrets/` | gitignored |
 
 **This template goes as far as building out what the concepts edition calls "the map + the
@@ -198,7 +197,7 @@ operation).
 As stated right at the top of `CLAUDE.md`, all you need is **a GitHub account / Claude Code /
 git / python3**. There are 2 reasons:
 
-- We want day one of the retreat spent entirely on "getting past the concepts and putting
+- We want your first session spent entirely on "getting past the concepts and putting
   your own company's context in," without distraction.
 - External integrations (Gmail / calendar / Slack, etc.) vary too much company to company to
   be pinned down on the template side.
@@ -252,7 +251,7 @@ This template's scripts are:
 ```
 scripts/
 ├── verify.py       <- the verification runner that mechanically runs RQTs (Required-Quality-Tests)
-└── cycle/          <- helper scripts for business-cycle operations (advanced, outside the retreat exercises' scope)
+└── cycle/          <- helper scripts for business-cycle operations (advanced)
 ```
 
 ### Why `verify.py` is a script
@@ -390,10 +389,7 @@ AI staff."** From here, the intended growth path is:
 - [README.md](../README.md) — setup instructions
 - [CLAUDE.md](../CLAUDE.md) — the operating constitution (this template's backbone)
 - [docs/starter-manual.md](./starter-manual.md) — how to use the harness
-- [docs/participant-guide.md](./participant-guide.md) — guidance for retreat participants
-- [docs/retreat-day-flow.md](./retreat-day-flow.md) — the retreat day's flow
-- [exercises/](../exercises/) — the 3 exercises for the day of the retreat
 
 ---
 
-*ai-retreat-starter — an "AI company" lens explainer (for non-engineers)*
+*company-starter — an "AI company" lens explainer (for non-engineers)*

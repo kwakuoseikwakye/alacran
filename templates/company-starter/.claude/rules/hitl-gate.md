@@ -77,4 +77,4 @@ table and the yaml do not need to correspond 1:1 (md = conceptual categories / y
 
 ---
 
-_ai-retreat-starter — the HITL Gate principle_
+_company-starter — the HITL Gate principle_

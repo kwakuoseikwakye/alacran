@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===================================================================
-# Session Start Handoff Hook (ai-retreat-starter)
+# Session Start Handoff Hook (company-starter)
 # ===================================================================
 # Purpose: at session start, deterministically inject HANDOFF.md's most
 #          recent section into context via additionalContext, mechanising

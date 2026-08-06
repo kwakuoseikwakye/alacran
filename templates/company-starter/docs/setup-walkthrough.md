@@ -226,11 +226,11 @@ deliberately stopped" — read the message and address it.
 
 ## Next steps
 
-- `exercises/01-define-your-company.md` — if you skipped Step 7 (e.g. skipped
-  `/define-company`), redo it here while following the detailed steps
-- `exercises/02-first-hitl-gate.md` — an exercise to actually experience the HITL Gate
-- `exercises/03-run-verify-loop.md` — an exercise to add your own RQT to `scripts/verify.py`
+- If you skipped Step 7, go back and run `/define-company` now.
+- Design one real HITL trigger for your own business and add it to
+  `definitions/hitl/triggers/` (see `.claude/rules/hitl-gate.md`).
+- Add your own RQT to `scripts/verify.py` once you have a check worth automating.
 
 ---
 
-*ai-retreat-starter — 15-Minute Setup Walkthrough*
+*company-starter — 15-Minute Setup Walkthrough*

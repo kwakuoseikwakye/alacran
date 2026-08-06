@@ -5,11 +5,11 @@ type: agents-template
 
 # AGENTS Template — Agent system design guidelines
 
-> **[This file is optional / for reference.]** The retreat itself (Phase 1–5, the 5-cycle
-> workflow) is complete using nothing but plain Claude Code's subagent mechanism and the 7
+> **[This file is optional / for reference.]** The 5-phase workflow (Phase 1–5) works
+> completely on its own, using nothing but plain Claude Code's subagent mechanism and the
 > commands in `.claude/commands/`. This file is design guidance for "once you've adopted this
 > at your own company and want to build out your own agent-role system" — it is not a
-> prerequisite for the retreat exercises.
+> prerequisite for using the template.
 > `docs/templates/README-template.md` §2 likewise classifies `AGENTS-template.md` as
 > "not needed (reference only)".
 

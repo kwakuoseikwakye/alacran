@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-The RQT (Requirements Traceability) verification mechanism for the AI-driven
-management retreat starter template.
+The RQT (Requirements Traceability) verification mechanism for this
+company-starter template.
 
-This script carries only a minimal set of base RQTs. Participants may add their
-own company's RQTs as verify_*() functions (when you do, also add the call to
+This script carries only a minimal set of base RQTs. You may add your own
+company's RQTs as verify_*() functions (when you do, also add the call to
 main()'s call list).
 
 An RQT whose target doesn't exist is treated as SKIP (with an INFO log) rather
 than FAIL. This is a deliberate design choice so the template doesn't come out
-covered in red the moment it's unpacked — it assumes participants grow the
-harness incrementally.
+covered in red the moment it's unpacked — it assumes you grow the harness
+incrementally.
 
 Usage:
   python3 scripts/verify.py
@@ -1735,14 +1735,10 @@ def verify_pathref(r: Report):
         REPO_ROOT / "docs" / "directory-map.md",
         REPO_ROOT / "docs" / "setup-walkthrough.md",
         REPO_ROOT / "docs" / "starter-manual.md",
-        REPO_ROOT / "docs" / "participant-guide.md",
-        REPO_ROOT / "docs" / "retreat-day-flow.md",
-        REPO_ROOT / "docs" / "feedback-collection.md",
         REPO_ROOT / "HANDOFF.md",
     ]
     targets += sorted((REPO_ROOT / ".claude" / "commands").glob("*.md"))
     targets += sorted((REPO_ROOT / "docs" / "templates").glob("*.md"))
-    targets += sorted((REPO_ROOT / "exercises").glob("*.md"))
     targets += sorted((REPO_ROOT / "docs" / "concepts").glob("*.md"))
 
     unresolved = []
@@ -1786,7 +1782,7 @@ def verify_pathref(r: Report):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="RQT verify for the AI-driven management retreat starter template"
+        description="RQT verify for the company-starter template"
     )
     parser.add_argument(
         "--json", action="store_true", help="Output JSON instead of text"

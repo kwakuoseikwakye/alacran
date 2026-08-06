@@ -478,12 +478,10 @@ Once you've finished this guide, here's what to read next (in the recommended or
 1. **`docs/starter-manual.md`** — a start manual one level more detailed than this guide (15 min)
 2. **`notes/README.md`** — the full picture of the memo box (`notes/`). Which small room holds
    what (a continuation of §7)
-3. **`exercises/01-define-your-company.md`** — the first hands-on exercise
-4. **`exercises/02-first-hitl-gate.md`** — an exercise to experience the HITL Gate
-5. **`exercises/03-run-verify-loop.md`** — an exercise to experience the verify loop
-6. **`docs/ai-company-explainer.md`** — an explainer of "why this structure," mapped against
+3. **`/define-company`** — run this to define your own company's ontology, hands-on
+4. **`docs/ai-company-explainer.md`** — an explainer of "why this structure," mapped against
    the concepts edition (L1-L9)
-7. **`CLAUDE.md`** — the company's constitution. Once you're comfortable, you'll start
+5. **`CLAUDE.md`** — the company's constitution. Once you're comfortable, you'll start
    customizing this
 
 ---
@@ -500,4 +498,4 @@ And Claude Code (the AI employee) is what helps you organize it, together.
 
 ---
 
-*ai-retreat-starter — The Beginner's Guide to an AI Company*
+*company-starter — The Beginner's Guide to an AI Company*

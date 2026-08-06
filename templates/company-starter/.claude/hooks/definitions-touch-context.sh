@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===================================================================
-# Definitions-Touch Context Hook (ai-retreat-starter)
+# Definitions-Touch Context Hook (company-starter)
 # ===================================================================
 # Purpose: the moment definitions/ is Edited/Written, inject the
 #          definitions-touch discipline (SSOT handling, PII isolation) into

@@ -129,4 +129,4 @@ environments, etc.), you can't file an Issue on the spot. Don't stop working; ta
 
 ---
 
-*ai-retreat-starter — the Issue-First principle*
+*company-starter — the Issue-First principle*

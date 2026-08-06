@@ -113,7 +113,7 @@ def render(template_text, kpi_json, events, team_id):
     ccr_status, ccr_alert = status_ccr(ccr)
     hir_status, hir_alert = status_hir(hir)
     alerts = [a for a in (ccr_alert, hir_alert) if a]
-    alert_summary = "なし" if not alerts else f"{len(alerts)} 件: " + "; ".join(alerts)
+    alert_summary = "None" if not alerts else f"{len(alerts)}: " + "; ".join(alerts)
 
     replacements = {
         "{TEAM_ID}": team_id,

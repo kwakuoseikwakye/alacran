@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ===================================================================
-# Commit Message Advisor Hook (ai-retreat-starter)
+# Commit Message Advisor Hook (company-starter)
 # ===================================================================
 # Purpose: checks the hygiene of the most recent git commit message
 #          (Conventional Commits format / Issue reference / personal email

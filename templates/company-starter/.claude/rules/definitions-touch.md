@@ -100,4 +100,4 @@ So declare the Scope Contract's **NOT CHANGE** more strictly than usual.
 
 ---
 
-*ai-retreat-starter — definitions/ path-scoped rule (a worked `paths:` example from L2 of the concepts guide)*
+*company-starter — definitions/ path-scoped rule (a worked `paths:` example from L2 of the concepts guide)*

@@ -6,7 +6,7 @@ It keeps cycle execution records, KPI snapshots, and session-handoff digests in 
 KPI measurement (`definitions/kpi/`) and retrospectives (`definitions/retro/`) can later
 aggregate over.
 
-> Not required for the retreat exercises (`scripts/cycle/` is treated as advanced). Ships
+> Not required for day-to-day use (`scripts/cycle/` is treated as advanced). Ships
 > empty at first — only teams that start actually running cycles grow its contents.
 
 ## Layout (per team-id)
@@ -47,4 +47,4 @@ state/
 
 ---
 
-*ai-retreat-starter — state/, the home for business-cycle logs*
+*company-starter — state/, the home for business-cycle logs*

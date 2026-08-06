@@ -67,17 +67,3 @@ definitions/.staging/
 .pil-state/
 .ai/
 
-# === Vendored tools/office (a prebuilt vendor bundle, fully self-contained offline) ===
-# tools/office is tracked in full, since it's a prebuilt vendor bundle meant to work fully offline
-# (must come after node_modules/ dist/ build/ above — gitignore rules are last-wins)
-!tools/office/
-!tools/office/**
-
-# Even under vendor/, secret files and OS noise are still never tracked (comes after the
-# re-include above, so it takes precedence)
-tools/office/**/.DS_Store
-tools/office/**/.env
-tools/office/**/.env.*
-tools/office/**/*.pem
-tools/office/**/*.key
-tools/office/**/*.p12

@@ -1,7 +1,7 @@
-# Starter Manual — AI-driven management retreat
+# Starter Manual — company-starter
 
-> Expected read time: about 15 minutes. Once you've read it, move on to
-> `exercises/01-define-your-company.md`.
+> Expected read time: about 15 minutes. Once you've read it, run `/define-company` to start
+> defining your own company.
 
 ---
 
@@ -17,13 +17,12 @@ What's included:
 - The 5 operating principles: Issue-First / HITL Gate / SSOT / Scope Contract / no fake green
 - YAML/Markdown templates for your own company ontology, KPIs, cycles, and retrospectives
 - A working verification script (`scripts/verify.py`) and the CI that runs it
-- 3 hands-on exercises for the day of the retreat
 
 What's deliberately NOT included:
 
 - An external SDK, a dedicated fleet of agents, a dedicated MCP server
-- Core management information like a pricing model or GTM design (something you design in
-  your own retreat work)
+- Core management information like a pricing model or GTM design (something you design
+  yourself)
 - Your company's specific answers (the template is a "shape," not an "answer")
 
 ---
@@ -51,8 +50,8 @@ git clone git@github.com:<your-account>/<your-repo-name>.git
 cd <your-repo-name>
 ```
 
-> ⚠️ **Always start from a private repository.** The retreat includes work that handles your
-> own company's confidential information. See README.md's security-operations section for
+> ⚠️ **Always start from a private repository.** Day-to-day work here handles your own
+> company's confidential information. See README.md's security-operations section for
 > details.
 
 ### 2.3 Start Claude Code and have it read in
@@ -72,7 +71,7 @@ python3 scripts/verify.py
 
 This is the RQT (Requirements Traceability) verification script. At first, almost everything
 shows `INFO` (skipped because the target file doesn't exist yet) — that's normal. `PASS`
-grows as you progress through the retreat. For usage details, see the docstring at the top
+grows as you fill things in. For usage details, see the docstring at the top
 of `scripts/verify.py` and `.claude/rules/scope-contract.md`.
 
 That's it — the 15-minute setup is done.
@@ -93,8 +92,7 @@ Phase 5 Record       — record the Decision + update HANDOFF (session handover)
 ```
 
 The detailed procedure for each phase and how to use the templates is documented in
-`CLAUDE.md`. This manual covers only the overview — the hands-on details are left to each
-`exercises/*.md`.
+`CLAUDE.md`. This manual covers only the overview.
 
 ---
 
@@ -118,8 +116,8 @@ the Issue list alone, without digging through code or docs.
 5. Include an Issue reference in the commit message: `feat(ontology): define customer entity (#12)`
 6. Once the work is done, write `Resolves #12` in the PR
 
-The `/define-company` exercise lives at `exercises/01-define-your-company.md`. For the
-retreat day's flow, including filing Issues, see `docs/retreat-day-flow.md`.
+Run `/define-company` to start. See `.claude/rules/issue-first.md` for the full
+Issue-filing conventions.
 
 ---
 
@@ -141,8 +139,8 @@ Typical HITL trigger examples:
 | Hiring/firing | A final HR decision |
 
 Deciding up front "what to delegate to the AI, and what a human holds onto" is the starting
-point for the whole retreat. The exercise for actually designing one HITL trigger is
-`exercises/02-first-hitl-gate.md` (added once Phase B is complete).
+point for using this template well. See `.claude/rules/hitl-gate.md` for how to design your
+own triggers.
 
 ---
 
@@ -155,8 +153,8 @@ it unclear which is current, and confuses both the AI and humans.
 ```
 <your-repo>/
 ├─ CLAUDE.md                    <- the instruction manual for Claude Code (read with top priority)
-├─ README.md                    <- the repo's entry point / terms of use
-├─ LICENSE.md                   <- a license limited to retreat participants
+├─ README.md                    <- the repo's entry point
+├─ LICENSE.md                   <- MIT license for the template itself
 ├─ .claude/
 │   ├─ hooks/                   <- advisory checks, e.g. at git commit time
 │   ├─ rules/                   <- operating disciplines like scope-contract / hitl-gate
@@ -169,12 +167,11 @@ it unclear which is current, and confuses both the AI and humans.
 ├─ definitions/                 <- the SSOT of your own company's context (fill in here, copied from the templates)
 ├─ examples/                    <- filled-in samples (read-only)
 ├─ scripts/
-│   ├─ cycle/                   <- business-cycle operations scripts (advanced, outside the exercises' scope)
+│   ├─ cycle/                   <- business-cycle operations scripts (advanced)
 │   └─ verify.py                <- the RQT machine-verification script
 ├─ state/                       <- where cycle-operations logs live (written by scripts/cycle/)
-├─ .github/workflows/
-│   └─ verify.yml                <- the CI gate (automatically runs verify.py)
-└─ exercises/                   <- the 3 exercises for the day of the retreat
+└─ .github/workflows/
+    └─ verify.yml                <- the CI gate (automatically runs verify.py)
 ```
 
 When adding a new definition, first copy the corresponding template under `templates/`, and
@@ -203,8 +200,7 @@ start prevents most scope inflation.
 
 Even if it looks like it's working, a change that hasn't gone through machine verification is
 a breeding ground for "fake green." At every milestone, always run
-`python3 scripts/verify.py` and confirm there's no FAIL before moving on. You can experience
-this hands-on in `exercises/03-run-verify-loop.md`.
+`python3 scripts/verify.py` and confirm there's no FAIL before moving on.
 
 ### 7.4 Automating without first deciding on HITL triggers
 
@@ -216,18 +212,19 @@ HITL triggers (§5) at the same time as your automation, without fail.
 
 ## 8. What to do next
 
-Once you've finished reading this manual, move on to the next file:
+Once you've finished reading this manual:
 
-👉 **`exercises/01-define-your-company.md`** — the first exercise, defining your own company
-ontology.
+👉 **Run `/define-company`** — defining your own company ontology is the first real step.
 
-After that comes `exercises/02-first-hitl-gate.md` (experiencing the HITL Gate), then
-`exercises/03-run-verify-loop.md` (experiencing the verify loop).
+Then experience the HITL Gate for yourself: design one real trigger for your own business
+(§5) and add it to `definitions/hitl/triggers/`. Then run `python3 scripts/verify.py` (or
+`/verify`) and get comfortable reading its output — you'll be running it after every
+substantial change from here on.
 
-After finishing each exercise, we recommend filing one Epic Issue about your own management
-challenge. By the end of the retreat, your repository should have grown into "a template for
-an AI-driven management harness applied to your own company."
+We recommend filing one Epic Issue about your own first real management challenge as soon as
+you're set up. As you keep using it, your repository should grow into "a template for an
+AI-driven management harness applied to your own company."
 
 ---
 
-*ai-retreat-starter — Starter Manual*
+*company-starter — Starter Manual*
