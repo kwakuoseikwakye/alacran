@@ -457,6 +457,38 @@ version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
 than the usual brainstorm-spec-plan flow, since it's a packaging fix with
 no application-code change.
 
+v37 fixed real legal/licensing exposure in `templates/company-starter/` —
+the real bundled source `create-company-from-template.ts` copies into
+every new company. It was discovered to still be branded, in full, as a
+third-party "management training" program's proprietary,
+non-redistributable starter kit: its own `LICENSE.md` explicitly
+prohibited "publication of derivative works in a public repository
+without prior written consent" — exactly what this repo does. Fixed:
+replaced that license with real MIT (matching this repo's own), removed
+program-program branding throughout ~25 files, and deleted files that
+were pure program-logistics content (`exercises/`, participant/program-
+day/feedback docs, program-organizer feedback issue templates) with no
+place in a software template. Also translated all remaining Japanese
+content to English (`scripts/cycle/`, a CI sanitize-gate pattern, and a
+stale Japanese heading reference in this repo's own
+`lib/company-commands/registry.ts`) and removed two features found to be
+broken or legally exposed on inspection: the `/office` command and its
+test file (`tools/office/office.py` was referenced by both but never
+actually bundled in this repo's history — confirmed via `git log --all`
+— so every new company inherited a command that always fails and a test
+file that fails to even collect), and the `piro`/`piro-run` skills (built
+around and named after AWS's real "Kiro" product, "Kiro's little brother,
+one letter away" — trademark exposure with no offsetting value for most
+users). `lib/company-template-manifest.ts` and
+`lib/company-starter-packs.ts` updated so newly-created companies stop
+copying the deleted paths. Verified clean via the pre-existing
+`scripts/jp-audit.py` (added in an earlier slice to make the Japanese-
+translation state objectively checkable rather than eyeballed) and by
+confirming, via
+`git stash` against the pre-edit baseline, that the one remaining
+`templates/company-starter` pytest failure (dangling `PATHREF-01`
+references to `examples/harukaze-ec/`) is pre-existing and unrelated.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

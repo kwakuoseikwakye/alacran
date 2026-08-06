@@ -1086,3 +1086,67 @@ in a `.iconset`, packs it into `AppIcon.icns`, and adds
 `CFBundleIconFile` to `Info.plist`. Verified visually, not just
 structurally: a real Quick Look thumbnail of the generated `.icns`
 confirmed the correct scorpion mark renders, centered and unsquashed.
+
+## v37 (2026-08-06): fix company-starter's license, program branding, and legal exposure
+
+A licensing/legal-cleanup slice, not a feature — triggered by a direct
+request to check `templates/company-starter/` for anything that could
+create legal exposure, since it's the real bundled source
+`create-company-from-template.ts` copies into every new company.
+
+**Root cause: the bundled template was still, in full, a third party's
+proprietary kit.** `templates/company-starter/` turned out to be branded
+end-to-end as an "management training" program's own starter
+kit — its `LICENSE.md` explicitly prohibited "publication of derivative
+works... in a public repository... without prior written consent,"
+which is exactly what shipping it inside this MIT-licensed, public repo
+does. Fixed:
+
+- **License**: replaced with real MIT (matching this repo's own
+  `LICENSE`), plus a clarifying note that it covers only the template
+  scaffolding, not a company's own filled-in data.
+- **Branding**: removed program-program framing from `README.md`,
+  `CLAUDE.md`, and ~20 other docs; renamed `company-starter` to
+  `company-starter` everywhere (titles, directory trees, footers).
+- **Deleted program-only files** with no place in a software template:
+  `exercises/`, `docs/{participant-guide,day-flow,
+  feedback-collection,context-gathering-checklist,
+  ai-company-beginner-guide-lp.html}`, and 4 program-feedback GitHub
+  issue templates.
+
+**Also found and fixed while auditing for legal exposure:**
+
+- **Japanese content translated to English** in `scripts/cycle/`, a CI
+  sanitize-gate pattern (a redundant katakana duplicate of an already-
+  English brand term), and a stale Japanese heading reference in this
+  repo's own `lib/company-commands/registry.ts` (pointed at a heading
+  that had already been translated to English in an earlier slice — the
+  reference just never got updated). Verified clean against the
+  pre-existing `scripts/jp-audit.py`.
+- **The `/office` command and its test file removed.** `office.md` and
+  `tests/test_office.py` both reference `tools/office/office.py`, a
+  third-party "pixel-agents" visualization tool — but `git log --all`
+  confirms `tools/office/` has never existed anywhere in this repo's
+  history. It was never deleted; it was simply never bundled, even
+  though the command doc and 401 lines of tests for it were. Because
+  both `.claude/commands` and `tests` are whole-folder entries in the
+  copy manifest, every company created through Alacrán inherited a
+  `/office` command that always fails and a test file that fails to
+  even collect (`ModuleNotFoundError: No module named 'office'`) —
+  confirmed as the root cause of a pytest collection failure hit while
+  verifying an earlier slice.
+- **The `piro`/`piro-run` skills removed.** Both were built specifically
+  around Amazon/AWS's real "Kiro" product — generating files in Kiro's
+  proprietary spec format, with `piro/SKILL.md` introducing itself as
+  "Kiro's little brother, one letter away." Producing interoperable
+  files while naming the product you're compatible with is ordinarily
+  defensible (nominative fair use), but that framing edges toward
+  implying a relationship with AWS that doesn't exist — removed rather
+  than defended, since neither skill is load-bearing for most users.
+
+`lib/company-template-manifest.ts` and `lib/company-starter-packs.ts`
+updated so newly-created companies stop copying any of the deleted
+paths. The one remaining `templates/company-starter` pytest failure
+(`PATHREF-01`, dangling references to `examples/harukaze-ec/`) was
+confirmed pre-existing and unrelated, via `git stash` against the
+pre-edit baseline reproducing the exact same failure.
