@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, mkdir, readFile, rm, writeFile, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AI_EXECUTORS } from "../ai-executors"
@@ -455,5 +455,127 @@ describe("runCompanyCommandImpl", () => {
     )
 
     expect(resolvedFor).toEqual(["second-co"])
+  })
+
+  it("runs visibly (open -a Terminal, generated script, no exit handler) when the company has visible runs enabled on darwin", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const onCalls: string[] = []
+    const spawnFn = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options })
+      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+    }
+
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true, // resolveVisibleRun
+      "darwin"
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls).toHaveLength(1)
+    expect(calls[0].command).toBe("open")
+    expect(calls[0].args[0]).toBe("-a")
+    expect(calls[0].args[1]).toBe("Terminal")
+    const scriptPath = calls[0].args[2]
+    expect(scriptPath).toBe(path.join(dataDir, "digest.run.sh"))
+    // The crux of the whole design: no exit handler in visible mode. The
+    // script's own `trap ... EXIT` owns the lock's lifetime instead.
+    expect(onCalls).toEqual([])
+  })
+
+  it("falls back to headless when visible runs is enabled but the platform is not darwin", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const onCalls: string[] = []
+    const spawnFn = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options })
+      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+    }
+
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true, // resolveVisibleRun — enabled, but platform isn't darwin
+      "linux"
+    )
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0].command).toBe("claude")
+    expect(onCalls).toEqual(["exit"])
+  })
+
+  it("writes the args file NUL-delimited and the prompt file verbatim for a visible run", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true,
+      "darwin"
+    )
+
+    const argsRaw = await readFile(path.join(dataDir, "digest.args"), "utf-8")
+    const args = argsRaw.split("\0").slice(0, -1) // drop trailing empty segment after final NUL
+    expect(args[0]).toBe("-p")
+    expect(args).toContain("--allowedTools")
+
+    const promptRaw = await readFile(path.join(dataDir, "digest.prompt"), "utf-8")
+    expect(promptRaw).toBe(args[1]) // the prompt is args[1] for claude-code's buildArgs shape
+    expect(promptRaw.length).toBeGreaterThan(0)
+  })
+
+  it("makes the generated script executable", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true,
+      "darwin"
+    )
+
+    const scriptStat = await stat(path.join(dataDir, "digest.run.sh"))
+    // eslint-disable-next-line no-bitwise
+    expect(scriptStat.mode & 0o111).not.toBe(0) // at least one execute bit set
   })
 })

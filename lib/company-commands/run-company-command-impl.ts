@@ -11,8 +11,11 @@ import { acquireRunLock, releaseRunLock } from "./run-lock"
 import { runPrefetch } from "./prefetch"
 import { resolveAiExecutorForAgent } from "../ai-executor-registry"
 import type { AiExecutor } from "../ai-executors"
+import { getVisibleRunForAgent } from "../visible-run-registry"
+import { buildVisibleRunScript } from "./build-visible-run-script"
 
 export type ResolveExecutorFn = (agentId: string) => Promise<AiExecutor>
+export type ResolveVisibleRunFn = (agentId: string) => Promise<boolean>
 
 const execFileAsync = promisify(nodeExecFile)
 const MAX_FIELD_LENGTH = 4000
@@ -20,7 +23,7 @@ const MAX_FIELD_LENGTH = 4000
 export type SpawnOptions = {
   cwd: string
   detached: boolean
-  stdio: ["ignore", number, number]
+  stdio: ["ignore", number | "ignore", number | "ignore"]
 }
 export type SpawnedProcess = {
   unref: () => void
@@ -82,7 +85,9 @@ export async function runCompanyCommandImpl(
   spawnFn: SpawnFn = defaultSpawn,
   execFn: ExecFileFn = defaultExecFile,
   dataDir: string = path.join(COMPANY_COMMANDS_DATA_DIR, agentId),
-  resolveExecutor: ResolveExecutorFn = resolveAiExecutorForAgent
+  resolveExecutor: ResolveExecutorFn = resolveAiExecutorForAgent,
+  resolveVisibleRun: ResolveVisibleRunFn = getVisibleRunForAgent,
+  platform: NodeJS.Platform = process.platform
 ): Promise<{ started: boolean; message: string }> {
   const command = getCompanyCommand(commandId)
   if (!command) {
@@ -148,6 +153,38 @@ export async function runCompanyCommandImpl(
     const spawnArgs = executor.buildArgs({ prompt, editScopePattern, bashPatterns })
 
     const logPath = path.join(dataDir, `${command.id}.log`)
+    const runVisibly = platform === "darwin" && (await resolveVisibleRun(agentId))
+
+    if (runVisibly) {
+      const argsPath = path.join(dataDir, `${command.id}.args`)
+      const promptPath = path.join(dataDir, `${command.id}.prompt`)
+      const scriptPath = path.join(dataDir, `${command.id}.run.sh`)
+      await writeFile(argsPath, spawnArgs.join("\0") + "\0", "utf-8")
+      await writeFile(promptPath, prompt, "utf-8")
+      const script = buildVisibleRunScript({
+        binaryName: executor.binaryName,
+        argsFilePath: argsPath,
+        promptFilePath: promptPath,
+        logPath,
+        lockPath: path.join(dataDir, "company-command.lock"),
+        cwd: agent.rootPath,
+      })
+      await writeFile(scriptPath, script, { mode: 0o755 })
+      const child = spawnFn("open", ["-a", "Terminal", scriptPath], {
+        cwd: agent.rootPath,
+        detached: true,
+        stdio: ["ignore", "ignore", "ignore"],
+      })
+      // Deliberately NOT attaching an "exit" handler here: `open` returns
+      // the instant Terminal is told to open the window, long before the
+      // script — let alone the run inside it — finishes. The wrapper
+      // script's own `trap ... EXIT` releases the lock instead; attaching
+      // this handler too would release it immediately and the app would
+      // report "finished" while the gate is still waiting for Enter.
+      child.unref()
+      return { started: true, message: "Started" }
+    }
+
     outFd = openSync(logPath, "a")
     const child = spawnFn(executor.binaryName, spawnArgs, {
       cwd: agent.rootPath,
