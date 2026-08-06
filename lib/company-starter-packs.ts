@@ -5,7 +5,7 @@
 // files for the tasks that shape of company actually repeats.
 //
 // Deliberately not a full duplicate per shape: everything else (hooks,
-// rules, verify.py, exercises, docs) is identical for every company
+// rules, verify.py, docs) is identical for every company
 // regardless of what it does, so it lives once in company-starter/ and a
 // fix there fixes it for every pack at once — the same reasoning
 // definitions-touch.md already applies to a single company's own data.

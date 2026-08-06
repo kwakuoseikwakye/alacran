@@ -27,18 +27,12 @@ export const TEMPLATE_MANIFEST: string[] = [
   "docs/templates",
   "docs/concepts",
   "docs/ai-company-beginner-guide.md",
-  "docs/ai-company-beginner-guide-lp.html",
   "docs/ai-company-explainer.md",
-  "docs/context-gathering-checklist.md",
   "docs/directory-map.md",
-  "docs/feedback-collection.md",
-  "docs/participant-guide.md",
-  "docs/day-flow.md",
   "docs/setup-walkthrough.md",
   "docs/starter-manual.md",
   "docs/decisions/README.md",
   "docs/retros/README.md",
-  "exercises",
   "scripts/verify.py",
   "scripts/cycle",
   "tests",
@@ -80,12 +74,11 @@ appends to it at the end of each session.
 
 1. Read the start-of-session steps in \`CLAUDE.md\` §5 ("Session flow") — this
    file plus \`CLAUDE.md\` tell you where things currently stand.
-2. Start with \`exercises/01\` (the first hands-on exercise).
-3. When you're ready to fill in your own company's context, run
-   \`/define-company\` to generate \`definitions/ontology/company.yaml\`.
-4. After any substantial change, verify with \`python3 scripts/verify.py\`
+2. Run \`/define-company\` to generate \`definitions/ontology/company.yaml\`
+   — this is the real first step.
+3. After any substantial change, verify with \`python3 scripts/verify.py\`
    (or \`/verify\`) — no fake green.
-5. At the end of a session, update this file with \`/handoff\`, and leave a
+4. At the end of a session, update this file with \`/handoff\`, and leave a
    record with \`/decision\` or \`/retro\` for anything decided.
 
 ---
