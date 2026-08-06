@@ -190,10 +190,11 @@ A few design decisions worth knowing, because they constrain everything else:
 - **The app detects what changed; the agent never commits.** Alacrán diffs the
   result itself and shows it to you. Approval is a human step by construction.
 
-For the reasoning behind each of these, [`docs/superpowers/`](docs/superpowers/)
-has the original design spec and implementation plan for every feature that
-shipped — including the ones that were investigated and deliberately *not*
-built, and the security bugs found during live testing.
+For the reasoning behind each of these, [`CHANGELOG.md`](CHANGELOG.md) has a
+detailed, dated writeup of every feature that shipped — including the ones
+that were investigated and deliberately *not* built, and the security bugs
+found during live testing — and `CLAUDE.md` carries the standing conventions
+and a running summary of the current state.
 
 ## Development
 

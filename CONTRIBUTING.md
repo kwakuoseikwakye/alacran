@@ -124,11 +124,14 @@ doing it.
 
 ## Design docs
 
-Each substantial feature has a design spec and an implementation plan in
-[`docs/superpowers/`](docs/superpowers/), written before the code. You are not
-required to follow that process for a contribution, but reading the spec for
-the area you're changing will tell you which constraints are deliberate and
-which are accidents.
+Each substantial feature is designed before the code is written — a spec,
+then a plan. Those working documents aren't published, but every shipped
+feature gets a detailed, dated writeup in [`CHANGELOG.md`](CHANGELOG.md),
+including the reasoning, the alternatives that were rejected, and any bugs
+found during live testing. `CLAUDE.md` carries the standing conventions.
+You are not required to follow that process for a contribution, but reading
+the changelog entry for the area you're changing will tell you which
+constraints are deliberate and which are accidents.
 
 ## Questions
 

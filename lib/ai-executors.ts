@@ -14,8 +14,8 @@
  * aider --help`) — notably, `codex exec`'s real non-interactive/no-approval
  * flag is `--sandbox workspace-write`, not the `--full-auto` this started
  * with, which doesn't exist on the installed version (0.146.0). Neither has
- * been run end-to-end against a live model account from this app yet (see
- * LAUNCH.md) — only the flag names/shapes are confirmed real.
+ * been run end-to-end against a live model account from this app yet —
+ * only the flag names/shapes are confirmed real.
  *
  * Permission scoping is only as granular as each CLI's own model: Claude
  * Code's fine-grained `Edit(pattern)`/`Bash(pattern)` allowlist is unique to
