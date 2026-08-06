@@ -43,7 +43,7 @@ describe("ai-executors", () => {
         "--disallowedTools",
         "Bash",
         "--permission-mode",
-        "default",
+        "manual",
         "--output-format",
         "text",
       ])
@@ -61,7 +61,7 @@ describe("ai-executors", () => {
         "--allowedTools",
         "Read,Grep,Glob,Edit(notes/company/email-checks/**),Bash(gog -a auto gmail search*),Bash(gog -a auto gmail get*)",
         "--permission-mode",
-        "default",
+        "manual",
         "--output-format",
         "text",
       ])

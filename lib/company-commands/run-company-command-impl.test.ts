@@ -124,7 +124,7 @@ describe("runCompanyCommandImpl", () => {
     expect(calls[0].args).toContain("--disallowedTools")
     expect(calls[0].args[calls[0].args.indexOf("--disallowedTools") + 1]).toBe("Bash")
     expect(calls[0].args).toContain("--permission-mode")
-    expect(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1]).toBe("default")
+    expect(calls[0].args[calls[0].args.indexOf("--permission-mode") + 1]).toBe("manual")
     expect(calls[0].options.cwd).toBe(root)
     expect(calls[0].options.detached).toBe(true)
 

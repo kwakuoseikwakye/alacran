@@ -64,7 +64,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
         // pass --disallowedTools Bash, which would override the allow.
         ...(bashPatterns.length > 0 ? [] : ["--disallowedTools", "Bash"]),
         "--permission-mode",
-        "default",
+        "manual",
         "--output-format",
         "text",
       ]
