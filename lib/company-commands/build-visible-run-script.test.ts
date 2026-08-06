@@ -57,6 +57,33 @@ describe("buildVisibleRunScript", () => {
     expect(script).toContain('exec "$BINARY" -c')
   })
 
+  it("disarms the EXIT trap after releasing its own lock, so closing the window at the take-over gate can't delete a later run's lock", () => {
+    const script = buildVisibleRunScript(input)
+    const lines = script.split("\n")
+    const teeLineIndex = lines.findIndex((l) => l.includes("tee -a"))
+    const disarmLineIndex = lines.findIndex((l) => l === "trap - EXIT")
+    const releaseLineIndex = lines.findIndex((l) => l === 'rm -f "$LOCKPATH"')
+    const secondReadIndex = lines.findIndex((l) => l.includes("Press Enter for an interactive session"))
+    expect(teeLineIndex).toBeGreaterThan(-1)
+    expect(disarmLineIndex).toBeGreaterThan(teeLineIndex)
+    // Ordering is the whole fix: disarmed one line too late (after the
+    // explicit release, or after the gate) is the same bug.
+    expect(disarmLineIndex).toBeLessThan(releaseLineIndex)
+    expect(disarmLineIndex).toBeLessThan(secondReadIndex)
+  })
+
+  it("discloses that the take-over session is unscoped, in the script's own printed output", () => {
+    const script = buildVisibleRunScript(input)
+    expect(script).toContain("is NOT limited to what this command is allowed to do")
+    const lines = script.split("\n")
+    const disclosureIndex = lines.findIndex((l) => l.includes("is NOT limited to what this command is allowed to do"))
+    const secondReadIndex = lines.findIndex((l) => l.includes("Press Enter for an interactive session"))
+    // Disclosure has to be printed *before* the gate that offers take-over,
+    // or it isn't a disclosure.
+    expect(disclosureIndex).toBeGreaterThan(-1)
+    expect(disclosureIndex).toBeLessThan(secondReadIndex)
+  })
+
   it("embeds every path via a quoted variable assignment, never inline in the trap or cd lines", () => {
     const script = buildVisibleRunScript(input)
     // Regression guard: this is the only thing that makes the trap line

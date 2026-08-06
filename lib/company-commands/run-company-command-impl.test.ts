@@ -17,6 +17,16 @@ beforeEach(async () => {
   vi.doMock("../ai-executor-registry", () => ({
     resolveAiExecutorForAgent: async () => AI_EXECUTORS["claude-code"],
   }))
+  // Every pre-existing test below (i.e. every call that doesn't pass its
+  // own resolveVisibleRun argument) must stay on the headless path
+  // regardless of what a real developer's on-disk .data/visible-runs.json
+  // actually contains — otherwise this suite's result depends on whether
+  // the maintainer happens to have the setting on for a real company.
+  // Tests that exercise visible mode explicitly pass their own
+  // resolveVisibleRun function, which overrides this mock entirely.
+  vi.doMock("../visible-run-registry", () => ({
+    getVisibleRunForAgent: async () => false,
+  }))
 })
 
 afterEach(async () => {
@@ -522,6 +532,62 @@ describe("runCompanyCommandImpl", () => {
     expect(calls).toHaveLength(1)
     expect(calls[0].command).toBe("claude")
     expect(onCalls).toEqual(["exit"])
+  })
+
+  it("stays headless on darwin when visible runs is not enabled for the company", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const onCalls: string[] = []
+    const spawnFn = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options })
+      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+    }
+
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => false, // resolveVisibleRun — disabled, and platform IS darwin
+      "darwin"
+    )
+
+    expect(calls).toHaveLength(1)
+    expect(calls[0].command).toBe("claude")
+    expect(onCalls).toEqual(["exit"])
+  })
+
+  it("derives the visible-run script's lock path from the same runLockPath the rest of the app uses", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const { runLockPath } = await import("./run-lock")
+    const { shQuote } = await import("./build-visible-run-script")
+
+    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+
+    await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      undefined,
+      dataDir,
+      undefined,
+      async () => true,
+      "darwin"
+    )
+
+    const script = await readFile(path.join(dataDir, "digest.run.sh"), "utf-8")
+    expect(script).toContain(`LOCKPATH=${shQuote(runLockPath(dataDir))}`)
   })
 
   it("writes the args file NUL-delimited and the prompt file verbatim for a visible run", async () => {
