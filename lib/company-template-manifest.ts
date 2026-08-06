@@ -1,8 +1,7 @@
 // Exact relative paths copied from ai-company-starter-main when
 // scaffolding a new company. Every path here was individually verified
-// to contain no company-specific data (see
-// docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md
-// for the full audit). Anything not listed here is never copied — this
+// to contain no company-specific data (see v17 in CHANGELOG.md for the
+// full audit). Anything not listed here is never copied — this
 // is an explicit allowlist, not a blocklist, so newly-added real content
 // in ai-company-starter-main can never leak into a new company by
 // accident.

@@ -7,5 +7,6 @@ next-env.d.ts
 page-*.png
 .data/
 .superpowers/
+docs/superpowers/
 dist/
 .claude/worktrees/

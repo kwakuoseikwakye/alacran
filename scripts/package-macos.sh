@@ -14,12 +14,12 @@
 # still show a "cannot verify / may harm your Mac" warning on first launch
 # regardless of .dmg vs .zip — only a paid Apple Developer Program
 # enrollment + `codesign`/`notarytool` removes that warning. That's a
-# separate, not-yet-done step (see LAUNCH.md).
+# separate, not-yet-done step.
 #
 # Usage:  bash scripts/package-macos.sh [--no-selftest]
 #
-# The app name and default port are the two knobs; change APP_NAME once a
-# final product name is chosen (LAUNCH.md open decision).
+# The app name and default port are the two knobs; change APP_NAME if the
+# product name ever changes.
 
 set -euo pipefail
 

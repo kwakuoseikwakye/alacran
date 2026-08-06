@@ -21,9 +21,10 @@ change per-slice; `CHANGELOG.md` and this repo's git history do.
 
 > **This is a public, MIT-licensed open source repository** as of
 > 2026-08-04. There is no license gate, no paid tier and no checkout — that
-> code was deleted, not disabled. `LAUNCH.md` documents the commercial
-> launch that was planned and abandoned; it is kept as history and carries a
-> banner saying so. Don't reintroduce licensing, telemetry, or a phone-home
+> code was deleted, not disabled. A commercial launch (license gate, paid
+> subscription, checkout) was planned and then abandoned before this
+> release; that history isn't kept in this repo. Don't reintroduce
+> licensing, telemetry, or a phone-home
 > of any kind without an explicit decision from the maintainer: the README,
 > SECURITY.md and the landing site all make specific promises about what
 > leaves a user's machine, and those promises are now checkable by anyone.
@@ -45,7 +46,6 @@ AI-Native instance through the UI" product. Concretely:
   original flow, unchanged), or **create** one from scratch when the
   typed path doesn't exist yet — scaffolding a manifest of generic paths
   from `ai-company-starter-main`, `git init`-ing it, then registering it.
-  See `docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`.
 - Still missing (named as roadmap, not built): a general plugin/workflow
   packaging format — see "Roadmap" below.
 
@@ -202,12 +202,17 @@ change.
    ask clarifying questions one at a time, propose 2-3 approaches,
    present the design in sections, write the spec to
    `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`, self-review,
-   commit.
+   commit. **This directory is gitignored** — the spec is a local working
+   document scoped to the slice, not part of the public repo. The durable
+   public record of what shipped and why is `CHANGELOG.md` (full detail)
+   and this file's own "Current state" section (a running summary,
+   updated per slice — see step 6).
 2. **Plan** (`superpowers:writing-plans`) — turn the approved spec into a
    fully-coded, bite-sized task list at
    `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`, each task ending in an
    independently testable, committed deliverable. Every plan states its
-   **Global Constraints** up front (what NOT to touch).
+   **Global Constraints** up front (what NOT to touch). Same as the spec,
+   this stays local and gitignored.
 3. **Implement** (`superpowers:subagent-driven-development`, when
    available) — fresh subagent per task, task review after each, final
    whole-branch review before merge. **This session's subagent-spawn cap
@@ -226,9 +231,11 @@ change.
    tests on the target branch, fast-forward merge to `master`, remove
    the worktree, delete the branch.
 6. **Document** — append a dated `## vNN: <title>` section to
-   `CHANGELOG.md` (this is the durable, chronological record — don't
-   duplicate it here). If the change is user-visible, check whether
-   `README.md` still tells the truth.
+   `CHANGELOG.md` (the durable, chronological record, in full detail),
+   *and* add a brief summary of what shipped to this file's own "Current
+   state" section below, in the same voice as the entries already there.
+   If the change is user-visible, check whether `README.md` still tells
+   the truth.
 
 Each slice runs in its own git worktree at
 `.claude/worktrees/control-panel-vNN-<slug>/` (created via `EnterWorktree`
@@ -236,14 +243,13 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v32** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v35** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
 (`templates/company-starter/`, sourced by `create-company-from-template.ts`
 instead of `~/AI-Native/...`), and an empty install shows an
 `OnboardingWelcome` with `checkDependencies()` (claude + gog) detection.
-See `docs/superpowers/specs/2026-07-28-control-panel-day1-productize-design.md` (and `LAUNCH.md`, now historical).
 The 3-slice visual/UX pass (v14–v16) is complete. v17 added
 create-a-company-from-template — "Add a company" can now scaffold a
 brand-new company directory from `ai-company-starter-main`'s generic
@@ -308,16 +314,11 @@ Skills-page Run tab), and the one new entry point is a "Let AI draft
 tailored entities" step inside v18's wizard
 (`components/define-company-ai-draft.tsx`), spawning `define-company`
 with the wizard's own answers and showing the AI's diff before
-confirming. See
-`docs/superpowers/specs/2026-07-27-control-panel-v17-create-company-design.md`,
-`...v18-guided-company-setup-design.md`,
-`...v19-integrations-status-design.md`,
-`...v20-daily-team-log-installer-design.md`, and
-`...v21-define-company-generalize-design.md` for full details (the v17
-spec also has the agent-agnostic design decision: the portable core is
+confirming. (v17's design also established the agent-agnostic principle
+still in force: the portable core is
 `definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
 `.claude/*` is one Claude-Code-specific adapter on top of it, not the
-core itself). v22 investigated the last roadmap thread (a fresh company
+core itself.) v22 investigated the last roadmap thread (a fresh company
 having a real integration worth connecting) and found two things prior
 slices missed: `harness-engineering` (named "core" since v17, never
 examined) is a clone of a third-party methodology-thesis repo, not
@@ -354,7 +355,6 @@ exits 0 while reporting failure on stderr (macOS 26.2), so exit code
 can't be trusted even in the apparent-success case; a thrown error is
 still handled defensively for failure modes that were never actually
 observed. Bespoke to one agent id, like v2/v9/v19.
-See `docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
 **Same-day follow-up made "off" persistent:** a bare `unload` was found to
 write no disable override at all (label absent from `launchctl
 print-disabled gui/$UID`, macOS 26.2), so the shipped "off" had nothing
@@ -400,8 +400,50 @@ Every `gog` call carries `--readonly --gmail-no-send`; the email body
 fetch adds `--wrap-untrusted`. Issue *filing* is deliberately deferred
 to v33, behind its own confirmation gate on top of the existing
 diff-and-commit one — the same reasoning that kept `create-epic` out of
-v8. See
-`docs/superpowers/specs/2026-08-04-control-panel-v32-triage-intake-design.md`.
+v8.
+
+v34 added a per-company "Ownership Dashboard" — a "View ownership" button
+on every real company's card opens a Sheet showing where its data lives
+(local root path, copyable), which AI provider runs its commands, what's
+connected, whether it's backed up, and a synthesized "external network
+access" summary — composed from signals that already existed
+(`getCompanyRemoteImpl`, `getIntegrationStatus`, `getAiExecutorIdForAgent`)
+rather than tracking anything new. Deliberately non-committal about
+Aider: its model backend (cloud or local) is the user's own config,
+invisible to this app, so its network-access line says that rather than
+guessing. A final whole-branch review caught a real spec-level flaw
+before merge: `getIntegrationStatus` only ever reports a real connection
+for `plh-takeshi-agent`, which isn't a `command-set` agent and can never
+open this Sheet — so the Integrations section and the Google
+network-access line were structurally dead code for every company that
+could actually reach them. Fixed by falling back to the machine-wide
+Google connection (`getConnectStatusImpl`) when no per-company
+integration exists.
+
+v35 added a per-company setting — set in the company-setup wizard,
+editable afterward — that makes every command for that company run in a
+real, visible macOS Terminal window instead of headless, with a pre-run
+gate (shows the exact prompt, waits for Enter, or Ctrl-C to abort) before
+the agent runs at all, and an offer to continue interactively via
+`claude -c` once the constrained run finishes. macOS only. The command's
+prompt, tool allowlist, and diff-then-commit gate stay byte-identical to
+a headless run — only where the process's stdio goes, and whether a
+human sees a gate first, changes; the generated script's own
+`trap ... EXIT` owns the run-lock's lifetime instead of Node, since
+`open -a Terminal <script>` returns long before the real run finishes.
+Two things were measured, not assumed, before shipping: macOS's real
+`/bin/bash` is 3.2.57 and has no `mapfile` (an early draft used it;
+replaced with a bash-3.2-compatible read loop, verified against the real
+shell); and a NUL byte in the prompt would have been a real
+argv-injection path into the spawned `claude` process, on exactly the
+`triage-email`/`triage-issue` path that handles attacker-influenced
+content — caught in review and fixed with a one-line guard before merge.
+A final whole-branch review then caught a second, more subtle bug: the
+script's `EXIT` trap stayed armed after it explicitly released its own
+lock, so closing the window (or Ctrl-C) at the take-over gate could
+delete a *later* run's lock for the same company — reproduced on the
+real system bash in both the buggy and fixed shapes before the fix
+shipped.
 
 ## Roadmap (named, not yet designed)
 

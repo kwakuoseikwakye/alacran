@@ -19,9 +19,9 @@
 #
 # Requires `dpkg-deb` (part of `dpkg` on any Debian/Ubuntu system) to actually
 # build the .deb — this script cannot be run to completion on macOS. It has
-# been exercised here only up to payload assembly (see LAUNCH.md); the final
-# dpkg-deb build and a real `apt install` have not been verified on a real
-# Debian machine yet.
+# been exercised here only up to payload assembly; the final dpkg-deb build
+# and a real `apt install` have not been verified on a real Debian machine
+# yet.
 #
 # Usage:  bash scripts/package-linux.sh [--no-selftest]
 

@@ -62,7 +62,7 @@ jobs:
         # `npm ci` on macOS never notices, since it never resolves that
         # platform's optional subtree at all; a real `npm ci` on Linux does
         # and finds it inconsistent). npm install reconciles instead of
-        # hard-failing on that drift. See LAUNCH.md.
+        # hard-failing on that drift.
         run: npm install
 
       - name: Resolve the target tag

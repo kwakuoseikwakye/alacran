@@ -5,8 +5,9 @@ design spec, written plan, implement, verify against the real thing, merge.
 This file is the chronological record of every slice that shipped, kept in the
 detail it was written in rather than compressed into release notes.
 
-The matching design specs and implementation plans live in
-[`docs/superpowers/`](docs/superpowers/), one per slice.
+The matching design specs and implementation plans are working documents,
+written before the code for each slice and kept locally — this file is
+the durable public record of what they led to.
 
 Versions here are internal slice numbers, not semantic-version releases; see
 [the releases page](https://github.com/kwakuoseikwakye/alacran-releases/releases)
@@ -60,10 +61,6 @@ custom version history to maintain, `git log`/`git diff`/`git revert`
 already work on every edit. Writes are restricted to files that are
 current, real skill/command entries — not just anything living inside an
 agent's directory.
-
-See `docs/superpowers/specs/2026-07-22-control-panel-design.md` for the
-full v1 design and `docs/superpowers/plans/2026-07-22-control-panel-v1.md`
-for the implementation plan this was built from.
 
 ## v5: triggering ai-company-starter-main's /verify
 
@@ -527,10 +524,10 @@ This is piece 6 of the roadmap.
 
 ## v23–v25: productize (Day 1 of the 4-day launch push)
 
-The project pivoted from a personal local tool to a downloadable product
-(see `LAUNCH.md` for the launch runbook). Day 1 makes a fresh install a
-clean product while the developer's own machine keeps full daily use
-with zero setup, split into three slices:
+The project pivoted from a personal local tool to a downloadable product,
+planned as a 4-day push. Day 1 makes a fresh install a clean product
+while the developer's own machine keeps full daily use with zero setup,
+split into three slices:
 
 - **v23 — de-PLH the config.** The 3 example agents (`plh-takeshi-agent`,
   `ai-company-starter-main`, `plh-ops`) were hardcoded in `lib/config.ts`
@@ -564,7 +561,7 @@ with zero setup, split into three slices:
   locked launch decision to target CLI-comfortable early adopters with
   guided (not automated) dependency install.
 
-These are Day 1 of the launch; see `LAUNCH.md` for the full plan.
+These are Day 1 of the launch push.
 
 ## v28: Connect page — detect/guide/re-check for your tools
 
@@ -602,8 +599,7 @@ Claude login are per-machine, not per-company) using the same
 5 new unit tests (both-connected / claude-missing / gog-missing / no-account /
 malformed-JSON) with a fake `ExecFileFn`; 277 tests green; `tsc`/`build`
 clean; live-verified both the connected path (real account email shown) and
-the not-connected guidance UI. See
-`docs/superpowers/specs/2026-07-28-control-panel-v28-connect-tools-design.md`.
+the not-connected guidance UI.
 
 ## v29 (2026-07-28): one design language — Alacrán across app + landing
 
@@ -759,8 +755,7 @@ the deliberate choice to keep this app's plain-dashboard aesthetic rather
 than build Fleece's full tabbed gallery. `landing/templates/index.html`,
 previously stale (it said "more starters soon" while packs already
 shipped), now names all 7 real packs with real descriptions, grouped the
-same way. See
-`docs/superpowers/specs/2026-07-30-control-panel-starter-template-expansion-design.md`.
+same way.
 
 ## v31: scheduled-runs toggle for the Takeshi agent
 
@@ -810,8 +805,7 @@ rule: toggled through the real `launchctl` code path, confirmed via
 state was confirmed unchanged at three checkpoints during the session;
 the toggle's confirm dialog was opened and cancelled against the real
 card, never confirmed. The real button is left for the maintainer to
-click. See
-`docs/superpowers/specs/2026-08-04-control-panel-v31-scheduled-job-toggle-design.md`.
+click.
 
 ### Follow-up: make "off" persistent (same day)
 
@@ -930,10 +924,6 @@ configured for Codex or Aider, and the guarantees above do not hold: this
 app does not set, and cannot verify, either executor's own sandbox. Stated
 plainly in both commands' `.md` files, not just here.
 
-See
-`docs/superpowers/specs/2026-08-04-control-panel-v32-triage-intake-design.md`
-and `docs/superpowers/plans/2026-08-04-control-panel-v32-triage-intake.md`.
-
 ## v34 (2026-08-05): ownership dashboard — what leaves this machine, per company
 
 Every real company (a `command-set` agent) now has a "View ownership"
@@ -973,9 +963,6 @@ draft vision doc at the repo root, not yet relocated to a permanent
 `docs/` home): the marketplace, multi-AI-framework, and cloud-sync threads
 in it are unrelated to this slice and each need their own maintainer
 decision before any design work starts.
-
-See `docs/superpowers/specs/2026-08-05-ownership-dashboard-design.md` and
-`docs/superpowers/plans/2026-08-05-ownership-dashboard.md`.
 
 ## v35 (2026-08-06): terminal-visible company-command runs, with a pre-run gate
 
@@ -1070,6 +1057,3 @@ Pinned to the real value, `"manual"`. `lib/daily-team-log/trigger-daily-team-log
 has the identical hardcoded string in a separate spawn path — left
 untouched, disclosed not fixed, same shape as other cross-cutting
 findings this project records rather than opportunistically patches.
-
-See `docs/superpowers/specs/2026-08-06-terminal-visible-run-design.md`
-and `docs/superpowers/plans/2026-08-06-terminal-visible-run.md`.
