@@ -1057,3 +1057,32 @@ Pinned to the real value, `"manual"`. `lib/daily-team-log/trigger-daily-team-log
 has the identical hardcoded string in a separate spawn path — left
 untouched, disclosed not fixed, same shape as other cross-cutting
 findings this project records rather than opportunistically patches.
+
+## v36 (2026-08-06): fix the macOS app icon not showing after install
+
+A packaging-only bugfix, not a feature slice — found via a user report
+("when i install the app the icon does not show"), diagnosed with
+`superpowers:systematic-debugging` rather than the usual brainstorm-spec-
+plan flow, and shipped as a patch version (v0.5.1) rather than the minor
+bumps used for feature slices.
+
+**Root cause, confirmed by direct inspection, not guessed:**
+`scripts/package-macos.sh` never generated a `.icns` file and the
+`Info.plist` it writes had no `CFBundleIconFile` key at all — checked
+both the shipped `Info.plist` and the whole repo for any `.icns` file
+before writing a line of fix. Every single install got macOS's generic
+fallback icon, deterministically — this was never intermittent or
+environment-specific.
+
+**The fix, and what was measured before writing it:** the brand mark
+(`components/alacran-logo.png`) is 600×626, not square, and this
+project's own convention is that it must never be squashed into a
+square. Before touching the packaging script, `sips -p`'s padding
+behavior was tested directly — confirmed (via a raw pixel read, not
+assumed) that it pads onto a square canvas with genuine alpha
+transparency, not a solid fill. The script now pads the mark once onto
+a square, transparent master, generates all ten sizes `iconutil` expects
+in a `.iconset`, packs it into `AppIcon.icns`, and adds
+`CFBundleIconFile` to `Info.plist`. Verified visually, not just
+structurally: a real Quick Look thumbnail of the generated `.icns`
+confirmed the correct scorpion mark renders, centered and unsquashed.

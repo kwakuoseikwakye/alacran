@@ -243,7 +243,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v35** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v36** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -444,6 +444,18 @@ lock, so closing the window (or Ctrl-C) at the take-over gate could
 delete a *later* run's lock for the same company — reproduced on the
 real system bash in both the buggy and fixed shapes before the fix
 shipped.
+
+v36 fixed a real user-reported bug, not a feature: the macOS app icon
+didn't show after install. Root cause, confirmed by direct inspection —
+`scripts/package-macos.sh` never generated a `.icns` file and `Info.plist`
+had no `CFBundleIconFile` key, so every install got macOS's generic
+fallback icon. Fixed by padding the brand mark (600×626, non-square) onto
+a square transparent canvas — `sips -p`'s transparency behavior was
+measured directly, not assumed, before relying on it — generating the
+full `.iconset`, and packing it with `iconutil`. Shipped as a patch
+version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
+than the usual brainstorm-spec-plan flow, since it's a packaging fix with
+no application-code change.
 
 ## Roadmap (named, not yet designed)
 
