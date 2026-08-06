@@ -976,3 +976,78 @@ decision before any design work starts.
 
 See `docs/superpowers/specs/2026-08-05-ownership-dashboard-design.md` and
 `docs/superpowers/plans/2026-08-05-ownership-dashboard.md`.
+
+## v35 (2026-08-06): terminal-visible company-command runs, with a pre-run gate
+
+A per-company setting — set in the company-setup wizard, editable
+afterward — makes every command for that company run in a real, visible
+macOS Terminal window instead of headless, with a gate before anything
+happens: the window shows the exact prompt and waits for Enter (or
+Ctrl-C to abort) before the agent runs at all. When the run finishes, it
+offers `claude -c` to continue that exact conversation interactively.
+Aimed at technical users who want to watch — or, if they take the
+offered continuation, drive — what's happening, without giving up the
+existing diff-then-commit gate for the constrained run itself. macOS
+only; the setting simply doesn't appear elsewhere.
+
+**The command's prompt, tool allowlist, and diff-then-commit gate are
+byte-identical to a headless run.** Everything before the spawn point —
+validation, prefetch, `buildPrompt`, `executor.buildArgs` — is untouched.
+Only where the process's stdio goes, and whether a human sees a gate
+first, changes.
+
+**The trickiest part of the design is who owns the run-lock's lifetime.**
+`open -a Terminal <script>` returns to Node the instant Terminal is told
+to open a window — long before the script, let alone the real run inside
+it, finishes. So visible mode does **not** attach the existing
+`child.on("exit", ...)` handler; the generated wrapper script's own
+`trap 'rm -f "$LOCKPATH"' EXIT` owns the lock instead, firing on normal
+completion, an abort at either gate, or the window simply being closed.
+
+**Measured, not assumed, twice over, before shipping:**
+- **macOS's real `/bin/bash` is 3.2.57** (Apple ships the last GPLv2
+  release) — confirmed by direct invocation, not inferred from version
+  numbers. An early draft's script used `mapfile -d ''` to read the
+  NUL-delimited args file back; `mapfile` requires bash 4+ and doesn't
+  exist on the actual target shell (`mapfile: command not found`,
+  confirmed). Replaced with a `while IFS= read -r -d ""` loop, verified in
+  session to round-trip a NUL-delimited array correctly *including an
+  empty-string element* under the real system bash — and re-verified via
+  a live run against a disposable `/tmp` company, where the generated
+  script executed correctly end-to-end up to the gate.
+- **A NUL byte in the prompt would have been a real argv-injection path
+  into the spawned `claude` process**, caught in review before merge, not
+  after: `spawnArgs.join("\0")` used NUL as the args-file delimiter but
+  never checked the payload was NUL-free. A NUL inside the prompt would
+  silently split it into extra argv entries when the script's read loop
+  parsed it back — e.g. injecting `--dangerously-skip-permissions`. The
+  headless path already rejects this (Node's own `spawn()` throws
+  `ERR_INVALID_ARG_VALUE` on a NUL in argv, confirmed directly); the
+  visible path was silently accepting it instead, on exactly the path
+  `triage-email`/`triage-issue`'s unsanitized email/issue body text
+  reaches. Fixed with a one-line guard that refuses the run the same way
+  the headless path already does, before anything is written to disk.
+
+**A live end-to-end check surfaced one more real, if minor, finding:**
+the pre-run gate's `cat -v` (rendering control characters visibly instead
+of letting the terminal execute them, specifically so injected ANSI
+sequences in attacker-influenced prompt text can't hide or rewrite what
+the gate displays) also renders ordinary UTF-8 multi-byte characters —
+em-dashes, in the actual prompt text checked during live verification —
+as ugly-but-harmless escape sequences (`M-^@M-^T`) rather than the real
+character. Not a security defect — `cat -v`'s whole job is exactly this
+kind of visibility — but a real readability cost on non-ASCII prompt
+text, left as a known, disclosed limitation rather than fixed in this
+slice.
+
+**Also fixed in passing:** `lib/ai-executors.ts` was passing
+`--permission-mode default`, an undocumented legacy alias — confirmed
+accepted by the real CLI, but not among the six documented mode values
+(`acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`).
+Pinned to the real value, `"manual"`. `lib/daily-team-log/trigger-daily-team-log-impl.ts`
+has the identical hardcoded string in a separate spawn path — left
+untouched, disclosed not fixed, same shape as other cross-cutting
+findings this project records rather than opportunistically patches.
+
+See `docs/superpowers/specs/2026-08-06-terminal-visible-run-design.md`
+and `docs/superpowers/plans/2026-08-06-terminal-visible-run.md`.
