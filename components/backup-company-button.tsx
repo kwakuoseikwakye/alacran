@@ -16,6 +16,9 @@ import {
 import { BrandIcon } from "@/components/brand-icon"
 import { backupCompany, getCompanyRemote } from "@/lib/github/github-actions"
 
+export const BACKUP_BLURB =
+  "Makes a private backup of this company's data, so you can bring it back on another computer if this one is ever lost."
+
 /**
  * Backing up creates a real GitHub repository and pushes real business content,
  * so it always goes through a confirmation that states plainly what will happen

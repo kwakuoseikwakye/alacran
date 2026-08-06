@@ -1187,3 +1187,40 @@ what happens when a whole project checkout (not just a downloaded release)
 travels between machines, since a raw folder copy doesn't honor
 `.gitignore`. No fix shipped; the existing "Remove" button on any registered
 company's card already handles it.
+
+## v39 (2026-08-07): the company guide — a plain-language walkthrough of every card action
+
+Closes the loop v38 opened: after finishing the company-setup wizard, a user
+still had no idea what any of the buttons on their new card actually did.
+Driven by explicit feedback that the app needs to work for both CLI-
+comfortable and non-technical users, so the copy bar was set higher than
+"label plus icon" — every non-obvious action, especially "Open in Terminal"
+(which hands off to a raw terminal window), needed plain-language framing
+that doesn't assume any CLI literacy.
+
+Skipped a spotlight-tour library (none installed, none needed for this
+audience) for something much smaller: a `Sheet` listing one line per action,
+opened once automatically the first time a company's info is filled in
+(tracked with a single `localStorage` flag, the same mechanism the landing
+site already uses for its theme toggle — no new registry, no Server Action),
+and reachable anytime after via a small "?" icon next to the kind badge.
+
+Each button's blurb is exported as a constant from that button's own file
+(`OPEN_TERMINAL_BLURB`, `BACKUP_BLURB`, etc.) — the copy lives next to the
+component it describes, not in a separate list that could drift. A new pure
+`lib/company-guide-steps.ts` (`buildGuideSteps`) takes the exact same show*
+flags `AgentCard` already computes and filters them down to the steps that
+actually apply, so the guide can never explain a button that isn't really on
+the card — confirmed live: the built-in "AI Company Starter" card's guide
+correctly omitted "Remove" (not a registered company) while including
+everything else. This kept the component itself untested, matching every
+other button component in this app (none have `.test.tsx` files — there's no
+React Testing Library/jsdom here, and adding one for a single component
+wasn't worth it), while the actual filtering logic is fully covered by plain
+vitest.
+
+Live-verified with Playwright against a real dev server (throwaway port
+4322, no repo state touched): the guide auto-opened on first load with the
+correct 7 steps for the real `ai-company-starter-main` built-in, stayed
+closed on a reload (flag persisted), and the persistent "?" reopened it
+identically on demand.

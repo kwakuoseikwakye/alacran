@@ -13,6 +13,9 @@ import { formatDefineCompanyFields } from "@/lib/format-define-company-fields"
 import { DefineCompanyAiDraft } from "@/components/define-company-ai-draft"
 import { VisibleRunToggle } from "@/components/visible-run-toggle"
 
+export const COMPANY_SETUP_BLURB =
+  "Tell your AI assistant about your business. This is the context it uses to act for you."
+
 const STEPS = ["about", "stakeholders", "value-flow", "bottleneck", "review"] as const
 type Step = (typeof STEPS)[number]
 

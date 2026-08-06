@@ -5,6 +5,9 @@ import { TerminalSquare, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { openInteractiveTerminal } from "@/lib/open-interactive-terminal"
 
+export const OPEN_TERMINAL_BLURB =
+  "Chat with your AI assistant in plain English, right inside this company's own files. No commands to memorize. A window opens and you just type what you want."
+
 /**
  * The direct answer to "I defined my company, now what?" — opens a real,
  * unscoped interactive session of this company's configured AI executor,

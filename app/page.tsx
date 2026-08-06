@@ -95,6 +95,8 @@ export default async function AgentTreePage() {
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                 showOpenTerminalButton={showVisibleRunOption}
                 showAiExecutorPicker={isCommandSet}
+                showCompanyGuide={isCommandSet}
+                hasOntology={hasOntology}
                 aiExecutorId={aiExecutorId}
                 index={index}
               />
