@@ -44,7 +44,7 @@ export function buildVisibleRunScript(input: BuildVisibleRunScriptInput): string
     // window simply being closed — a leaked lock wedges the company until
     // the app's stale-lock handling kicks in, so this must never be skipped.
     'trap \'rm -f "$LOCKPATH"\' EXIT',
-    'cd "$CWD"',
+    'cd "$CWD" || exit 1',
     "",
     "ARGS=()",
     'while IFS= read -r -d "" item; do',

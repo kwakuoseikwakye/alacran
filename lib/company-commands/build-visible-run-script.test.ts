@@ -64,8 +64,8 @@ describe("buildVisibleRunScript", () => {
     // this test must fail.
     const lines = script.split("\n")
     expect(lines).toContain(`CWD=${shQuote(input.cwd)}`)
-    expect(lines).toContain('cd "$CWD"')
-    expect(lines.filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD"'])
+    expect(lines).toContain('cd "$CWD" || exit 1')
+    expect(lines.filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD" || exit 1'])
   })
 
   it("never contains prompt text or field values literally — this function only ever receives paths", () => {
@@ -76,7 +76,7 @@ describe("buildVisibleRunScript", () => {
     const dangerous = { ...input, cwd: "/tmp/acme'; rm -rf ~; echo '" }
     const script = buildVisibleRunScript(dangerous)
     expect(script).toContain(`CWD=${shQuote(dangerous.cwd)}`)
-    expect(script.split("\n").filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD"'])
+    expect(script.split("\n").filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD" || exit 1'])
   })
 
   it("the args-reading loop round-trips a NUL-delimited array under the real system bash, including an empty-string element", async () => {
