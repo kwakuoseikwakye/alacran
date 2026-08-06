@@ -29,6 +29,31 @@ export type BuildVisibleRunScriptInput = {
  * `ARGSFILE=` / etc. lines below, which embed a real JS expression
  * (`shQuote(...)`), use template literals.
  */
+export type BuildInteractiveTerminalScriptInput = {
+  binaryName: string
+  cwd: string
+}
+
+/**
+ * Generates the wrapper script for "just open an interactive session here" —
+ * no prompt, no allowlist, no lock, no gate. This is exactly what the user
+ * would get by `cd`-ing into the company's directory and running the
+ * executor themselves; the only thing this automates is the `cd` and the
+ * Terminal window.
+ */
+export function buildInteractiveTerminalScript(input: BuildInteractiveTerminalScriptInput): string {
+  const { binaryName, cwd } = input
+  return [
+    "#!/bin/bash",
+    `BINARY=${shQuote(binaryName)}`,
+    `CWD=${shQuote(cwd)}`,
+    "",
+    'cd "$CWD" || exit 1',
+    'exec "$BINARY"',
+    "",
+  ].join("\n")
+}
+
 export function buildVisibleRunScript(input: BuildVisibleRunScriptInput): string {
   const { binaryName, argsFilePath, promptFilePath, logPath, lockPath, cwd } = input
   const lines = [

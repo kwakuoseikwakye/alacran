@@ -243,7 +243,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v36** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v38** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -488,6 +488,27 @@ confirming, via
 `git stash` against the pre-edit baseline, that the one remaining
 `templates/company-starter` pytest failure (dangling `PATHREF-01`
 references to `examples/harukaze-ec/`) is pre-existing and unrelated.
+
+v38 added an "Open in Terminal" button on every `command-set` agent's card —
+real user feedback that after finishing the company-setup wizard, there was
+no path to actually building a new skill (the Skills page's Run tab can only
+run/edit commands the app already knows about; `resolve-known-skill.ts`
+requires the write target to already be a discovered skill, so it can't help
+create one). The button opens a real Terminal window, `cd`'d into the
+company's root, running a plain interactive session of whichever AI executor
+is configured for it — no prompt, no allowlist, no gate, the same thing as
+`cd`-ing there and running the executor by hand. Reuses v35's exact
+`open -a Terminal` launch mechanism and `shQuote` helper; the new
+`buildInteractiveTerminalScript` lives alongside `buildVisibleRunScript`.
+macOS only, same gate as v35's visible-run option. A second report from the
+same feedback — a company appearing pre-registered on a fresh install on
+another machine — turned out not to be a product bug: the real per-user
+registry (`~/Library/Application Support/Alacrán/companies.json`) is
+confirmed empty on a machine that hasn't registered anything; the dev-mode
+registry (`.data/companies.json`, gitignored) is what had it, which only
+travels if the whole project folder (not a downloaded release) is copied
+between machines. No fix needed — the existing "Remove" button on any
+registered company's card already clears it.
 
 ## Roadmap (named, not yet designed)
 
