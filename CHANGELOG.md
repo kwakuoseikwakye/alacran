@@ -1150,3 +1150,40 @@ paths. The one remaining `templates/company-starter` pytest failure
 (`PATHREF-01`, dangling references to `examples/harukaze-ec/`) was
 confirmed pre-existing and unrelated, via `git stash` against the
 pre-edit baseline reproducing the exact same failure.
+
+## v38 (2026-08-06): "Open in Terminal" — the direct answer to "I defined my company, now what?"
+
+Triggered by real user feedback after using a fresh install: after finishing
+the company-setup wizard, there was no path to actually building anything —
+the Skills page's Run tab can only run/edit commands the app already knows
+about (`lib/resolve-known-skill.ts` requires write targets to already be a
+discovered skill), so it structurally cannot help someone create a brand-new
+skill. The user asked for exactly one thing: a button that opens a real,
+interactive AI-executor session in the company's own directory, so they can
+just ask it to build what they need — no terminal-typing, no `cd` first.
+
+Reused v35's exact "open a real Terminal window" mechanism
+(`spawnFn("open", ["-a", "Terminal", scriptPath], ...)`) but stripped down to
+the minimum: no prompt, no `--allowedTools` scoping, no run-lock, no
+diff-and-commit gate. `buildInteractiveTerminalScript` (added alongside
+`buildVisibleRunScript`, sharing its `shQuote` helper) just `cd`s into the
+company root and `exec`s whichever AI executor is configured for it
+(`resolveAiExecutorForAgent` — same multi-executor support the Run tab
+already uses). This is deliberately not a scoped/automated action; it's the
+same thing as the user `cd`-ing there and running the executor by hand, just
+without needing to find the path or remember the command. New "Open in
+Terminal" button on every `command-set` agent's card, gated to macOS like
+v35's visible-run option.
+
+Also investigated a second report from the same feedback — a company named
+"PLH Triage" appearing on a freshly-installed second laptop. Traced
+`lib/data-dir.ts`: the real per-user registry
+(`~/Library/Application Support/Alacrán/companies.json`) is empty by design
+on any machine that hasn't registered a company yet — confirmed directly.
+The dev-mode registry (`.data/companies.json`, gitignored) is the one that
+had "PLH Triage" in it. No code path in `scripts/package-macos.sh` ever
+copies `.data/` into a packaged build. Conclusion: not a product bug — it's
+what happens when a whole project checkout (not just a downloaded release)
+travels between machines, since a raw folder copy doesn't honor
+`.gitignore`. No fix shipped; the existing "Remove" button on any registered
+company's card already handles it.

@@ -16,6 +16,7 @@ import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
 import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
+import { OpenTerminalButton } from "@/components/open-terminal-button"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
 
@@ -37,6 +38,7 @@ type AgentCardProps = {
   showVisibleRunOption?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
+  showOpenTerminalButton?: boolean
   showAiExecutorPicker?: boolean
   aiExecutorId?: string
   /** Position in the grid — drives the staggered entrance animation. */
@@ -69,6 +71,7 @@ export function AgentCard({
   showVisibleRunOption,
   integrationStatus,
   showInstallDailyTeamLogButton,
+  showOpenTerminalButton,
   showAiExecutorPicker,
   aiExecutorId,
   index = 0,
@@ -148,6 +151,7 @@ export function AgentCard({
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
+          {showOpenTerminalButton && <OpenTerminalButton agentId={agent.id} />}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}
           {showAiExecutorPicker && (

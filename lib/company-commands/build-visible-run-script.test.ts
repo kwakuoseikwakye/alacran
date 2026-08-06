@@ -4,9 +4,26 @@ import { promisify } from "node:util"
 import { mkdtemp, writeFile, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { shQuote, buildVisibleRunScript } from "./build-visible-run-script"
+import { shQuote, buildVisibleRunScript, buildInteractiveTerminalScript } from "./build-visible-run-script"
 
 const execFileAsync = promisify(execFile)
+
+describe("buildInteractiveTerminalScript", () => {
+  it("cd's into the given directory then execs the binary with no arguments", () => {
+    const script = buildInteractiveTerminalScript({ binaryName: "claude", cwd: "/companies/acme" })
+    const lines = script.split("\n")
+    expect(lines).toContain(`CWD=${shQuote("/companies/acme")}`)
+    expect(lines).toContain('cd "$CWD" || exit 1')
+    expect(lines).toContain('exec "$BINARY"')
+  })
+
+  it("never embeds the cwd or binary name outside a quoted variable assignment", () => {
+    const dangerous = { binaryName: "claude", cwd: "/tmp/acme'; rm -rf ~; echo '" }
+    const script = buildInteractiveTerminalScript(dangerous)
+    expect(script).toContain(`CWD=${shQuote(dangerous.cwd)}`)
+    expect(script.split("\n").filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD" || exit 1'])
+  })
+})
 
 describe("shQuote", () => {
   it("wraps a plain string in single quotes", () => {
