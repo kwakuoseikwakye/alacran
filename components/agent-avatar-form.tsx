@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input"
 import { setAvatar } from "@/lib/set-avatar"
 import { removeAvatar } from "@/lib/remove-avatar"
 
+export const AVATAR_BLURB = "Add a picture for this company. Just for your own dashboard, purely for fun."
+
 export function AgentAvatarForm({ agentId, currentUrl }: { agentId: string; currentUrl: string | null }) {
   const router = useRouter()
   const [url, setUrl] = useState(currentUrl ?? "")

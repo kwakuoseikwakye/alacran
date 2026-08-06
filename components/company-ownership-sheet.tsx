@@ -8,6 +8,9 @@ import { getCompanyOwnership } from "@/lib/ownership/ownership-actions"
 import { getAiExecutor } from "@/lib/ai-executors"
 import type { CompanyOwnership } from "@/lib/ownership/get-company-ownership-impl"
 
+export const OWNERSHIP_BLURB =
+  "See exactly where this company's data lives, and what, if anything, leaves this computer."
+
 export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: string; companyName: string }) {
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)

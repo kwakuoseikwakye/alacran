@@ -6,6 +6,9 @@ import { setAiExecutor } from "@/lib/set-ai-executor"
 import { listAiExecutors } from "@/lib/ai-executors"
 import { cn } from "@/lib/utils"
 
+export const AI_EXECUTOR_BLURB =
+  "Choose which AI tool runs this company's commands. It uses your own account, so this app never stores anything."
+
 const EXECUTOR_OPTIONS = listAiExecutors()
 
 export function AiExecutorPicker({ agentId, currentExecutorId }: { agentId: string; currentExecutorId: string }) {

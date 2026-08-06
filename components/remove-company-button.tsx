@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import { removeCompany } from "@/lib/remove-company"
 
+export const REMOVE_BLURB = "Removes this company from the dashboard. Your files stay right where they are."
+
 export function RemoveCompanyButton({ id, name }: { id: string; name: string }) {
   const router = useRouter()
   const [pending, setPending] = useState(false)

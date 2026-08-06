@@ -243,7 +243,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v38** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v39** (see `CHANGELOG.md` for the full per-slice changelog).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -509,6 +509,22 @@ registry (`.data/companies.json`, gitignored) is what had it, which only
 travels if the whole project folder (not a downloaded release) is copied
 between machines. No fix needed — the existing "Remove" button on any
 registered company's card already clears it.
+
+v39 added a "company guide" — a plain-language walkthrough of every action
+on a company's card, closing the gap v38 opened (a user still didn't know
+what any button, including v38's own "Open in Terminal," actually did).
+Explicit direction: this has to work for CLI-comfortable and non-technical
+users alike, so the copy assumes no CLI literacy at all. No tour library —
+a `Sheet` listing one line per action, opened once automatically the first
+time a company's info is filled in (a single `localStorage` flag, same
+mechanism the landing site already uses for its theme toggle), reachable
+anytime after via a small "?" next to the kind badge. Each blurb is
+exported as a constant from its own button's file, so the copy lives next
+to the component it describes. `lib/company-guide-steps.ts`'s
+`buildGuideSteps` takes the exact same show* flags `AgentCard` already
+computes, so the guide can never explain a button that isn't really there —
+live-verified against the real `ai-company-starter-main` card, which
+correctly showed 7 steps and omitted "Remove" (not a registered company).
 
 ## Roadmap (named, not yet designed)
 

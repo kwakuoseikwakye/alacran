@@ -17,6 +17,7 @@ import { BackupCompanyButton } from "@/components/backup-company-button"
 import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
 import { OpenTerminalButton } from "@/components/open-terminal-button"
+import { CompanyGuide } from "@/components/company-guide"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
 
@@ -40,6 +41,8 @@ type AgentCardProps = {
   showInstallDailyTeamLogButton?: boolean
   showOpenTerminalButton?: boolean
   showAiExecutorPicker?: boolean
+  showCompanyGuide?: boolean
+  hasOntology?: boolean
   aiExecutorId?: string
   /** Position in the grid — drives the staggered entrance animation. */
   index?: number
@@ -73,6 +76,8 @@ export function AgentCard({
   showInstallDailyTeamLogButton,
   showOpenTerminalButton,
   showAiExecutorPicker,
+  showCompanyGuide,
+  hasOntology,
   aiExecutorId,
   index = 0,
 }: AgentCardProps) {
@@ -93,9 +98,24 @@ export function AgentCard({
             <AgentAvatar imageUrl={avatarUrl ?? null} />
             <span className="truncate">{agent.name}</span>
           </span>
-          <Badge variant="outline" className={KIND_BADGE_CLASS[agent.kind]}>
-            {agent.kind}
-          </Badge>
+          <span className="flex shrink-0 items-center gap-1.5">
+            {showCompanyGuide && (
+              <CompanyGuide
+                companyName={agent.name}
+                hasOntology={Boolean(hasOntology)}
+                showOpenTerminalButton={showOpenTerminalButton}
+                showSetupCompanyButton={showSetupCompanyButton}
+                showEditCompanyButton={showEditCompanyButton}
+                showBackupButton={showBackupButton}
+                showOwnershipButton={showOwnershipButton}
+                showAiExecutorPicker={showAiExecutorPicker}
+                removable={removable}
+              />
+            )}
+            <Badge variant="outline" className={KIND_BADGE_CLASS[agent.kind]}>
+              {agent.kind}
+            </Badge>
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-sm">
