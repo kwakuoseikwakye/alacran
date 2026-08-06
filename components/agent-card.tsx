@@ -34,6 +34,7 @@ type AgentCardProps = {
   showEditCompanyButton?: boolean
   showBackupButton?: boolean
   showOwnershipButton?: boolean
+  showVisibleRunOption?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
   showAiExecutorPicker?: boolean
@@ -65,6 +66,7 @@ export function AgentCard({
   showEditCompanyButton,
   showBackupButton,
   showOwnershipButton,
+  showVisibleRunOption,
   integrationStatus,
   showInstallDailyTeamLogButton,
   showAiExecutorPicker,
@@ -128,9 +130,20 @@ export function AgentCard({
           {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
           {showVerifyButton && <VerifyButton />}
           {showDailyTeamLogButton && <DailyTeamLogButton />}
-          {showSetupCompanyButton && <CompanySetupWizard agentId={agent.id} companyName={agent.name} />}
+          {showSetupCompanyButton && (
+            <CompanySetupWizard
+              agentId={agent.id}
+              companyName={agent.name}
+              showVisibleRunOption={showVisibleRunOption}
+            />
+          )}
           {showEditCompanyButton && (
-            <CompanySetupWizard agentId={agent.id} companyName={agent.name} mode="edit" />
+            <CompanySetupWizard
+              agentId={agent.id}
+              companyName={agent.name}
+              mode="edit"
+              showVisibleRunOption={showVisibleRunOption}
+            />
           )}
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
