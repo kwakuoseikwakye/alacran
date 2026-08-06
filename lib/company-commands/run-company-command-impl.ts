@@ -7,7 +7,7 @@ import { getEffectiveAgents } from "../get-effective-agents"
 import { getCompanyCommand } from "./registry"
 import type { CompanyCommand } from "./types"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
-import { acquireRunLock, releaseRunLock } from "./run-lock"
+import { acquireRunLock, releaseRunLock, runLockPath } from "./run-lock"
 import { runPrefetch } from "./prefetch"
 import { resolveAiExecutorForAgent } from "../ai-executor-registry"
 import type { AiExecutor } from "../ai-executors"
@@ -169,7 +169,7 @@ export async function runCompanyCommandImpl(
         argsFilePath: argsPath,
         promptFilePath: promptPath,
         logPath,
-        lockPath: path.join(dataDir, "company-command.lock"),
+        lockPath: runLockPath(dataDir),
         cwd: agent.rootPath,
       })
       await writeFile(scriptPath, script, { mode: 0o755 })

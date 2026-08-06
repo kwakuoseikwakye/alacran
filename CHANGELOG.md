@@ -1001,8 +1001,10 @@ first, changes.
 to open a window — long before the script, let alone the real run inside
 it, finishes. So visible mode does **not** attach the existing
 `child.on("exit", ...)` handler; the generated wrapper script's own
-`trap 'rm -f "$LOCKPATH"' EXIT` owns the lock instead, firing on normal
-completion, an abort at either gate, or the window simply being closed.
+`trap 'rm -f "$LOCKPATH"' EXIT` owns the lock instead, covering an abort
+at the pre-run gate and the window simply being closed. The trap is then
+explicitly disarmed (`trap - EXIT`) at the moment the script releases the
+lock itself after a normal run — see the final review's findings below.
 
 **Measured, not assumed, twice over, before shipping:**
 - **macOS's real `/bin/bash` is 3.2.57** (Apple ships the last GPLv2
@@ -1027,6 +1029,26 @@ completion, an abort at either gate, or the window simply being closed.
   `triage-email`/`triage-issue`'s unsanitized email/issue body text
   reaches. Fixed with a one-line guard that refuses the run the same way
   the headless path already does, before anything is written to disk.
+- **The script's `cd` had no failure guard**, also caught in review: a
+  bare `cd "$CWD"` that fails (the company directory renamed, deleted, or
+  on an unmounted volume between the click and the window opening) would
+  have let the run proceed in whatever directory Terminal happened to
+  start in — running the command against the wrong repo. Now
+  `cd "$CWD" || exit 1`, with the trap still releasing the lock on the way
+  out.
+- **The EXIT trap stayed armed after the script's own explicit release**,
+  caught in the final whole-branch review. After the constrained run
+  finishes the script does `rm -f "$LOCKPATH"` (correctly releasing the
+  lock it owns) and then waits at the take-over gate — with the trap still
+  live. Only `exec` discards a trap, so the *safe* exit from that gate was
+  the one that takes over the window; closing it or pressing Ctrl-C fired
+  the trap a second time and deleted whatever lock file was at that path —
+  by then plausibly a *later* run's, since the app correctly allows a new
+  run the moment the lock is released. `lib/file-lock.ts` has no staleness
+  check of any kind (no PID liveness, no TTL, no sweep), so the mirror-image
+  failure — a leaked lock — wedges that company's commands until someone
+  deletes the file by hand; both directions are now covered by disarming
+  with `trap - EXIT` at the exact point ownership ends.
 
 **A live end-to-end check surfaced one more real, if minor, finding:**
 the pre-run gate's `cat -v` (rendering control characters visibly instead
