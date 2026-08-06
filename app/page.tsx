@@ -64,6 +64,7 @@ export default async function AgentTreePage() {
               result.agent.id
             )
             const isCommandSet = result.agent.kind === "command-set"
+            const showVisibleRunOption = isCommandSet && process.platform === "darwin"
             const hasOntology = isCommandSet && (await companyOntologyExists(result.agent.rootPath))
             const needsCompanySetup = isCommandSet && !hasOntology
             const integrationStatus = await getIntegrationStatus(result.agent)
@@ -89,6 +90,7 @@ export default async function AgentTreePage() {
                 showEditCompanyButton={hasOntology}
                 showBackupButton={isCommandSet}
                 showOwnershipButton={isCommandSet}
+                showVisibleRunOption={showVisibleRunOption}
                 integrationStatus={integrationStatus}
                 showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                 showAiExecutorPicker={isCommandSet}

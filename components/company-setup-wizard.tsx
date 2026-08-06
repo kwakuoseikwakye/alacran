@@ -11,6 +11,7 @@ import { getCompanyOntology } from "@/lib/get-company-ontology"
 import type { Stakeholder } from "@/lib/build-company-ontology"
 import { formatDefineCompanyFields } from "@/lib/format-define-company-fields"
 import { DefineCompanyAiDraft } from "@/components/define-company-ai-draft"
+import { VisibleRunToggle } from "@/components/visible-run-toggle"
 
 const STEPS = ["about", "stakeholders", "value-flow", "bottleneck", "review"] as const
 type Step = (typeof STEPS)[number]
@@ -19,11 +20,13 @@ export function CompanySetupWizard({
   agentId,
   companyName,
   mode = "create",
+  showVisibleRunOption,
 }: {
   agentId: string
   companyName: string
   /** "edit" prefills every field from the company's saved company.yaml on open. */
   mode?: "create" | "edit"
+  showVisibleRunOption?: boolean
 }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
@@ -146,6 +149,11 @@ export function CompanySetupWizard({
             <SheetTitle>{mode === "edit" ? `${companyName}'s company details` : `Set up ${companyName}`}</SheetTitle>
           </SheetHeader>
           <div className="space-y-4 px-4 pb-4">
+            {showVisibleRunOption && (
+              <div className="border-b pb-3">
+                <VisibleRunToggle agentId={agentId} />
+              </div>
+            )}
             {loadingExisting && <p className="text-sm text-muted-foreground">Loading saved details…</p>}
             {!loadingExisting && step === "about" && (
               <div className="space-y-3">
