@@ -105,6 +105,29 @@ wait \$SERVER_PID
 LAUNCH
 chmod +x "$LAUNCHER"
 
+echo "==> Generating the app icon (.icns)"
+# Root cause of a real bug (icon not showing after install): this step
+# never existed. Info.plist had no CFBundleIconFile and no .icns was ever
+# produced, so macOS fell back to its generic icon for every install,
+# deterministically. components/alacran-logo.png is 600x626 (non-square) —
+# `sips -p` was verified (not assumed) to pad it onto a square canvas with
+# real alpha transparency, not a solid fill, so the mark itself is never
+# squashed. All ten required iconset sizes are then downsampled from that
+# one square, transparent master.
+ICONSET_DIR="$(mktemp -d)/AppIcon.iconset"
+mkdir -p "$ICONSET_DIR"
+SQUARE_MASTER="$(mktemp -d)/square-master.png"
+sips -p 626 626 components/alacran-logo.png --out "$SQUARE_MASTER" >/dev/null
+for spec in "16 icon_16x16.png" "32 icon_16x16@2x.png" "32 icon_32x32.png" "64 icon_32x32@2x.png" \
+            "128 icon_128x128.png" "256 icon_128x128@2x.png" "256 icon_256x256.png" \
+            "512 icon_256x256@2x.png" "512 icon_512x512.png" "1024 icon_512x512@2x.png"; do
+  set -- $spec
+  sips -z "$1" "$1" "$SQUARE_MASTER" --out "$ICONSET_DIR/$2" >/dev/null
+done
+mkdir -p "$APP/Contents/Resources"
+iconutil -c icns "$ICONSET_DIR" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$(dirname "$ICONSET_DIR")" "$(dirname "$SQUARE_MASTER")"
+
 echo "==> Writing Info.plist"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -118,6 +141,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleShortVersionString</key><string>$APP_VERSION</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleExecutable</key><string>launcher</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
   <key>LSUIElement</key><false/>
 </dict>
