@@ -163,7 +163,7 @@ export function CompanySetupWizard({
                 <div className="space-y-1">
                   <label className="text-sm font-medium">What problem does your company solve?</label>
                   <p className="text-xs text-muted-foreground">
-                    A plain-language description of what you do and who it&apos;s for — no jargon needed.
+                    A plain-language description of what you do and who it&apos;s for. No jargon needed.
                   </p>
                   <Textarea
                     value={domain}
@@ -188,7 +188,7 @@ export function CompanySetupWizard({
                 <div className="space-y-1">
                   <p className="text-sm font-medium">Who are your key stakeholders?</p>
                   <p className="text-xs text-muted-foreground">
-                    Anyone who cares about or is affected by the business — customers, employees, managers,
+                    Anyone who cares about or is affected by the business (customers, employees, managers,
                     partners, investors.
                   </p>
                 </div>
@@ -277,7 +277,7 @@ export function CompanySetupWizard({
               <div className="space-y-3 text-sm">
                 <div>
                   <p className="font-medium">Your company</p>
-                  <p className="text-muted-foreground">{domain || "—"}</p>
+                  <p className="text-muted-foreground">{domain || "Not set"}</p>
                   {employeeCount && <p className="text-muted-foreground">{employeeCount} employees</p>}
                 </div>
                 <div>
@@ -286,19 +286,19 @@ export function CompanySetupWizard({
                     .filter((s) => s.role.trim() || s.position.trim())
                     .map((s, i) => (
                       <p key={i} className="text-muted-foreground">
-                        {s.role} — {s.position}
+                        {s.role}: {s.position}
                       </p>
                     ))}
                 </div>
                 <div>
                   <p className="font-medium">Value flow</p>
-                  <p className="text-muted-foreground">Receive: {valueFlow.input || "—"}</p>
-                  <p className="text-muted-foreground">Do: {valueFlow.transform || "—"}</p>
-                  <p className="text-muted-foreground">Deliver: {valueFlow.output || "—"}</p>
+                  <p className="text-muted-foreground">Receive: {valueFlow.input || "Not set"}</p>
+                  <p className="text-muted-foreground">Do: {valueFlow.transform || "Not set"}</p>
+                  <p className="text-muted-foreground">Deliver: {valueFlow.output || "Not set"}</p>
                 </div>
                 <div>
                   <p className="font-medium">Biggest bottleneck</p>
-                  <p className="text-muted-foreground">{bottleneck || "—"}</p>
+                  <p className="text-muted-foreground">{bottleneck || "Not set"}</p>
                 </div>
               </div>
             )}

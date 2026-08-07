@@ -8,7 +8,7 @@ import { CommandLine } from "@/components/copy-button"
 
 type Phase = "idle" | "updating" | "restarting" | "error"
 
-/** Polls `/` until the relaunched server answers, then reloads to it — a fixed delay would either
+/** Polls `/` until the relaunched server answers, then reloads to it. A fixed delay would either
  * jump the gun (dpkg + relaunch isn't instant) or make every update feel slower than it needs to. */
 async function waitForServerThenReload(): Promise<void> {
   for (let i = 0; i < 30; i++) {
@@ -17,7 +17,7 @@ async function waitForServerThenReload(): Promise<void> {
       const res = await fetch("/", { method: "HEAD", cache: "no-store" })
       if (res.ok) break
     } catch {
-      // Still down — the old process is gone and the new one hasn't bound the port yet.
+      // Still down: the old process is gone and the new one hasn't bound the port yet.
     }
   }
   window.location.reload()
@@ -28,7 +28,7 @@ async function waitForServerThenReload(): Promise<void> {
  *
  * On Linux this can actually perform the update (download the .deb, install
  * it via a native pkexec password prompt, relaunch) instead of only linking
- * out — see lib/updates/perform-linux-update-impl.ts for why macOS can't
+ * out. See lib/updates/perform-linux-update-impl.ts for why macOS can't
  * safely do the same (unsigned, unnotarized builds get Gatekeeper-quarantined).
  */
 export function UpdateBanner({
@@ -68,7 +68,7 @@ export function UpdateBanner({
         <ArrowUpCircle className="size-4 shrink-0 text-primary" aria-hidden />
         <span>
           {phase === "restarting" ? (
-            "Update installed — restarting…"
+            "Update installed, restarting…"
           ) : (
             <>
               Version <span className="font-semibold">{latestVersion}</span> is available

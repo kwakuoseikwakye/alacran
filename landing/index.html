@@ -4,11 +4,10 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Alacrán: give your AI a memory of your business</title>
-<meta name="description" content="An AI-native framework for organizing and running your AI company, entirely on your own Mac or Linux machine. Nothing is uploaded, nothing is kept anywhere else, and nothing gets saved until you approve it." />
+<meta name="description" content="An AI-native framework for organizing and running your AI company, entirely on your own Mac or Linux machine." />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/styles.css" />
 <script>(function(){var r=document.documentElement,s=null;try{s=localStorage.getItem('alacran-theme')}catch(e){}r.setAttribute('data-theme',s==='light'?'light':'dark');})();</script>
-
 </head>
 <body>
 <nav class="nav">
@@ -26,37 +25,65 @@
     <a class="btn btn-primary" href="#download">Download</a>
   </div>
 </nav>
-<header class="hero" id="top">
-  <div class="halo"></div>
-  <div class="wrap">
-        <div class="hero-logo">
-      <img class="mark mark-glow" src="/logo.png" alt="Alacrán" width="600" height="626" fetchpriority="high" />
+
+<header class="page-hero" id="top">
+  <div class="wrap" style="position:relative">
+    <div class="surreal-orb orb-1"></div>
+    <div class="surreal-orb orb-2"></div>
+    <div class="halo"></div>
+    
+    <div class="hero-stagger" style="position:relative; z-index:20;">
+      <p class="eyebrow">An AI-native framework that stays on your machine</p>
+      <h1>
+        <span class="reveal-word" style="animation-delay:.05s">Your</span>
+        <span class="reveal-word" style="animation-delay:.12s">AI</span>
+        <span class="reveal-word" style="animation-delay:.2s">forgets.</span><br>
+        <span class="reveal-word ex" style="animation-delay:.32s">Alacrán</span>
+        <span class="reveal-word ex" style="animation-delay:.4s">remembers.</span>
+      </h1>
+      <p class="hero-sub" style="margin-top:24px;">Give every project its own isolated sandbox, its own files, and its own context window. Run everything locally, safely orchestrate Claude and Aider, and keep all your work strictly on your own machine.</p>
+      <div class="cta r" style="margin-top:32px;">
+        <a class="btn btn-primary" href="#download">Download free</a> 
+        <a class="btn btn-ghost" href="#how-it-works">How it works</a>
+      </div>
     </div>
-    <p class="eyebrow">An AI-native framework that stays on your machine</p>
-    <h1>
-      <span class="reveal-word" style="animation-delay:.05s">Your</span>
-      <span class="reveal-word" style="animation-delay:.12s">AI</span>
-      <span class="reveal-word" style="animation-delay:.2s">forgets.</span><br>
-      <span class="reveal-word ex" style="animation-delay:.32s">Alacrán</span>
-      <span class="reveal-word ex" style="animation-delay:.4s">remembers.</span>
-    </h1>
-    <p class="hero-sub">Alacr&aacute;n is an AI-native framework for organizing and running your AI company &mdash; entirely on your own machine. Every file it touches lives in a folder you own: nothing uploaded, nothing kept anywhere else. It hands your AI the jobs you repeat every week, the inbox summary, the weekly update, the client follow-up, and nothing gets saved until you approve it.</p>
-    <div class="hero-cta">
-      <a class="btn btn-primary" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS</a>
-      <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download>Download for Linux (.deb)</a>
-      <a class="btn btn-ghost" href="https://github.com/kwakuoseikwakye/alacran">View source</a>
+
+    <!-- Cinematic Hero Mockup -->
+    <div class="hero-mockup-wrapper">
+      <div class="mac-window hero-mockup">
+        <div class="mac-header">
+          <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
+          <div class="mac-title">Alacrán — Workspace: "Marketing Launch"</div>
+        </div>
+        <div class="mac-body">
+          <div class="mac-sidebar">
+            <div class="mac-sidebar-label">Workspaces</div>
+            <div class="mac-item active"><img src="/logo.png" style="width:14px;border-radius:3px"> Marketing Launch</div>
+            <div class="mac-item">Q3 Engineering</div>
+            <div class="mac-item">Personal Setup</div>
+            <div class="mac-sidebar-label" style="margin-top:16px">Connected Tools</div>
+            <div class="mac-item">GitHub Repo</div>
+            <div class="mac-item">Local File System</div>
+          </div>
+          <div class="mac-content">
+            <div class="terminal-line"><span class="prompt">➜</span> <span class="cmd">claude-code</span> --task "Analyze the latest launch metrics and draft a summary email."</div>
+            <div class="terminal-line" style="margin-top:12px;"><span class="info">ℹ</span> Connecting to Anthropic API...</div>
+            <div class="terminal-line"><span class="success">✔</span> Processed 4 files in context.</div>
+            <div class="terminal-line" style="margin-top:12px; color:var(--bone);">Generating summary based on <code>metrics.csv</code> and <code>campaign_notes.txt</code>...</div>
+          </div>
+        </div>
+      </div>
     </div>
-    <p class="hero-trust"><b>Free and open source</b> (MIT) &middot; bring your own AI &mdash; Claude, ChatGPT, or open source &middot; no analytics, no tracking, ever</p>
   </div>
 </header>
 
-<section class="section" id="plain">
+<section class="section" id="plain" style="padding-top:160px;">
   <div class="wrap">
     <div class="plain r">
       <p class="eyebrow">In plain English</p>
-      <h2>Never used an AI tool before? Start here.</h2>
-      <p>You already know how to ask ChatGPT or Claude a question. The catch is that it starts every conversation as a total stranger. It doesn&rsquo;t know what you sell, who your customers are, or how you like things written, so you end up typing the same background paragraph over and over before it can be any use.</p>
-      <p><b>Alacr&aacute;n is a small app for your computer that fixes exactly that.</b> You write down the basics of your business once, in ordinary words. From then on your AI reads that first, every single time, and gets straight to the actual work.</p>
+      <h2>Never used an AI tool before? Start right here.</h2>
+      <p>You probably already know how to ask ChatGPT or Claude a question. The catch is that it starts every conversation as a total stranger. It doesn&rsquo;t know what you sell, who your customers are, or how you like things written. As a result, you end up typing the same background paragraph over and over before it can actually be useful.</p>
+      <p><b>Alacr&aacute;n is a small app for your computer that fixes exactly that.</b> You write down the basics of your business once in ordinary words. From then on, your AI reads that first, every single time, and gets straight to the actual work.</p>
       <div class="plain-split">
         <div class="plain-col no">
           <h3>Without it</h3>
@@ -71,318 +98,216 @@
           <h3>With it</h3>
           <ul>
             <li>It already knows the business before you ask</li>
-            <li>The work is saved where you can find it later</li>
+            <li>The work is saved where you can easily find it later</li>
             <li>Anything it did well becomes a one-click repeat</li>
             <li>You read the change and approve it, or you don&rsquo;t</li>
           </ul>
         </div>
       </div>
-      <p class="plain-foot"><b>No coding, at any point.</b> If you can fill in a form and read a paragraph before clicking Yes, you can run this. It all happens on your own laptop, and we don&rsquo;t run a server your business could reach, so there is nowhere for your data to go.</p>
     </div>
   </div>
 </section>
 
-<section class="section" id="easy">
-  <div class="wrap">
-    <div class="sec-head r">
-      <p class="eyebrow">01 — Get started</p>
-      <h2>Up and running before your coffee gets cold.</h2>
-      <p>No terminal commands to memorise and no config files to fight with.<span class="lede-break">Four short steps, and your workspace is live.</span></p>
+<section id="how-it-works" style="padding: 140px 0;">
+  <div class="sticky-layout">
+    <div class="sticky-text">
+      <span class="eyebrow">Orchestrate</span>
+      <h2>You are the hub. Everything else is isolated.</h2>
+      <p>Instead of copying files into random chat boxes, give your AI a dedicated folder and access to only the tools it needs. Every AI company you connect with stays sandboxed in its own workspace. You keep the root access.</p>
     </div>
-    <div class="steps r">
-      <div class="step">
-        <span class="num">01</span>
-        <h3>Download and open it</h3>
-        <p>One download for your machine &mdash; .dmg for Mac, .deb for Linux. No installer maze, and it runs entirely on your own machine.</p>
-        <span class="step-time">~1 minute</span>
-      </div>
-      <div class="step">
-        <span class="num">02</span>
-        <h3>Set up a workspace</h3>
-        <p>Alacr&aacute;n calls it a <b>company</b>: one folder on your computer holding everything your AI should know about a business, plus the jobs it runs for you. Name it and it&rsquo;s built.</p>
-        <span class="step-time">~30 seconds</span>
-      </div>
-      <div class="step">
-        <span class="num">03</span>
-        <h3>Answer four questions</h3>
-        <p>What the business does, who it serves, how it makes money, and what&rsquo;s eating your time. That&rsquo;s the memory your AI reads from then on. Too tired to type? Let it draft the answers instead.</p>
-        <span class="step-time">~5 minutes</span>
-      </div>
-      <div class="step">
-        <span class="num">04</span>
-        <h3>Hand over the repeat work</h3>
-        <p>It reads the inbox, drafts the weekly update, writes up decisions. You skim what it did and approve the bits you want kept.</p>
-        <span class="step-time">every day, from here on</span>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="orch" id="orchestrate">
-  <div class="wrap">
-    <div class="head r">
-      <p class="eyebrow">02 — Orchestrate</p>
-      <h2>Run several businesses without mixing them up.</h2>
-      <p>Each workspace keeps its own context, its own connected tools, and its own set of jobs. Your AI always knows which one it&rsquo;s working in, so a client&rsquo;s details never leak into someone else&rsquo;s weekly report.</p>
-    </div>
-    <div class="flow r" role="img" aria-label="You set the goal, Alacrán passes it to the right workspace, and each workspace runs its own jobs">
-      <div class="flow-you"><span class="flow-pill">You <span class="flow-pill-sub">set the goal</span></span></div>
-      <div class="flow-line"><i></i></div>
-      <div class="flow-hub-wrap">
-        <div class="flow-hub"><span class="flow-hub-name">Alacrán</span><span class="flow-hub-sub">your AI &middot; knows every workspace</span></div>
-      </div>
-      <div class="flow-companies">
-        <div class="flow-co">
-          <div class="flow-co-head"><span class="flow-co-name">Acme Co</span><span class="flow-co-tag">workspace</span></div>
-          <div class="flow-jobs">
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-gmail"/></svg></span>Check inbox</div>
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-git"/></svg></span>Weekly digest</div>
-          </div>
+    <div class="sticky-visual">
+      <!-- Mockup 1: Workspace Selector -->
+      <div class="mac-window r">
+        <div class="mac-header">
+          <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
+          <div class="mac-title">Isolated Workspaces</div>
         </div>
-        <div class="flow-co">
-          <div class="flow-co-head"><span class="flow-co-name">Harbor</span><span class="flow-co-tag">workspace</span></div>
-          <div class="flow-jobs">
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-claude"/></svg></span>Define company</div>
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-git"/></svg></span>Session handoff</div>
-          </div>
+        <div class="mac-body" style="min-height: 240px; padding: 24px; display:flex; gap:16px; flex-wrap:wrap; background: color-mix(in srgb, var(--void) 50%, transparent);">
+           <div style="background:var(--shell-2); border:1px solid var(--line); border-radius:12px; padding:16px; flex:1; min-width:200px;">
+              <h4 style="font-family:var(--font-display); font-size:14px; color:var(--bone);">Codebase Refactor</h4>
+              <p style="font-family:var(--font-mono); font-size:11px; color:var(--dune); margin-top:8px;">MODEL: CLAUDE 3.5 SONNET</p>
+              <p style="font-family:var(--font-mono); font-size:11px; color:var(--dune); margin-top:4px;">ACCESS: LOCAL, GITHUB</p>
+           </div>
+           <div style="background:var(--shell); border:1px solid color-mix(in srgb, var(--red) 50%, var(--line)); box-shadow: 0 4px 20px -10px rgba(255,46,67,0.3); border-radius:12px; padding:16px; flex:1; min-width:200px;">
+              <h4 style="font-family:var(--font-display); font-size:14px; color:var(--red);">Tax Documents</h4>
+              <p style="font-family:var(--font-mono); font-size:11px; color:var(--dune); margin-top:8px;">MODEL: LLAMA 3 (LOCAL)</p>
+              <p style="font-family:var(--font-mono); font-size:11px; color:var(--dune); margin-top:4px;">ACCESS: PDF DIR ONLY</p>
+           </div>
         </div>
-        <div class="flow-co">
-          <div class="flow-co-head"><span class="flow-co-name">Field Ops</span><span class="flow-co-tag">workspace</span></div>
-          <div class="flow-jobs">
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-claude"/></svg></span>Draft social posts</div>
-            <div class="flow-job"><span class="brandtile"><svg class="bi"><use href="#b-claude"/></svg></span>Record a decision</div>
-          </div>
+      </div>
+      <!-- Mockup 2: Security logs -->
+      <div class="mac-window r">
+        <div class="mac-header">
+          <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
+          <div class="mac-title">Security & Audit</div>
+        </div>
+        <div class="mac-body" style="min-height: 180px; padding: 24px; background: color-mix(in srgb, var(--void) 50%, transparent);">
+           <div class="terminal-line"><span class="info">10:42:01</span> [Tax Docs] Denied network access request.</div>
+           <div class="terminal-line"><span class="success">10:42:05</span> [Codebase] Pushed commit to remote repository.</div>
+           <div class="terminal-line"><span class="info">10:45:12</span> [Tax Docs] Local summary generated.</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<section class="section" id="execute">
-  <div class="wrap">
-    <div class="sec-head center r">
-      <p class="eyebrow">03 &mdash; Execute</p>
+<section id="execute" style="padding: 140px 0; background: color-mix(in srgb, var(--void) 60%, transparent);">
+  <div class="sticky-layout">
+    <div class="sticky-visual" style="align-items:flex-start;">
+      <div class="mac-window r" style="width:100%; box-shadow: 0 40px 100px -20px rgba(255,46,67,0.15);">
+        <div class="mac-header">
+          <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
+          <div class="mac-title">Live Execution Board</div>
+        </div>
+        <div class="mac-body" style="padding: 24px; background: var(--void); display:flex; gap:16px; overflow-x:auto;">
+          <!-- Board Simulation (CSS/HTML mockup replacing the complex JS one) -->
+          <div style="flex:1; min-width:220px;">
+            <div style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--dune); margin-bottom:12px;">Running</div>
+            <div style="background:var(--shell-2); border:1px solid color-mix(in srgb, var(--red) 40%, var(--line)); border-radius:12px; padding:16px; position:relative; overflow:hidden;">
+              <div style="position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--red); animation: flow-dot 2s linear infinite;"></div>
+              <h4 style="font-size:13px; color:var(--bone); margin-bottom:4px;">Check inbox</h4>
+              <p style="font-size:12px; color:var(--dune);">Processing 12 threads...</p>
+            </div>
+          </div>
+          <div style="flex:1; min-width:220px;">
+            <div style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--dune); margin-bottom:12px;">Awaiting OK</div>
+            <div style="background:var(--shell-2); border:1px solid var(--line); border-radius:12px; padding:16px;">
+              <h4 style="font-size:13px; color:var(--bone); margin-bottom:4px;">Draft social posts</h4>
+              <p style="font-size:12px; color:var(--c-google);">Diff ready for review</p>
+              <button class="btn btn-primary" style="padding:6px 12px; font-size:11px; margin-top:12px; width:100%; justify-content:center;">Approve Change</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="sticky-text">
+      <span class="eyebrow">Execute</span>
       <h2>Watch the work happen, live.</h2>
-      <p>Every job moves through the same four stages, out in the open: waiting, running, then showing you exactly what it wants to change. You get the final say, every single time.</p>
-    </div>
-    <div class="board r" id="execBoard" role="img" aria-label="A live simulation of company commands moving from ready to running to awaiting your approval to done">
-      <div class="board-col" data-stage="ready">
-        <div class="board-colhead"><span class="board-collabel">Ready to run</span><span class="board-count">0</span></div>
-        <div class="board-cards"></div>
-      </div>
-      <div class="board-col" data-stage="running">
-        <div class="board-colhead"><span class="board-collabel">Running</span><span class="board-count">0</span></div>
-        <div class="board-cards"></div>
-      </div>
-      <div class="board-col" data-stage="awaiting">
-        <div class="board-colhead"><span class="board-collabel">Awaiting your OK</span><span class="board-count">0</span></div>
-        <div class="board-cards"></div>
-      </div>
-      <div class="board-col" data-stage="done">
-        <div class="board-colhead"><span class="board-collabel">Done</span><span class="board-count">0</span></div>
-        <div class="board-cards"></div>
-      </div>
-    </div>
-    <p class="board-cap">A simulated run &middot; these are the real stages and the real buttons from inside the app</p>
-    <p class="board-compare"><b>Most automation tools</b> tell you what they did after the fact. Alacr&aacute;n shows you the exact change first, and waits.</p>
-  </div>
-</section>
-
-<section class="section" id="features">
-  <div class="wrap">
-    <div class="sec-head r"><p class="eyebrow">What&rsquo;s inside</p><h2>What you get, the moment you open it.</h2></div>
-    <div class="grid r">
-      <div class="card"><div class="dot"></div><h3>A workspace in one click</h3><p>Everything your AI needs to know about a business, in one tidy folder on your computer.</p></div>
-      <div class="card"><div class="dot"></div><h3>Setup that writes itself</h3><p>Answer four plain questions, or let your AI take a first pass and just correct it.</p></div>
-      <div class="card"><div class="dot"></div><h3>Your AI, your account</h3><p>No second AI bill. Runs on Claude by default, or point a workspace at ChatGPT or an open-source model instead.</p></div>
-      <div class="card"><div class="dot"></div><h3>Your inbox, summarised</h3><p>What came in, what needs a reply. It only reads, so it can never send or delete by mistake.</p></div>
-      <div class="card"><div class="dot"></div><h3>Teach it once, reuse forever</h3><p>Turn any routine job into a skill, then drop it onto another workspace in one click.</p></div>
-      <div class="card"><div class="dot"></div><h3>An undo button for everything</h3><p>Every change is saved as a checkpoint you approved, so you can always walk it back.</p></div>
+      <p>Every job moves through the same stages right out in the open: waiting, running, then showing you exactly what it wants to change.</p>
+      <p style="margin-top:16px;"><b>Most automation tools</b> tell you what they did after the fact. Alacr&aacute;n, however, shows you the exact change first, and then waits for your approval.</p>
     </div>
   </div>
 </section>
 
-<section class="section" id="automate">
+<section style="padding: 140px 0;">
   <div class="wrap">
-    <div class="sec-head r">
-      <p class="eyebrow">Put it to work</p>
-      <h2>The busywork it takes off your plate.</h2>
-      <p>There&rsquo;s no fixed menu of integrations to pick from here. You show your AI how you do something once, it learns your way of doing it, and from then on you just ask.</p>
-    </div>
-    <div class="grid r">
-      <div class="card"><div class="dot"></div><h3>Marketing</h3><p>Social captions, newsletter copy and campaign briefs, written in your voice because it has actually read your business. Save the recipe and next week is one click.</p></div>
-      <div class="card"><div class="dot"></div><h3>Sales &amp; outreach</h3><p>Pull up a lead, draft the follow-up that actually references your last call, and keep a running note on every conversation.</p></div>
-      <div class="card"><div class="dot"></div><h3>Customer support</h3><p>A plain-English rundown of what&rsquo;s sitting unread each morning, sorted by what actually needs you first.</p></div>
-      <div class="card"><div class="dot"></div><h3>Ops &amp; reporting</h3><p>Turn a messy week into a clean update, log the calls you made and why, and run a proper retro. No spreadsheet required.</p></div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="connect">
-  <div class="wrap">
-    <div class="sec-head center r">
-      <p class="eyebrow">Connect</p>
-      <h2>It works with the accounts you already have.</h2>
-      <p>No new logins to create and no passwords handed over. You sign in once on your own machine, and Alacr&aacute;n never stores a key or a token anywhere.</p>
-    </div>
-
-    <div class="orbit r" role="img" aria-label="Alacrán at the centre of the products it connects: Claude, Apple, Git, Gmail, Google Calendar, Google Drive, Google Chat, GitHub and Notion">
-      <div class="ring"></div>
-      <div class="ring inner"></div>
-      <div class="spin">
-        <div class="sat" style="--a:0deg"><span class="brandtile lit" style="--brand:var(--c-gmail)"><svg class="bi"><use href="#b-gmail"/></svg></span></div>
-        <div class="sat" style="--a:60deg"><span class="brandtile lit" style="--brand:var(--c-google)"><svg class="bi"><use href="#b-googlecalendar"/></svg></span></div>
-        <div class="sat" style="--a:120deg"><span class="brandtile lit" style="--brand:var(--c-google)"><svg class="bi"><use href="#b-googledrive"/></svg></span></div>
-        <div class="sat" style="--a:180deg"><span class="brandtile lit" style="--brand:var(--c-chat)"><svg class="bi"><use href="#b-googlechat"/></svg></span></div>
-        <div class="sat" style="--a:240deg"><span class="brandtile lit" style="--brand:var(--bone)"><svg class="bi"><use href="#b-github"/></svg></span></div>
-        <div class="sat" style="--a:300deg"><span class="brandtile lit" style="--brand:var(--bone)"><svg class="bi"><use href="#b-notion"/></svg></span></div>
-      </div>
-      <div class="spin inner">
-        <div class="sat" style="--a:30deg"><span class="brandtile sm lit" style="--brand:#e89b80"><svg class="bi"><use href="#b-claude"/></svg></span></div>
-        <div class="sat" style="--a:150deg"><span class="brandtile sm lit" style="--brand:#ff7a6d"><svg class="bi"><use href="#b-git"/></svg></span></div>
-        <div class="sat" style="--a:270deg"><span class="brandtile sm lit" style="--brand:var(--bone)"><svg class="bi"><use href="#b-apple"/></svg></span></div>
-      </div>
-      <div class="core"><img class="mark mark-glow" src="/logo.png" alt="" width="600" height="626" /></div>
-    </div>
-    <p class="orbit-cap">Inner ring: what Alacrán runs on · Outer ring: what it can reach for you</p>
-
-    <div class="grid r" style="margin-top:46px">
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:#e89b80"><svg class="bi"><use href="#b-claude"/></svg></span>
-          <span class="pill live"><i></i>Live</span>
-        </div>
-        <h3>Your own Claude</h3>
-        <p>Your subscription, your keys, no second AI bill from us. The default, and the one we&rsquo;ve run longest.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="pill live"><i></i>New</span>
-        </div>
-        <h3>Or ChatGPT / open source</h3>
-        <p>Point any workspace at OpenAI&rsquo;s Codex CLI instead &mdash; or at Aider, which itself runs on Anthropic, OpenAI, or a local open-source model. Same deal as Claude: your own account, your own key, nothing routed through us.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:var(--c-gmail)"><svg class="bi"><use href="#b-gmail"/></svg></span>
-          <span class="brandtile" style="--brand:var(--c-google)"><svg class="bi"><use href="#b-googlecalendar"/></svg></span>
-          <span class="pill live"><i></i>Live</span>
-        </div>
-        <h3>Gmail &amp; Calendar</h3>
-        <p>It can read what&rsquo;s in your inbox and what&rsquo;s on your week. Read-only by default, so it physically cannot send, label, or delete.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:var(--bone)"><svg class="bi"><use href="#b-github"/></svg></span>
-          <span class="brandtile" style="--brand:var(--bone)"><svg class="bi"><use href="#b-notion"/></svg></span>
-          <span class="pill next"><i></i>Next</span>
-        </div>
-        <h3>More on the way</h3>
-        <p>GitHub, Notion, Linear and Slack are queued up next. Anything with an API can already be wired in by hand.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:#ff7a6d"><svg class="bi"><use href="#b-git"/></svg></span>
-          <span class="pill live"><i></i>Live</span>
-        </div>
-        <h3>A record of every change</h3>
-        <p>Nothing happens invisibly. Every edit is a checkpoint you signed off on, and you can rewind any of it.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:var(--bone)"><svg class="bi"><use href="#b-apple"/></svg></span>
-          <span class="brandtile" style="--brand:var(--bone)"><svg class="bi"><use href="#b-linux"/></svg></span>
-          <span class="pill live"><i></i>Live</span>
-        </div>
-        <h3>Runs on your computer</h3>
-        <p>Not a website with your business in it. The app, the data, and the keys all sit on your own machine.</p>
-      </div>
-      <div class="card">
-        <div class="cardmark">
-          <span class="brandtile" style="--brand:#ff2e43"><svg class="bi"><use href="#b-git"/></svg></span>
-          <span class="pill next"><i></i>Soon</span>
-        </div>
-        <h3>Build your own jobs</h3>
-        <p>Wrap any routine into a reusable skill, or describe it and let Alacr&aacute;n draft the first version.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section" id="inside">
-  <div class="wrap">
-    <div class="sec-head center r">
-      <p class="eyebrow">Inside the app</p>
-      <h2>This is the actual app.</h2>
-      <p>One card per workspace, showing what ran, what it connected to, and what changed. No dashboards to configure.</p>
-    </div>
-    <div class="appshot r">
-      <div class="bar"><b></b><b></b><b></b></div>
-      <div class="body">
-        <div class="appnav">
-          <span class="who"><img src="/logo.png" alt="" width="600" height="626" />Alacrán</span>
-          <span class="tabs"><span class="on">Agents</span><span>Activity</span><span>Skills</span><span>Connect</span></span>
-        </div>
-        <div class="appgrid">
-          <div class="appcard">
-            <div class="top"><span class="nm">Acme Co</span><span class="kind b">command-set</span></div>
-            <div class="ln"><em></em>Weekly digest: done</div>
-            <div class="ln"><svg class="bi"><use href="#b-gmail"/></svg>Email connected</div>
+    <span class="eyebrow r">Features</span>
+    <h2 class="r" style="font-size: clamp(2rem, 4.4vw, 3rem); margin-bottom: 40px; max-width: 600px; line-height: 1.1;">Everything you need to scale your AI workflow.</h2>
+    <div class="bento-grid r">
+      <div class="bento-card bento-span-2">
+        <div class="bento-visual">
+          <div class="micro-mockup">
+             <div class="hdr"><span>$ aider</span> <span>100% Local</span></div>
+             <div style="color:var(--success); margin-bottom: 4px;">✔ Model loaded successfully.</div>
+             <div style="color:var(--bone);">Awaiting instructions from workspace...</div>
           </div>
-          <div class="appcard">
-            <div class="top"><span class="nm">Harbor</span><span class="kind a">pipeline</span></div>
-            <div class="ln"><em></em>Inbox check: done</div>
-            <div class="ln"><svg class="bi"><use href="#b-googlecalendar"/></svg>Calendar connected</div>
+        </div>
+        <div class="bento-content">
+          <h3>Local models supported</h3>
+          <p>Point any workspace at Aider and run it completely off the grid using local open-source models. Your data never touches an external API.</p>
+        </div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-visual">
+          <img src="/logo.png" style="width:48px; filter:drop-shadow(0 0 10px rgba(255,46,67,0.5))">
+        </div>
+        <div class="bento-content">
+          <h3>Claude Code native</h3>
+          <p>Built from the ground up to orchestrate Anthropic's powerful CLI agent seamlessly.</p>
+        </div>
+      </div>
+      <div class="bento-card">
+        <div class="bento-content" style="margin-top:0;">
+          <h3>Your own key</h3>
+          <p>There are no subscriptions or hidden middleman fees here. Use your own API keys. The deal is exactly the same as always: your own account, completely direct.</p>
+        </div>
+      </div>
+      <div class="bento-card bento-span-2">
+        <div class="bento-visual">
+           <div class="mac-window" style="width:90%; height:140px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.8)">
+             <div class="mac-header"><div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div></div>
+             <div class="mac-content" style="padding:16px;">
+               <div class="terminal-line"><span class="cmd">git</span> commit -m "Automated AI backup"</div>
+               <div class="terminal-line"><span class="success">✔</span> Backed up to private repo.</div>
+             </div>
+           </div>
+        </div>
+        <div class="bento-content">
+          <h3>Private GitHub backups</h3>
+          <p>Instantly back up your workspace to a private GitHub repository on your own account. Total version control without any friction.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:140px 0; background: color-mix(in srgb, var(--void) 40%, transparent);">
+  <div class="sticky-layout r">
+    <div class="sticky-text">
+      <span class="eyebrow">Privacy & Security</span>
+      <h2>In plain English:<br>what leaves my computer?</h2>
+      <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own computer, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
+      <p style="margin-top:16px">There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
+      <p style="margin-top:16px">So we won&rsquo;t claim &ldquo;nothing ever leaves your computer&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
+      <p style="margin-top:16px">And you don&rsquo;t have to take our word for any of it. <a href="https://github.com/kwakuoseikwakye/alacran">The whole source is public</a>. Go read it.</p>
+    </div>
+    <div class="sticky-visual">
+      <div class="mac-window">
+        <div class="mac-header"><div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div><div class="mac-title">Privacy Check</div></div>
+        <div class="mac-body" style="padding:0; background: color-mix(in srgb, var(--void) 50%, transparent);">
+          <div class="mac-sidebar" style="width: 200px; padding: 16px 12px; background: color-mix(in srgb, var(--shell) 30%, transparent);">
+            <div class="mac-sidebar-label">Settings</div>
+            <div class="mac-item active" style="margin-bottom:4px;"><img src="/logo.png" style="width:14px;border-radius:3px; filter:grayscale(1) contrast(1.5);"> Privacy & Security</div>
+            <div class="mac-item" style="margin-bottom:4px;">Network Access</div>
+            <div class="mac-item">Advanced</div>
           </div>
-          <div class="appcard">
-            <div class="top"><span class="nm">Field Ops</span><span class="kind c">report-log</span></div>
-            <div class="ln"><em></em>Daily report: done</div>
-            <div class="ln"><svg class="bi"><use href="#b-git"/></svg>12 commits this week</div>
+          <div class="mac-content" style="padding: 24px 32px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 20px;">
+              <div>
+                <h3 style="font-size: 18px; margin-bottom:4px; font-weight:800; font-family:var(--font-display);">Data Isolation</h3>
+                <p style="font-size: 12.5px; color: var(--dune);">Manage outbound connections and telemetry.</p>
+              </div>
+              <div style="width: 44px; height: 26px; border-radius: 13px; background: var(--success); position:relative; box-shadow: 0 0 14px rgba(47,211,155,0.3);">
+                 <div style="width: 22px; height: 22px; border-radius: 50%; background: #fff; position: absolute; right: 2px; top: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
+              </div>
+            </div>
+            
+            <div style="display:grid; gap: 14px;">
+              <!-- Local Only Item -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                 <div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Prompts, Files & History</div>
+                   <div style="font-size: 12.5px; color: var(--dune);">Kept strictly on your local machine.</div>
+                 </div>
+                 <div style="padding: 6px 12px; background: color-mix(in srgb, var(--success) 12%, transparent); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent); color: var(--success); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">LOCAL ONLY</div>
+              </div>
+
+              <!-- Blocked Item -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                 <div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Analytics & Telemetry</div>
+                   <div style="font-size: 12.5px; color: var(--dune);">No usage data or crash reports collected.</div>
+                 </div>
+                 <div style="padding: 6px 12px; background: color-mix(in srgb, var(--dune) 15%, transparent); border: 1px solid color-mix(in srgb, var(--dune) 30%, transparent); color: var(--dune); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">BLOCKED</div>
+              </div>
+
+              <!-- Allowed Item -->
+              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                 <div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">AI Inference & Backups</div>
+                   <div style="font-size: 12.5px; color: var(--dune);">Direct connections via API only when requested.</div>
+                 </div>
+                 <div style="padding: 6px 12px; background: color-mix(in srgb, var(--ember) 12%, transparent); border: 1px solid color-mix(in srgb, var(--ember) 30%, transparent); color: var(--ember); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">ALLOWED</div>
+              </div>
+            </div>
+            
+            <div style="margin-top:24px; font-size: 12px; color: var(--dune); line-height: 1.5;">
+              <b>Note:</b> Version checks run up to 1x/day against GitHub releases. That's the whole list.
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
-
-<section class="section" id="whatsnew">
-  <div class="wrap">
-    <div class="sec-head r">
-      <p class="eyebrow">Just shipped</p>
-      <h2>We ship fast, and we fix what we find.</h2>
-      <p>Alacr&aacute;n is built in the open, one small release at a time. Here&rsquo;s what landed recently.</p>
-    </div>
-    <div class="whatsnew-list r">
-      <div class="whatsnew-item">
-        <span class="pill live"><i></i>New</span>
-        <div><h3>Never lose your work again</h3><p>Back a workspace up to your own private GitHub in one click, and pull it back down onto a new computer just as fast. Changing laptops used to mean starting over.</p></div>
-      </div>
-      <div class="whatsnew-item">
-        <span class="pill live"><i></i>Fixed</span>
-        <div><h3>Your data now survives updates</h3><p>We caught a bug where updating the app could wipe a workspace. Everything now lives safely outside the app, and anything you already had was moved across automatically.</p></div>
-      </div>
-      <div class="whatsnew-item">
-        <span class="pill live"><i></i>New</span>
-        <div><h3>No more guessing what&rsquo;s installed</h3><p>The Skills page now shows you at a glance which workspaces already have a job set up, so you stop wondering where you left things.</p></div>
-      </div>
-      <div class="whatsnew-item">
-        <span class="pill live"><i></i>Improved</span>
-        <div><h3>Setup that explains itself</h3><p>Every question now comes with a real example underneath it, so you&rsquo;re never stuck staring at an empty box wondering what it wants.</p></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="local" id="local">
-  <div class="wrap r">
-    <p class="eyebrow">Privacy, specifically</p>
-    <h2>We couldn&rsquo;t spy on you if <span class="glow">we</span> wanted to.</h2>
-    <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own computer, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
-    <p>There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
-    <p>So we won&rsquo;t claim &ldquo;nothing ever leaves your computer&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
-    <p>And you don&rsquo;t have to take our word for any of it. <a href="https://github.com/kwakuoseikwakye/alacran">The whole source is public</a> &mdash; go read it.</p>
-    <div class="row"><span>A version number check, to GitHub, at most once a day</span><span>Your prompts, to whichever AI that workspace is set to &mdash; Anthropic by default &mdash; when you press Run</span><span>Your files, to your own private GitHub, when you press Back up</span></div>
-    <p style="margin-top:26px;font-size:1rem">That&rsquo;s the whole list. Everything else stays in a folder you picked, in plain text you can read without us.</p>
   </div>
 </section>
 
@@ -394,7 +319,6 @@
       <p>Straight answers, including the awkward ones.</p>
     </div>
     <div class="faq r">
-
       <details>
         <summary><span>I&rsquo;ve never used an AI tool. Is this going to be over my head?</span></summary>
         <div class="ans">
@@ -402,7 +326,6 @@
           <p>Setup is four plain questions about your business, in ordinary words. After that, running a job is pressing a button and reading what comes back. Our <a href="/how-to-use">complete guide</a> walks through every screen assuming you&rsquo;ve never touched an AI tool in your life.</p>
         </div>
       </details>
-
       <details>
         <summary><span>Can you see my business data?</span></summary>
         <div class="ans">
@@ -410,18 +333,6 @@
           <p>Alacr&aacute;n runs on your computer, listening only to your own machine. We don&rsquo;t operate a server your company data could be sent to, which means there is no database on our side holding your work and no internal tool any employee of ours could use to look at it. The data sits in a folder you chose, on your laptop.</p>
         </div>
       </details>
-
-      <details>
-        <summary><span>Alright, so what <i>does</i> leave my computer?</span></summary>
-        <div class="ans">
-          <p>Fair question, and here&rsquo;s the complete list rather than a vague reassurance:</p>
-          <p><b>1. A version number</b> is checked against GitHub&rsquo;s public releases page, at most once a day, so the app can tell you when an update is out. It&rsquo;s an anonymous read of a public page. Nothing is sent about you, and you can turn it off.</p>
-          <p><b>2. Your prompts go to whichever AI that workspace is set to</b> when you press Run &mdash; Anthropic by default, or OpenAI / wherever Aider is pointed if you&rsquo;ve switched it. Either way, that&rsquo;s the AI doing its job, exactly as if you&rsquo;d typed into it yourself. Nothing is sent when you&rsquo;re just clicking around the app.</p>
-          <p><b>3. Your files go to GitHub</b> only if you press Back up, and only into a private repository on your own account.</p>
-          <p>That is genuinely everything. There is no analytics, no telemetry and no crash reporting in the app at all &mdash; and since the source is public, that&rsquo;s a claim you can check rather than trust.</p>
-        </div>
-      </details>
-
       <details>
         <summary><span>Do I have to pay for AI on top of this?</span></summary>
         <div class="ans">
@@ -429,15 +340,6 @@
           <p>We deliberately don&rsquo;t resell AI usage, so there is no bill from us at all &mdash; the app itself is free and open source. You pay your AI provider for the AI, and nothing to us, ever.</p>
         </div>
       </details>
-
-      <details>
-        <summary><span>Can I use ChatGPT, or my own open-source model, instead of Claude?</span></summary>
-        <div class="ans">
-          <p>Yes. Every workspace has a &ldquo;Runs commands with&rdquo; setting on its card: Claude Code by default, or OpenAI&rsquo;s Codex CLI, or Aider. Aider itself can run on Anthropic, OpenAI, or a local model you host yourself, so it&rsquo;s the one to reach for if you want to keep everything off the big providers entirely.</p>
-          <p>Whichever you pick, the deal stays the same as Claude: your own account, your own key, nothing routed through us. Claude Code is the one we&rsquo;ve run longest and trust most by default; the others are newer here, so if something looks off, email us and tell us what happened.</p>
-        </div>
-      </details>
-
       <details>
         <summary><span>What if the AI gets something wrong?</span></summary>
         <div class="ans">
@@ -445,89 +347,13 @@
           <p>When a job finishes, nothing has been saved yet. You see exactly what it wants to change, laid out clearly, and you either accept it or throw it away. If you accept something and regret it later, every approval is saved as a checkpoint you can roll back to.</p>
         </div>
       </details>
-
-      <details>
-        <summary><span>Could it email a client or delete something by accident?</span></summary>
-        <div class="ans">
-          <p>It can&rsquo;t email anyone. The Gmail connection is built read-only, so sending, replying, labelling, archiving and deleting are not capabilities it has. That isn&rsquo;t a checkbox someone could tick by mistake; the ability simply isn&rsquo;t there.</p>
-          <p>For files, nothing is written until you approve it, and everything that is written becomes a checkpoint you can undo.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>Does it work without internet?</span></summary>
-        <div class="ans">
-          <p>Partly, and here&rsquo;s the honest split. The app itself, your files and your whole history are local, so you can open it and read everything on a plane.</p>
-          <p>Anything that asks the AI to do something needs a connection, because that request goes to Anthropic. Nothing else does &mdash; there&rsquo;s no licence check, no account, and no sign-in, so the app never locks you out for being offline.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>How do I get updates?</span></summary>
-        <div class="ans">
-          <p>Today, you update it yourself, and it takes about twenty seconds. Download the latest version from this site, drag it into Applications the same way you did the first time, say yes to replacing the old one, then re-run the same <code>xattr -cr</code> command you ran on the first install &mdash; the new copy is a fresh download, so macOS quarantines it too.</p>
-          <p><b>Your work is completely untouched by this.</b> Your workspaces live in your own folders and your settings live outside the app, so replacing the app is genuinely just swapping the program. Nothing to export, nothing to migrate.</p>
-          <p>The app now tells you when a new version is out: a small strip appears at the top with a download link, and you can dismiss it. It won&rsquo;t pester you about the same version twice, and the check is an anonymous read of a public page, at most once a day.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>What happens when I get a new laptop?</span></summary>
-        <div class="ans">
-          <p>Press Back up before you switch. That creates a private repository on your own GitHub account and pushes your workspace into it.</p>
-          <p>On the new computer, install Alacr&aacute;n, sign in to the same GitHub account, and restore. Everything comes back, including the full history. Switching machines used to mean starting over, which is exactly why we built this.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>Do I need to know what &ldquo;git&rdquo; is?</span></summary>
-        <div class="ans">
-          <p>Not at all. Git is the technology underneath, the same thing software teams use to track changes, and it&rsquo;s what gives you the undo button and the full history.</p>
-          <p>You never have to touch it or learn a single command. You&rsquo;ll only ever see it as &ldquo;approve this change&rdquo; and &ldquo;here&rsquo;s what happened last week&rdquo;.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>If I stop paying, do I lose my work?</span></summary>
-        <div class="ans">
-          <p>No. Everything the app produces is ordinary text files sitting in a folder you chose on your own computer. You can open them in any text editor, today or in ten years.</p>
-          <p>There&rsquo;s no proprietary format and no export process to go through, because your work was never locked inside the app to begin with.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>Is there a Windows or Linux version?</span></summary>
-        <div class="ans">
-          <p>Linux, yes &mdash; there&rsquo;s a <code>.deb</code> for Debian/Ubuntu-based distros, right alongside the Mac download above. Windows isn&rsquo;t built yet. If you&rsquo;d like it, email us, because that&rsquo;s genuinely how we&rsquo;re deciding what to build next.</p>
-        </div>
-      </details>
-
-      <details>
-        <summary><span>macOS says Alacr&aacute;n is damaged, or won&rsquo;t open it. What now?</span></summary>
-        <div class="ans">
-          <p><b>It isn&rsquo;t damaged.</b> Alacr&aacute;n isn&rsquo;t signed with a paid Apple Developer certificate, so macOS quarantines it the way it does anything downloaded from the internet, and then refuses to open it. Drag the app into Applications, then open <b>Terminal</b> (Command-Space, type &ldquo;Terminal&rdquo;, Enter), paste this line and press Enter:</p>
-          <p class="gcode"><code>xattr -cr "/Applications/Alacrán.app"</code></p>
-          <p>Nothing visible happens, which means it worked. Now open the app normally. You&rsquo;ll need to run it once more after each update, since every new download gets quarantined again.</p>
-          <p>That command clears the quarantine flag and does nothing else. Right-clicking and choosing <b>Open</b>, which works for some unsigned apps, is not enough for this one on current macOS. The real fix is notarization, which needs a paid Apple developer account &mdash; it&rsquo;s an open item, not a permanent state of affairs.</p>
-        </div>
-      </details>
-
       <details>
         <summary><span>What does it cost?</span></summary>
         <div class="ans">
-          <p>Nothing. Alacr&aacute;n is free and open source under the MIT licence. There is no account, no licence key, no trial clock and no paid tier &mdash; download it and it works.</p>
+          <p>Nothing. Alacr&aacute;n is free and open source under the MIT licence. There is no account, no licence key, no trial clock and no paid tier. Simply download it and it works.</p>
           <p>You do still pay whoever provides your AI (an Anthropic or OpenAI subscription, or nothing at all if you point it at a local model). That bill is between you and them; we never see it.</p>
         </div>
       </details>
-
-      <details>
-        <summary><span>It&rsquo;s open source &mdash; can I change it?</span></summary>
-        <div class="ans">
-          <p>Yes. The MIT licence lets you use, modify, fork and even sell it. The <a href="https://github.com/kwakuoseikwakye/alacran">source lives on GitHub</a>, along with the design specs for every feature that shipped, so you can see not just what the code does but why it&rsquo;s shaped that way.</p>
-          <p>Bug reports and pull requests are genuinely welcome &mdash; see <code>CONTRIBUTING.md</code> in the repository.</p>
-        </div>
-      </details>
-
     </div>
   </div>
 </section>
@@ -541,28 +367,29 @@
       <p class="muted" style="font-size:.95rem">No account, no licence key, no trial clock</p>
       <ul class="plist">
         <li>As many workspaces as you want</li>
-        <li>Runs on your own Claude, ChatGPT, or open-source setup &mdash; no second AI bill</li>
+        <li>Runs on your own Claude, ChatGPT, or open-source setup, meaning no second AI bill</li>
         <li>Guided setup, or let your AI draft it</li>
         <li>Connect your tools and reuse your saved jobs</li>
         <li>Every change recorded and approved by you</li>
-        <li>Full source on GitHub &mdash; fork it, audit it, change it</li>
+        <li>Full source on GitHub. Fork it, audit it, and change it</li>
       </ul>
       <a class="btn btn-primary" style="width:100%;justify-content:center" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download for macOS (.dmg)</a>
       <a class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download>Download for Linux (.deb)</a>
       <a class="btn btn-ghost" style="width:100%;justify-content:center;margin-top:10px" href="https://github.com/kwakuoseikwakye/alacran">Build from source on GitHub</a>
-      <p class="ph">Requires the Claude Code CLI (or another supported agent CLI). Setup takes about five minutes &mdash; see <a href="/how-to-use">How to use</a>.</p>
+      <p class="ph">Requires the Claude Code CLI (or another supported agent CLI). Setup takes about five minutes. See <a href="/how-to-use">How to use</a>.</p>
     </div>
   </div>
 </section>
-<script src="/brands.js" defer></script>
+
 <section class="final">
   <div class="wrap r">
     <img class="mark mark-glow" src="/logo.png" alt="" width="600" height="626" />
     <h2>An AI-native framework that never leaves your machine.</h2>
-    <p>Every file your AI company touches stays in a folder you own &mdash; organized, versioned, never uploaded anywhere. Set it up once this afternoon, and the routine work is already done by the time you sit down next week.</p>
+    <p>Every file your AI company touches stays in a folder you own. They stay organized, versioned, and are never uploaded anywhere. Set it up once this afternoon, and the routine work is already done by the time you sit down next week.</p>
     <div class="cta"><a class="btn btn-primary" href="#download">Download free</a></div>
   </div>
 </section>
+
 <footer>
   <div class="wrap foot-in">
     <span>Alacr&aacute;n. Your business, remembered. On your own computer.</span>
@@ -580,93 +407,6 @@
     if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
     var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});
     els.forEach(function(e){io.observe(e);});})();
-
-  /* ── Execute board: a live simulation of the app's real runner/diff/commit
-     mechanic (see components/company-command-runner.tsx). Not a real
-     company; the cadence and copy ("Running…", "Confirm & commit") mirror
-     the real UI. ── */
-  (function(){
-    var board = document.getElementById("execBoard");
-    if(!board) return;
-    var reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var STAGES = ["ready","running","awaiting","done"];
-    var NEXT = {ready:"running", running:"awaiting", awaiting:"done", done:"ready"};
-    var tasks = [
-      {co:"Acme Co",   task:"Weekly digest",           icon:"b-git",    stage:"ready",    left:2, note:"Weekly digest ready to review"},
-      {co:"Field Ops", task:"Run a retrospective",     icon:"b-claude", stage:"ready",    left:3, note:"Retrospective ready to review"},
-      {co:"Harbor",    task:"Check inbox",             icon:"b-gmail",  stage:"running",  left:2, note:"Inbox summary ready to review"},
-      {co:"Acme Co",   task:"Session handoff",         icon:"b-git",    stage:"running",  left:3, note:"HANDOFF.md updated"},
-      {co:"Field Ops", task:"Define company ontology", icon:"b-claude", stage:"awaiting", left:3, note:"3 ontology entities drafted"},
-      {co:"Harbor",    task:"Record a decision",       icon:"b-claude", stage:"done",     left:4, note:"Decision RFC drafted", hash:"7c1d0aa"}
-    ];
-    var cols = {};
-    STAGES.forEach(function(s){ cols[s] = board.querySelector('.board-col[data-stage="'+s+'"]'); });
-
-    function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
-
-    function cardHTML(t){
-      var head = '<div class="co">'+esc(t.co)+'</div><div class="task">'+esc(t.task)+'</div>';
-      var icon = '<span class="brandtile sm"><svg class="bi"><use href="#'+t.icon+'"/></svg></span>';
-      if(t.stage==="running"){
-        return '<div class="board-card">'+head+
-          '<div class="foot">'+icon+'<span class="board-dot is-running"></span><span class="board-status">Running&hellip;</span></div>'+
-          '<div class="board-prog"><i></i></div></div>';
-      }
-      if(t.stage==="awaiting"){
-        return '<div class="board-card">'+head+
-          '<div class="foot">'+icon+'<span class="board-dot is-awaiting"></span><span class="board-status">Diff ready</span></div>'+
-          (t.note ? '<div class="board-note">'+esc(t.note)+'</div>' : "")+
-          '<div class="board-actions"><button type="button" disabled>Cancel</button><button type="button" class="go" disabled>Confirm &amp; commit</button></div></div>';
-      }
-      if(t.stage==="done"){
-        return '<div class="board-card is-done">'+head+
-          '<div class="foot">'+icon+'<span class="board-dot is-done"></span><span class="board-status">Committed &middot; <span class="board-hash">'+esc(t.hash||"")+'</span></span></div></div>';
-      }
-      return '<div class="board-card">'+head+
-        '<div class="foot">'+icon+'<span class="board-dot"></span><span class="board-status">Not started yet</span></div></div>';
-    }
-
-    function render(){
-      STAGES.forEach(function(s){
-        var col = cols[s]; if(!col) return;
-        var list = tasks.filter(function(t){ return t.stage===s; });
-        col.querySelector(".board-count").textContent = list.length;
-        col.querySelector(".board-cards").innerHTML = list.length
-          ? list.map(cardHTML).join("")
-          : '<div class="board-empty">Nothing here right now</div>';
-      });
-    }
-
-    render();
-    if(reduced) return;
-
-    function tick(){
-      tasks.forEach(function(t){ t.left--; });
-      var due = tasks.filter(function(t){ return t.left<=0; });
-      if(!due.length) return;
-      var t = due[0];
-      t.stage = NEXT[t.stage];
-      t.left = t.stage==="ready" ? (2+Math.floor(Math.random()*2))
-             : t.stage==="running" ? (1+Math.floor(Math.random()*2))
-             : t.stage==="awaiting" ? (2+Math.floor(Math.random()*2))
-             : (3+Math.floor(Math.random()*3));
-      if(t.stage==="done") t.hash = Math.random().toString(16).slice(2,9);
-      render();
-    }
-
-    var interval = null;
-    function start(){ if(!interval) interval = setInterval(tick, 3800); }
-    function stop(){ if(interval){ clearInterval(interval); interval = null; } }
-
-    if("IntersectionObserver" in window){
-      var bio = new IntersectionObserver(function(entries){
-        entries.forEach(function(e){ e.isIntersecting ? start() : stop(); });
-      }, {threshold:0.2});
-      bio.observe(board);
-    } else {
-      start();
-    }
-  })();
 </script>
 </body>
 </html>

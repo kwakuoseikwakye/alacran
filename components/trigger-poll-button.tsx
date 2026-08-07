@@ -66,7 +66,7 @@ export function TriggerPollButton({ pollStatus }: { pollStatus: PollLockStatus }
           <AlertDialogHeader>
             <AlertDialogTitle>Run the Takeshi agent now?</AlertDialogTitle>
             <AlertDialogDescription>
-              This runs the same automated pipeline that normally fires every 5 minutes — run it now?
+              This runs the same automated pipeline that normally fires every 5 minutes. Run it now?
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

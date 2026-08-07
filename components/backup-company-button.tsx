@@ -22,7 +22,7 @@ export const BACKUP_BLURB =
 /**
  * Backing up creates a real GitHub repository and pushes real business content,
  * so it always goes through a confirmation that states plainly what will happen
- * and that the repo is private — matching how every other outward-facing action
+ * and that the repo is private, matching how every other outward-facing action
  * in this app is gated.
  */
 export function BackupCompanyButton({ agentId, companyName }: { agentId: string; companyName: string }) {
@@ -94,7 +94,7 @@ export function BackupCompanyButton({ agentId, companyName }: { agentId: string;
               {isFirstBackup ? (
                 <>
                   This creates a new <strong>private</strong> GitHub repository and pushes this company&apos;s
-                  full history to it — including its business context, decisions and notes. Nobody else can see
+                  full history to it, including its business context, decisions and notes. Nobody else can see
                   a private repo. You can then restore this company on another computer.
                 </>
               ) : (

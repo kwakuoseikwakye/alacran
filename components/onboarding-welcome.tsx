@@ -18,23 +18,23 @@ const STEPS: { id: StepId; label: string; title: string; blurb: string }[] = [
   {
     id: "install",
     label: "Install",
-    title: "Install the two tools Alacrán drives",
+    title: "Install the core tools",
     blurb:
-      "Alacrán never installs anything behind your back — it detects what's on your machine and tells you exactly what's missing.",
+      "Alacrán never installs anything behind your back. It simply detects what is on your machine and tells you exactly what is missing.",
   },
   {
     id: "connect",
     label: "Connect",
-    title: "Sign in to the accounts your company will use",
+    title: "Sign in to your accounts",
     blurb:
-      "Signing in happens in your own terminal and browser. Alacrán only reads whether it worked — no keys or tokens are ever stored here.",
+      "Signing in happens directly in your own terminal and browser. Alacrán only checks if it worked; no keys or tokens are ever stored here.",
   },
   {
     id: "create",
     label: "Create",
-    title: "Create your first company",
+    title: "Launch your first company",
     blurb:
-      "This scaffolds a complete company from the built-in template and puts it under git, so every later change is a diff you approve.",
+      "This scaffolds a complete company from our built-in template and puts it under git version control, so every future change is a diff you can approve.",
   },
 ]
 
@@ -154,7 +154,7 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
   const [failed, setFailed] = useState(false)
   const inFlight = useRef(false)
 
-  // Read-only probes (`which`, `gog auth status -j`) — safe to repeat, but the
+  // Read-only probes (`which`, `gog auth status -j`) are safe to repeat, but the
   // ref keeps overlapping runs from racing each other's results.
   const refresh = useCallback(async () => {
     if (inFlight.current) return
@@ -226,7 +226,7 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
         </p>
       </header>
 
-      {/* clickable step rail — every step stays reachable, nothing is a dead end */}
+      {/* clickable step rail; every step stays reachable, nothing is a dead end */}
       <nav className="relative mt-8 flex items-center gap-2" aria-label="Setup progress">
         {STEPS.map((s, i) => {
           const done = stepDone[s.id]
@@ -268,7 +268,7 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
       </nav>
 
       {/* the `key` restarts the entrance animation on every step change */}
-      <section key={current.id} className="a-rise relative mt-7 space-y-5">
+      <section key={current.id} className="a-rise relative mt-7 space-y-5 bento-card p-8">
         <div className="space-y-1.5">
           <h2 className="font-display text-xl font-bold">{current.title}</h2>
           <p className="text-sm text-muted-foreground">{current.blurb}</p>
@@ -276,7 +276,7 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
 
         {failed && (
           <p className="text-xs text-destructive" role="alert">
-            Couldn&apos;t read your machine&apos;s status — press Re-check to retry.
+            We couldn&apos;t read your machine&apos;s status. Please press Re-check to retry.
           </p>
         )}
 
@@ -297,7 +297,7 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
             />
             <ToolRow
               brand="google"
-              name="gog — Google CLI"
+              name="gog: Google CLI"
               detail={
                 deps?.gog
                   ? "Installed and on your PATH."
@@ -360,8 +360,8 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
             <AddCompanyForm prominent homeDir={homeDir} />
             {!loading && !claudeInstalled && (
               <p className="text-xs text-warning">
-                Claude Code isn&apos;t installed yet — you can still create the company, but its commands
-                won&apos;t run until you do.
+                Claude Code isn&apos;t installed yet. You can still create the company, but its commands
+                won&apos;t run until you install it.
               </p>
             )}
           </div>

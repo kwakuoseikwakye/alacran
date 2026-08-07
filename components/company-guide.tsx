@@ -15,7 +15,7 @@ type CompanyGuideProps = CompanyGuideFlags & {
 }
 
 /**
- * The answer to "I set up my company, now what?" — a plain-language walk
+ * The answer to "I set up my company, now what?" It's a plain-language walk
  * through every action actually available on this card, built from the same
  * show* flags AgentCard already uses (see lib/company-guide-steps.ts).
  * Opens itself once, the first time this browser sees a company with its

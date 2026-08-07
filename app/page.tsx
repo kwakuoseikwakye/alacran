@@ -50,12 +50,12 @@ export default async function AgentTreePage() {
 
   return (
     <main className="mx-auto max-w-5xl space-y-6 px-8 pt-2 pb-12">
-      <div className="a-rise">
+      <div className="a-rise" style={{ position: 'relative', zIndex: 10 }}>
         <p className="eyebrow">Your machine</p>
         <h1 className="mt-1 font-display text-3xl font-extrabold">Agents</h1>
         <p className="text-sm text-muted-foreground">Status, avatars, and quick actions for every managed agent.</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="bento-grid">
         {await Promise.all(
           results.map(async (result, index) => {
             const latest = mergeAndSortActivities([result])[0] ?? null
@@ -66,7 +66,7 @@ export default async function AgentTreePage() {
               result.agent.id
             )
             const isCommandSet = result.agent.kind === "command-set"
-            // Both features open a real terminal window — supported on macOS
+            // Both features open a real terminal window which is supported on macOS
             // and Linux (see lib/terminal-launch-command.ts); if neither
             // finds an actual terminal emulator installed, the action itself
             // reports that rather than hiding the button pre-emptively.

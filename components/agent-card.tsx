@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import type { Agent, Activity } from "@/lib/adapters/types"
 import type { LaunchdHealth } from "@/lib/adapters/launchd"
@@ -44,7 +43,7 @@ type AgentCardProps = {
   showCompanyGuide?: boolean
   hasOntology?: boolean
   aiExecutorId?: string
-  /** Position in the grid — drives the staggered entrance animation. */
+  /** Position in the grid, which drives the staggered entrance animation. */
   index?: number
 }
 
@@ -86,14 +85,14 @@ export function AgentCard({
   const hasIntegration = integrationStatus !== NO_INTEGRATION_STATUS
 
   return (
-    <Card
-      className="a-rise transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80 hover:shadow-[0_18px_40px_-26px_var(--primary)]"
+    <div
+      className="bento-card a-rise"
       style={{ "--d": `${index * 70}ms` } as React.CSSProperties}
     >
-      <CardHeader>
+      <div className="flex flex-col space-y-1.5 p-0 mb-4">
         {/* min-w-0: CardTitle is a grid item, whose automatic minimum size would
             otherwise stop the agent name ever truncating on narrow screens. */}
-        <CardTitle className="flex min-w-0 items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center justify-between gap-2 text-lg font-semibold leading-none tracking-tight">
           <span className="flex min-w-0 items-center gap-2 font-display font-bold">
             <AgentAvatar imageUrl={avatarUrl ?? null} />
             <span className="truncate">{agent.name}</span>
@@ -116,9 +115,9 @@ export function AgentCard({
               {agent.kind}
             </Badge>
           </span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+        </div>
+      </div>
+      <div className="p-0 space-y-3 text-sm flex-1 flex flex-col justify-end">
         {error && <p className="text-destructive">Source unavailable: {error}</p>}
         {!error && !latestActivity && <p className="text-muted-foreground">No activity recorded yet.</p>}
         {!error && latestActivity && (
@@ -180,7 +179,7 @@ export function AgentCard({
           {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
           <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

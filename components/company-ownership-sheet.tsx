@@ -65,7 +65,7 @@ export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: strin
               <section className="space-y-1.5">
                 <h3 className="font-medium">Backup destination</h3>
                 <p className="text-muted-foreground">
-                  {ownership.remoteUrl ?? "Not backed up yet — nothing leaves this machine."}
+                  {ownership.remoteUrl ?? "Not backed up yet. Nothing leaves this machine."}
                 </p>
               </section>
               <section className="space-y-1.5">

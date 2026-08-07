@@ -7,7 +7,7 @@ import { getUpdateStatus } from "@/lib/updates/update-actions"
 import { UpdateBanner } from "@/components/update-banner"
 
 // next/font downloads and self-hosts at build time, so the packaged .app still
-// renders correctly with no network — important for a local-first product.
+// renders correctly with no network. Important for a local-first product.
 const nunito = Nunito({
   subsets: ["latin"],
   weight: ["600", "700", "800", "900"],

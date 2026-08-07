@@ -19,7 +19,7 @@ export function CopyButton({ text, className }: { text: string; className?: stri
           setCopied(true)
           setTimeout(() => setCopied(false), 1500)
         } catch {
-          // clipboard unavailable — user can still select the text
+          // clipboard unavailable, user can still select the text
         }
       }}
     >

@@ -63,9 +63,9 @@ export function SkillBrowser({
                 {owned.length} available
               </Badge>
               {/* Every company scaffolded from the template already inherits
-                  .claude/skills and .claude/commands — nothing to install. */}
+                  .claude/skills and .claude/commands, so there is nothing to install. */}
               <span className="text-xs text-muted-foreground">
-                already installed in this company — open one to read or run it
+                already installed in this company. Open one to read or run it
               </span>
             </div>
             {result.error && <p className="text-sm text-destructive">Source unavailable: {result.error}</p>}

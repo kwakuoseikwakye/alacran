@@ -30,14 +30,14 @@ export function ScheduledJobToggle({ health }: { health: LaunchdHealth }) {
     try {
       const result = await setScheduledJob(!loaded)
       // Always render the state launchctl actually reports, never an optimistic
-      // guess — a failed unload must not render as "off".
+      // guess: a failed unload must not render as "off".
       const fresh = await getScheduledJobStatus()
       setLoaded(fresh.loaded)
       setLastExitStatus(fresh.lastExitStatus)
       setMessage(result.message)
       setFailed(!result.ok)
     } catch {
-      setMessage("Could not reach the server — reload and check the status.")
+      setMessage("Could not reach the server. Please reload and check the status.")
       setFailed(true)
     } finally {
       setBusy(false)

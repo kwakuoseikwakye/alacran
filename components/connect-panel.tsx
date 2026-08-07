@@ -18,7 +18,7 @@ const TOOL_BRAND: Record<ToolStatus["id"], BrandId> = {
   github: "github",
 }
 
-// The Google services a connected `gog` unlocks — real marks, so the payoff of
+// The Google services a connected `gog` unlocks. These are real marks, so the payoff of
 // connecting is legible at a glance.
 const GOOGLE_SURFACE: BrandId[] = ["gmail", "googlecalendar", "googledrive", "googlechat"]
 
@@ -45,7 +45,7 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
                 className="size-[18px]"
               />
             </span>
-            {/* wraps rather than truncates — there are only ever two tools and
+            {/* wraps rather than truncates: there are only ever two tools and
                 their names are long enough to clip even on a wide screen */}
             <span className="min-w-0 font-display leading-snug font-bold">{tool.label}</span>
           </span>
@@ -142,7 +142,7 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
       </div>
 
       {error && (
-        <p className="text-xs text-destructive">Couldn&apos;t check connection status — press Re-check to retry.</p>
+        <p className="text-xs text-destructive">We couldn&apos;t check connection status. Please press Re-check to retry.</p>
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
