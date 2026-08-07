@@ -20,6 +20,7 @@ import { getCompanyPathStatus } from "@/lib/get-company-path-status"
 import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 import { restoreCompany } from "@/lib/github/github-actions"
 import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "@/lib/company-starter-packs"
+import { COMPANIES_DIR_NAME } from "@/lib/branding"
 
 /** Turns a company name into a directory-safe leaf, e.g. "Second Co!" -> "second-co". */
 function slugify(name: string): string {
@@ -51,7 +52,9 @@ export function AddCompanyForm({
   const [restoreUrl, setRestoreUrl] = useState("")
   const [showRestore, setShowRestore] = useState(false)
 
-  const suggestedPath = homeDir ? `${homeDir}/AI-Native${name.trim() ? `/${slugify(name)}` : ""}` : ""
+  const suggestedPath = homeDir
+    ? `${homeDir}/${COMPANIES_DIR_NAME}${name.trim() ? `/${slugify(name)}` : ""}`
+    : ""
   if (!pathTouched && suggestedPath && suggestedPath !== rootPath) {
     setRootPath(suggestedPath)
   }
@@ -158,12 +161,12 @@ export function AddCompanyForm({
             setRootPath(e.target.value)
             setPathTouched(true)
           }}
-          placeholder="/Users/you/AI-Native/second-co"
+          placeholder={homeDir ? `${homeDir}/${COMPANIES_DIR_NAME}/second-co` : `~/${COMPANIES_DIR_NAME}/second-co`}
         />
         <p className="text-xs text-muted-foreground">
           {pathTouched
             ? "Using your own path — make sure it's a real location on this machine."
-            : "Created in a new AI-Native folder in your home directory, next to your other companies. Know exactly where you want it? Just type over the path above."}
+            : `Created in an ${COMPANIES_DIR_NAME} folder in your home directory, next to your other companies. The folder is made for you if it isn't there yet. Know exactly where you want it? Just type over the path above.`}
         </p>
       </div>
       {!showRestore && (

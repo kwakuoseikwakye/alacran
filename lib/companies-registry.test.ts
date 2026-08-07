@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest"
-import { mkdtemp, mkdir, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { getRegisteredCompanies, registerCompanyImpl, removeCompanyImpl, getCompanyPathStatusImpl } from "./companies-registry"
@@ -106,8 +106,20 @@ describe("companies-registry", () => {
     expect(await getCompanyPathStatusImpl(missingChild)).toBe("creatable")
   })
 
-  it("getCompanyPathStatusImpl returns 'not-creatable' when neither the path nor its parent exist", async () => {
+  // This is the fresh-install shape: the suggested path is ~/Alacran/<company>
+  // and ~/Alacran doesn't exist yet. Requiring the immediate parent made the
+  // default path fail for every new user, and the UI then reported the
+  // misleading "Path does not exist or is not a directory".
+  it("getCompanyPathStatusImpl returns 'creatable' when intermediate directories are missing too", async () => {
     const deeplyMissing = path.join(companyDir, "missing-parent", "missing-child")
-    expect(await getCompanyPathStatusImpl(deeplyMissing)).toBe("not-creatable")
+    expect(await getCompanyPathStatusImpl(deeplyMissing)).toBe("creatable")
+  })
+
+  it("getCompanyPathStatusImpl returns 'not-creatable' when an ancestor is a file, not a directory", async () => {
+    // mkdir -p genuinely cannot create a directory underneath a file, so this
+    // is what "not-creatable" is actually for.
+    const filePath = path.join(companyDir, "a-file")
+    await writeFile(filePath, "not a directory", "utf-8")
+    expect(await getCompanyPathStatusImpl(path.join(filePath, "child"))).toBe("not-creatable")
   })
 })
