@@ -61,9 +61,9 @@ type GogAuthStatus = {
   account?: { email?: unknown; credentials_exists?: unknown }
 }
 
-async function googleStatus(execFn: ExecFileFn): Promise<ToolStatus> {
+async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<ToolStatus> {
   const label = "Google (Gmail & Calendar)"
-  const notConnected = (detail: string, command: string, link?: string): ToolStatus => ({
+  const notConnected = (detail: string, command?: string, link?: string): ToolStatus => ({
     id: "google",
     label,
     connected: false,
@@ -80,9 +80,11 @@ async function googleStatus(execFn: ExecFileFn): Promise<ToolStatus> {
 
   const installed = await isPresent(execFn, "gog")
   if (!installed) {
+    // brew is macOS-only — on Linux there's no verified one-line install, so
+    // just point at the repo instead of guessing a command that won't run.
     return notConnected(
       "The gog (Google CLI) is not installed.",
-      "brew install gogcli/tap/gog",
+      platform === "darwin" ? "brew install gogcli/tap/gog" : undefined,
       "https://github.com/gogcli/gog"
     )
   }
@@ -127,9 +129,9 @@ async function googleStatus(execFn: ExecFileFn): Promise<ToolStatus> {
  * `gog auth setup`. So this detects and guides, and the automation picks up
  * from `gh auth login` onward.
  */
-async function githubStatus(execFn: ExecFileFn): Promise<ToolStatus> {
+async function githubStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<ToolStatus> {
   const label = "GitHub (company backup)"
-  const notConnected = (detail: string, command: string, link?: string): ToolStatus => ({
+  const notConnected = (detail: string, command?: string, link?: string): ToolStatus => ({
     id: "github",
     label,
     connected: false,
@@ -146,9 +148,12 @@ async function githubStatus(execFn: ExecFileFn): Promise<ToolStatus> {
   })
 
   if (!(await isPresent(execFn, "gh"))) {
+    // brew is macOS-only. gh's own docs actively discourage the Linux snap
+    // package, and the real apt-repo install is multi-step, not a one-liner —
+    // so Linux gets the install link instead of a fabricated command.
     return notConnected(
       "The GitHub CLI (gh) is not installed.",
-      "brew install gh",
+      platform === "darwin" ? "brew install gh" : undefined,
       "https://cli.github.com"
     )
   }
@@ -171,11 +176,14 @@ async function githubStatus(execFn: ExecFileFn): Promise<ToolStatus> {
   }
 }
 
-export async function getConnectStatusImpl(execFn: ExecFileFn = defaultExecFile): Promise<ConnectStatus> {
+export async function getConnectStatusImpl(
+  execFn: ExecFileFn = defaultExecFile,
+  platform: NodeJS.Platform = process.platform
+): Promise<ConnectStatus> {
   const [claude, google, github] = await Promise.all([
     claudeStatus(execFn),
-    googleStatus(execFn),
-    githubStatus(execFn),
+    googleStatus(execFn, platform),
+    githubStatus(execFn, platform),
   ])
   return { claude, google, github }
 }

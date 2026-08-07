@@ -43,17 +43,31 @@ describe("getConnectStatusImpl", () => {
     expect(status.google.connected).toBe(true)
   })
 
-  it("marks Google not connected with install guidance when gog is missing", async () => {
+  it("marks Google not connected with a brew install command on macOS when gog is missing", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gog") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
       return new Error(`unexpected ${command}`)
     })
-    const status = await getConnectStatusImpl(exec)
+    const status = await getConnectStatusImpl(exec, "darwin")
 
     expect(status.google.connected).toBe(false)
     expect(status.google.guidance.command).toContain("gog")
     expect(status.claude.connected).toBe(true)
+  })
+
+  it("omits the macOS-only brew command on Linux, keeping the install link", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which" && (args[0] === "gog" || args[0] === "gh")) return new Error("not found")
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, "linux")
+
+    expect(status.google.guidance.command).toBeUndefined()
+    expect(status.google.guidance.link).toBe("https://github.com/gogcli/gog")
+    expect(status.github.guidance.command).toBeUndefined()
+    expect(status.github.guidance.link).toBe("https://cli.github.com")
   })
 
   it("guides `gog auth setup` when gog is installed but no account is connected", async () => {
@@ -95,7 +109,7 @@ describe("getConnectStatusImpl", () => {
     expect(status.github.detail).toContain("octocat")
   })
 
-  it("guides installing gh when the GitHub CLI is missing", async () => {
+  it("guides installing gh with a brew command on macOS when the GitHub CLI is missing", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gh") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
@@ -103,7 +117,7 @@ describe("getConnectStatusImpl", () => {
         return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
       return new Error(`unexpected ${command}`)
     })
-    const status = await getConnectStatusImpl(exec)
+    const status = await getConnectStatusImpl(exec, "darwin")
 
     expect(status.github.connected).toBe(false)
     expect(status.github.guidance.command).toBe("brew install gh")
