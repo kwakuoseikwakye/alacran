@@ -34,42 +34,48 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
   {
     id: "software-engineering",
     label: "Software engineering",
-    description: "Ships an ontology for repos, features, and releases, plus a /code-review and /plan-feature command.",
+    description:
+      "Ships an ontology for repos, features, and releases, plus /plan-feature, /write-tests, /debug-issue, /code-review, and /prep-release commands — one for each stage from planning a feature to shipping it.",
     dirName: "software-engineering",
     category: "Engineering",
   },
   {
     id: "sales",
     label: "Sales",
-    description: "Ships an ontology for leads and accounts, plus a /follow-up-lead command.",
+    description:
+      "Ships an ontology for leads and accounts, plus /follow-up-lead, /draft-proposal, and /pipeline-review commands — from one-to-one outreach to the whole pipeline.",
     dirName: "sales",
     category: "Sales",
   },
   {
     id: "marketing",
     label: "Marketing",
-    description: "Ships an ontology for campaigns and offerings, plus a /draft-campaign command.",
+    description:
+      "Ships an ontology for campaigns and offerings, plus /draft-campaign, /campaign-recap, and /campaign-status commands — brief, results, and the calendar view.",
     dirName: "marketing",
     category: "Marketing",
   },
   {
     id: "customer-support",
     label: "Customer support",
-    description: "Ships an ontology for tickets and contacts, plus a /triage-ticket and /draft-response command.",
+    description:
+      "Ships an ontology for tickets and contacts, plus /triage-ticket, /draft-response, /escalate-ticket, and /ticket-trends commands — assess, reply, escalate, and spot recurring bugs.",
     dirName: "customer-support",
     category: "Support",
   },
   {
     id: "hr-people",
     label: "HR & People",
-    description: "Ships an ontology for open roles and candidates, plus a /screen-candidate and /draft-offer command.",
+    description:
+      "Ships an ontology for open roles and candidates, plus /screen-candidate, /draft-offer, /draft-rejection, and /hiring-pipeline-review commands — both outcomes covered, plus the pipeline view.",
     dirName: "hr-people",
     category: "HR & People",
   },
   {
     id: "leadership-team",
     label: "Leadership team",
-    description: "A generalist, cross-functional ontology (finance, ops, people) plus a /weekly-briefing command.",
+    description:
+      "A generalist, cross-functional ontology (finance, ops, people) plus /weekly-briefing, /decision-prep, and /investor-update commands — what happened, what to decide, and the external update.",
     dirName: "leadership-team",
     category: "Leadership",
   },
