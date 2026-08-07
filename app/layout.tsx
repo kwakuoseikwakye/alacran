@@ -24,7 +24,7 @@ const nunitoSans = Nunito_Sans({
 
 export const metadata: Metadata = {
   title: "Alacrán",
-  description: "Run your own AI-native company, locally on your Mac.",
+  description: "Run your own AI-native company, locally on your own computer.",
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

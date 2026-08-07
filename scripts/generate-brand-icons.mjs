@@ -34,6 +34,10 @@ const SPEC = [
   ["linear", "siLinear", "#5e6ad2", "#9aa2ec"],
   ["git", "siGit", "#f03c2e", "#ff7a6d"],
   ["apple", "siApple", "#000000", "#e6e8eb"],
+  // Paired with apple on the landing page's "runs on your computer" card —
+  // that card shipped with an Apple mark alone, which read as macOS-only to
+  // a Linux user standing right next to a .deb download button.
+  ["linux", "siLinux", "#000000", "#e6e8eb"],
   ["lemonsqueezy", "siLemonsqueezy", "#ffc233", "#ffd977"],
 ]
 

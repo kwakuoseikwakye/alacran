@@ -95,7 +95,7 @@ export function BackupCompanyButton({ agentId, companyName }: { agentId: string;
                 <>
                   This creates a new <strong>private</strong> GitHub repository and pushes this company&apos;s
                   full history to it — including its business context, decisions and notes. Nobody else can see
-                  a private repo. You can then restore this company on another Mac.
+                  a private repo. You can then restore this company on another computer.
                 </>
               ) : (
                 <>
