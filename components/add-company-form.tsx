@@ -41,7 +41,7 @@ export function AddCompanyForm({
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [rootPath, setRootPath] = useState("")
-  // False until the user edits the path field directly — keeps the suggested
+  // False until the user edits the path field directly. This keeps the suggested
   // path in sync with the name for non-technical users, without ever
   // clobbering a path a technical user typed themselves.
   const [pathTouched, setPathTouched] = useState(false)
@@ -165,7 +165,7 @@ export function AddCompanyForm({
         />
         <p className="text-xs text-muted-foreground">
           {pathTouched
-            ? "Using your own path — make sure it's a real location on this machine."
+            ? "Using your custom path. Please make sure it's a real location on this machine."
             : `Created in an ${COMPANIES_DIR_NAME} folder in your home directory, next to your other companies. The folder is made for you if it isn't there yet. Know exactly where you want it? Just type over the path above.`}
         </p>
       </div>
@@ -174,7 +174,7 @@ export function AddCompanyForm({
           <label className="text-xs text-muted-foreground">
             Starter template{" "}
             <span className="text-muted-foreground/70">
-              (available for any new company, any time — skipped only if the path above already exists)
+              (available for any new company, any time. Skipped only if the path above already exists)
             </span>
           </label>
           {Object.entries(packsByCategory).map(([category, packs]) => (

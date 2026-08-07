@@ -46,7 +46,7 @@ export function InstallDailyTeamLogButton({ agentId, companyName }: { agentId: s
           <AlertDialogHeader>
             <AlertDialogTitle>Install daily-team-log?</AlertDialogTitle>
             <AlertDialogDescription>
-              Adds a daily-report skill to &quot;{companyName}&quot; — turns each day&apos;s Claude Code
+              Adds a daily-report skill to &quot;{companyName}&quot; which turns each day&apos;s Claude Code
               session history into a daily report, committed to this company&apos;s own repo. Setup (who
               you are, which projects to include, scheduling) happens afterward inside Claude Code, not
               here.

@@ -9,7 +9,7 @@ export type { BrandId }
  * Marks are monochrome by design: on Alacrán's near-black surfaces a grid of
  * full-colour vendor logos reads as noise and fights the single-accent palette.
  * `tone="brand"` opts one mark into the vendor's own colour for the moments
- * that earn it — a live connection, a hover, the hero orbit.
+ * that earn it: a live connection, a hover, the hero orbit.
  */
 export function BrandIcon({
   id,

@@ -9,7 +9,7 @@ export const OPEN_TERMINAL_BLURB =
   "Chat with your AI assistant in plain English, right inside this company's own files. No commands to memorize. A window opens and you just type what you want."
 
 /**
- * The direct answer to "I defined my company, now what?" — opens a real,
+ * The direct answer to "I defined my company, now what?" It opens a real,
  * unscoped interactive session of this company's configured AI executor,
  * cd'd into its own directory, so the user can ask it to build or edit
  * skills themselves. No prompt, no allowlist: this is the same thing as

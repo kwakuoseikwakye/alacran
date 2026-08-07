@@ -63,7 +63,7 @@ export function DailyTeamLogButton() {
             <AlertDialogTitle>Run the daily team-log now?</AlertDialogTitle>
             <AlertDialogDescription>
               This reads your local Claude Code session history, writes and commits a report, and
-              pushes it to the shared plh-ops repo — the same routine that already runs automatically
+              pushes it to the shared plh-ops repo. This is the same routine that already runs automatically
               every night at 22:00.
             </AlertDialogDescription>
           </AlertDialogHeader>
