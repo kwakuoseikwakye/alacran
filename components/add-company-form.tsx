@@ -215,7 +215,7 @@ export function AddCompanyForm({
             placeholder="https://github.com/you/your-company"
           />
           <p className="text-xs text-muted-foreground">
-            Clones a company you previously backed up, so it works on this Mac too.
+            Clones a company you previously backed up, so it works on this computer too.
           </p>
         </div>
       )}
@@ -244,7 +244,7 @@ export function AddCompanyForm({
         }}
         disabled={pending}
       >
-        {showRestore ? "← Create a new company instead" : "Restoring from a backup on another Mac? →"}
+        {showRestore ? "← Create a new company instead" : "Restoring from a backup on another computer? →"}
       </button>
 
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
