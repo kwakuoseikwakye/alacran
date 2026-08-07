@@ -90,9 +90,31 @@ export HOSTNAME="127.0.0.1"
 # app update replaces wholesale.
 export NODE_ENV="production"
 
+# A prior run that wasn't cleanly quit (Force Quit, the .app deleted or
+# replaced while it was still running, a crashed launcher) can leave an
+# orphaned server holding this port forever — every later launch, even a
+# freshly reinstalled or updated one, would silently keep talking to that
+# stale build, since the readiness check below can't tell "just started
+# this instant" from "orphaned from last time". This port is deliberately
+# uncommon (see DEFAULT_PORT above) specifically so nothing but a previous
+# Alacrán instance should ever legitimately be on it — safe to assume and
+# clear before starting a fresh one.
+if command -v lsof >/dev/null 2>&1; then
+  OLD_PID="\$(lsof -ti "tcp:\$PORT" 2>/dev/null || true)"
+  if [ -n "\$OLD_PID" ]; then
+    kill \$OLD_PID 2>/dev/null || true
+    sleep 0.5
+  fi
+fi
+
 cd "\$APP_DIR"
 "\$NODE_BIN" server.js &
 SERVER_PID=\$!
+# The other half of the fix above: make sure THIS run doesn't become next
+# time's orphan. Quitting the app (Cmd+Q, Force Quit, or closing the
+# terminal it was run from) now actually stops the server instead of
+# leaving it running headless in the background indefinitely.
+trap 'kill \$SERVER_PID 2>/dev/null' EXIT INT TERM
 
 # Wait for the server to answer, then open the browser.
 for i in \$(seq 1 40); do
