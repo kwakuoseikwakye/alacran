@@ -112,11 +112,31 @@ describe("createCompanyFromTemplateImpl", () => {
     expect(execCalls).toEqual([])
   })
 
-  it("fails cleanly if the parent directory doesn't exist either", async () => {
+  // Was "fails cleanly if the parent directory doesn't exist either" — that
+  // behavior was the bug. The default suggested path is ~/Alacran/<company>
+  // and ~/Alacran doesn't exist until the first company is created, so
+  // refusing a missing intermediate directory broke creation for every new
+  // user. mkdir -p handles it.
+  it("creates missing intermediate directories rather than refusing", async () => {
     const target = path.join(targetParentDir, "missing-parent", "new-co")
     const result = await createCompanyFromTemplateImpl(
-      "Dup2",
+      "Nested Co",
       target,
+      templateSourceDir,
+      undefined,
+      registryPath,
+      fakeExecFn
+    )
+    expect(result.ok).toBe(true)
+    expect((await stat(target)).isDirectory()).toBe(true)
+  })
+
+  it("refuses when an ancestor exists but is a file, since mkdir -p can't nest under it", async () => {
+    const filePath = path.join(targetParentDir, "a-file")
+    await writeFile(filePath, "not a directory", "utf-8")
+    const result = await createCompanyFromTemplateImpl(
+      "Blocked Co",
+      path.join(filePath, "new-co"),
       templateSourceDir,
       undefined,
       registryPath,

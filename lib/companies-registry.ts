@@ -86,11 +86,37 @@ export async function removeCompanyImpl(
 
 export type CompanyPathStatus = "exists" | "creatable" | "not-creatable"
 
+/**
+ * The deepest ancestor of `p` that actually exists on disk, or null if none
+ * does. Used to answer "could we mkdir -p our way to this path?" rather than
+ * the narrower "does its immediate parent already exist?".
+ */
+async function nearestExistingAncestor(p: string): Promise<string | null> {
+  let current = path.dirname(path.resolve(p))
+  for (;;) {
+    if (await exists(current)) return current
+    const parent = path.dirname(current)
+    // path.dirname("/") === "/" — the fixed point is how we detect the root.
+    if (parent === current) return null
+    current = parent
+  }
+}
+
 export async function getCompanyPathStatusImpl(rootPath: string): Promise<CompanyPathStatus> {
   if (await exists(rootPath)) {
     return "exists"
   }
-  if (await isDirectory(path.dirname(rootPath))) {
+  // Requiring the IMMEDIATE parent to exist made every default-path creation
+  // fail on a fresh install: the suggested path is ~/Alacran/<company>, and
+  // ~/Alacran itself doesn't exist until the first company is made. The UI
+  // then fell through to the register-an-existing-directory branch and
+  // reported "Path does not exist or is not a directory", which is true but
+  // useless — nothing was wrong except a missing intermediate directory that
+  // createCompanyFromTemplateImpl creates anyway. Any missing ancestor chain
+  // is fine as long as SOMETHING above it exists and is a directory; a
+  // non-directory (a file sitting where a parent should be) still isn't.
+  const ancestor = await nearestExistingAncestor(rootPath)
+  if (ancestor !== null && (await isDirectory(ancestor))) {
     return "creatable"
   }
   return "not-creatable"

@@ -51,12 +51,19 @@ export async function createCompanyFromTemplateImpl(
   if (await pathExists(rootPath)) {
     return { ok: false, message: "This path already exists" }
   }
-  if (!(await isDirectory(path.dirname(rootPath)))) {
-    return { ok: false, message: "Parent directory does not exist" }
+  // Deliberately NOT requiring the immediate parent to exist — the default
+  // suggested path is ~/Alacran/<company>, and ~/Alacran itself doesn't exist
+  // until the first company is created. The recursive mkdir below handles any
+  // missing intermediate directories; what still has to be rejected is a
+  // parent path that exists but isn't a directory, since mkdir -p can't
+  // create a directory underneath a file.
+  const parent = path.dirname(rootPath)
+  if ((await pathExists(parent)) && !(await isDirectory(parent))) {
+    return { ok: false, message: "That location isn't a folder" }
   }
 
   try {
-    await mkdir(rootPath)
+    await mkdir(rootPath, { recursive: true })
 
     for (const relativePath of TEMPLATE_MANIFEST) {
       await copyManifestEntry(templateSourcePath, rootPath, relativePath)
