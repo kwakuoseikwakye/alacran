@@ -1,4 +1,5 @@
 import fs from "node:fs"
+import os from "node:os"
 import { PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
 import { PIPELINE_LAUNCHD_PLIST_PATH } from "@/lib/scheduled-job/paths"
 import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
@@ -17,6 +18,7 @@ import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
 export const dynamic = "force-dynamic"
 
 export default async function AgentTreePage() {
+  const homeDir = os.homedir()
   const [agents, adapters, avatars] = await Promise.all([
     getEffectiveAgents(),
     getEffectiveAdapters(),
@@ -25,7 +27,7 @@ export default async function AgentTreePage() {
   if (agents.length === 0) {
     return (
       <main className="mx-auto max-w-5xl px-8 pb-12">
-        <OnboardingWelcome />
+        <OnboardingWelcome homeDir={homeDir} />
       </main>
     )
   }
@@ -64,7 +66,11 @@ export default async function AgentTreePage() {
               result.agent.id
             )
             const isCommandSet = result.agent.kind === "command-set"
-            const showVisibleRunOption = isCommandSet && process.platform === "darwin"
+            // Both features open a real terminal window — supported on macOS
+            // and Linux (see lib/terminal-launch-command.ts); if neither
+            // finds an actual terminal emulator installed, the action itself
+            // reports that rather than hiding the button pre-emptively.
+            const showVisibleRunOption = isCommandSet
             const hasOntology = isCommandSet && (await companyOntologyExists(result.agent.rootPath))
             const needsCompanySetup = isCommandSet && !hasOntology
             const integrationStatus = await getIntegrationStatus(result.agent)
@@ -104,7 +110,7 @@ export default async function AgentTreePage() {
           })
         )}
       </div>
-      <AddCompanyForm />
+      <AddCompanyForm homeDir={homeDir} />
     </main>
   )
 }
