@@ -83,7 +83,13 @@ APP_DIR="\$(cd "\$(dirname "\$0")/../Resources/app" && pwd)"
 # their PATH setup past exactly that kind of guard, so without -i this
 # looks like it works but silently misses them. Falls back to a few known
 # install locations if the shell invocation fails for any reason.
-LOGIN_PATH="\$("\${SHELL:-/bin/zsh}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail -n 1 || true)"
+# \`printenv PATH\`, not \`echo "\$PATH"\`: in fish, PATH is a list and echo
+# joins it with SPACES, producing one unusable mega-element. printenv reads
+# the actual environment variable, which is colon-separated by definition in
+# every shell. </dev/null so an rc file that reads stdin hits EOF instead of
+# hanging here forever — this runs before the server starts, so a hang means
+# the app never launches at all.
+LOGIN_PATH="\$("\${SHELL:-/bin/zsh}" -ilc 'printenv PATH' </dev/null 2>/dev/null | tail -n 1 || true)"
 # Union, never either/or. The shell's own PATH covers nvm/pyenv (whose bin
 # directories are version-specific and can't be guessed), and the fixed list
 # covers the case where rc parsing came back incomplete for any reason — a
@@ -98,7 +104,14 @@ LOGIN_PATH="\$("\${SHELL:-/bin/zsh}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail 
 # cd's into the app payload — so a bare "\$LOGIN_PATH:..." with no shell
 # PATH would make every unqualified command prefer a same-named file
 # sitting in that directory. Verified directly rather than assumed.
-COMMON_BINS="/opt/homebrew/bin:/usr/local/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:\$HOME/bin"
+# Every user-level location a CLI this app drives (claude, gog, gh, ollama)
+# realistically installs to. \$HOME/.local/bin is Claude Code's own native
+# installer target and pipx's; .npm-global/bin is \`npm config set prefix\`;
+# the rest are one per package manager that installs to a FIXED directory.
+# nvm/fnm/pyenv/asdf are deliberately absent — their directories are
+# version-specific and unguessable, which is exactly what reading the
+# shell's own PATH above is for.
+COMMON_BINS="\$HOME/.local/bin:\$HOME/.npm-global/bin:\$HOME/bin:\$HOME/.bun/bin:\$HOME/.deno/bin:\$HOME/.yarn/bin:\$HOME/.volta/bin:/opt/homebrew/bin:/usr/local/bin"
 if [ -n "\$LOGIN_PATH" ]; then
   export PATH="\$LOGIN_PATH:\$COMMON_BINS:\$PATH"
 else
