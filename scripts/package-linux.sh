@@ -69,8 +69,14 @@ mkdir -p "$PAYLOAD/.next"
 cp -R .next/static "$PAYLOAD/.next/static"
 cp -R templates "$PAYLOAD/templates"
 
-if [ -f "app/icon.png" ]; then
-  cp "app/icon.png" "$BUILDROOT/usr/share/icons/hicolor/512x512/apps/$PKG_NAME.png"
+# components/alacran-icon-512.png (scripts/generate-logo.py) is a real
+# square 512x512 render, not app/icon.png's 512x534 favicon source —
+# a hicolor theme bucket's file is expected to actually be the size its
+# directory name claims. Shipping the wrong one here (previously app/icon.png
+# at 128x133, stretched 4x by whatever desktop environment read it) is the
+# actual reason this icon looked blurry on Linux.
+if [ -f "components/alacran-icon-512.png" ]; then
+  cp "components/alacran-icon-512.png" "$BUILDROOT/usr/share/icons/hicolor/512x512/apps/$PKG_NAME.png"
 fi
 
 echo "==> Writing the launcher"

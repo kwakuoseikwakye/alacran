@@ -13,7 +13,21 @@ Outputs (committed, so the build needs neither PIL nor this script):
                                 Next emits it into .next/static/media, which
                                 scripts/package-macos.sh already copies
     landing/favicon.png         128px
-    app/icon.png                128px (Next.js file convention)
+    app/icon.png                512px (Next.js file convention; a browser
+                                favicon source only now — see below for what
+                                the Linux .deb's own icon actually uses)
+    components/alacran-icon-master.png
+    components/alacran-icon-512.png
+                                1024x1024 and 512x512, both padded to a
+                                square canvas and NOT colour-quantized
+                                (unlike the four outputs above, these are
+                                local packaging inputs, never served over a
+                                network, so fidelity beats file size).
+                                scripts/package-macos.sh's .icns and
+                                scripts/package-linux.sh's hicolor icon both
+                                downsample from these instead of upscaling a
+                                small, non-square source — which is why both
+                                platforms' app icons used to look blurry.
 
 Two problems have to be solved to use this artwork on a dark surface:
 
@@ -146,7 +160,34 @@ def main():
     save("landing/logo.png", 600)
     save("components/alacran-logo.png", 600)
     save("landing/favicon.png", 128)
-    save("app/icon.png", 128)
+    save("app/icon.png", 512)
+
+    # Padded to a square canvas (transparent, centered — same idea
+    # scripts/package-macos.sh used to do with `sips -p` on a 600px source;
+    # doing it once here, on the full-resolution non-quantized image, means
+    # neither packaging script ever has to upscale a small master again, and
+    # both platforms' OS-level icons come from one canonical square source
+    # instead of two different ad hoc paths. 1024 exceeds the source's own
+    # native detail (trimmed to 800x834 from an 840x916 photo), so this
+    # tier alone can't be perfectly crisp — but it's a ~1.2x stretch instead
+    # of the previous 1.7x (macOS) or 8x (Linux, which used to just stretch
+    # the 128px favicon straight into a "512x512" icon bucket), and
+    # downsampling from here for every smaller tier introduces no further
+    # blur at all.
+    # ponytail: true 1024px crispness needs higher-resolution source
+    # artwork; rerun this script unchanged if scorpion.png is ever replaced
+    # with one.
+    side = max(img.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(img, ((side - img.size[0]) // 2, (side - img.size[1]) // 2), img)
+
+    def save_square_icon(path, size):
+        square.resize((size, size), Image.LANCZOS).save(path, optimize=True)
+        kb = os.path.getsize(path) / 1024
+        print(f"  wrote {path} ({size}x{size}, {kb:.0f} KB)")
+
+    save_square_icon("components/alacran-icon-master.png", 1024)  # macOS .icns, up to the 512@2x tier
+    save_square_icon("components/alacran-icon-512.png", 512)  # Linux .deb's hicolor/512x512 icon
 
 
 if __name__ == "__main__":
