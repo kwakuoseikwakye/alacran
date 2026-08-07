@@ -101,7 +101,28 @@ APP_DIR="/usr/lib/$PKG_NAME/app"
 # \`tail -n 1\` guards against a noisy interactive .bashrc (a MOTD, a
 # fortune/cowsay line, etc.) printing to stdout before the real PATH line.
 LOGIN_PATH="\$("\${SHELL:-/bin/bash}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail -n 1 || true)"
-[ -n "\$LOGIN_PATH" ] && export PATH="\$LOGIN_PATH:\$PATH"
+# Union the shell's PATH with the common user-level install locations, rather
+# than trusting either alone. The shell's own PATH is the only way to find
+# nvm/pyenv installs (version-specific directories, unguessable), but it can
+# still come back incomplete — a non-bash shell, an rc file that sets PATH
+# under a conditional, a guard variant we haven't seen — and when it does,
+# these fixed locations are where a user-level npm/pipx install actually
+# lands. \$HOME/.npm-global/bin in particular is a plain
+# \`npm config set prefix\` setup and a real user's actual claude location;
+# this launcher previously had no fixed list at all, so nothing caught it
+# when the shell capture came up short.
+#
+# The empty-LOGIN_PATH branch is not cosmetic: an empty element anywhere in
+# PATH is interpreted as the CURRENT DIRECTORY by POSIX, and this script
+# cd's into the app payload — so a bare "\$LOGIN_PATH:..." with no shell
+# PATH would make every unqualified command prefer a same-named file
+# sitting in that directory. Verified directly rather than assumed.
+COMMON_BINS="\$HOME/.npm-global/bin:\$HOME/.local/bin:\$HOME/bin:/usr/local/bin"
+if [ -n "\$LOGIN_PATH" ]; then
+  export PATH="\$LOGIN_PATH:\$COMMON_BINS:\$PATH"
+else
+  export PATH="\$COMMON_BINS:\$PATH"
+fi
 
 NODE_BIN="\$(command -v node || true)"
 if [ -z "\$NODE_BIN" ]; then

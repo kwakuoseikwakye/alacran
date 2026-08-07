@@ -84,10 +84,25 @@ APP_DIR="\$(cd "\$(dirname "\$0")/../Resources/app" && pwd)"
 # looks like it works but silently misses them. Falls back to a few known
 # install locations if the shell invocation fails for any reason.
 LOGIN_PATH="\$("\${SHELL:-/bin/zsh}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail -n 1 || true)"
+# Union, never either/or. The shell's own PATH covers nvm/pyenv (whose bin
+# directories are version-specific and can't be guessed), and the fixed list
+# covers the case where rc parsing came back incomplete for any reason — a
+# non-bash/zsh shell, an rc file that sets PATH only under a conditional, a
+# guard we haven't seen. Making the fixed list an \`else\` branch was a real
+# regression: \$HOME/.npm-global/bin (a plain \`npm config set prefix\` setup,
+# and a real user's actual claude location) used to be prepended
+# unconditionally, and became reachable only when the shell call FAILED.
+#
+# The empty-LOGIN_PATH branch is not cosmetic: an empty element anywhere in
+# PATH is interpreted as the CURRENT DIRECTORY by POSIX, and this script
+# cd's into the app payload — so a bare "\$LOGIN_PATH:..." with no shell
+# PATH would make every unqualified command prefer a same-named file
+# sitting in that directory. Verified directly rather than assumed.
+COMMON_BINS="/opt/homebrew/bin:/usr/local/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:\$HOME/bin"
 if [ -n "\$LOGIN_PATH" ]; then
-  export PATH="\$LOGIN_PATH:\$PATH"
+  export PATH="\$LOGIN_PATH:\$COMMON_BINS:\$PATH"
 else
-  export PATH="/opt/homebrew/bin:/usr/local/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:\$PATH"
+  export PATH="\$COMMON_BINS:\$PATH"
 fi
 
 NODE_BIN="\$(command -v node || true)"
