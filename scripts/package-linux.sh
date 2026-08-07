@@ -80,6 +80,13 @@ cat > "$LAUNCHER" <<LAUNCH
 # Desktop-launcher / terminal entry point: start the local server, open the browser.
 APP_DIR="/usr/lib/$PKG_NAME/app"
 
+# A .desktop launch (Terminal=false) doesn't source ~/.bashrc or ~/.profile,
+# so tools installed via nvm/pipx/a custom npm prefix (claude, ollama, gh...)
+# are invisible even though \`which claude\` finds them from a real terminal.
+# Ask the user's own login shell for its PATH instead of guessing directories.
+LOGIN_PATH="\$("\${SHELL:-/bin/bash}" -lc 'echo -n "\$PATH"' 2>/dev/null || true)"
+[ -n "\$LOGIN_PATH" ] && export PATH="\$LOGIN_PATH:\$PATH"
+
 NODE_BIN="\$(command -v node || true)"
 if [ -z "\$NODE_BIN" ]; then
   echo "Node.js is required. Please install Node.js (nodejs.org or your distro's package) and try again." >&2
@@ -149,6 +156,37 @@ Description: Manage your AI companies
  A local dashboard for managing AI "companies" — status, activity, and
  quick actions for every agent Alacrán manages on this machine.
 CONTROL
+
+echo "==> Writing DEBIAN/postrm (uninstaller)"
+# dpkg already removes everything IT installed (the binary, the .desktop
+# entry, the icon) on both 'remove' and 'purge' — that's the uninstaller for
+# the app itself, no custom script needed for it. The one thing dpkg can't
+# see is lib/data-dir.ts's per-user data directory, written at runtime under
+# $HOME rather than tracked as a package file. Only touch it on 'purge'
+# (Debian convention: 'remove' keeps data in case of a reinstall) and only
+# for $SUDO_USER specifically — this is a single-user desktop app, and
+# guessing at every home directory on the machine to wipe would be a far
+# more destructive action than this script has any business taking.
+cat > "$BUILDROOT/DEBIAN/postrm" <<'POSTRM'
+#!/bin/bash
+set -e
+
+if [ "$1" = "purge" ]; then
+  if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+    USER_HOME="$(getent passwd "$SUDO_USER" | cut -d: -f6)"
+    DATA_DIR="$USER_HOME/.local/share/Alacrán"
+    if [ -n "$USER_HOME" ] && [ -d "$DATA_DIR" ]; then
+      echo "alacran: removing $DATA_DIR"
+      rm -rf "$DATA_DIR"
+    fi
+  else
+    echo "alacran: couldn't tell which user ran this purge — remove ~/.local/share/Alacrán yourself if you want your company data gone too."
+  fi
+fi
+
+exit 0
+POSTRM
+chmod +x "$BUILDROOT/DEBIAN/postrm"
 
 if [ "$RUN_SELFTEST" = "1" ]; then
   echo "==> Self-test: booting the packaged server headlessly"

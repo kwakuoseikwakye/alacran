@@ -146,7 +146,7 @@ function RecheckButton({ pending, onClick }: { pending: boolean; onClick: () => 
 
 /* ------------------------------------------------------------------ shell */
 
-export function OnboardingWelcome() {
+export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
   const [step, setStep] = useState(0)
   const [deps, setDeps] = useState<DependencyStatus | null>(null)
   const [connect, setConnect] = useState<ConnectStatus | null>(null)
@@ -222,7 +222,7 @@ export function OnboardingWelcome() {
         </p>
         <h1 className="font-display text-3xl font-extrabold">Welcome to Alacrán</h1>
         <p className="mx-auto max-w-md text-sm text-muted-foreground">
-          Three steps to a running AI-native company on this machine. Nothing leaves your Mac.
+          Three steps to a running AI-native company on this machine. Nothing leaves this machine.
         </p>
       </header>
 
@@ -291,10 +291,8 @@ export function OnboardingWelcome() {
                   : "The agent that does the work. Required."
               }
               state={toolState(deps?.claude)}
-              command={loading || claudeInstalled ? undefined : "npm install -g @anthropic-ai/claude-code"}
-              link={
-                loading || claudeInstalled ? undefined : "https://docs.claude.com/en/docs/claude-code/overview"
-              }
+              command={loading || claudeInstalled ? undefined : connect?.claude.guidance.command}
+              link={loading || claudeInstalled ? undefined : connect?.claude.guidance.link}
               delay={0}
             />
             <ToolRow
@@ -306,8 +304,8 @@ export function OnboardingWelcome() {
                   : "Only needed for Gmail and Calendar workflows. You can add it later."
               }
               state={toolState(deps?.gog, true)}
-              command={loading || deps?.gog ? undefined : "brew install gogcli/tap/gog"}
-              link={loading || deps?.gog ? undefined : "https://github.com/gogcli/gog"}
+              command={loading || deps?.gog ? undefined : connect?.google.guidance.command}
+              link={loading || deps?.gog ? undefined : connect?.google.guidance.link}
               delay={90}
             />
             <div className="flex flex-wrap items-center justify-between gap-3 pt-1">
@@ -359,7 +357,7 @@ export function OnboardingWelcome() {
                 ))}
               </ul>
             </div>
-            <AddCompanyForm prominent />
+            <AddCompanyForm prominent homeDir={homeDir} />
             {!loading && !claudeInstalled && (
               <p className="text-xs text-warning">
                 Claude Code isn&apos;t installed yet — you can still create the company, but its commands
