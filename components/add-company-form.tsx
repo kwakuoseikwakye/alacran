@@ -21,20 +21,40 @@ import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 import { restoreCompany } from "@/lib/github/github-actions"
 import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "@/lib/company-starter-packs"
 
+/** Turns a company name into a directory-safe leaf, e.g. "Second Co!" -> "second-co". */
+function slugify(name: string): string {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
 export function AddCompanyForm({
   /** Onboarding shows this as the step's primary action; the dashboard keeps it quiet. */
   prominent = false,
-}: { prominent?: boolean } = {}) {
+  /** Server-detected home directory, used to suggest a path non-technical users don't have to type. */
+  homeDir,
+}: { prominent?: boolean; homeDir?: string } = {}) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [rootPath, setRootPath] = useState("")
+  // False until the user edits the path field directly — keeps the suggested
+  // path in sync with the name for non-technical users, without ever
+  // clobbering a path a technical user typed themselves.
+  const [pathTouched, setPathTouched] = useState(false)
   const [packId, setPackId] = useState(DEFAULT_COMPANY_STARTER_PACK_ID)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
   const [restoreUrl, setRestoreUrl] = useState("")
   const [showRestore, setShowRestore] = useState(false)
+
+  const suggestedPath = homeDir ? `${homeDir}/AI-Native${name.trim() ? `/${slugify(name)}` : ""}` : ""
+  if (!pathTouched && suggestedPath && suggestedPath !== rootPath) {
+    setRootPath(suggestedPath)
+  }
 
   async function handleSubmit() {
     setPending(true)
@@ -50,6 +70,7 @@ export function AddCompanyForm({
     if (result.ok) {
       setName("")
       setRootPath("")
+      setPathTouched(false)
       setMessage(`Registered "${result.company.name}"`)
       setOpen(false)
       router.refresh()
@@ -66,6 +87,7 @@ export function AddCompanyForm({
     if (result.ok) {
       setName("")
       setRootPath("")
+      setPathTouched(false)
       setRestoreUrl("")
       setShowRestore(false)
       setOpen(false)
@@ -84,6 +106,7 @@ export function AddCompanyForm({
     if (result.ok) {
       setName("")
       setRootPath("")
+      setPathTouched(false)
       setPackId(DEFAULT_COMPANY_STARTER_PACK_ID)
       setMessage(`Created and registered "${result.company.name}"`)
       setOpen(false)
@@ -131,14 +154,25 @@ export function AddCompanyForm({
         <label className="text-xs text-muted-foreground">Local directory path</label>
         <Input
           value={rootPath}
-          onChange={(e) => setRootPath(e.target.value)}
+          onChange={(e) => {
+            setRootPath(e.target.value)
+            setPathTouched(true)
+          }}
           placeholder="/Users/you/AI-Native/second-co"
         />
+        <p className="text-xs text-muted-foreground">
+          {pathTouched
+            ? "Using your own path — make sure it's a real location on this machine."
+            : "Created in a new AI-Native folder in your home directory, next to your other companies. Know exactly where you want it? Just type over the path above."}
+        </p>
       </div>
       {!showRestore && (
         <div className="space-y-2.5">
           <label className="text-xs text-muted-foreground">
-            Starter template <span className="text-muted-foreground/70">(only used if this path is new)</span>
+            Starter template{" "}
+            <span className="text-muted-foreground/70">
+              (available for any new company, any time — skipped only if the path above already exists)
+            </span>
           </label>
           {Object.entries(packsByCategory).map(([category, packs]) => (
             <div key={category} className="space-y-1.5">
