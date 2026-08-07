@@ -13,6 +13,7 @@ import { resolveAiExecutorForAgent } from "../ai-executor-registry"
 import type { AiExecutor } from "../ai-executors"
 import { getVisibleRunForAgent } from "../visible-run-registry"
 import { buildVisibleRunScript } from "./build-visible-run-script"
+import { resolveTerminalLaunchCommand } from "../terminal-launch-command"
 
 export type ResolveExecutorFn = (agentId: string) => Promise<AiExecutor>
 export type ResolveVisibleRunFn = (agentId: string) => Promise<boolean>
@@ -153,9 +154,12 @@ export async function runCompanyCommandImpl(
     const spawnArgs = executor.buildArgs({ prompt, editScopePattern, bashPatterns })
 
     const logPath = path.join(dataDir, `${command.id}.log`)
-    const runVisibly = platform === "darwin" && (await resolveVisibleRun(agentId))
+    const wantsVisible = await resolveVisibleRun(agentId)
+    const terminalLaunch = wantsVisible
+      ? await resolveTerminalLaunchCommand(platform, (cmd, cmdArgs) => execFn(cmd, cmdArgs, { cwd: agent.rootPath }))
+      : null
 
-    if (runVisibly) {
+    if (terminalLaunch) {
       if (spawnArgs.some((a) => a.includes("\0"))) {
         throw new Error("Refusing to run: a NUL byte in the command arguments would corrupt the args file")
       }
@@ -173,14 +177,14 @@ export async function runCompanyCommandImpl(
         cwd: agent.rootPath,
       })
       await writeFile(scriptPath, script, { mode: 0o755 })
-      const child = spawnFn("open", ["-a", "Terminal", scriptPath], {
+      const child = spawnFn(terminalLaunch.command, terminalLaunch.args(scriptPath), {
         cwd: agent.rootPath,
         detached: true,
         stdio: ["ignore", "ignore", "ignore"],
       })
-      // Deliberately NOT attaching an "exit" handler here: `open` returns
-      // the instant Terminal is told to open the window, long before the
-      // script — let alone the run inside it — finishes. The wrapper
+      // Deliberately NOT attaching an "exit" handler here: the terminal
+      // launcher returns the instant the window is told to open, long
+      // before the script — let alone the run inside it — finishes. The wrapper
       // script's own `trap ... EXIT` releases the lock instead; attaching
       // this handler too would release it immediately and the app would
       // report "finished" while the gate is still waiting for Enter.
