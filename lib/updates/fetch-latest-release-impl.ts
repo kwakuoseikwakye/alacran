@@ -8,6 +8,12 @@ export const RELEASES_API_URL =
 export const RELEASE_PAGE_URL =
   "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest"
 
+// Stable across every release — .github/workflows/package-linux.yml always
+// publishes the .deb under this exact asset name, precisely so this URL
+// never has to change or be looked up per-version.
+export const DEB_ASSET_URL =
+  "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb"
+
 const defaultFetch: FetchLike = (url, init) => fetch(url, init)
 
 /**
