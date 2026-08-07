@@ -34,7 +34,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         <AutoRefresh />
         {update.available && update.latestVersion ? (
-          <UpdateBanner latestVersion={update.latestVersion} currentVersion={update.currentVersion} />
+          <UpdateBanner
+            latestVersion={update.latestVersion}
+            currentVersion={update.currentVersion}
+            canAutoUpdate={process.platform === "linux"}
+          />
         ) : null}
         <Nav />
         {children}

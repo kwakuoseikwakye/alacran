@@ -4,6 +4,8 @@ import { updateStatusImpl } from "./update-status-impl"
 import type { UpdateStatus } from "./update-status-impl"
 import { readUpdate, writeUpdate } from "./update-store"
 import { fetchLatestReleaseImpl } from "./fetch-latest-release-impl"
+import { performLinuxUpdateImpl, type PerformUpdateResult } from "./perform-linux-update-impl"
+import { restartAppImpl } from "./restart-app-impl"
 import { APP_VERSION } from "../app-version"
 
 // Only the packaged app checks. In `next dev` there is nothing to update to,
@@ -37,4 +39,22 @@ export async function dismissUpdate(version: string): Promise<void> {
     latestVersion: stored?.latestVersion ?? version,
     dismissedVersion: version,
   })
+}
+
+/** Linux only — see perform-linux-update-impl.ts for why macOS has no equivalent. */
+export async function performLinuxUpdate(): Promise<PerformUpdateResult> {
+  if (process.platform !== "linux") {
+    return { ok: false, message: "Automatic updates are only available on Linux." }
+  }
+  return performLinuxUpdateImpl()
+}
+
+/**
+ * Fires the relaunch and returns immediately — the caller (the update
+ * banner) is expected to poll for the server coming back, not await this
+ * finishing, because this process exits shortly after returning.
+ */
+export async function restartApp(): Promise<void> {
+  restartAppImpl()
+  setTimeout(() => process.exit(0), 300)
 }

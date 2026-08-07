@@ -96,6 +96,33 @@ your default browser at `http://127.0.0.1:<port>`.
 
 See [Development](#development) below.
 
+## Updating
+
+Alacrán checks for a new release once a day and shows a banner when one's
+available.
+
+- **Linux**: click **Update & Restart** in the banner. It downloads the new
+  `.deb`, installs it via a native `pkexec` password prompt (the same kind of
+  prompt GNOME Software uses), and restarts the app for you. If `pkexec`
+  isn't installed, it shows the exact `sudo apt install` command instead.
+- **macOS**: click **Download it** and repeat the install steps above
+  (including `xattr -cr`). There's no one-click updater here yet — these
+  builds aren't notarized, so a silently-installed update would just get
+  Gatekeeper-blocked on next launch, which is worse than asking you to
+  download it yourself.
+
+Set `ALACRAN_NO_UPDATE_CHECK=1` to turn the check off entirely.
+
+## Uninstalling
+
+- **Linux**: `sudo apt remove alacran` keeps your data;
+  `sudo apt purge alacran` also removes Alacrán's own registry/settings at
+  `~/.local/share/Alacrán`. Either way, your companies' actual files —
+  wherever you put them, e.g. `~/AI-Native/` — are untouched.
+- **macOS**: run `bash scripts/uninstall-macos.sh` from a checkout, or by
+  hand: drag `/Applications/Alacrán.app` to the Trash, and delete
+  `~/Library/Application Support/Alacrán` if you want its registry gone too.
+
 ## Prerequisites
 
 Alacrán drives command-line tools you install and authenticate yourself. It
