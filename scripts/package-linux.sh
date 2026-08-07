@@ -90,7 +90,17 @@ APP_DIR="/usr/lib/$PKG_NAME/app"
 # so tools installed via nvm/pipx/a custom npm prefix (claude, ollama, gh...)
 # are invisible even though \`which claude\` finds them from a real terminal.
 # Ask the user's own login shell for its PATH instead of guessing directories.
-LOGIN_PATH="\$("\${SHELL:-/bin/bash}" -lc 'echo -n "\$PATH"' 2>/dev/null || true)"
+#
+# Needs -i (interactive), not just -l (login): Ubuntu's stock ~/.bashrc
+# starts with \`case \$- in *i*) ;; *) return;; esac\` — an early return for
+# any NON-interactive shell — and nvm's installer appends its PATH setup
+# near the bottom of .bashrc, past that guard. \`-lc\` alone hits the guard
+# and skips it silently, so this looked fixed but wasn't for anyone using
+# nvm specifically (confirmed by reproducing the exact guard in isolation:
+# \`-lc\` returned the PATH unchanged, \`-ilc\` included nvm's bin directory).
+# \`tail -n 1\` guards against a noisy interactive .bashrc (a MOTD, a
+# fortune/cowsay line, etc.) printing to stdout before the real PATH line.
+LOGIN_PATH="\$("\${SHELL:-/bin/bash}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail -n 1 || true)"
 [ -n "\$LOGIN_PATH" ] && export PATH="\$LOGIN_PATH:\$PATH"
 
 NODE_BIN="\$(command -v node || true)"

@@ -70,9 +70,25 @@ cat > "$LAUNCHER" <<LAUNCH
 # Double-click launcher: start the local server, open the browser.
 APP_DIR="\$(cd "\$(dirname "\$0")/../Resources/app" && pwd)"
 
-# Ensure common CLI install locations are on PATH so a GUI-launched app can
-# still find node, and so the app's own spawned 'claude'/'gog' resolve.
-export PATH="/opt/homebrew/bin:/usr/local/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:\$PATH"
+# A double-clicked .app doesn't source ~/.zshrc or ~/.bash_profile, so
+# anything installed via nvm/pyenv/a custom prefix (claude, gog...) is
+# invisible even though it resolves fine from a real Terminal. Ask the
+# user's own shell for its real PATH instead of guessing directories.
+#
+# Needs -i (interactive) as well as -l (login): some shell rc files —
+# Ubuntu's stock ~/.bashrc, notably, though this is the macOS launcher —
+# guard their body with something like \`case \$- in *i*) ;; *) return;;
+# esac\` that skips everything past it for a non-interactive shell, which
+# is exactly what -l alone produces. nvm/pyenv-style installers append
+# their PATH setup past exactly that kind of guard, so without -i this
+# looks like it works but silently misses them. Falls back to a few known
+# install locations if the shell invocation fails for any reason.
+LOGIN_PATH="\$("\${SHELL:-/bin/zsh}" -ilc 'echo -n "\$PATH"' 2>/dev/null | tail -n 1 || true)"
+if [ -n "\$LOGIN_PATH" ]; then
+  export PATH="\$LOGIN_PATH:\$PATH"
+else
+  export PATH="/opt/homebrew/bin:/usr/local/bin:\$HOME/.local/bin:\$HOME/.npm-global/bin:\$PATH"
+fi
 
 NODE_BIN="\$(command -v node || true)"
 if [ -z "\$NODE_BIN" ]; then
