@@ -46,18 +46,51 @@ describe("openInteractiveTerminalImpl", () => {
     expect(spawnFn).not.toHaveBeenCalled()
   })
 
-  it("refuses on non-macOS without spawning anything", async () => {
+  it("refuses on Linux without spawning anything when no terminal emulator is installed", async () => {
     const { spawnFn } = fakeSpawn()
+    const execFn = async () => {
+      throw new Error("not found")
+    }
     const result = await openInteractiveTerminalImpl(
       "acme",
       spawnFn,
       async () => [AGENT],
       async () => AI_EXECUTORS["claude-code"],
-      "linux"
+      "linux",
+      undefined,
+      execFn
     )
     expect(result.started).toBe(false)
-    expect(result.message).toContain("macOS")
+    expect(result.message).toContain("No supported terminal")
     expect(spawnFn).not.toHaveBeenCalled()
+  })
+
+  it("opens whichever Linux terminal emulator is actually installed", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "open-terminal-"))
+    try {
+      const { spawnFn, calls } = fakeSpawn()
+      const agent: Agent = { ...AGENT, rootPath: dir }
+      // x-terminal-emulator (tried first) is missing; konsole is installed.
+      const execFn = async (command: string, args: string[]) => {
+        if (command === "which" && args[0] === "konsole") return { stdout: "/usr/bin/konsole", stderr: "" }
+        throw new Error("not found")
+      }
+      const result = await openInteractiveTerminalImpl(
+        "acme",
+        spawnFn,
+        async () => [agent],
+        async () => AI_EXECUTORS["claude-code"],
+        "linux",
+        dir,
+        execFn
+      )
+      expect(result).toEqual({ started: true, message: "Opened Terminal" })
+      expect(calls).toHaveLength(1)
+      expect(calls[0].command).toBe("konsole")
+      expect(calls[0].args[0]).toBe("-e")
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it("writes an executable script and spawns 'open -a Terminal' with it, cwd'd to the company root", async () => {

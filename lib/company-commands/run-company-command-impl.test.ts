@@ -504,7 +504,7 @@ describe("runCompanyCommandImpl", () => {
     expect(onCalls).toEqual([])
   })
 
-  it("falls back to headless when visible runs is enabled but the platform is not darwin", async () => {
+  it("falls back to headless on Linux when visible runs is enabled but no terminal emulator is installed", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
     }))
@@ -516,22 +516,65 @@ describe("runCompanyCommandImpl", () => {
       calls.push({ command, args, options })
       return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
     }
+    // Every `which <terminal>` probe fails — none of the candidates are installed.
+    const execFn = async () => {
+      throw new Error("not found")
+    }
 
     await runCompanyCommandImpl(
       "digest",
       { period: "last week" },
       "ai-company-starter-main",
       spawnFn,
-      undefined,
+      execFn,
       dataDir,
       undefined,
-      async () => true, // resolveVisibleRun — enabled, but platform isn't darwin
+      async () => true, // resolveVisibleRun — enabled, but no terminal emulator resolves
       "linux"
     )
 
     expect(calls).toHaveLength(1)
     expect(calls[0].command).toBe("claude")
     expect(onCalls).toEqual(["exit"])
+  })
+
+  it("runs visibly on Linux using whichever terminal emulator the which-probe finds first", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const onCalls: string[] = []
+    const spawnFn = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options })
+      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+    }
+    // x-terminal-emulator (tried first) is missing; gnome-terminal is installed.
+    const execFn = async (command: string, args: string[]) => {
+      if (command === "which" && args[0] === "gnome-terminal") return { stdout: "/usr/bin/gnome-terminal", stderr: "" }
+      throw new Error("not found")
+    }
+
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "last week" },
+      "ai-company-starter-main",
+      spawnFn,
+      execFn,
+      dataDir,
+      undefined,
+      async () => true, // resolveVisibleRun
+      "linux"
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls).toHaveLength(1)
+    expect(calls[0].command).toBe("gnome-terminal")
+    // gnome-terminal takes `--` before the command, unlike the `-e` the rest use.
+    expect(calls[0].args[0]).toBe("--")
+    expect(calls[0].args[1]).toBe(path.join(dataDir, "digest.run.sh"))
+    expect(onCalls).toEqual([])
   })
 
   it("stays headless on darwin when visible runs is not enabled for the company", async () => {

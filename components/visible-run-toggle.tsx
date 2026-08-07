@@ -49,10 +49,10 @@ export function VisibleRunToggle({ agentId }: { agentId: string }) {
         Run commands in a visible Terminal window
       </label>
       <p className="text-xs text-muted-foreground">
-        Every command opens a real Terminal window and shows you the exact prompt before running —
+        Every command opens a real terminal window and shows you the exact prompt before running —
         press Enter to proceed, or Ctrl-C to abort. When it finishes, it offers an interactive session
-        continuing that run, which is not limited to what the command itself is allowed to do. macOS
-        only.
+        continuing that run, which is not limited to what the command itself is allowed to do. Works on
+        macOS and Linux (using whichever terminal emulator is installed).
       </p>
       {message && <p className="text-xs text-destructive">{message}</p>}
     </div>
