@@ -19,11 +19,21 @@
  *
  * Permission scoping is only as granular as each CLI's own model: Claude
  * Code's fine-grained `Edit(pattern)`/`Bash(pattern)` allowlist is unique to
- * it. Codex and Aider get their own coarser non-interactive/auto-approve
- * flags instead of an equivalent path/command allowlist.
+ * it. Codex, Aider, and Google Antigravity CLI get their own coarser
+ * non-interactive/auto-approve flags instead of an equivalent path/command
+ * allowlist.
+ *
+ * Google Antigravity CLI's flags were confirmed against the real installed
+ * binary's `agy --help` (v1.1.11) — same bar as Codex/Aider. `--mode
+ * accept-edits` makes it actually apply edits instead of just proposing a
+ * plan; `--dangerously-skip-permissions` is its one coarse auto-approve
+ * flag (no human is present to click through prompts in headless mode) —
+ * the same shape as Aider's `--yes-always`. Not run end-to-end against a
+ * live model account from this app yet, per this project's standing rule
+ * against triggering real spawns from an automated pass.
  */
 
-export type AiExecutorId = "claude-code" | "openai-codex" | "aider"
+export type AiExecutorId = "claude-code" | "openai-codex" | "aider" | "google-antigravity"
 
 export type AiExecutorBuildArgsInput = {
   prompt: string
@@ -85,6 +95,22 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     installHint: "pipx install aider-chat",
     installLink: "https://aider.chat/docs/install.html",
     buildArgs: ({ prompt }) => ["--message", prompt, "--yes-always", "--no-auto-commits"],
+  },
+  "google-antigravity": {
+    id: "google-antigravity",
+    label: "Google Antigravity CLI",
+    binaryName: "agy",
+    installHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash",
+    installLink: "https://antigravity.google/cli",
+    buildArgs: ({ prompt }) => [
+      "-p",
+      prompt,
+      "--output-format",
+      "text",
+      "--mode",
+      "accept-edits",
+      "--dangerously-skip-permissions",
+    ],
   },
 }
 

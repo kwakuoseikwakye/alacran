@@ -1319,3 +1319,113 @@ don't cover an arbitrary write into a real company beyond the one
 dedicated `stock-note.md` case; every write path is instead covered by
 `vitest` against disposable temp directories. Full suite: 522 tests
 passing, `tsc` and `next build` clean.
+
+## v42 (2026-08-08): Google Antigravity CLI as a fourth pluggable AI executor
+
+"Choose which AI agent runs a company's commands" already existed since
+the multi-model slice that shipped alongside v41 — `lib/ai-executors.ts`'s
+`AI_EXECUTORS` registry, `AiExecutorPicker` on the agent card, and the
+per-agent `ai-executors.json` assignment already made Claude Code, OpenAI
+Codex CLI, and Aider pluggable. This slice added a fourth entry; no new
+mechanism was needed.
+
+Verification was the actual work. Every existing entry's flags were
+confirmed against the real installed CLI's `--help` output before
+shipping (the file's own header comment says so for Codex/Aider); web
+search for Antigravity CLI's flags turned up mostly unreliable results —
+one fetched page described its command as *"Anthropic's official CLI for
+Claude,"* a hallucination lifted from Claude Code's own description, not
+real Antigravity documentation. Declined to guess flags for a tool that
+spawns real subprocesses with edit/bash access against real company
+repos. The user had it installed locally (`agy`, v1.1.11); ran
+`agy --help` directly against the real binary instead, matching the
+project's existing bar. Did **not** trigger a live prompt/model call, per
+the standing rule against letting an automated pass complete a real
+headless spawn — flag *shapes* are confirmed real, end-to-end behavior
+against a live account is left for the user.
+
+`google-antigravity` uses `-p <prompt> --output-format text --mode
+accept-edits --dangerously-skip-permissions` — no per-pattern
+Edit()/Bash() allowlist exists on this CLI (unlike Claude Code), so it
+falls into the same coarser "auto-approve everything, no human present"
+bucket as Aider's `--yes-always`, verified as `--dangerously-skip-permissions`
+in the real `--help` output. `--mode accept-edits` is needed for it to
+actually write file changes rather than just propose a plan.
+
+Adding a 4th `AiExecutorId` broke `tsc` on the first try: `lib/ownership
+/summarize-network-access.ts`'s `Record<AiExecutorId, string>` (v34) is
+exhaustive by construction, so the compiler itself caught the missing
+case — added "Google (Antigravity CLI) — your own account," the same
+"always a real account-bound cloud call" bucket as Claude Code/Codex (not
+Aider's honest "depends," since Antigravity's backend isn't
+user-configurable the way Aider's is).
+
+New standing rule from this slice's stalled first pass (blocked
+mid-investigation on unverifiable flags, then unblocked once the user
+supplied a locally-installed binary to test against): every feature now
+gets documented — including blocked/in-progress ones, not just shipped
+ones — added to this file's "Established conventions" list.
+
+Full suite: 530 tests passing (84 files), `tsc` and `next build` clean.
+No live UI/Playwright pass — the change is confined to the executor
+registry + one exhaustive label map, both fully covered by the existing
+`vitest` pattern (byte-identical assertions on `buildArgs`' output, same
+as every other executor).
+
+**Same-day follow-up, from real usage:** the user picked Antigravity in
+the per-company executor picker, then went looking for it on the Connect
+page and couldn't find any install/connection status for it. Root cause:
+`lib/connect/connect-status-impl.ts`'s "AI agent" card was hardcoded to
+check only the `claude` binary — a gap that predates this slice entirely
+(Codex and Aider were never added to it either when they shipped). Fixed
+at the root rather than patching in a 4th special case: `claudeStatus`
+now loops `listAiExecutors()` and reports install status (`which
+<binaryName>`) for all four, exposed as a new `executors` field on the
+existing `claude` `ToolStatus` — the card's own `connected`/`detail`
+still mean exactly "is Claude Code, the default, installed" (zero change
+to that meaning or its existing test assertions), with the other three
+executors' status shown as a badge list underneath, same visual pattern
+as the Google card's account chips. No new brand icons needed — text
+badges only, sidestepping the fact that Simple Icons has no OpenAI mark
+(withdrawn) and no Aider mark at all. Live-verified on a throwaway dev
+server (port 3002): with `agy` genuinely installed and `codex`/`aider`
+genuinely not, the page correctly showed "Google Antigravity CLI —
+installed" in green and the other two as "not found." New test asserts
+the full `executors` array; all 10 pre-existing `connect-status-impl`
+tests pass unmodified since the default fake `which` handler already
+resolved every binary name. Full suite: 531 tests, `tsc`/`next build`
+clean.
+
+**Second same-day follow-up — the badge-list shape above was itself bad
+design**, called out directly: cramming all 4 executors under a card
+still titled "AI agent (Claude Code)" with a `Connected` badge that only
+ever meant Claude Code's own state was confusing regardless of how
+accurate the badges underneath were. Redesigned properly instead of
+patching the badge copy: each registered AI executor now gets its own
+full `ToolStatus` card — own title, own real `connected`/`detail`, own
+install guidance (reusing `installHint`/`installLink` from
+`lib/ai-executors.ts`, unused by any UI until now) — the same shape
+`google`/`github` already had, generalized rather than special-cased.
+`ConnectStatus.claude` is gone; `ConnectStatus.aiExecutors: ToolStatus[]`
+replaces it, produced by looping `listAiExecutors()`. Two more call sites
+that read `.claude` directly needed updating:
+`components/onboarding-welcome.tsx`'s two-step "Install/Connect" gate
+(deliberately still scoped to Claude Code only, the one built-in
+default — now looks it up via `aiExecutors.find(id === "claude-code")`
+instead of a dedicated field) and `connect-panel.tsx`'s brand-icon map
+(`TOOL_BRAND` is now `Partial`, with a generic `Bot` icon fallback for
+Codex/Aider, which have no real mark in the Simple Icons dataset — no
+icon was hand-drawn). `lib/ownership/get-company-ownership-impl.ts` only
+ever read `.google`, so it was unaffected. Rewrote the 4
+`connect-status-impl.test.ts` cases that referenced `status.claude`
+directly (a real behavior/shape change, not the kind of pure DI
+extraction this repo's "keep old tests passing unmodified" convention
+governs) plus one replacing the old badge-list assertion with a per-card
+one. Live-verified again on the same throwaway port: six independent
+cards now render (Claude Code, OpenAI Codex CLI, Aider, Google
+Antigravity CLI, Google, GitHub), each with its own accurate
+connected/not-connected state and, for the three not installed, real
+copyable install commands. Full suite: 531 tests, `tsc`/`next build`
+clean (one `.next` cache corruption hit mid-build from the concurrent
+dev-server run above — `rm -rf .next` and rebuilding was the fix, not a
+real regression).

@@ -77,4 +77,21 @@ describe("ai-executors", () => {
     const args = AI_EXECUTORS.aider.buildArgs({ prompt: "do the thing", editScopePattern: "x/**", bashPatterns: [] })
     expect(args).toEqual(["--message", "do the thing", "--yes-always", "--no-auto-commits"])
   })
+
+  it("google-antigravity buildArgs uses non-interactive print mode with edits auto-accepted", () => {
+    const args = AI_EXECUTORS["google-antigravity"].buildArgs({
+      prompt: "do the thing",
+      editScopePattern: "x/**",
+      bashPatterns: [],
+    })
+    expect(args).toEqual([
+      "-p",
+      "do the thing",
+      "--output-format",
+      "text",
+      "--mode",
+      "accept-edits",
+      "--dangerously-skip-permissions",
+    ])
+  })
 })

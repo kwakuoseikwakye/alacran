@@ -1,6 +1,7 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
 import { listGoogleAccountEmails } from "../google-accounts"
+import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -11,17 +12,17 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
 }
 
 export type ToolStatus = {
-  id: "claude" | "google" | "github"
+  id: AiExecutorId | "google" | "github"
   label: string
   connected: boolean
   detail: string
   guidance: { steps: string[]; command?: string; link?: string }
   /** google only: every account gog auth list knows about, not just the one
-   *  -a auto resolves to. Undefined for claude/github. */
+   *  -a auto resolves to. Undefined for every AI executor/github. */
   accounts?: string[]
 }
 
-export type ConnectStatus = { claude: ToolStatus; google: ToolStatus; github: ToolStatus }
+export type ConnectStatus = { aiExecutors: ToolStatus[]; google: ToolStatus; github: ToolStatus }
 
 async function isPresent(execFn: ExecFileFn, name: string): Promise<boolean> {
   try {
@@ -32,31 +33,31 @@ async function isPresent(execFn: ExecFileFn, name: string): Promise<boolean> {
   }
 }
 
-async function claudeStatus(execFn: ExecFileFn): Promise<ToolStatus> {
-  const installed = await isPresent(execFn, "claude")
+/** One card per registered AI executor (lib/ai-executors.ts) — a company can
+ *  be assigned any of these, so each gets its own real install status and
+ *  install guidance instead of only ever checking Claude Code. */
+async function aiExecutorStatus(execFn: ExecFileFn, executor: AiExecutor): Promise<ToolStatus> {
+  const installed = await isPresent(execFn, executor.binaryName)
   if (installed) {
     return {
-      id: "claude",
-      label: "AI agent (Claude Code)",
+      id: executor.id,
+      label: executor.label,
       connected: true,
-      // Login state can't be detected without spawning claude; the honest proof
-      // of login is running a company command.
-      detail: "Installed — run any company command to confirm your Claude login.",
+      // Login state can't be detected without spawning the CLI; the honest
+      // proof is running a company command assigned to it.
+      detail: "Installed — run an assigned company command to confirm you're signed in.",
       guidance: { steps: [] },
     }
   }
   return {
-    id: "claude",
-    label: "AI agent (Claude Code)",
+    id: executor.id,
+    label: executor.label,
     connected: false,
-    detail: "Claude Code CLI not found on your PATH.",
+    detail: `${executor.label} not found on your PATH.`,
     guidance: {
-      steps: [
-        "Install Claude Code, then sign in to your Claude subscription.",
-        "Reopen this app or press Re-check.",
-      ],
-      command: "npm install -g @anthropic-ai/claude-code",
-      link: "https://docs.claude.com/en/docs/claude-code/overview",
+      steps: [`Install ${executor.label}, then sign in with your own account.`, "Reopen this app or press Re-check."],
+      command: executor.installHint,
+      link: executor.installLink,
     },
   }
 }
@@ -192,10 +193,10 @@ export async function getConnectStatusImpl(
   execFn: ExecFileFn = defaultExecFile,
   platform: NodeJS.Platform = process.platform
 ): Promise<ConnectStatus> {
-  const [claude, google, github] = await Promise.all([
-    claudeStatus(execFn),
+  const [aiExecutors, google, github] = await Promise.all([
+    Promise.all(listAiExecutors().map((e) => aiExecutorStatus(execFn, e))),
     googleStatus(execFn, platform),
     githubStatus(execFn, platform),
   ])
-  return { claude, google, github }
+  return { aiExecutors, google, github }
 }

@@ -16,6 +16,7 @@ const AI_EXECUTOR_NETWORK_LABEL: Record<AiExecutorId, string> = {
   "claude-code": "Anthropic (Claude Code) — your own account",
   "openai-codex": "OpenAI (Codex CLI) — your own account",
   aider: "Depends on your own Aider model config (OpenAI, Anthropic, or a local model) — not visible to this app",
+  "google-antigravity": "Google (Antigravity CLI) — your own account",
 }
 
 export function summarizeNetworkAccess(input: SummarizeNetworkAccessInput): NetworkAccessEntry[] {

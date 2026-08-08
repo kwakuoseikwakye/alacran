@@ -193,6 +193,9 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
 
   const loading = deps === null || connect === null
   const claudeInstalled = deps?.claude === true
+  // Onboarding only ever gates on Claude Code (the one built-in default);
+  // the other registered AI executors show up on the full Connect page.
+  const claudeConnect = connect?.aiExecutors.find((e) => e.id === "claude-code")
 
   const stepDone: Record<StepId, boolean> = {
     install: claudeInstalled,
@@ -291,8 +294,8 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
                   : "The agent that does the work. Required."
               }
               state={toolState(deps?.claude)}
-              command={loading || claudeInstalled ? undefined : connect?.claude.guidance.command}
-              link={loading || claudeInstalled ? undefined : connect?.claude.guidance.link}
+              command={loading || claudeInstalled ? undefined : claudeConnect?.guidance.command}
+              link={loading || claudeInstalled ? undefined : claudeConnect?.guidance.link}
               delay={0}
             />
             <ToolRow
@@ -319,9 +322,9 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
 
         {current.id === "connect" && (
           <div className="space-y-3" aria-live="polite">
-            {connect ? (
+            {connect && claudeConnect ? (
               <>
-                <ConnectRow tool={connect.claude} brand="claude" delay={0} />
+                <ConnectRow tool={claudeConnect} brand="claude" delay={0} />
                 <ConnectRow tool={connect.google} brand="google" delay={90} />
               </>
             ) : (

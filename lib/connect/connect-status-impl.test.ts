@@ -1,5 +1,11 @@
 import { describe, it, expect } from "vitest"
-import { getConnectStatusImpl, type ExecFileFn } from "./connect-status-impl"
+import { getConnectStatusImpl, type ExecFileFn, type ToolStatus } from "./connect-status-impl"
+
+function findExecutor(status: { aiExecutors: ToolStatus[] }, id: string): ToolStatus {
+  const found = status.aiExecutors.find((e) => e.id === id)
+  if (!found) throw new Error(`no executor with id ${id}`)
+  return found
+}
 
 /** Build a fake ExecFileFn from a handler map keyed by "command arg0 arg1 ...". */
 function fakeExec(handler: (command: string, args: string[]) => { stdout: string } | Error): ExecFileFn {
@@ -23,7 +29,7 @@ describe("getConnectStatusImpl", () => {
     })
     const status = await getConnectStatusImpl(exec)
 
-    expect(status.claude.connected).toBe(true)
+    expect(findExecutor(status, "claude-code").connected).toBe(true)
     expect(status.google.connected).toBe(true)
     expect(status.google.detail).toContain("user@example.com")
   })
@@ -42,7 +48,7 @@ describe("getConnectStatusImpl", () => {
     expect(status.google.detail).toBe("Connected: user@example.com, second@example.com.")
   })
 
-  it("marks Claude not connected with install guidance when the CLI is missing", async () => {
+  it("marks Claude Code not connected with install guidance when the CLI is missing", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "claude") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
@@ -51,10 +57,31 @@ describe("getConnectStatusImpl", () => {
     })
     const status = await getConnectStatusImpl(exec)
 
-    expect(status.claude.connected).toBe(false)
-    expect(status.claude.guidance.command).toContain("claude-code")
-    // The other tool still resolves independently.
+    expect(findExecutor(status, "claude-code").connected).toBe(false)
+    expect(findExecutor(status, "claude-code").guidance.command).toContain("claude-code")
+    // Every other tool still resolves independently.
     expect(status.google.connected).toBe(true)
+  })
+
+  it("gives every registered AI executor its own card, not just Claude Code", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which" && args[0] === "agy") return new Error("not found")
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "gog") return { stdout: GOG_CONNECTED }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec)
+
+    expect(status.aiExecutors.map((e) => ({ id: e.id, label: e.label, connected: e.connected }))).toEqual([
+      { id: "claude-code", label: "Claude Code", connected: true },
+      { id: "openai-codex", label: "OpenAI Codex CLI", connected: true },
+      { id: "aider", label: "Aider (OpenAI, Anthropic, or a local/open-source model)", connected: true },
+      { id: "google-antigravity", label: "Google Antigravity CLI", connected: false },
+    ])
+    // A missing executor gets its real install command/link, not Claude's.
+    expect(findExecutor(status, "google-antigravity").guidance.command).toContain(
+      "antigravity.google/cli/install.sh"
+    )
   })
 
   it("marks Google not connected with a brew install command on macOS when gog is missing", async () => {
@@ -67,7 +94,7 @@ describe("getConnectStatusImpl", () => {
 
     expect(status.google.connected).toBe(false)
     expect(status.google.guidance.command).toContain("gog")
-    expect(status.claude.connected).toBe(true)
+    expect(findExecutor(status, "claude-code").connected).toBe(true)
   })
 
   it("omits the macOS-only brew command on Linux, keeping the install link", async () => {
