@@ -3,6 +3,7 @@ import { COMPANY_SETUP_BLURB } from "@/components/company-setup-wizard"
 import { BACKUP_BLURB } from "@/components/backup-company-button"
 import { OWNERSHIP_BLURB } from "@/components/company-ownership-sheet"
 import { AI_EXECUTOR_BLURB } from "@/components/ai-executor-picker"
+import { GOOGLE_ACCOUNTS_BLURB } from "@/components/google-accounts-picker"
 import { REMOVE_BLURB } from "@/components/remove-company-button"
 import { AVATAR_BLURB } from "@/components/agent-avatar-form"
 
@@ -18,6 +19,7 @@ export type CompanyGuideFlags = {
   showBackupButton?: boolean
   showOwnershipButton?: boolean
   showAiExecutorPicker?: boolean
+  showGoogleAccountsPicker?: boolean
   removable?: boolean
 }
 
@@ -40,6 +42,7 @@ export function buildGuideSteps(flags: CompanyGuideFlags): GuideStep[] {
     { show: flags.showBackupButton, label: "Back up to GitHub", blurb: BACKUP_BLURB },
     { show: flags.showOwnershipButton, label: "View ownership", blurb: OWNERSHIP_BLURB },
     { show: flags.showAiExecutorPicker, label: "AI executor", blurb: AI_EXECUTOR_BLURB },
+    { show: flags.showGoogleAccountsPicker, label: "Inbox accounts", blurb: GOOGLE_ACCOUNTS_BLURB },
     { show: flags.removable, label: "Remove", blurb: REMOVE_BLURB },
     { show: true, label: "Avatar", blurb: AVATAR_BLURB },
   ]

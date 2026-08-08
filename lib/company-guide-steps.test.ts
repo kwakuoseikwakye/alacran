@@ -16,6 +16,7 @@ describe("buildGuideSteps", () => {
       showBackupButton: true,
       showOwnershipButton: true,
       showAiExecutorPicker: true,
+      showGoogleAccountsPicker: true,
       removable: true,
       showEditCompanyButton: true,
     })
@@ -26,6 +27,7 @@ describe("buildGuideSteps", () => {
       "Back up to GitHub",
       "View ownership",
       "AI executor",
+      "Inbox accounts",
       "Remove",
       "Avatar",
     ])
@@ -53,6 +55,7 @@ describe("buildGuideSteps", () => {
       showBackupButton: true,
       showOwnershipButton: true,
       showAiExecutorPicker: true,
+      showGoogleAccountsPicker: true,
       removable: true,
     })
     for (const step of steps) {
