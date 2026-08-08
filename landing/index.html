@@ -12,7 +12,7 @@
 <body>
 <nav class="nav">
   <a class="brand" href="/"><img class="glyph" src="/logo.png" alt="" width="600" height="626" />Alacrán</a>
-  <div class="navlinks">
+  <div class="navlinks" id="navlinks">
     <a href="/use-cases">Use cases</a>
     <a href="/templates">Templates</a>
     <a href="/integrations">Integrations</a>
@@ -21,6 +21,7 @@
     <a href="https://github.com/kwakuoseikwakye/alacran">GitHub</a>
   </div>
   <div class="nav-right">
+    <button class="nav-toggle" id="nt" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="navlinks">&#9776;</button>
     <button class="theme-toggle" id="tt" type="button" aria-label="Toggle day / night">&#9680;</button>
     <a class="btn btn-primary" href="#download">Download</a>
   </div>
@@ -108,6 +109,69 @@
   </div>
 </section>
 
+<section id="onboarding-demo" style="padding: 140px 0; background: color-mix(in srgb, var(--void) 30%, transparent);">
+  <div class="sticky-layout r">
+    <div class="sticky-text">
+      <span class="eyebrow">Setup in seconds</span>
+      <h2>Zero configuration.<br>Ready to run.</h2>
+      <p>Creating a new company workspace is as simple as answering four plain-English questions. No coding, no prompts, no API scaffolding.</p>
+      <p style="margin-top:16px;">Once the wizard finishes, your dedicated sandbox is generated instantly. Your AI company is immediately ready to run jobs.</p>
+    </div>
+    <div class="sticky-visual">
+      <div class="mac-window" style="min-height:380px; box-shadow: 0 40px 100px -20px rgba(255,46,67,0.15);">
+        <div class="mac-header">
+          <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
+          <div class="mac-title">Alacrán Setup</div>
+        </div>
+        
+        <div class="mac-body" style="position: relative; overflow: hidden; min-height: 340px;">
+          <!-- Scene 1: The Form -->
+          <div class="onboarding-scene s1" style="justify-content: center;">
+            <div class="demo-form" style="max-width: 400px; margin: 0 auto; width: 100%;">
+               <div class="demo-label">What is the name of your company?</div>
+               <div class="demo-input"><span class="type-text"></span><span class="demo-cursor"></span></div>
+               <div class="demo-label">Describe what your company does</div>
+               <div class="demo-input" style="color:var(--dune);">...</div>
+               <div class="demo-btn">Create workspace</div>
+            </div>
+          </div>
+          
+          <!-- Scene 2: Terminal Generation -->
+          <div class="onboarding-scene s2">
+            <div class="mac-content" style="height:100%; display: flex; flex-direction: column; justify-content: center;">
+               <div class="terminal-line term-line-anim"><span class="info">ℹ</span> Generating ontology for "Marketing Launch"...</div>
+               <div class="terminal-line term-line-anim"><span class="success">✔</span> Ontology created successfully.</div>
+               <div class="terminal-line term-line-anim"><span class="info">ℹ</span> Configuring isolated sandbox environment...</div>
+               <div class="terminal-line term-line-anim"><span class="success">✔</span> Workspace ready.</div>
+            </div>
+          </div>
+          
+          <!-- Scene 3: Dashboard Ready -->
+          <div class="onboarding-scene s3" style="justify-content: center;">
+            <div class="demo-dash" style="align-content: center; height: auto;">
+               <div style="width:100%; margin-bottom:8px;">
+                 <div style="font-family:var(--font-display); font-size:16px; font-weight:800; color:var(--bone);">Marketing Launch</div>
+                 <div style="font-size:12px; color:var(--dune); margin-top:4px;">Workspace active and ready to run jobs.</div>
+               </div>
+               <div class="demo-agent-card">
+                 <h4>Codebase Refactor</h4>
+                 <p>claude-3-5-sonnet</p>
+                 <span class="status">● Idle</span>
+               </div>
+               <div class="demo-agent-card">
+                 <h4>Copywriter</h4>
+                 <p>gpt-4o</p>
+                 <span class="status">● Idle</span>
+               </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="how-it-works" style="padding: 140px 0;">
   <div class="sticky-layout">
     <div class="sticky-text">
@@ -159,7 +223,7 @@
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Live Execution Board</div>
         </div>
-        <div class="mac-body" style="padding: 24px; background: var(--void); display:flex; gap:16px; overflow-x:auto;">
+        <div class="mac-body execute-board-body" style="padding: 24px; background: var(--void); display:flex; gap:16px; overflow-x:auto;">
           <!-- Board Simulation (CSS/HTML mockup replacing the complex JS one) -->
           <div style="flex:1; min-width:220px;">
             <div style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--dune); margin-bottom:12px;">Running</div>
@@ -261,7 +325,7 @@
             <div class="mac-item" style="margin-bottom:4px;">Network Access</div>
             <div class="mac-item">Advanced</div>
           </div>
-          <div class="mac-content" style="padding: 24px 32px;">
+          <div class="mac-content privacy-content" style="padding: 24px 32px;">
             <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--line); padding-bottom: 16px; margin-bottom: 20px;">
               <div>
                 <h3 style="font-size: 18px; margin-bottom:4px; font-weight:800; font-family:var(--font-display);">Data Isolation</h3>
@@ -274,7 +338,7 @@
             
             <div style="display:grid; gap: 14px;">
               <!-- Local Only Item -->
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+              <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
                    <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Prompts, Files & History</div>
                    <div style="font-size: 12.5px; color: var(--dune);">Kept strictly on your local machine.</div>
@@ -283,7 +347,7 @@
               </div>
 
               <!-- Blocked Item -->
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+              <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
                    <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Analytics & Telemetry</div>
                    <div style="font-size: 12.5px; color: var(--dune);">No usage data or crash reports collected.</div>
@@ -292,7 +356,7 @@
               </div>
 
               <!-- Allowed Item -->
-              <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+              <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
                    <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">AI Inference & Backups</div>
                    <div style="font-size: 12.5px; color: var(--dune);">Direct connections via API only when requested.</div>
@@ -403,6 +467,13 @@
 <script>
   (function(){var r=document.documentElement,b=document.getElementById("tt");
     if(b)b.addEventListener("click",function(){var n=(r.getAttribute("data-theme")==="dark")?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem('alacran-theme',n)}catch(e){}});})();
+  (function(){var n=document.querySelector(".nav"),t=document.getElementById("nt");
+    if(!n||!t)return;
+    function close(){n.classList.remove("menu-open");t.setAttribute("aria-expanded","false");}
+    t.addEventListener("click",function(e){e.stopPropagation();var open=n.classList.toggle("menu-open");t.setAttribute("aria-expanded",open?"true":"false");});
+    n.querySelectorAll(".navlinks a").forEach(function(a){a.addEventListener("click",close);});
+    document.addEventListener("click",function(e){if(!n.contains(e.target))close();});
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});})();
   (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".r,.diagram");
     if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
     var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});

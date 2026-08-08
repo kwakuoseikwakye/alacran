@@ -13,7 +13,7 @@
 <body>
 <nav class="nav">
   <a class="brand" href="/"><img class="glyph" src="/logo.png" alt="" width="600" height="626" />Alacrán</a>
-  <div class="navlinks">
+  <div class="navlinks" id="navlinks">
     <a href="/use-cases">Use cases</a>
     <a href="/templates">Templates</a>
     <a href="/integrations">Integrations</a>
@@ -22,6 +22,7 @@
     <a href="https://github.com/kwakuoseikwakye/alacran">GitHub</a>
   </div>
   <div class="nav-right">
+    <button class="nav-toggle" id="nt" type="button" aria-label="Toggle menu" aria-expanded="false" aria-controls="navlinks">&#9776;</button>
     <button class="theme-toggle" id="tt" type="button" aria-label="Toggle day / night">&#9680;</button>
     <a class="btn btn-primary" href="/#download">Download</a>
   </div>
@@ -65,6 +66,13 @@
 <script>
   (function(){var r=document.documentElement,b=document.getElementById("tt");
     if(b)b.addEventListener("click",function(){var n=(r.getAttribute("data-theme")==="dark")?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem('alacran-theme',n)}catch(e){}});})();
+  (function(){var n=document.querySelector(".nav"),t=document.getElementById("nt");
+    if(!n||!t)return;
+    function close(){n.classList.remove("menu-open");t.setAttribute("aria-expanded","false");}
+    t.addEventListener("click",function(e){e.stopPropagation();var open=n.classList.toggle("menu-open");t.setAttribute("aria-expanded",open?"true":"false");});
+    n.querySelectorAll(".navlinks a").forEach(function(a){a.addEventListener("click",close);});
+    document.addEventListener("click",function(e){if(!n.contains(e.target))close();});
+    document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});})();
   (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".r,.diagram");
     if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
     var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});
