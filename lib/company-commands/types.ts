@@ -18,6 +18,13 @@ export type CompanyCommand = {
   outputKind: CompanyCommandOutputKind
   outputPath: string
   prefetchKind?: PrefetchKind
-  bashPatterns?: string[]
-  buildPrompt: (fieldValues: Record<string, string>, today: string, prefetch: string) => string
+  /**
+   * Static for every command but check-inbox. check-inbox's allowlist
+   * depends on which Google account(s) the company is assigned (see
+   * lib/google-accounts-config.ts) — the function form lets
+   * runCompanyCommandImpl resolve that once and build the exact
+   * `Bash(gog -a <account> ...)` patterns for it.
+   */
+  bashPatterns?: string[] | ((accounts: string[]) => string[])
+  buildPrompt: (fieldValues: Record<string, string>, today: string, prefetch: string, accounts: string[]) => string
 }

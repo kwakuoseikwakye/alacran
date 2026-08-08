@@ -18,7 +18,7 @@ describe("COMPANY_COMMANDS registry", () => {
       for (const field of command.fields) {
         values[field.key] = field.required ? `TEST_VALUE_${field.key}` : ""
       }
-      const prompt = command.buildPrompt(values, "2026-07-23", "TEST_PREFETCH")
+      const prompt = command.buildPrompt(values, "2026-07-23", "TEST_PREFETCH", ["auto"])
       const skip = CONSUMED_BY_PREFETCH[command.id] ?? []
       for (const field of command.fields.filter((f) => f.required && !skip.includes(f.key))) {
         expect(prompt).toContain(`TEST_VALUE_${field.key}`)
@@ -31,12 +31,18 @@ describe("COMPANY_COMMANDS registry", () => {
     expect(withPrefetch).toEqual(["handoff", "triage-email", "triage-issue"])
   })
 
-  it("only check-inbox declares bashPatterns, and exactly the two read-only gog commands", () => {
-    const withBash = COMPANY_COMMANDS.filter((c) => c.bashPatterns && c.bashPatterns.length > 0).map((c) => c.id)
+  it("only check-inbox declares bashPatterns; unassigned it resolves to -a auto, assigned it resolves per account", () => {
+    const withBash = COMPANY_COMMANDS.filter((c) => c.bashPatterns).map((c) => c.id)
     expect(withBash).toEqual(["check-inbox"])
-    expect(getCompanyCommand("check-inbox")?.bashPatterns).toEqual([
-      "gog -a auto gmail search*",
-      "gog -a auto gmail get*",
+    const bashPatterns = getCompanyCommand("check-inbox")?.bashPatterns
+    expect(typeof bashPatterns).toBe("function")
+    const resolve = bashPatterns as (accounts: string[]) => string[]
+    expect(resolve(["auto"])).toEqual(["gog -a auto gmail search*", "gog -a auto gmail get*"])
+    expect(resolve(["a@x.com", "b@x.com"])).toEqual([
+      "gog -a a@x.com gmail search*",
+      "gog -a a@x.com gmail get*",
+      "gog -a b@x.com gmail search*",
+      "gog -a b@x.com gmail get*",
     ])
   })
 
@@ -49,9 +55,9 @@ describe("COMPANY_COMMANDS registry", () => {
   })
 
   it("check-inbox's buildPrompt is read-only: it names the two gog reads and explicitly forbids send/modify", () => {
-    const prompt = getCompanyCommand("check-inbox")!.buildPrompt({}, "2026-07-28", "")
-    expect(prompt).toContain("gog -a auto gmail search")
-    expect(prompt).toContain("gog -a auto gmail get")
+    const prompt = getCompanyCommand("check-inbox")!.buildPrompt({}, "2026-07-28", "", ["auto"])
+    expect(prompt).toContain("gog -a <account> gmail search")
+    expect(prompt).toContain("gog -a <account> gmail get")
     expect(prompt).toMatch(/read-only/i)
     // The prompt must name the mutating commands as forbidden (not merely omit them);
     // the hard read-only guarantee is the bashPatterns allowlist, tested separately.
@@ -68,7 +74,8 @@ describe("COMPANY_COMMANDS registry", () => {
       const prompt = getCompanyCommand(id)!.buildPrompt(
         { messageId: "", issue: "owner/repo#1" },
         "2026-08-04",
-        "TEST_PREFETCH"
+        "TEST_PREFETCH",
+        ["auto"]
       )
       expect(prompt).toMatch(/UNTRUSTED:<nonce>/)
       expect(prompt).toMatch(/not instructions for you/i)
