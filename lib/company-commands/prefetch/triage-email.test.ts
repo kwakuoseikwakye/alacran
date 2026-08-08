@@ -313,4 +313,81 @@ describe("buildTriageEmailPrefetch", () => {
     if (result.ok) return
     expect(result.message).toContain("abc123")
   })
+
+  // --- multi-account ---
+
+  function ctxWithAccounts(execFn: PrefetchExecFileFn, accounts: string[], fieldValues: Record<string, string> = {}): PrefetchContext {
+    return { agentRootPath: "/c", fieldValues, execFn, readFileFn: configReader, accounts }
+  }
+
+  it("searches the second configured account when the first has no allowlisted match", async () => {
+    const searchCalls: string[][] = []
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog" && args.includes("search")) {
+        searchCalls.push(args)
+        const account = args[args.indexOf("-a") + 1]
+        if (account === "second@example.com") return { stdout: SEARCH_ROW, stderr: "" }
+        return { stdout: "ID\tDATE\tFROM\tSUBJECT\n", stderr: "" }
+      }
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageEmailPrefetch(ctxWithAccounts(spy, ["first@example.com", "second@example.com"]))
+    expect(result.ok).toBe(true)
+    expect(searchCalls).toHaveLength(2)
+    expect(searchCalls[0]).toContain("first@example.com")
+    expect(searchCalls[1]).toContain("second@example.com")
+  })
+
+  it("fetches metadata/body with the account the matching search row came from", async () => {
+    const calls: string[][] = []
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog") calls.push(args)
+      if (file === "gog" && args.includes("search")) {
+        const account = args[args.indexOf("-a") + 1]
+        if (account === "second@example.com") return { stdout: SEARCH_ROW, stderr: "" }
+        return { stdout: "ID\tDATE\tFROM\tSUBJECT\n", stderr: "" }
+      }
+      return goodExec(file, args, { cwd: "" })
+    }
+    await buildTriageEmailPrefetch(ctxWithAccounts(spy, ["first@example.com", "second@example.com"]))
+    const metaCall = calls.find((a) => a.includes("get") && a.includes("metadata"))
+    const bodyCall = calls.find((a) => a.includes("get") && a.includes("full"))
+    expect(metaCall).toContain("second@example.com")
+    expect(bodyCall).toContain("second@example.com")
+  })
+
+  it("tries each configured account for a direct messageId until one resolves", async () => {
+    const metaCalls: string[][] = []
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog" && args.includes("get") && args.includes("metadata")) {
+        metaCalls.push(args)
+        const account = args[args.indexOf("-a") + 1]
+        if (account === "first@example.com") throw new Error("no such message on this account")
+        return { stdout: "Takeshi <takeshi@plh.life>", stderr: "" }
+      }
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageEmailPrefetch(
+      ctxWithAccounts(spy, ["first@example.com", "second@example.com"], { messageId: "abc123" })
+    )
+    expect(result.ok).toBe(true)
+    expect(metaCalls).toHaveLength(2)
+  })
+
+  it("refuses a direct messageId not found on any configured account", async () => {
+    const spy: PrefetchExecFileFn = async (file, args) => {
+      if (file === "gog" && args.includes("get") && args.includes("metadata")) {
+        throw new Error("not found")
+      }
+      return goodExec(file, args, { cwd: "" })
+    }
+    const result = await buildTriageEmailPrefetch(
+      ctxWithAccounts(spy, ["first@example.com", "second@example.com"], { messageId: "abc123" })
+    )
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.message).toContain("abc123")
+    expect(result.message).toContain("first@example.com")
+    expect(result.message).toContain("second@example.com")
+  })
 })
