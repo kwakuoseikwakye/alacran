@@ -1240,3 +1240,70 @@ header and `.dash-content` for the body, both new tokens in
 `components/ui/*` primitive touched, per the standing design-token
 convention. All existing tests, `tsc`, and `next build` pass unchanged; no
 new dependency.
+
+## v41 (2026-08-08): connect and assign more than one Google account
+
+Real user gap: this app only ever exposed one Google account, machine-wide
+(`-a auto`, hardcoded into `check-inbox`'s prompt/bashPatterns and
+`triage-email`'s prefetch), documented as a known limitation since v20/v22.
+Investigation found the limitation was never in `gog` — the installed
+binary (v0.34.1) already supports multiple stored accounts end to end
+(`gog auth add`, `gog auth list`, `-a <email|alias|auto>` per call, verified
+directly against the real CLI) — the app just never exposed more than the
+one "auto" resolves to. No new integration needed.
+
+**Connect page**: `ToolStatus.google` gains `accounts: string[]` (a new
+`gog auth list -j` call, `lib/google-accounts.ts`) — every stored account
+shown as a chip, plus a typed-email → `gog auth add <email>` copyable
+command. Same "show the command, you run it, press Re-check" pattern
+already used for every other guidance flow on that page; the app never
+spawns interactive OAuth itself.
+
+**Per-company assignment**: `definitions/integrations/google.yaml`
+(`accounts: [...]`) in the company's own repo — company-owned data, same
+tier as `definitions/ontology/company.yaml`, not an app preference, so a
+manual/interactive run (v38's Open Terminal) reads the same source of
+truth a dashboard-triggered run does. Written only through a dedicated
+`saveGoogleAccountsImpl` (mirrors `save-company-ontology-impl.ts` exactly,
+including the single-file-scoped commit), never through the generic
+skill-editor gate. New `GoogleAccountsPicker` card control (checkboxes over
+`gog auth list`'s accounts) sits next to the existing `AiExecutorPicker`,
+gated the same way (`isCommandSet`), and got its own company-guide step.
+Missing/empty config resolves to `[]`, and every call site falls back to
+`["auto"]` — an unconfigured company is unaffected; the pre-existing
+`check-inbox` bashPatterns test (`"gog -a auto gmail search*"`) still
+passes unmodified.
+
+**check-inbox** (the agent runs `gog` itself): `CompanyCommand.bashPatterns`
+can now be a function of the resolved accounts — only this command uses the
+function form, every other command's static array is untouched —
+resolving to one `Bash(gog -a <account> ...)` pair per configured account.
+`buildPrompt` gained a 4th `accounts` param so the prompt itself loops
+per-account instead of a bare `-a auto`.
+
+**triage-email** (prefetch runs `gog` control-panel-side; the agent has no
+Bash access at all): the search step now loops the company's configured
+accounts in priority order, first allowlisted match wins — documented as a
+`ponytail:` simplification rather than a true cross-account recency sort,
+since that needs a confirmed `gog --plain` date format that isn't
+discoverable without a live query against a real inbox. The metadata/body
+fetch reuse whichever account the matching search row came from; an
+explicit message-id override (no search) tries each configured account in
+turn since a bare id doesn't say which mailbox it lives in.
+
+Both template commands (`check-inbox.md`, `triage-email.md`, a commit in
+`ai-company-starter-main` itself, same mechanism as v22) now mention
+`definitions/integrations/google.yaml` so a manual/interactive run matches
+dashboard-run behavior instead of staying hardcoded to `auto`.
+
+Live-verified against a real dev server (throwaway port 4326) with this
+machine's real single connected account: the Connect page correctly showed
+it as a chip plus the add-another flow, and a command-set company's card
+correctly rendered the checkbox picker with that account. Deliberately
+did **not** click the checkbox live — doing so commits
+`definitions/integrations/google.yaml` into whichever real company repo
+rendered it, and the standing safety rule's sanctioned live-test targets
+don't cover an arbitrary write into a real company beyond the one
+dedicated `stock-note.md` case; every write path is instead covered by
+`vitest` against disposable temp directories. Full suite: 522 tests
+passing, `tsc` and `next build` clean.
