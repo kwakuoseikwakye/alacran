@@ -51,6 +51,14 @@ AI-Native instance through the UI" product. Concretely:
 
 ## Established conventions (binding for every slice)
 
+- **Every feature gets documented — no exceptions, and not only once it
+  ships.** Shipped, in-progress, blocked, or abandoned-after-investigation
+  all count. Follow Workflow step 6 below the moment there's something to
+  record: a dated note in `CHANGELOG.md` plus a line in this file's
+  "Current state" section covering what was investigated, what was
+  decided, and what's still open (e.g. blocked pending verification of an
+  external tool's real CLI flags). This is what makes the process
+  resumable across a session boundary instead of re-derived from scratch.
 - **`export const dynamic = "force-dynamic"`** on every page — this app
   reads live filesystem/git state, never statically cached.
 - **Adapter-per-agent pattern**: `AGENTS` / `ADAPTERS` / `SKILL_ADAPTERS`
@@ -544,6 +552,33 @@ page now lists every stored account (`lib/google-accounts.ts`) with a
 control, and both `check-inbox` and `triage-email` resolve and loop the
 assigned account(s) instead of a hardcoded `-a auto`. Unconfigured
 companies are unaffected (`[]` → `["auto"]` fallback everywhere).
+
+v42 added Google Antigravity CLI (`agy`) as a fourth entry in the
+already-existing pluggable AI-executor registry (`lib/ai-executors.ts` —
+"choose which AI agent runs this company's commands" was not new; it
+shipped alongside v41). Flags (`-p ... --output-format text --mode
+accept-edits --dangerously-skip-permissions`) were confirmed against the
+real installed `agy --help` (v1.1.11) on the user's machine, not web
+docs — search results for Antigravity CLI's flags were unreliable enough
+to include a hallucinated description ("Anthropic's official CLI for
+Claude") on an otherwise-plausible-looking page. `lib/ownership
+/summarize-network-access.ts`'s exhaustive `Record<AiExecutorId, string>`
+(v34) caught the missing case at `tsc` time, same "always a real
+account-bound cloud call" bucket as Claude Code/Codex. **Same-day
+follow-up:** the Connect page's "AI agent" card was hardcoded to check
+only the `claude` binary — a pre-existing gap (Codex/Aider were never
+added either), just more visible now with a 4th option. First fix
+(badges for every executor under the one Claude Code card) was itself
+called out as bad design — a card titled "AI agent (Claude Code)"
+showing 4 tools' status is confusing no matter how accurate the badges
+are. Redesigned properly: every registered AI executor now gets its own
+full connect-page card (own title, real connected state, own install
+guidance via `installHint`/`installLink`, finally used by a UI),
+`ConnectStatus.aiExecutors: ToolStatus[]` replacing the single `claude`
+field. `onboarding-welcome.tsx`'s Claude-only install gate now looks it
+up by id instead of a dedicated field. Live-verified: 6 independent
+cards (Claude Code, Codex, Aider, Antigravity, Google, GitHub), each
+correct for what's really installed on this machine.
 
 ## Roadmap (named, not yet designed)
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, ExternalLink } from "lucide-react"
+import { RefreshCw, ExternalLink, Bot } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,10 +11,14 @@ import { CommandLine } from "@/components/copy-button"
 import { getConnectStatus } from "@/lib/connect/connect-actions"
 import type { ConnectStatus, ToolStatus } from "@/lib/connect/connect-status-impl"
 
-// Each tool's real product mark. `gog` is a third-party CLI with no mark of its
-// own, so Google's stands in for what it actually connects you to.
-const TOOL_BRAND: Record<ToolStatus["id"], BrandId> = {
-  claude: "claude",
+// Each tool's real product mark, where one exists. `gog` and Antigravity CLI
+// have no mark of their own, so Google's stands in for what they actually
+// connect you to. OpenAI's mark was withdrawn from the Simple Icons dataset
+// and Aider (a smaller open-source project) was never in it — both fall back
+// to a generic icon in ToolCard rather than an approximated/redrawn logo.
+const TOOL_BRAND: Partial<Record<ToolStatus["id"], BrandId>> = {
+  "claude-code": "claude",
+  "google-antigravity": "google",
   google: "google",
   github: "github",
 }
@@ -48,6 +52,7 @@ function AddGoogleAccount() {
 
 function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
   const live = tool.connected
+  const brand = TOOL_BRAND[tool.id]
   return (
     <Card
       className="a-rise gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80"
@@ -63,14 +68,14 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
                 live ? "border-success/30 bg-success/10" : "border-border bg-background/60"
               }`}
             >
-              <BrandIcon
-                id={TOOL_BRAND[tool.id]}
-                tone={live ? "brand" : "inherit"}
-                className="size-[18px]"
-              />
+              {brand ? (
+                <BrandIcon id={brand} tone={live ? "brand" : "inherit"} className="size-[18px]" />
+              ) : (
+                <Bot className="size-[18px]" aria-label={tool.label} />
+              )}
             </span>
-            {/* wraps rather than truncates: there are only ever two tools and
-                their names are long enough to clip even on a wide screen */}
+            {/* wraps rather than truncates: names get long enough (e.g. Aider's)
+                to clip even on a wide screen */}
             <span className="min-w-0 font-display leading-snug font-bold">{tool.label}</span>
           </span>
           <Badge
@@ -92,6 +97,12 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{tool.detail}</p>
+
+        {tool.id !== "google" && tool.id !== "github" && (
+          <p className="text-xs text-muted-foreground">
+            Assign which company runs commands with this from that company&apos;s card.
+          </p>
+        )}
 
         {tool.id === "google" && live && (
           <>
@@ -185,9 +196,11 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <ToolCard tool={status.claude} delay={0} />
-        <ToolCard tool={status.google} delay={90} />
-        <ToolCard tool={status.github} delay={180} />
+        {status.aiExecutors.map((tool, i) => (
+          <ToolCard key={tool.id} tool={tool} delay={i * 90} />
+        ))}
+        <ToolCard tool={status.google} delay={status.aiExecutors.length * 90} />
+        <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} />
       </div>
     </div>
   )

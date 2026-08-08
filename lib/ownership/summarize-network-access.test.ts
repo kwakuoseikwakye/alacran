@@ -12,6 +12,11 @@ describe("summarizeNetworkAccess", () => {
     expect(result).toEqual([{ label: "OpenAI (Codex CLI) — your own account" }])
   })
 
+  it("labels the Google Antigravity executor", () => {
+    const result = summarizeNetworkAccess({ aiExecutorId: "google-antigravity", hasIntegration: false, remoteUrl: null })
+    expect(result).toEqual([{ label: "Google (Antigravity CLI) — your own account" }])
+  })
+
   it("gives Aider a non-committal line rather than claiming certainty about its backend", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "aider", hasIntegration: false, remoteUrl: null })
     expect(result).toEqual([
