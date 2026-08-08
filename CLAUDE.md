@@ -532,6 +532,19 @@ mobile — plus ambient background orbs, both driven by new tokens in
 `app/globals.css`. Every page now shares `.dash-topbar`/`.dash-content`
 from `app/layout.tsx` instead of its own `<main>` wrapper.
 
+v41 let a company connect and use more than one Google account — `gog`
+(the CLI underneath the "email connection") already supported multiple
+stored accounts (`gog auth add/list`, `-a <email|alias|auto>` per call);
+the app just never exposed more than the one `auto` resolved to. Connect
+page now lists every stored account (`lib/google-accounts.ts`) with a
+"connect another email" flow; a new per-company
+`definitions/integrations/google.yaml` (written via
+`saveGoogleAccountsImpl`, same tier/pattern as
+`definitions/ontology/company.yaml`) feeds a `GoogleAccountsPicker` card
+control, and both `check-inbox` and `triage-email` resolve and loop the
+assigned account(s) instead of a hardcoded `-a auto`. Unconfigured
+companies are unaffected (`[]` → `["auto"]` fallback everywhere).
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
