@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { RefreshCw, ExternalLink } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,6 +22,29 @@ const TOOL_BRAND: Record<ToolStatus["id"], BrandId> = {
 // The Google services a connected `gog` unlocks. These are real marks, so the payoff of
 // connecting is legible at a glance.
 const GOOGLE_SURFACE: BrandId[] = ["gmail", "googlecalendar", "googledrive", "googlechat"]
+
+/** Lets you connect a 2nd, 3rd, ... Google account. Same pattern as every
+ *  other guidance flow here: show the exact command, the user runs it in
+ *  their own terminal, then presses Re-check — the app never spawns an
+ *  interactive OAuth flow itself. */
+function AddGoogleAccount() {
+  const [email, setEmail] = useState("")
+  return (
+    <div className="space-y-1.5 border-t border-border pt-3">
+      <p className="text-xs text-muted-foreground">Connect another email</p>
+      <div className="flex gap-2">
+        <Input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="h-8 text-xs"
+        />
+      </div>
+      {email.trim() && <CommandLine command={`gog auth add ${email.trim()}`} />}
+    </div>
+  )
+}
 
 function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
   const live = tool.connected
@@ -70,17 +94,32 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
         <p className="text-sm text-muted-foreground">{tool.detail}</p>
 
         {tool.id === "google" && live && (
-          <div className="flex items-center gap-2 pt-0.5">
-            {GOOGLE_SURFACE.map((id) => (
-              <span
-                key={id}
-                className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
-              >
-                <BrandIcon id={id} tone="brand" className="size-3.5" />
-              </span>
-            ))}
-            <span className="text-xs text-muted-foreground">available to your companies</span>
-          </div>
+          <>
+            <div className="flex items-center gap-2 pt-0.5">
+              {GOOGLE_SURFACE.map((id) => (
+                <span
+                  key={id}
+                  className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
+                >
+                  <BrandIcon id={id} tone="brand" className="size-3.5" />
+                </span>
+              ))}
+              <span className="text-xs text-muted-foreground">available to your companies</span>
+            </div>
+            {tool.accounts && tool.accounts.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {tool.accounts.map((email) => (
+                  <Badge key={email} variant="outline" className="border-border font-normal text-muted-foreground">
+                    {email}
+                  </Badge>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">
+              Assign specific accounts to a company from that company&apos;s card.
+            </p>
+            <AddGoogleAccount />
+          </>
         )}
 
         {!live && (

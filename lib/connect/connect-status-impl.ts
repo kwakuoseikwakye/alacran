@@ -1,5 +1,6 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
+import { listGoogleAccountEmails } from "../google-accounts"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -15,6 +16,9 @@ export type ToolStatus = {
   connected: boolean
   detail: string
   guidance: { steps: string[]; command?: string; link?: string }
+  /** google only: every account gog auth list knows about, not just the one
+   *  -a auto resolves to. Undefined for claude/github. */
+  accounts?: string[]
 }
 
 export type ConnectStatus = { claude: ToolStatus; google: ToolStatus; github: ToolStatus }
@@ -108,12 +112,20 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
   const hasCredentials = parsed.account?.credentials_exists === true
 
   if (email && hasCredentials) {
+    // gog already supports more than one stored account (gog auth add,
+    // -a <email|alias|auto> per call) — list every one of them, not just
+    // whichever "auto" happens to resolve to, so a second/third account can
+    // be assigned to a different company.
+    const accounts = await listGoogleAccountEmails(execFn)
+    const detail =
+      accounts.length > 1 ? `Connected: ${accounts.join(", ")}.` : `Connected as ${email}.`
     return {
       id: "google",
       label,
       connected: true,
-      detail: `Connected as ${email}.`,
+      detail,
       guidance: { steps: [] },
+      accounts: accounts.length > 0 ? accounts : [email],
     }
   }
 

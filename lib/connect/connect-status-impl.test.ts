@@ -28,6 +28,20 @@ describe("getConnectStatusImpl", () => {
     expect(status.google.detail).toContain("user@example.com")
   })
 
+  it("lists every stored account and pluralizes the detail when there's more than one", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "gog" && args[1] === "list")
+        return { stdout: JSON.stringify({ accounts: [{ email: "user@example.com" }, { email: "second@example.com" }] }) }
+      if (command === "gog") return { stdout: GOG_CONNECTED }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec)
+
+    expect(status.google.accounts).toEqual(["user@example.com", "second@example.com"])
+    expect(status.google.detail).toBe("Connected: user@example.com, second@example.com.")
+  })
+
   it("marks Claude not connected with install guidance when the CLI is missing", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "claude") return new Error("not found")
