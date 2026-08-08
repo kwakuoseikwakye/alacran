@@ -183,21 +183,23 @@ Do not move or archive older sections to a separate file even if there are more 
     fields: [],
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/email-checks",
-    bashPatterns: ["gog -a auto gmail search*", "gog -a auto gmail get*"],
-    buildPrompt: (fields, today) => `Run this repository's /check-inbox command as described in .claude/commands/check-inbox.md.
+    bashPatterns: (accounts) => accounts.flatMap((a) => [`gog -a ${a} gmail search*`, `gog -a ${a} gmail get*`]),
+    buildPrompt: (fields, today, prefetch, accounts) => `Run this repository's /check-inbox command as described in .claude/commands/check-inbox.md.
 
 This is a READ-ONLY inbox check via the gog CLI (an authenticated Google account). Never send, mark-as-read, label, or archive anything.
 
+Check these account(s): ${accounts.join(", ")}. Repeat steps 1-2 once per account, substituting it for <account>.
+
 1. List unread messages:
-   gog -a auto gmail search "is:unread" --plain --max 20
-   The first line is a header; each following line is tab-separated: ID, DATE, FROM, SUBJECT, LABELS, THREAD. If there are no result rows, write a report noting "no unread mail" and stop.
+   gog -a <account> gmail search "is:unread" --plain --max 20
+   The first line is a header; each following line is tab-separated: ID, DATE, FROM, SUBJECT, LABELS, THREAD. If there are no result rows for an account, note "no unread mail" for it and move on.
 
 2. For each message ID, fetch metadata only (never the body):
-   gog -a auto gmail get <ID> --format metadata --headers From,Subject,Date --plain
+   gog -a <account> gmail get <ID> --format metadata --headers From,Subject,Date --plain
 
-3. Write a summary to notes/company/email-checks/${today}-inbox-check.md (create notes/company/email-checks/ first if it doesn't exist) with this structure: frontmatter (type: inbox-check, status: active, created: ${today}, tags: []); a one-line banner that this is a read-only snapshot; a heading "# Inbox check ${today} (unread: <count>)"; a "## Unread" section listing "- <From> — <Subject> (<Date>)" per message; and a "## Notes / may need a reply" section with 1-2 lines on anything that looks like it needs attention (or "none").
+3. Write a summary to notes/company/email-checks/${today}-inbox-check.md (create notes/company/email-checks/ first if it doesn't exist) with this structure: frontmatter (type: inbox-check, status: active, created: ${today}, tags: []); a one-line banner that this is a read-only snapshot; a heading "# Inbox check ${today} (unread: <total count across all accounts>)"; one "## Unread" section per account when there is more than one account (otherwise a single "## Unread" section), each listing "- <From> — <Subject> (<Date>)" per message; and a "## Notes / may need a reply" section with 1-2 lines on anything that looks like it needs attention across all accounts (or "none").
 
-Only ever run the two gog commands above (search and get). Do NOT run gog gmail send, gog gmail messages modify, or any other command. Do not copy message bodies, tokens, or personal data into the report — sender name, subject, and date only. Write exactly one file and stop.`,
+Only ever run the two gog commands above (search and get), and only with -a set to one of the account(s) listed above. Do NOT run gog gmail send, gog gmail messages modify, or any other command, and do NOT use any -a value not listed above. Do not copy message bodies, tokens, or personal data into the report — sender name, subject, and date only. Write exactly one file and stop.`,
   },
   {
     id: "triage-email",
