@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Nunito, Nunito_Sans } from "next/font/google"
 import "./globals.css"
 import { AutoRefresh } from "@/components/auto-refresh"
-import { Nav } from "@/components/nav"
+import { Sidebar } from "@/components/sidebar"
 import { getUpdateStatus } from "@/lib/updates/update-actions"
 import { UpdateBanner } from "@/components/update-banner"
 
@@ -31,17 +31,30 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const update = await getUpdateStatus()
   return (
     <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`}>
-      <body>
+      <body className="relative overflow-x-hidden">
         <AutoRefresh />
-        {update.available && update.latestVersion ? (
-          <UpdateBanner
-            latestVersion={update.latestVersion}
-            currentVersion={update.currentVersion}
-            canAutoUpdate={process.platform === "linux"}
-          />
-        ) : null}
-        <Nav />
-        {children}
+
+        {/* Surreal animated background orbs – z-index 0 so everything sits above */}
+        <div aria-hidden="true">
+          <span className="surreal-orb one" />
+          <span className="surreal-orb two" />
+          <span className="surreal-orb three" />
+        </div>
+
+        {/* Glassmorphic sidebar (desktop) + bottom nav (mobile) */}
+        <Sidebar />
+
+        {/* Main content pane offset from the sidebar */}
+        <div className="app-shell-main">
+          {update.available && update.latestVersion ? (
+            <UpdateBanner
+              latestVersion={update.latestVersion}
+              currentVersion={update.currentVersion}
+              canAutoUpdate={process.platform === "linux"}
+            />
+          ) : null}
+          {children}
+        </div>
       </body>
     </html>
   )

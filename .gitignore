@@ -10,3 +10,4 @@ page-*.png
 docs/superpowers/
 dist/
 .claude/worktrees/
+.DS_Store
