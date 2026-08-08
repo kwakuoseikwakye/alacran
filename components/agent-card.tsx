@@ -15,6 +15,7 @@ import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
 import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
+import { GoogleAccountsPicker } from "@/components/google-accounts-picker"
 import { OpenTerminalButton } from "@/components/open-terminal-button"
 import { CompanyGuide } from "@/components/company-guide"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
@@ -40,9 +41,12 @@ type AgentCardProps = {
   showInstallDailyTeamLogButton?: boolean
   showOpenTerminalButton?: boolean
   showAiExecutorPicker?: boolean
+  showGoogleAccountsPicker?: boolean
   showCompanyGuide?: boolean
   hasOntology?: boolean
   aiExecutorId?: string
+  googleAccounts?: string[]
+  availableGoogleAccounts?: string[]
   /** Position in the grid, which drives the staggered entrance animation. */
   index?: number
 }
@@ -75,9 +79,12 @@ export function AgentCard({
   showInstallDailyTeamLogButton,
   showOpenTerminalButton,
   showAiExecutorPicker,
+  showGoogleAccountsPicker,
   showCompanyGuide,
   hasOntology,
   aiExecutorId,
+  googleAccounts,
+  availableGoogleAccounts,
   index = 0,
 }: AgentCardProps) {
   // getIntegrationStatus returns prose; anything other than the "none" sentinel
@@ -108,6 +115,7 @@ export function AgentCard({
                 showBackupButton={showBackupButton}
                 showOwnershipButton={showOwnershipButton}
                 showAiExecutorPicker={showAiExecutorPicker}
+                showGoogleAccountsPicker={showGoogleAccountsPicker}
                 removable={removable}
               />
             )}
@@ -175,6 +183,13 @@ export function AgentCard({
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}
           {showAiExecutorPicker && (
             <AiExecutorPicker agentId={agent.id} currentExecutorId={aiExecutorId ?? "claude-code"} />
+          )}
+          {showGoogleAccountsPicker && (
+            <GoogleAccountsPicker
+              agentId={agent.id}
+              currentAccounts={googleAccounts ?? []}
+              availableAccounts={availableGoogleAccounts ?? []}
+            />
           )}
           {removable && <RemoveCompanyButton id={agent.id} name={agent.name} />}
           <AgentAvatarForm agentId={agent.id} currentUrl={avatarUrl ?? null} />

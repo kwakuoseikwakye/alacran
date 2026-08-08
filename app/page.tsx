@@ -14,6 +14,8 @@ import { getIntegrationStatus } from "@/lib/get-integration-status"
 import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
 import { OnboardingWelcome } from "@/components/onboarding-welcome"
 import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
+import { listGoogleAccountEmails } from "@/lib/google-accounts"
+import { readGoogleAccounts } from "@/lib/google-accounts-config"
 
 export const dynamic = "force-dynamic"
 
@@ -36,12 +38,13 @@ export default async function AgentTreePage() {
   const pipelineAgent = agents.find((agent) => agent.id === "email-pipeline-agent")
   const plhOpsSource = agents.find((agent) => agent.id === "plh-ops")
 
-  const [results, launchdHealth, pollStatus] = await Promise.all([
+  const [results, launchdHealth, pollStatus, availableGoogleAccounts] = await Promise.all([
     getAllActivities(agents, adapters),
     checkLaunchdJob(PIPELINE_LAUNCHD_LABEL),
     pipelineAgent
       ? checkPollLockStatus(pipelineAgent.rootPath)
       : Promise.resolve({ running: false, lockAgeSeconds: null }),
+    listGoogleAccountEmails(),
   ])
 
   // The toggle needs a plist to load/unload. A fresh install has neither the
@@ -88,6 +91,7 @@ export default async function AgentTreePage() {
                 result.agent.kind === "command-set" &&
                 !(await dailyTeamLogInstalled(result.agent.rootPath))
               const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
+              const googleAccounts = isCommandSet ? await readGoogleAccounts(result.agent.rootPath) : undefined
               return (
                 <AgentCard
                   key={result.agent.id}
@@ -110,9 +114,12 @@ export default async function AgentTreePage() {
                   showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                   showOpenTerminalButton={showVisibleRunOption}
                   showAiExecutorPicker={isCommandSet}
+                  showGoogleAccountsPicker={isCommandSet}
                   showCompanyGuide={isCommandSet}
                   hasOntology={hasOntology}
                   aiExecutorId={aiExecutorId}
+                  googleAccounts={googleAccounts}
+                  availableGoogleAccounts={availableGoogleAccounts}
                   index={index}
                 />
               )
