@@ -17,6 +17,13 @@ export type PrefetchContext = {
    * to real fs. Declared here rather than added later so tests never need a cast.
    */
   readFileFn?: (filePath: string) => Promise<string>
+  /**
+   * The company's assigned Google account(s) (lib/google-accounts-config.ts),
+   * or ["auto"] when unassigned. Optional so every existing ctx() fixture
+   * keeps working unchanged — only triage-email's handler reads it, and
+   * defaults to ["auto"] itself when absent.
+   */
+  accounts?: string[]
 }
 
 /**
