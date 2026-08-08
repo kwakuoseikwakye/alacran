@@ -1,9 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import type { SkillEntry } from "@/lib/skills/types"
@@ -15,8 +13,8 @@ import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
 import { CompanyCommandRunner } from "@/components/company-command-runner"
 
 const KIND_BADGE_CLASS: Record<SkillEntry["kind"], string> = {
-  skill: "border-teal-500/30 bg-teal-500/10 text-teal-400",
-  command: "border-blue-500/30 bg-blue-500/10 text-blue-400",
+  skill: "border-teal-500/30 bg-teal-500/10 text-teal-400 font-mono text-[10px] tracking-wider uppercase",
+  command: "border-blue-500/30 bg-blue-500/10 text-blue-400 font-mono text-[10px] tracking-wider uppercase",
 }
 
 export function SkillBrowser({
@@ -52,46 +50,52 @@ export function SkillBrowser({
 
   return (
     <>
-      <div className="space-y-6">
+      <div className="space-y-12 pb-12">
         {results.map((result) => {
           const owned = entries.filter((entry) => entry.agentId === result.agent.id)
           return (
-          <div key={result.agent.id} className="space-y-2">
-            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 border-b border-border pb-2">
-              <h2 className="font-display text-lg font-bold">{result.agent.name}</h2>
-              <Badge variant="outline" className="border-border text-muted-foreground">
-                {owned.length} available
-              </Badge>
-              {/* Every company scaffolded from the template already inherits
-                  .claude/skills and .claude/commands, so there is nothing to install. */}
-              <span className="text-xs text-muted-foreground">
-                already installed in this company. Open one to read or run it
+          <div key={result.agent.id} className="space-y-4">
+            <div className="flex flex-col gap-2 rounded-xl bg-shell-2 p-4 border border-line">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <h2 className="font-display text-xl font-bold text-bone">{result.agent.name}</h2>
+                <Badge variant="outline" className="border-line bg-shell text-dune">
+                  {owned.length} available
+                </Badge>
+              </div>
+              <span className="text-xs font-mono text-dune">
+                Installed in this workspace. Click to read or run.
               </span>
             </div>
-            {result.error && <p className="text-sm text-destructive">Source unavailable: {result.error}</p>}
+            {result.error && <p className="text-sm text-red-500 font-mono">Source unavailable: {result.error}</p>}
             {!result.error && owned.length === 0 && (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm font-mono text-dune p-4 border border-line rounded-xl bg-shell/50">
                 No skills or commands found in this company&apos;s <code>.claude/</code> folder.
               </p>
             )}
             {!result.error && (
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {entries
                   .filter((entry) => entry.agentId === result.agent.id)
                   .map((entry) => (
-                    <Card key={entry.id} className="cursor-pointer" onClick={() => openEntry(entry)}>
-                      <CardHeader className="p-3">
-                        <CardTitle className="flex items-center justify-between text-sm font-medium">
-                          <span>{entry.name}</span>
+                    <div
+                      key={entry.id}
+                      className="group flex cursor-pointer flex-col justify-between rounded-xl border border-line bg-shell p-5 transition-all hover:border-red-500/50 hover:bg-void hover:shadow-lg"
+                      onClick={() => openEntry(entry)}
+                    >
+                      <div>
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <h3 className="font-display text-sm font-semibold text-bone transition-colors group-hover:text-red-400">
+                            {entry.name}
+                          </h3>
                           <Badge variant="outline" className={KIND_BADGE_CLASS[entry.kind]}>
                             {entry.kind}
                           </Badge>
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="p-3 pt-0 text-xs text-muted-foreground">
-                        {entry.description || "No description."}
-                      </CardContent>
-                    </Card>
+                        </div>
+                        <p className="text-xs text-dune line-clamp-3 leading-relaxed">
+                          {entry.description || "No description."}
+                        </p>
+                      </div>
+                    </div>
                   ))}
               </div>
             )}
@@ -100,45 +104,64 @@ export function SkillBrowser({
         })}
       </div>
       <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-xl">
-          <SheetHeader>
-            <SheetTitle>{selected?.name}</SheetTitle>
+        <SheetContent className="w-full sm:max-w-xl border-l border-glass-edge bg-void/80 backdrop-blur-2xl">
+          <SheetHeader className="border-b border-line pb-4 mb-4">
+            <SheetTitle className="font-display text-xl text-bone">{selected?.name}</SheetTitle>
           </SheetHeader>
-          <div className="flex gap-2 px-4">
-            <Button size="sm" variant={view === "content" ? "default" : "outline"} onClick={() => setView("content")}>
+          <div className="flex gap-2 px-1 mb-4">
+            <button
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                view === "content" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
+              }`}
+              onClick={() => setView("content")}
+            >
               Content
-            </Button>
-            <Button size="sm" variant={view === "history" ? "default" : "outline"} onClick={() => setView("history")}>
+            </button>
+            <button
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                view === "history" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
+              }`}
+              onClick={() => setView("history")}
+            >
               History
-            </Button>
+            </button>
             {matchedCompanyCommand && (
-              <Button size="sm" variant={view === "run" ? "default" : "outline"} onClick={() => setView("run")}>
+              <button
+                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                  view === "run" ? "bg-red-500 text-white" : "bg-shell border border-line text-red-400 hover:bg-red-500/10"
+                }`}
+                onClick={() => setView("run")}
+              >
                 Run
-              </Button>
+              </button>
             )}
           </div>
-          <ScrollArea className="h-[80vh] pr-4">
+          <ScrollArea className="h-[calc(100vh-140px)]">
             {view === "content" && (
               <>
-                {detailError && <p className="text-destructive">{detailError}</p>}
+                {detailError && <p className="text-red-500 text-sm font-mono px-1">{detailError}</p>}
                 {!detailError && detail !== null && selected && (
-                  <SkillEditor path={selected.path} initialContent={detail} onSaved={(newContent) => setDetail(newContent)} />
+                  <div className="px-1"><SkillEditor path={selected.path} initialContent={detail} onSaved={(newContent) => setDetail(newContent)} /></div>
                 )}
-                {!detailError && detail === null && <p>Loading…</p>}
+                {!detailError && detail === null && <p className="px-1 text-dune font-mono text-sm">Loading…</p>}
               </>
             )}
             {view === "history" && selected && (
-              <SkillHistory
-                path={selected.path}
-                currentContent={detail}
-                onReverted={(newContent) => {
-                  setDetail(newContent)
-                  setView("content")
-                }}
-              />
+              <div className="px-1">
+                <SkillHistory
+                  path={selected.path}
+                  currentContent={detail}
+                  onReverted={(newContent) => {
+                    setDetail(newContent)
+                    setView("content")
+                  }}
+                />
+              </div>
             )}
             {view === "run" && matchedCompanyCommand && selected && (
-              <CompanyCommandRunner command={matchedCompanyCommand} agentId={selected.agentId} />
+              <div className="px-1">
+                <CompanyCommandRunner command={matchedCompanyCommand} agentId={selected.agentId} />
+              </div>
             )}
           </ScrollArea>
         </SheetContent>
