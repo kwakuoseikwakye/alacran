@@ -411,6 +411,35 @@ describe("runCompanyCommandImpl", () => {
     expect(calls[0].args).not.toContain("--disallowedTools")
   })
 
+  it("uses the company's assigned Google accounts for check-inbox's bashPatterns and prompt when configured", async () => {
+    await mkdir(path.join(root, "definitions", "integrations"), { recursive: true })
+    await writeFile(
+      path.join(root, "definitions", "integrations", "google.yaml"),
+      "accounts:\n  - a@example.com\n  - b@example.com\n"
+    )
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "check-inbox",
+      {},
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls[0].args[calls[0].args.indexOf("--allowedTools") + 1]).toBe(
+      "Read,Grep,Glob,Edit(notes/company/email-checks/**),Bash(gog -a a@example.com gmail search*),Bash(gog -a a@example.com gmail get*),Bash(gog -a b@example.com gmail search*),Bash(gog -a b@example.com gmail get*)"
+    )
+    const promptArg = calls[0].args[calls[0].args.indexOf("-p") + 1]
+    expect(promptArg).toContain("Check these account(s): a@example.com, b@example.com.")
+  })
+
   it("spawns the resolved executor's binary and args instead of a hardcoded 'claude', when a company is assigned a different one", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],

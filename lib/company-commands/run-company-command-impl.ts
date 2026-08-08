@@ -4,6 +4,7 @@ import { openSync, closeSync } from "node:fs"
 import { readdir, readFile, writeFile, mkdir } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "../get-effective-agents"
+import { readGoogleAccounts } from "../google-accounts-config"
 import { getCompanyCommand } from "./registry"
 import type { CompanyCommand } from "./types"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
@@ -115,10 +116,16 @@ export async function runCompanyCommandImpl(
   let outFd: number | undefined
   try {
     const today = new Date().toISOString().slice(0, 10)
+    // Empty (never assigned, via lib/google-accounts-config.ts) falls back to
+    // gog's own "auto" resolution — this is the byte-for-byte-unchanged
+    // default every company had before this feature existed.
+    const configuredAccounts = await readGoogleAccounts(agent.rootPath)
+    const accounts = configuredAccounts.length > 0 ? configuredAccounts : ["auto"]
     const prefetchResult = await runPrefetch(command.prefetchKind, {
       agentRootPath: agent.rootPath,
       fieldValues,
       execFn,
+      accounts,
     })
     if (!prefetchResult.ok) {
       // Refuse before spawning: a doomed run must not cost an API call. Release
@@ -144,12 +151,13 @@ export async function runCompanyCommandImpl(
       "utf-8"
     )
 
-    const prompt = command.buildPrompt(fieldValues, today, prefetch)
+    const prompt = command.buildPrompt(fieldValues, today, prefetch, accounts)
 
     const editScopePattern =
       command.outputKind === "new-file-in-dir" ? `${command.outputPath}/**` : command.outputPath
 
-    const bashPatterns = command.bashPatterns ?? []
+    const bashPatterns =
+      typeof command.bashPatterns === "function" ? command.bashPatterns(accounts) : (command.bashPatterns ?? [])
     const executor = await resolveExecutor(agent.id)
     const spawnArgs = executor.buildArgs({ prompt, editScopePattern, bashPatterns })
 
