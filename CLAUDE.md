@@ -526,6 +526,12 @@ computes, so the guide can never explain a button that isn't really there —
 live-verified against the real `ai-company-starter-main` card, which
 correctly showed 7 steps and omitted "Remove" (not a registered company).
 
+v40 replaced the top `Nav` bar with a collapsible glassmorphic sidebar
+(`components/sidebar.tsx`) — icon rail on desktop, bottom tab strip on
+mobile — plus ambient background orbs, both driven by new tokens in
+`app/globals.css`. Every page now shares `.dash-topbar`/`.dash-content`
+from `app/layout.tsx` instead of its own `<main>` wrapper.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

@@ -26,9 +26,9 @@ export default async function AgentTreePage() {
   ])
   if (agents.length === 0) {
     return (
-      <main className="mx-auto max-w-5xl px-8 pb-12">
+      <div className="dash-content">
         <OnboardingWelcome homeDir={homeDir} />
-      </main>
+      </div>
     )
   }
 
@@ -49,68 +49,77 @@ export default async function AgentTreePage() {
   const pipelinePlistExists = Boolean(pipelineAgent) && fs.existsSync(PIPELINE_LAUNCHD_PLIST_PATH)
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6 px-8 pt-2 pb-12">
-      <div className="a-rise" style={{ position: 'relative', zIndex: 10 }}>
-        <p className="eyebrow">Your machine</p>
-        <h1 className="mt-1 font-display text-3xl font-extrabold">Agents</h1>
-        <p className="text-sm text-muted-foreground">Status, avatars, and quick actions for every managed agent.</p>
+    <>
+      {/* Page header */}
+      <header className="dash-topbar a-rise">
+        <div>
+          <p className="eyebrow">Your machine</p>
+          <h1>Agents</h1>
+          <p>Status and quick actions for every managed agent on this computer.</p>
+        </div>
+        <div className="mt-1">
+          <AddCompanyForm homeDir={homeDir} />
+        </div>
+      </header>
+
+      {/* Bento grid of agent cards */}
+      <div className="dash-content">
+        <div className="bento-grid">
+          {await Promise.all(
+            results.map(async (result, index) => {
+              const latest = mergeAndSortActivities([result])[0] ?? null
+              const ispipelineAgent = result.agent.id === "email-pipeline-agent"
+              const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
+              const isPlhOps = result.agent.id === "plh-ops"
+              const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
+                result.agent.id
+              )
+              const isCommandSet = result.agent.kind === "command-set"
+              // Both features open a real terminal window which is supported on macOS
+              // and Linux (see lib/terminal-launch-command.ts); if neither
+              // finds an actual terminal emulator installed, the action itself
+              // reports that rather than hiding the button pre-emptively.
+              const showVisibleRunOption = isCommandSet
+              const hasOntology = isCommandSet && (await companyOntologyExists(result.agent.rootPath))
+              const needsCompanySetup = isCommandSet && !hasOntology
+              const integrationStatus = await getIntegrationStatus(result.agent)
+              const showInstallDailyTeamLogButton =
+                Boolean(plhOpsSource) &&
+                result.agent.kind === "command-set" &&
+                !(await dailyTeamLogInstalled(result.agent.rootPath))
+              const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
+              return (
+                <AgentCard
+                  key={result.agent.id}
+                  agent={result.agent}
+                  latestActivity={latest}
+                  error={result.error}
+                  launchdHealth={ispipelineAgent ? launchdHealth : undefined}
+                  showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
+                  pollStatus={ispipelineAgent ? pollStatus : undefined}
+                  showVerifyButton={isAiCompanyStarterMain}
+                  showDailyTeamLogButton={isPlhOps}
+                  removable={isRegisteredCompany}
+                  avatarUrl={avatarByAgentId[result.agent.id] ?? null}
+                  showSetupCompanyButton={needsCompanySetup}
+                  showEditCompanyButton={hasOntology}
+                  showBackupButton={isCommandSet}
+                  showOwnershipButton={isCommandSet}
+                  showVisibleRunOption={showVisibleRunOption}
+                  integrationStatus={integrationStatus}
+                  showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
+                  showOpenTerminalButton={showVisibleRunOption}
+                  showAiExecutorPicker={isCommandSet}
+                  showCompanyGuide={isCommandSet}
+                  hasOntology={hasOntology}
+                  aiExecutorId={aiExecutorId}
+                  index={index}
+                />
+              )
+            })
+          )}
+        </div>
       </div>
-      <div className="bento-grid">
-        {await Promise.all(
-          results.map(async (result, index) => {
-            const latest = mergeAndSortActivities([result])[0] ?? null
-            const ispipelineAgent = result.agent.id === "email-pipeline-agent"
-            const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
-            const isPlhOps = result.agent.id === "plh-ops"
-            const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
-              result.agent.id
-            )
-            const isCommandSet = result.agent.kind === "command-set"
-            // Both features open a real terminal window which is supported on macOS
-            // and Linux (see lib/terminal-launch-command.ts); if neither
-            // finds an actual terminal emulator installed, the action itself
-            // reports that rather than hiding the button pre-emptively.
-            const showVisibleRunOption = isCommandSet
-            const hasOntology = isCommandSet && (await companyOntologyExists(result.agent.rootPath))
-            const needsCompanySetup = isCommandSet && !hasOntology
-            const integrationStatus = await getIntegrationStatus(result.agent)
-            const showInstallDailyTeamLogButton =
-              Boolean(plhOpsSource) &&
-              result.agent.kind === "command-set" &&
-              !(await dailyTeamLogInstalled(result.agent.rootPath))
-            const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
-            return (
-              <AgentCard
-                key={result.agent.id}
-                agent={result.agent}
-                latestActivity={latest}
-                error={result.error}
-                launchdHealth={ispipelineAgent ? launchdHealth : undefined}
-                showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
-                pollStatus={ispipelineAgent ? pollStatus : undefined}
-                showVerifyButton={isAiCompanyStarterMain}
-                showDailyTeamLogButton={isPlhOps}
-                removable={isRegisteredCompany}
-                avatarUrl={avatarByAgentId[result.agent.id] ?? null}
-                showSetupCompanyButton={needsCompanySetup}
-                showEditCompanyButton={hasOntology}
-                showBackupButton={isCommandSet}
-                showOwnershipButton={isCommandSet}
-                showVisibleRunOption={showVisibleRunOption}
-                integrationStatus={integrationStatus}
-                showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
-                showOpenTerminalButton={showVisibleRunOption}
-                showAiExecutorPicker={isCommandSet}
-                showCompanyGuide={isCommandSet}
-                hasOntology={hasOntology}
-                aiExecutorId={aiExecutorId}
-                index={index}
-              />
-            )
-          })
-        )}
-      </div>
-      <AddCompanyForm homeDir={homeDir} />
-    </main>
+    </>
   )
 }

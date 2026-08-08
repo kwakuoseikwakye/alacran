@@ -1224,3 +1224,19 @@ Live-verified with Playwright against a real dev server (throwaway port
 correct 7 steps for the real `ai-company-starter-main` built-in, stayed
 closed on a reload (flag persisted), and the persistent "?" reopened it
 identically on demand.
+
+## v40 (2026-08-08): sidebar nav — replaces the top nav on every page
+
+Swapped the top `Nav` bar (`components/nav.tsx`, deleted) for a collapsible
+glassmorphic sidebar (`components/sidebar.tsx`): 72px icon-only rail on
+desktop that expands to 228px on hover, a bottom tab strip on mobile
+(`<640px`), and three blurred ambient "orb" gradients drifting behind the
+content (`prefers-reduced-motion` turns the drift off, sidebar hover-expand
+included). Every page (`/`, `/activity`, `/connect`, `/skills`) moved from
+its own `<main className="mx-auto max-w-* ...">` wrapper to two shared
+layout classes owned by `app/layout.tsx`: `.dash-topbar` for the page
+header and `.dash-content` for the body, both new tokens in
+`app/globals.css` alongside the sidebar/orb rules — no existing
+`components/ui/*` primitive touched, per the standing design-token
+convention. All existing tests, `tsc`, and `next build` pass unchanged; no
+new dependency.
