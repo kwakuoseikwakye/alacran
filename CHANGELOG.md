@@ -1296,6 +1296,18 @@ Both template commands (`check-inbox.md`, `triage-email.md`, a commit in
 `definitions/integrations/google.yaml` so a manual/interactive run matches
 dashboard-run behavior instead of staying hardcoded to `auto`.
 
+**Same-day fix, caught by automated security review:** account values are
+joined with a bare comma into Claude Code's `--allowedTools` string
+(`lib/ai-executors.ts`), so an account containing a comma or close-paren
+could have spliced in an unintended extra `Bash(...)` allowlist entry —
+real allowlist injection, not just bad data, since the picker UI only
+constrains normal use and `saveGoogleAccounts` is a public Server Action
+while the YAML file is deliberately hand-editable. Fixed at the one
+chokepoint every consumer already routes through: `readGoogleAccounts`
+now drops anything not shaped like an email (`isSafeAccountEmail`), and
+`saveGoogleAccountsImpl` additionally rejects it at write time with a
+clear error instead of a silent drop.
+
 Live-verified against a real dev server (throwaway port 4326) with this
 machine's real single connected account: the Connect page correctly showed
 it as a chip plus the add-another flow, and a command-set company's card
