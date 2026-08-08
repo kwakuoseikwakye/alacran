@@ -109,7 +109,21 @@ p { margin: 0; }
 .nav-right { display: flex; align-items: center; gap: 8px; }
 .theme-toggle { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--dune); background: transparent; border: 1px solid var(--glass-edge); cursor: pointer; font-size: 14px; }
 .theme-toggle:hover { color: var(--red); border-color: var(--red); }
-@media (max-width: 1040px) { .navlinks { display: none; } }
+/* Hidden on desktop; the <1040px rules below swap it in for the links it
+   replaces, so the nav never drops to a dead end with no way to reach them. */
+.nav-toggle { display: none; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--dune); background: transparent; border: 1px solid var(--glass-edge); cursor: pointer; font-size: 15px; line-height: 1; }
+.nav-toggle:hover { color: var(--red); border-color: var(--red); }
+.nav-toggle[aria-expanded="true"] { color: var(--red); border-color: var(--red); }
+@media (max-width: 1040px) {
+  .navlinks { display: none; }
+  .nav-toggle { display: grid; }
+  .nav { flex-wrap: wrap; }
+  /* Reopens .navlinks as a full-width column below the brand/icon row —
+     the pill's own border-radius softens to match instead of clipping it. */
+  .nav.menu-open { border-radius: 20px; }
+  .nav.menu-open .navlinks { display: flex; flex-direction: column; width: 100%; order: 5; gap: 4px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--glass-edge); }
+  .nav.menu-open .navlinks a { padding: 8px 4px; font-size: 15px; }
+}
 
 /* ---------- reusable bits ---------- */
 .mark-glow { filter: drop-shadow(0 0 20px var(--red)); }
@@ -248,6 +262,82 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
    Marks are monochrome by default so a wall of vendor logos doesn't fight the
    single-accent palette; each tile reveals the vendor's own colour on hover. */
 .bi { width: 20px; height: 20px; fill: currentColor; display: block; }
+
+/* ---------- Onboarding Demo Sequence ---------- */
+.onboarding-scene {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  animation: scene-fade 16s infinite;
+}
+.onboarding-scene.s1 { animation-delay: 0s; }
+.onboarding-scene.s2 { animation-delay: 5.6s; } /* 35% of 16s */
+.onboarding-scene.s3 { animation-delay: 8.8s; } /* 55% of 16s */
+
+@keyframes scene-fade {
+  0% { opacity: 0; transform: translateY(10px); pointer-events: none; }
+  5% { opacity: 1; transform: translateY(0); pointer-events: auto; }
+  32% { opacity: 1; transform: translateY(0); }
+  37% { opacity: 0; transform: translateY(-10px); pointer-events: none; }
+  100% { opacity: 0; }
+}
+
+/* Setup Wizard Fake Form */
+.demo-form { padding: 24px; }
+.demo-label { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--bone); margin-bottom: 8px; }
+.demo-input { background: var(--shell); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font-family: var(--font-mono); font-size: 13px; color: var(--bone); height: 44px; display: flex; align-items: center; position: relative; margin-bottom: 24px; }
+.demo-cursor { width: 8px; height: 16px; background: var(--red); display: inline-block; animation: blink 1s infinite; margin-left: 2px; }
+@keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+.type-text::before {
+  content: "";
+  animation: typing 16s infinite steps(20, end);
+}
+@keyframes typing {
+  0%, 5% { content: ""; }
+  6% { content: "M"; }
+  7% { content: "Ma"; }
+  8% { content: "Mar"; }
+  9% { content: "Mark"; }
+  10% { content: "Marke"; }
+  11% { content: "Market"; }
+  12% { content: "Marketi"; }
+  13% { content: "Marketin"; }
+  14% { content: "Marketing "; }
+  15% { content: "Marketing L"; }
+  16% { content: "Marketing La"; }
+  17% { content: "Marketing Lau"; }
+  18% { content: "Marketing Laun"; }
+  19% { content: "Marketing Launch"; }
+  100% { content: "Marketing Launch"; }
+}
+
+.demo-btn { background: var(--shell-2); border: 1px solid var(--line); color: var(--dune); padding: 12px; border-radius: 8px; text-align: center; font-weight: 700; animation: btn-click 16s infinite; }
+@keyframes btn-click {
+  0%, 25% { background: var(--shell-2); border-color: var(--line); color: var(--dune); transform: scale(1); }
+  27%, 32% { background: var(--red); border-color: var(--red); color: white; transform: scale(1.02); box-shadow: 0 4px 12px rgba(255,46,67,0.3); }
+  34%, 100% { transform: scale(0.98); opacity: 0.8; }
+}
+
+/* Terminal Generation */
+.term-line-anim { opacity: 0; animation: term-appear 16s infinite; }
+.term-line-anim:nth-child(1) { animation-delay: 5.8s; }
+.term-line-anim:nth-child(2) { animation-delay: 6.6s; }
+.term-line-anim:nth-child(3) { animation-delay: 7.2s; }
+.term-line-anim:nth-child(4) { animation-delay: 8.0s; }
+@keyframes term-appear {
+  0%, 1% { opacity: 0; transform: translateX(-10px); }
+  2%, 100% { opacity: 1; transform: translateX(0); }
+}
+
+/* Dashboard Mockup */
+.demo-dash { padding: 24px; background: color-mix(in srgb, var(--void) 50%, transparent); display: flex; gap: 16px; flex-wrap: wrap; height: 100%; align-content: flex-start; }
+.demo-agent-card { background: var(--shell); border: 1px solid color-mix(in srgb, var(--red) 40%, var(--line)); border-radius: 12px; padding: 16px; flex: 1; min-width: 140px; box-shadow: inset 0 1px 0 rgba(255,255,255,0.05); }
+.demo-agent-card h4 { font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px; }
+.demo-agent-card p { font-family: var(--font-mono); font-size: 10px; color: var(--dune); }
+.demo-agent-card .status { margin-top: 12px; display: inline-block; padding: 4px 8px; background: color-mix(in srgb, var(--success) 20%, transparent); color: var(--success); border-radius: 4px; font-size: 10px; font-weight: bold; }
 
 .brandtile {
   display: inline-grid; place-items: center; width: 44px; height: 44px;
@@ -478,3 +568,44 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
   .appshot .body { padding: 16px 12px 20px; }
   .orbit .core .mark { width: 74px; height: auto; }
 }
+
+/* ===================== Comprehensive Mobile Fixes ===================== */
+@media (max-width: 600px) {
+  .halo { width: 100vw; height: 100vw; }
+  
+  /* Fix nav padding and text */
+  .nav { padding: 8px 12px; gap: 12px; }
+  .brand { font-size: 16px; }
+  .brand .glyph { width: 22px; }
+  .btn { padding: 10px 16px; font-size: 14px; }
+  
+  /* Fix hero texts */
+  .hero h1 { font-size: clamp(2.4rem, 10vw, 3rem); }
+  
+  /* Fix sticky layouts which break on narrow mobile */
+  .sticky-layout { padding: 0 16px; gap: 32px; }
+  .sticky-text h2 { font-size: 2rem; }
+  
+  /* Make mac window elements flow properly */
+  .mac-body { min-height: 200px !important; }
+  .mac-content { padding: 16px !important; }
+  
+  /* Fix Privacy Check section */
+  .privacy-content { padding: 16px !important; }
+  .privacy-item { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+  .privacy-item > div:last-child { align-self: flex-start !important; }
+  
+  /* Fix Execute Board */
+  .execute-board-body { flex-direction: column !important; overflow-y: visible !important; }
+  
+  /* Fix footer */
+  .foot-in { justify-content: center; text-align: center; }
+  .foot-nav { justify-content: center; }
+}
+
+@media (max-width: 400px) {
+  /* Ultra narrow fixes */
+  .demo-dash { padding: 16px; gap: 10px; }
+  .demo-agent-card { min-width: 100%; }
+}
+
