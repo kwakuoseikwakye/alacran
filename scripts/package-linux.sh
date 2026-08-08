@@ -69,6 +69,17 @@ mkdir -p "$PAYLOAD/.next"
 cp -R .next/static "$PAYLOAD/.next/static"
 cp -R templates "$PAYLOAD/templates"
 
+# `next build` never cleans .next/standalone before writing to it, so a stray
+# .data left over from running `node server.js` directly against this
+# directory (a real local dev/verification workflow) would survive every
+# later build and get bundled by the blanket copy above. GitHub Actions'
+# ubuntu-latest runner starts from a clean checkout every time, so this is
+# unreachable there — but this script is also runnable locally (see the
+# header), and this exact bug shipped once on the macOS side (v0.7.8 carried
+# a real dev-machine company registry into every fresh install). Never bundle
+# local runtime state, regardless of what .next/standalone happens to hold.
+rm -rf "$PAYLOAD/.data"
+
 # components/alacran-icon-512.png (scripts/generate-logo.py) is a real
 # square 512x512 render, not app/icon.png's 512x534 favicon source —
 # a hicolor theme bucket's file is expected to actually be the size its

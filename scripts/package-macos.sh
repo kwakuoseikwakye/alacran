@@ -63,6 +63,19 @@ mkdir -p "$PAYLOAD/.next"
 cp -R .next/static "$PAYLOAD/.next/static"
 cp -R templates "$PAYLOAD/templates"
 
+# `next build` never cleans .next/standalone before writing to it — it only
+# adds/overwrites what it generates — so a stray .data left over from running
+# `node server.js` directly against this same directory (a real dev
+# workflow: cd .next/standalone && node server.js, for a quick production-mode
+# check) survives every later `npm run build` and gets swept into the payload
+# by the blanket copy above. That actually shipped once: v0.7.8's published
+# .dmg carried a real company entry from this machine's own dev registry,
+# which lib/data-dir.ts's migrateLegacyData() then silently copied into every
+# fresh install's real data dir on first launch. This app must never bundle
+# ANY local runtime state — belt-and-suspenders regardless of what
+# .next/standalone happens to contain when this script runs.
+rm -rf "$PAYLOAD/.data"
+
 echo "==> Writing the launcher"
 LAUNCHER="$APP/Contents/MacOS/launcher"
 cat > "$LAUNCHER" <<LAUNCH
