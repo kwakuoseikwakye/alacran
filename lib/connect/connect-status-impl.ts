@@ -2,6 +2,9 @@ import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
 import { listGoogleAccountEmails } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
+import { getEffectiveAgents } from "../get-effective-agents"
+import { readNotionToken } from "../notion/read-notion-token"
+import type { Agent } from "../adapters/types"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -22,7 +25,13 @@ export type ToolStatus = {
   accounts?: string[]
 }
 
-export type ConnectStatus = { aiExecutors: ToolStatus[]; google: ToolStatus; github: ToolStatus }
+/** Unlike the other cards, Notion has no single machine-wide connected state:
+ *  the api-connect skill writes NOTION_TOKEN into each company's own .env, so
+ *  whether "Notion" is connected is a different answer per company. */
+export type NotionCompanyStatus = { agentId: string; companyName: string; connected: boolean }
+export type NotionStatus = { companies: NotionCompanyStatus[] }
+
+export type ConnectStatus = { aiExecutors: ToolStatus[]; google: ToolStatus; github: ToolStatus; notion: NotionStatus }
 
 async function isPresent(execFn: ExecFileFn, name: string): Promise<boolean> {
   try {
@@ -189,14 +198,31 @@ async function githubStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
   }
 }
 
+/** Only command-set companies have a .claude/commands to run api-connect or
+ *  check-notion from at all — the pipeline/report-log built-ins don't apply. */
+async function notionStatus(getAgentsFn: () => Promise<Agent[]>): Promise<NotionStatus> {
+  const agents = await getAgentsFn()
+  const commandSetAgents = agents.filter((a) => a.kind === "command-set")
+  const companies = await Promise.all(
+    commandSetAgents.map(async (agent) => ({
+      agentId: agent.id,
+      companyName: agent.name,
+      connected: Boolean(await readNotionToken(agent.rootPath)),
+    }))
+  )
+  return { companies }
+}
+
 export async function getConnectStatusImpl(
   execFn: ExecFileFn = defaultExecFile,
-  platform: NodeJS.Platform = process.platform
+  platform: NodeJS.Platform = process.platform,
+  getAgentsFn: () => Promise<Agent[]> = getEffectiveAgents
 ): Promise<ConnectStatus> {
-  const [aiExecutors, google, github] = await Promise.all([
+  const [aiExecutors, google, github, notion] = await Promise.all([
     Promise.all(listAiExecutors().map((e) => aiExecutorStatus(execFn, e))),
     googleStatus(execFn, platform),
     githubStatus(execFn, platform),
+    notionStatus(getAgentsFn),
   ])
-  return { aiExecutors, google, github }
+  return { aiExecutors, google, github, notion }
 }

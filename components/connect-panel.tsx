@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { getConnectStatus } from "@/lib/connect/connect-actions"
-import type { ConnectStatus, ToolStatus } from "@/lib/connect/connect-status-impl"
+import type { ConnectStatus, ToolStatus, NotionStatus } from "@/lib/connect/connect-status-impl"
 
 // Each tool's real product mark, where one exists. `gog` and Antigravity CLI
 // have no mark of their own, so Google's stands in for what they actually
@@ -162,6 +162,89 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
   )
 }
 
+/** Notion has no single machine-wide connected state — the api-connect skill
+ *  writes NOTION_TOKEN into each company's own .env, so "connected" is a
+ *  different answer per company. Shaped differently from ToolCard on purpose
+ *  rather than forced into it: a summary badge instead of one Connected/Not
+ *  pill, and a per-company list instead of a single detail line. */
+function NotionCard({ notion, delay }: { notion: NotionStatus; delay: number }) {
+  const total = notion.companies.length
+  const connectedCount = notion.companies.filter((c) => c.connected).length
+  const anyConnected = connectedCount > 0
+  return (
+    <Card
+      className="a-rise gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80"
+      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    >
+      <CardHeader>
+        <CardTitle className="flex min-w-0 items-start justify-between gap-3">
+          <span className="flex min-w-0 items-center gap-2.5">
+            <span
+              className={`grid size-9 shrink-0 place-items-center rounded-lg border transition-colors ${
+                anyConnected ? "border-success/30 bg-success/10" : "border-border bg-background/60"
+              }`}
+            >
+              <BrandIcon id="notion" tone={anyConnected ? "brand" : "inherit"} className="size-[18px]" />
+            </span>
+            <span className="min-w-0 font-display leading-snug font-bold">Notion</span>
+          </span>
+          <Badge
+            variant="outline"
+            className={
+              anyConnected
+                ? "border-success/30 bg-success/10 text-success"
+                : "border-border text-muted-foreground"
+            }
+          >
+            <span
+              className={`mr-1 inline-block size-1.5 rounded-full ${
+                anyConnected ? "a-live bg-success" : "bg-muted-foreground"
+              }`}
+            />
+            {total === 0 ? "No companies yet" : `${connectedCount} of ${total} connected`}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Not one machine-wide sign-in like the others — each company connects its own, via the{" "}
+          <code>api-connect</code> skill inside that company&apos;s own repo.
+        </p>
+
+        {total === 0 ? (
+          <p className="text-xs text-muted-foreground">
+            Register or create a company first, then connect Notion for it.
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {notion.companies.map((c) => (
+              <div
+                key={c.agentId}
+                className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-xs"
+              >
+                <span className="min-w-0 truncate">{c.companyName}</span>
+                <span
+                  className={`inline-flex shrink-0 items-center gap-1 ${
+                    c.connected ? "text-success" : "text-muted-foreground"
+                  }`}
+                >
+                  <span className={`size-1.5 rounded-full ${c.connected ? "bg-success" : "bg-muted-foreground"}`} />
+                  {c.connected ? "Connected" : "Not connected"}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <p className="text-xs text-muted-foreground">
+          To connect one: open its Skills page and run the api-connect skill (&ldquo;connect Notion&rdquo;), or use
+          &ldquo;Open in Terminal&rdquo; on its card and ask your AI assistant to connect Notion.
+        </p>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }) {
   const [status, setStatus] = useState<ConnectStatus>(initialStatus)
   const [pending, setPending] = useState(false)
@@ -201,6 +284,7 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
         ))}
         <ToolCard tool={status.google} delay={status.aiExecutors.length * 90} />
         <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} />
+        <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
       </div>
     </div>
   )
