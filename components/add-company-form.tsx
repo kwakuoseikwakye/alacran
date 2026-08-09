@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -127,28 +128,10 @@ export function AddCompanyForm({
     {}
   )
 
-  if (!open) {
-    return prominent ? (
-      <Button
-        className="w-full shadow-[0_10px_30px_-12px_var(--primary)] transition-transform hover:-translate-y-0.5"
-        onClick={() => setOpen(true)}
-      >
-        <Plus className="h-4 w-4" />
-        Create my first company
-      </Button>
-    ) : (
-      <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setOpen(true)}>
-        <Plus className="h-4 w-4" />
-        Add a company
-      </Button>
-    )
-  }
-
-  return (
-    <div
-      className={`${prominent ? "w-full" : "max-w-sm"} a-rise space-y-3 rounded-lg border border-border bg-card p-4`}
-    >
-      <h2 className="text-sm font-medium">Add a company</h2>
+  // Shared between both presentations below: the onboarding wizard's inline
+  // card (prominent) and the agents-page header's Sheet modal (default).
+  const formFields = (
+    <>
       <div className="space-y-1">
         <label className="text-xs text-muted-foreground">Name</label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Second Co" />
@@ -251,22 +234,67 @@ export function AddCompanyForm({
       </button>
 
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
+    </>
+  )
 
-      <AlertDialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Create this company?</AlertDialogTitle>
-            <AlertDialogDescription>
-              <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the{" "}
-              <strong>{getCompanyStarterPack(packId).label}</strong> starter?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmCreate}>Create &amp; register</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </div>
+  const confirmDialog = (
+    <AlertDialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Create this company?</AlertDialogTitle>
+          <AlertDialogDescription>
+            <code>{rootPath}</code> doesn&apos;t exist yet. Create &quot;{name}&quot; here from the{" "}
+            <strong>{getCompanyStarterPack(packId).label}</strong> starter?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmCreate}>Create &amp; register</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+
+  // Onboarding's "create" step is already a dedicated step of its own
+  // full-width wizard card — expanding inline there is the right shape.
+  // It's only the agents-page header (below) where inline expansion has no
+  // room to work: see the Sheet modal instead.
+  if (prominent) {
+    if (!open) {
+      return (
+        <Button
+          className="w-full shadow-[0_10px_30px_-12px_var(--primary)] transition-transform hover:-translate-y-0.5"
+          onClick={() => setOpen(true)}
+        >
+          <Plus className="h-4 w-4" />
+          Create my first company
+        </Button>
+      )
+    }
+    return (
+      <div className="a-rise w-full space-y-3 rounded-lg border border-border bg-card p-4">
+        <h2 className="text-sm font-medium">Add a company</h2>
+        {formFields}
+        {confirmDialog}
+      </div>
+    )
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="ghost" className="text-muted-foreground" onClick={() => setOpen(true)}>
+        <Plus className="h-4 w-4" />
+        Add a company
+      </Button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>Add a company</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 space-y-3 overflow-y-auto px-4 pb-4">{formFields}</div>
+        </SheetContent>
+      </Sheet>
+      {confirmDialog}
+    </>
   )
 }
