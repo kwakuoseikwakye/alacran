@@ -1,10 +1,17 @@
-export type PrefetchKind = "repo-status" | "triage-email" | "triage-issue"
+export type PrefetchKind = "repo-status" | "triage-email" | "triage-issue" | "check-notion"
 
 export type PrefetchExecFileFn = (
   file: string,
   args: string[],
   options: { cwd: string }
 ) => Promise<{ stdout: string; stderr: string }>
+
+/** Minimal shape check-notion needs from a fetch call — real enough to inject
+ *  a fake in tests without pulling in a full Response mock. */
+export type PrefetchFetchFn = (
+  url: string,
+  init: { method: string; headers: Record<string, string>; body: string }
+) => Promise<{ status: number; ok: boolean; json: () => Promise<unknown> }>
 
 export type PrefetchContext = {
   /** The company repo. Prefetch may read outside it; the spawned agent may not. */
@@ -24,6 +31,14 @@ export type PrefetchContext = {
    * defaults to ["auto"] itself when absent.
    */
   accounts?: string[]
+  /**
+   * Injectable network call for check-notion (the only prefetch that talks to
+   * a real external API rather than shelling out to a CLI — Notion has none
+   * to shell out to). Same optional/falls-back-to-real convention as
+   * readFileFn: unset in every existing caller, so no other prefetch or its
+   * tests need to change.
+   */
+  fetchFn?: PrefetchFetchFn
 }
 
 /**

@@ -202,6 +202,22 @@ Check these account(s): ${accounts.join(", ")}. Repeat steps 1-2 once per accoun
 Only ever run the two gog commands above (search and get), and only with -a set to one of the account(s) listed above. Do NOT run gog gmail send, gog gmail messages modify, or any other command, and do NOT use any -a value not listed above. Do not copy message bodies, tokens, or personal data into the report — sender name, subject, and date only. Write exactly one file and stop.`,
   },
   {
+    id: "check-notion",
+    commandFileName: "check-notion.md",
+    label: "Check Notion",
+    fields: [],
+    outputKind: "new-file-in-dir",
+    outputPath: "notes/company/notion-checks",
+    prefetchKind: "check-notion",
+    buildPrompt: (fields, today, prefetch) => `Run this repository's /check-notion command as described in .claude/commands/check-notion.md.
+
+Today's date is ${today}. You have no Notion credentials and no Bash access for this command — everything has already been fetched for you:
+
+${prefetch}
+
+Write ONE file to notes/company/notion-checks/${today}-notion-check.md (create the directory first if it doesn't exist) with this structure: frontmatter (type: notion-check, status: active, created: ${today}, tags: []); a one-line banner that this is a read-only snapshot; a heading "# Notion check ${today}"; and a "## Recently edited" section listing exactly what was fetched above, one "- [page|database] <title> — edited <date> — <url>" line each (or the "nothing shared with the integration yet" note, verbatim, if that's what was fetched). Do not fetch anything else and do not write to Notion. Write exactly one file and stop.`,
+  },
+  {
     id: "triage-email",
     commandFileName: "triage-email.md",
     label: "Triage an email",

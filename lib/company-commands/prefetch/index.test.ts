@@ -7,9 +7,9 @@ const execFn: PrefetchExecFileFn = async () => ({ stdout: "", stderr: "" })
 const ctx = (): PrefetchContext => ({ agentRootPath: "/tmp/x", fieldValues: {}, execFn })
 
 describe("prefetchKind migration", () => {
-  it("leaves exactly handoff, triage-email, and triage-issue declaring a prefetch kind", () => {
+  it("leaves exactly handoff, check-notion, triage-email, and triage-issue declaring a prefetch kind", () => {
     const withKind = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
-    expect(withKind).toEqual(["handoff", "triage-email", "triage-issue"])
+    expect(withKind).toEqual(["handoff", "check-notion", "triage-email", "triage-issue"])
   })
 
   it("gives handoff the repo-status kind", () => {
@@ -46,5 +46,12 @@ describe("runPrefetch", () => {
     expect(result.ok).toBe(false)
     if (result.ok) return
     expect(result.message).not.toBe("No prefetch handler for kind: triage-email")
+  })
+
+  it("dispatches check-notion to its real handler (which refuses without a .env, since ctx() has no readFileFn)", async () => {
+    const result = await runPrefetch("check-notion", ctx())
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.message).not.toBe("No prefetch handler for kind: check-notion")
   })
 })

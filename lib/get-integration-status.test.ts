@@ -44,13 +44,25 @@ describe("getIntegrationStatus", () => {
     expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
   })
 
-  it("reports none configured for any other agent, without reading anything", async () => {
+  it("reports none configured for any other agent when it has no .env at all", async () => {
     const otherAgent: Agent = {
       id: "ai-company-starter-main",
       name: "AI Company Starter",
       rootPath: path.join(root, "does-not-exist"),
       kind: "command-set",
     }
+    expect(await getIntegrationStatus(otherAgent)).toBe("none configured yet")
+  })
+
+  it("reports Notion connected for any other agent when its own .env has NOTION_TOKEN (via api-connect)", async () => {
+    const otherAgent: Agent = { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }
+    await writeFile(path.join(root, ".env"), "NOTION_TOKEN=secret_real\n")
+    expect(await getIntegrationStatus(otherAgent)).toBe("Notion connected")
+  })
+
+  it("reports none configured for any other agent when .env has the empty NOTION_TOKEN= placeholder api-connect writes before the user pastes a value", async () => {
+    const otherAgent: Agent = { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }
+    await writeFile(path.join(root, ".env"), "NOTION_TOKEN=\n")
     expect(await getIntegrationStatus(otherAgent)).toBe("none configured yet")
   })
 })

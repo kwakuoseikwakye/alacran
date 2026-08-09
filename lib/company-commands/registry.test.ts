@@ -2,9 +2,19 @@ import { describe, it, expect } from "vitest"
 import { COMPANY_COMMANDS, getCompanyCommand } from "./registry"
 
 describe("COMPANY_COMMANDS registry", () => {
-  it("has exactly the 8 in-scope commands", () => {
+  it("has exactly the 9 in-scope commands", () => {
     expect(COMPANY_COMMANDS.map((c) => c.id).sort()).toEqual(
-      ["check-inbox", "decision", "define-company", "digest", "handoff", "retro", "triage-email", "triage-issue"].sort()
+      [
+        "check-inbox",
+        "check-notion",
+        "decision",
+        "define-company",
+        "digest",
+        "handoff",
+        "retro",
+        "triage-email",
+        "triage-issue",
+      ].sort()
     )
   })
 
@@ -26,9 +36,9 @@ describe("COMPANY_COMMANDS registry", () => {
     }
   })
 
-  it("only handoff, triage-email, and triage-issue declare a prefetchKind", () => {
+  it("only handoff, check-notion, triage-email, and triage-issue declare a prefetchKind", () => {
     const withPrefetch = COMPANY_COMMANDS.filter((c) => c.prefetchKind !== undefined).map((c) => c.id)
-    expect(withPrefetch).toEqual(["handoff", "triage-email", "triage-issue"])
+    expect(withPrefetch).toEqual(["handoff", "check-notion", "triage-email", "triage-issue"])
   })
 
   it("only check-inbox declares bashPatterns; unassigned it resolves to -a auto, assigned it resolves per account", () => {
@@ -62,6 +72,21 @@ describe("COMPANY_COMMANDS registry", () => {
     // The prompt must name the mutating commands as forbidden (not merely omit them);
     // the hard read-only guarantee is the bashPatterns allowlist, tested separately.
     expect(prompt).toMatch(/Do NOT run gog gmail send, gog gmail messages modify/)
+  })
+
+  it("check-notion is a zero-field new-file-in-dir command writing to notes/company/notion-checks, with the check-notion prefetch kind", () => {
+    const cmd = getCompanyCommand("check-notion")
+    expect(cmd?.fields).toEqual([])
+    expect(cmd?.outputKind).toBe("new-file-in-dir")
+    expect(cmd?.outputPath).toBe("notes/company/notion-checks")
+    expect(cmd?.prefetchKind).toBe("check-notion")
+    expect(cmd?.bashPatterns).toBeUndefined()
+  })
+
+  it("check-notion's buildPrompt embeds the prefetched text verbatim and states it never writes to Notion", () => {
+    const prompt = getCompanyCommand("check-notion")!.buildPrompt({}, "2026-08-09", "TEST_PREFETCH_TEXT", ["auto"])
+    expect(prompt).toContain("TEST_PREFETCH_TEXT")
+    expect(prompt).toMatch(/do not write to notion/i)
   })
 
   it("both triage commands' prompts carry the untrusted-content framing, naming the nonced fence", () => {
