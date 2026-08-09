@@ -2,22 +2,22 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdtemp, writeFile, mkdir, rm } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { aiCompanyStarterMainSkillsAdapter } from "./ai-company-starter-main"
+import { genericCommandSetSkillAdapter } from "./generic-command-set"
 import type { Agent } from "../adapters/types"
 
 let root: string
 let agent: Agent
 
 beforeEach(async () => {
-  root = await mkdtemp(path.join(tmpdir(), "ai-company-skills-test-"))
-  agent = { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }
+  root = await mkdtemp(path.join(tmpdir(), "generic-command-set-test-"))
+  agent = { id: "some-company", name: "Some Company", rootPath: root, kind: "command-set" }
 })
 
 afterEach(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-describe("aiCompanyStarterMainSkillsAdapter", () => {
+describe("genericCommandSetSkillAdapter", () => {
   it("combines .claude/skills and .claude/commands into one list", async () => {
     await mkdir(path.join(root, ".claude", "skills", "piro"), { recursive: true })
     await writeFile(
@@ -30,7 +30,7 @@ describe("aiCompanyStarterMainSkillsAdapter", () => {
       "---\nname: verify\ndescription: Runs verification.\n---\n"
     )
 
-    const entries = await aiCompanyStarterMainSkillsAdapter(agent)
+    const entries = await genericCommandSetSkillAdapter(agent)
 
     expect(entries).toHaveLength(2)
     expect(entries.find((e) => e.kind === "skill")).toMatchObject({ name: "piro" })
@@ -38,7 +38,7 @@ describe("aiCompanyStarterMainSkillsAdapter", () => {
   })
 
   it("returns an empty array when neither directory exists", async () => {
-    const entries = await aiCompanyStarterMainSkillsAdapter(agent)
+    const entries = await genericCommandSetSkillAdapter(agent)
     expect(entries).toEqual([])
   })
 })

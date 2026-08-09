@@ -6,9 +6,8 @@ import { emailPipelineAdapter } from "./adapters/email-pipeline-agent"
 import { aiCompanyStarterMainAdapter } from "./adapters/ai-company-starter-main"
 import { plhOpsAdapter } from "./adapters/plh-ops"
 import type { SkillAdapter } from "./skills/types"
-import { aiCompanyStarterMainSkillsAdapter } from "./skills/ai-company-starter-main"
-import { emailPipelineSkillsAdapter } from "./skills/email-pipeline-agent"
-import { plhOpsSkillsAdapter } from "./skills/plh-ops"
+import { genericCommandSetSkillAdapter } from "./skills/generic-command-set"
+import { scanSkillsDir } from "./skills/scan-helpers"
 
 const AI_NATIVE_ROOT = path.join(os.homedir(), "AI-Native")
 
@@ -30,7 +29,10 @@ const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
       kind: "pipeline",
     },
     adapter: emailPipelineAdapter,
-    skillAdapter: emailPipelineSkillsAdapter,
+    // The only one of the 3 built-ins whose skills live directly under
+    // skills/ rather than .claude/skills — not a generic command-set agent,
+    // so genericCommandSetSkillAdapter doesn't apply.
+    skillAdapter: (agent) => scanSkillsDir(agent.id, path.join(agent.rootPath, "skills")),
   },
   {
     agent: {
@@ -40,7 +42,7 @@ const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
       kind: "command-set",
     },
     adapter: aiCompanyStarterMainAdapter,
-    skillAdapter: aiCompanyStarterMainSkillsAdapter,
+    skillAdapter: genericCommandSetSkillAdapter,
   },
   {
     agent: {
@@ -50,7 +52,9 @@ const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
       kind: "report-log",
     },
     adapter: plhOpsAdapter,
-    skillAdapter: plhOpsSkillsAdapter,
+    // plh-ops's skills live under workflow/, not .claude/skills — same
+    // reasoning as email-pipeline-agent above.
+    skillAdapter: (agent) => scanSkillsDir(agent.id, path.join(agent.rootPath, "workflow")),
   },
 ]
 

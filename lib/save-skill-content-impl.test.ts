@@ -3,7 +3,7 @@ import { mkdtemp, writeFile, mkdir, rm, readFile, realpath } from "node:fs/promi
 import { tmpdir } from "node:os"
 import path from "node:path"
 import type { ExecFileFn } from "./git-commit-file"
-import { emailPipelineSkillsAdapter } from "./skills/email-pipeline-agent"
+import { scanSkillsDir } from "./skills/scan-helpers"
 
 let root: string
 
@@ -26,7 +26,7 @@ async function mockAgents() {
     return {
       ...actual,
       AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
-      SKILL_ADAPTERS: { "email-pipeline-agent": emailPipelineSkillsAdapter },
+      SKILL_ADAPTERS: { "email-pipeline-agent": (agent: { id: string; rootPath: string }) => scanSkillsDir(agent.id, path.join(agent.rootPath, "skills")) },
     }
   })
 }
