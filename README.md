@@ -4,13 +4,13 @@
 
 # Alacrán
 
-**Give your AI a memory of your business — on your own machine.**
+**Give your AI a memory of your business on your own machine.**
 
 [![CI](https://github.com/kwakuoseikwakye/alacran/actions/workflows/ci.yml/badge.svg)](https://github.com/kwakuoseikwakye/alacran/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-ff2e43.svg)](LICENSE)
 [![Download](https://img.shields.io/github/v/release/kwakuoseikwakye/alacran-releases?label=download)](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest)
 
-[Download](#install) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Contributing](CONTRIBUTING.md) · [Changelog](CHANGELOG.md)
+[Download](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Contributing](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
 
 </div>
 
@@ -23,7 +23,7 @@ background paragraph before it can be any use.
 Alacrán is a small local app that fixes that. You describe your business once,
 in plain language. It writes that down as structured files in a folder **you**
 own, hands them to your coding-agent CLI before every task, and shows you a
-diff of anything the agent wants to write — before it's saved.
+diff of anything the agent wants to write before it's saved.
 
 It is not a hosted service. There is no account, no licence key, and no server
 of ours your data could reach. It runs as a local Next.js server on
@@ -31,25 +31,28 @@ of ours your data could reach. It runs as a local Next.js server on
 
 ## What it actually does
 
-- **Create a company** — one folder holding everything an AI should know about
+- **Create a company:** one folder holding everything an AI should know about
   a business, scaffolded from one of 7 starter packs (General, Software
   engineering, Sales, Marketing, Customer support, HR & People, Leadership).
-- **Guided setup** — a plain-language wizard (business domain, stakeholders,
+- **Guided setup:** a plain-language wizard (business domain, stakeholders,
   value flow, bottleneck) that writes a structured ontology file. Or let the
   AI draft the domain entities for you.
-- **Run jobs** — `digest`, `decision`, `retro`, `handoff`, `define-company`,
+- **Run jobs:** `digest`, `decision`, `retro`, `handoff`, `define-company`,
   `check-inbox`, `triage-email`, `triage-issue`. Each spawns a headless agent
   session scoped to exactly one output directory, then shows you the diff
   before anything is committed.
-- **Edit and version skills** — browse every skill and slash-command across
+- **Edit and version skills:** browse every skill and slash-command across
   your companies, edit them in-app, and get real git history, per-commit
   diffs, and one-click revert. Every write is a single-file-scoped git commit
   in that company's own repo.
-- **Connect tools** — detect-and-guide setup for the Claude Code CLI, Google
-  (Gmail/Calendar via `gog`), and GitHub. Alacrán never holds a credential
-  itself; it checks whether *your* CLI is already authenticated.
-- **Bring your own agent** — Claude Code by default, with OpenAI Codex and
-  Aider selectable per company.
+- **Connect tools:** detect-and-guide setup for the Claude Code CLI, Google
+  (Gmail/Calendar via `gog`), GitHub, and Notion. Alacrán never holds a
+  credential itself; it checks whether *your* CLI is already authenticated.
+- **See the network:** a map of every company on your machine and exactly
+  what it's plugged into (AI executor, GitHub backup, Google, Notion), so
+  it's obvious at a glance what's connected and what isn't.
+- **Bring your own agent:** Claude Code by default, with OpenAI Codex, Aider,
+  and Google Antigravity CLI selectable per company.
 
 ## Install
 
@@ -60,8 +63,8 @@ of ours your data could reach. It runs as a local Next.js server on
 | macOS (Apple Silicon / Intel) | `Alacran.dmg` | [Download](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg) |
 | Debian / Ubuntu | `Alacran.deb` | [Download](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb) |
 
-**macOS.** Open the `.dmg` and drag Alacrán to Applications. Then — before the
-first launch — run this once in Terminal:
+**macOS.** Open the `.dmg` and drag Alacrán to Applications. Then, before the
+first launch, run this once in Terminal:
 
 ```bash
 xattr -cr "/Applications/Alacrán.app"
@@ -69,15 +72,15 @@ xattr -cr "/Applications/Alacrán.app"
 
 The build is ad-hoc signed but **not notarized**, because that requires a paid
 Apple Developer account. Without the command above, macOS quarantines the
-download and refuses to open it — often with *"Alacrán is damaged and can't be
+download and refuses to open it, often with *"Alacrán is damaged and can't be
 opened"*, which is misleading: the app is fine, it just isn't signed by a
 registered developer. `xattr -cr` clears the quarantine flag macOS attaches to
-anything downloaded from the internet. Right-click → **Open** alone is **not**
+anything downloaded from the internet. Right-click > **Open** alone is **not**
 enough for an ad-hoc-signed app on current macOS.
 
 You only do this once, per install. Repeat it after each update.
 
-*A signed and notarized pipeline is welcome as a contribution — it needs the
+*A signed and notarized pipeline is welcome as a contribution. It needs the
 certificate, not the code. See the [issue tracker](https://github.com/kwakuoseikwakye/alacran/issues).*
 
 **Linux.**
@@ -106,7 +109,7 @@ available.
   prompt GNOME Software uses), and restarts the app for you. If `pkexec`
   isn't installed, it shows the exact `sudo apt install` command instead.
 - **macOS**: click **Download it** and repeat the install steps above
-  (including `xattr -cr`). There's no one-click updater here yet — these
+  (including `xattr -cr`). There's no one-click updater here yet - these
   builds aren't notarized, so a silently-installed update would just get
   Gatekeeper-blocked on next launch, which is worse than asking you to
   download it yourself.
@@ -117,8 +120,8 @@ Set `ALACRAN_NO_UPDATE_CHECK=1` to turn the check off entirely.
 
 - **Linux**: `sudo apt remove alacran` keeps your data;
   `sudo apt purge alacran` also removes Alacrán's own registry/settings at
-  `~/.local/share/Alacrán`. Either way, your companies' actual files —
-  wherever you put them, e.g. `~/AI-Native/` — are untouched.
+  `~/.local/share/Alacrán`. Either way, your companies' actual files -
+  wherever you put them, e.g. `~/AI-Native/` - are untouched.
 - **macOS**: run `bash scripts/uninstall-macos.sh` from a checkout, or by
   hand: drag `/Applications/Alacrán.app` to the Trash, and delete
   `~/Library/Application Support/Alacrán` if you want its registry gone too.
@@ -130,9 +133,9 @@ never stores an API key and never proxies a request to a model provider.
 
 **Required**
 
-- **[Node.js](https://nodejs.org/) 20 or newer** — the packaged app runs a
+- **[Node.js](https://nodejs.org/) 20 or newer:** the packaged app runs a
   Node server and needs `node` on your `PATH`. Check with `node -v`.
-- **Git** — every company is a git repository; all writes go through real
+- **Git:** every company is a git repository; all writes go through real
   commits. Check with `git --version`.
 - **A coding-agent CLI**, at least one of:
 
@@ -140,18 +143,19 @@ never stores an API key and never proxies a request to a model provider.
   |---|---|---|
   | Claude Code *(default)* | `npm install -g @anthropic-ai/claude-code` | The only one with fine-grained `Edit(path)` / `Bash(cmd)` permission scoping. Recommended. |
   | OpenAI Codex | `npm install -g @openai/codex` | Coarser permissions (`--sandbox workspace-write`). |
+  | Google Antigravity CLI | `curl -fsSL https://antigravity.google/cli/install.sh \| bash` | Coarser permissions (`--dangerously-skip-permissions`). |
   | Aider | `uvx --from aider-chat aider` | Can point at a local model via Ollama. |
 
   You authenticate these yourself, with your own account. Alacrán checks
-  whether the binary exists and tells you if it doesn't — it never installs
+  whether the binary exists and tells you if it doesn't - it never installs
   anything for you.
 
 **Optional**
 
-- **[`gog`](https://github.com/gogcli/gog)** (`brew install gogcli/tap/gog`) —
+- **[`gog`](https://github.com/gogcli/gog)** (`brew install gogcli/tap/gog`) -
   a Google API CLI, needed only for the `check-inbox` command (read-only Gmail
   summaries). Alacrán detects it and guides you if it's missing.
-- **[GitHub CLI](https://cli.github.com/) (`gh`)** — needed only for the
+- **[GitHub CLI](https://cli.github.com/) (`gh`)** - needed only for the
   optional "back up this company to a private repo" flow.
 
 **Not required:** an Alacrán account, a licence key, a network connection for
@@ -166,15 +170,15 @@ turn off.
    scaffold it from a starter pack; type a path to an existing directory (with
    `.git` and `.claude`) and it just registers it.
 3. **Answer four questions.** The setup wizard asks what the business does, who
-   it serves, how value flows, and what's eating your time — then writes
+   it serves, how value flows, and what's eating your time - then writes
    `definitions/ontology/company.yaml`. Or click **Let AI draft tailored
    entities** and review what it proposes.
 4. **Run a job.** Open **Skills**, pick a command, hit **Run**. The agent runs
    headlessly, scoped to one output directory. When it finishes, you get a
    diff. Nothing is written to git until you approve it.
 
-A longer, step-by-step walkthrough — including what to do when macOS blocks the
-first launch — is in [`landing/how-to-use/`](landing/how-to-use/index.html),
+A longer, step-by-step walkthrough - including what to do when macOS blocks the
+first launch - is in [`landing/how-to-use/`](landing/how-to-use/index.html),
 which is also the source for the site's How-to-use page.
 
 ## How it works
@@ -212,15 +216,15 @@ A few design decisions worth knowing, because they constrain everything else:
   `--allowedTools Read,Grep,Glob,Edit(<one directory>)` and, only where a
   command genuinely needs a CLI, narrowly-pattern-matched `Bash(...)` access.
   Blanket `Write` and `--permission-mode acceptEdits` are deliberately not
-  used — see [v8 in the changelog](CHANGELOG.md) for the live test that proved
+  used - see [v8 in the changelog](CHANGELOG.md) for the live test that proved
   why.
 - **The app detects what changed; the agent never commits.** Alacrán diffs the
   result itself and shows it to you. Approval is a human step by construction.
 
 For the reasoning behind each of these, [`CHANGELOG.md`](CHANGELOG.md) has a
-detailed, dated writeup of every feature that shipped — including the ones
+detailed, dated writeup of every feature that shipped - including the ones
 that were investigated and deliberately *not* built, and the security bugs
-found during live testing — and `CLAUDE.md` carries the standing conventions
+found during live testing - and `CLAUDE.md` carries the standing conventions
 and a running summary of the current state.
 
 ## Development
@@ -248,13 +252,13 @@ Radix primitives · vitest.
 **Testing philosophy.** Every function that shells out or touches the
 filesystem takes an injectable `ExecFn`/`SpawnFn` with a real default, so the
 suite never spawns a real process, never hits the network, and never reads the
-real clock. If you add a new one, follow the pattern — a test that needs the
+real clock. If you add a new one, follow the pattern - a test that needs the
 real world is a test that will be flaky for everyone else.
 
 **Layout:**
 
 ```
-app/          Next.js routes (/, /activity, /skills, /connect)
+app/          Next.js routes (/, /network, /activity, /skills, /connect)
 components/   React components; components/ui/* are shadcn-style primitives
 lib/          All logic. *-impl.ts holds the injectable seam, the sibling
               file is the thin "use server" Server Action wrapper.
@@ -264,13 +268,13 @@ landing/      The static marketing site (plain HTML/CSS, no build step)
 docs/         Design specs and implementation plans, one per slice
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR — in particular the
+See [CONTRIBUTING.md](CONTRIBUTING.md) before opening a PR - in particular the
 conventions around `components/ui/*` (don't edit them) and design tokens.
 
 ## Privacy
 
 There is no analytics, no telemetry and no crash reporting in this app. Not
-disabled by default — not present. The complete list of what leaves your
+disabled by default - not present. The complete list of what leaves your
 machine:
 
 1. **Your prompts**, to whichever AI a company is pointed at, when you press
@@ -280,7 +284,7 @@ machine:
    URL; dismissible.
 3. **Your files to your own private GitHub repo**, only if you press Back up.
 
-That's it. The source is right here — verify it rather than trusting it.
+That's it. The source is right here - verify it rather than trusting it.
 
 ## Status and honest caveats
 
@@ -310,4 +314,4 @@ Bug reports, feature requests and pull requests are welcome. Start with
 [MIT](LICENSE) © Kwaku Osei Kwakye
 
 Brand icons are official [Simple Icons](https://simpleicons.org/) (CC0),
-extracted by `scripts/generate-brand-icons.mjs` — never hand-drawn.
+extracted by `scripts/generate-brand-icons.mjs` - never hand-drawn.
