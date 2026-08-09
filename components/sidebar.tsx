@@ -2,11 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Activity, BookOpen, Plug } from "lucide-react"
+import { Bot, Activity, BookOpen, Plug, Network } from "lucide-react"
 import { AlacranMark } from "@/components/alacran-mark"
+import { APP_VERSION } from "@/lib/app-version"
 
 const NAV = [
   { href: "/",         label: "Agents",   icon: Bot      },
+  { href: "/network",  label: "Network",  icon: Network   },
   { href: "/activity", label: "Activity", icon: Activity  },
   { href: "/skills",   label: "Skills",   icon: BookOpen  },
   { href: "/connect",  label: "Connect",  icon: Plug      },
@@ -51,7 +53,7 @@ export function Sidebar() {
         <div className="sidebar-spacer" />
         <div className="sidebar-sep" />
 
-        <span className="sidebar-version">v{process.env.npm_package_version ?? "—"}</span>
+        <span className="sidebar-version">v{APP_VERSION}</span>
       </aside>
 
       {/* ---- MOBILE BOTTOM NAV ---- */}

@@ -1429,3 +1429,126 @@ copyable install commands. Full suite: 531 tests, `tsc`/`next build`
 clean (one `.next` cache corruption hit mid-build from the concurrent
 dev-server run above — `rm -rf .next` and rebuilding was the fix, not a
 real regression).
+
+## v43 (2026-08-09): the Network tab — a graphical map of what every company is plugged into
+
+Direct user request: "a graphical representation... where users can see
+how their companies are connected or not connected. like how obsidian
+does it but this design must be different." Shipped a new `/network`
+page, reachable from a new sidebar item, rather than folding it into an
+existing page — it's a distinct view (all companies at once, cross-
+company), not a per-company detail like the Ownership Sheet.
+
+**Design decision: bipartite graph, not a force graph.** Obsidian's
+graph view is a physics simulation because the link structure is
+genuinely unknown ahead of time. Here it isn't — every edge (which AI
+executor a company runs on, whether it's backed up to GitHub, whether
+Google or Notion is connected) is already known, deterministic data.
+So instead of nodes bouncing around a canvas, companies sit in a fixed
+left column, services (AI executors in use, Google, GitHub, Notion) sit
+in a fixed right column, and curved SVG "cable" edges connect them —
+closer to a subway map or a Sankey diagram than Obsidian's graph, and
+inherently more responsive-friendly (a force-graph canvas has no good
+small-screen story; a two-column list does).
+
+**`lib/build-network-map.ts`** composes the per-company edge data from
+primitives that already existed for the Ownership Sheet and Connect
+page — `getConnectStatusImpl`, `getCompanyRemoteImpl`,
+`getAiExecutorIdForAgent`, `readGoogleAccounts`, and
+`connectStatus.notion.companies` — no new detection logic anywhere, only
+a different output shape (structured `{service, connected, detail}[]`
+per company instead of a formatted sentence) so the UI can pick an icon
+and a connected/not-connected state per service. Deliberately mirrors
+this app's existing "don't overclaim" discipline: edges are only ever
+produced for a service a company's *kind* actually supports elsewhere in
+the real UI (`AgentCard`'s show* flags) — a `pipeline` agent
+(`email-pipeline-agent`) gets only a Google/email edge (its one real
+integration), a `report-log` agent (`plh-ops`) gets none at all and
+renders as a genuinely isolated node, and only `command-set` companies
+get the full github/google/notion trio. Nothing here invents a
+capability the rest of the app doesn't have.
+
+**Rendering has no client-side layout pass.** Every node (company card
+or service node) is a fixed-height, flex-centered slot; row Y-positions
+are plain `index * PITCH + PITCH / 2` arithmetic computed at render
+time, and the connecting SVG's `viewBox` uses those same pixel units —
+no `ResizeObserver`, no `getBoundingClientRect`. `components/
+network-graph.tsx` is a small client component only for the hover-
+highlight interaction (dims unrelated companies/wires/services on
+hover); the diagram itself is otherwise plain server-rendered markup.
+Chip rows scroll horizontally instead of wrapping, which is what keeps
+the "every slot is a fixed height" assumption safe against long company
+names or many edges.
+
+**Color follows the app's own semantic palette, not per-vendor brand
+colors** — deliberately, to match `BrandIcon`'s existing documented house
+rule that vendor color is reserved for icons "at the moments that earn
+it," not a wash across the whole UI. Wires: ember for "runs on" (the AI-
+executor relationship, always true once a company exists, not a binary
+connect/disconnect state), success-green for a real, live connection,
+dashed muted-gray for "not connected yet." `TOOL_BRAND` (which AI
+executor gets which real product mark, with a generic `Bot` fallback for
+Codex/Aider, which have no mark in the Simple Icons dataset) was
+exported from `connect-panel.tsx` rather than redefined, so both pages
+agree.
+
+**Responsive by CSS breakpoint, not JS.** Below ~880px the wires and the
+services column disappear entirely; each company's own chip row — which
+renders on desktop too, as redundant non-color-dependent detail, each
+chip carrying a native `title` tooltip with the full status sentence —
+is the only thing left, and already carries the complete picture on a
+phone-width screen without a canvas diagram fighting the viewport.
+
+Zero new dependencies (plain SVG + CSS; no graph/diagram library added),
+zero write paths (the whole page is read-only composition of data the
+app already tracks), and zero edits to any existing page's own logic
+other than exporting one existing constant. New test:
+`lib/build-network-map.test.ts` (pipeline/report-log/command-set edge
+shapes, both disconnected-by-default and fully-connected). Live-verified
+on a throwaway dev server against the real registered companies on this
+machine — hover-dimming, the mobile stacked layout, and the desktop
+cable view all confirmed by screenshot; `/connect` and `/` (Agents)
+re-checked unaffected by the `TOOL_BRAND` export. Full suite: 561 tests,
+`tsc`/`next build` clean.
+
+## v44 (2026-08-09): Google Antigravity's real product mark on the Connect page
+
+The "Google Antigravity CLI" card on `/connect` (and anywhere else
+`TOOL_BRAND` feeds `BrandIcon`, including v43's Network tab) was showing
+Google's plain "G" as a stand-in — Simple Icons, this app's one sanctioned
+source of vendor marks, doesn't carry Antigravity (confirmed against the
+installed `simple-icons@16.28.0`, the latest published version: no
+`siAntigravity` or `siGoogleantigravity` export exists). Per this repo's
+"never hand-draw or approximate a vendor logo" rule, the fix wasn't to
+sketch one.
+
+Instead: fetched Antigravity's own real mark directly from
+`antigravity.google`'s own hosted assets (`/assets/image/antigravity-
+logo.png` and `/favicon.ico`, both confirmed identical) — a gradient arch
+silhouette — and traced it with `potrace` (installed via `brew`, a one-off
+local tool, same "build-time-only, never a runtime dependency" treatment
+already established for `simple-icons` itself) into a flat path on the same
+24×24 grid every other mark in `lib/brand-icons.ts` uses. The affine math to
+un-transform potrace's raw decipixel output back into that grid had a real
+bug caught before shipping: relative cubic-curve control points in SVG path
+data are each independently offset from the segment's start point, not
+chained to one another — an initial chained interpretation doubled the
+traced shape's bounding box, silently, with no error, only visible by
+rendering the result and comparing it against the source PNG.
+
+Because the real mark is a blue→green→orange gradient and `BrandIcon` only
+ever renders a flat single-color fill (deliberately, per its own house
+rule), `hex` is the dominant color sampled from the mark itself
+(area-weighted average across the opaque pixels) rather than an invented
+value — it lands on the same Google Blue (`#4285f4`) already used for every
+other Google mark in the file, keeping the family visually consistent
+rather than introducing an off-palette one-off.
+
+Shipped as a `MANUAL_MARKS` array in `scripts/generate-brand-icons.mjs`,
+alongside (not replacing) the existing Simple-Icons-derived `SPEC` list, so
+it's regenerated and won't be hand-edited out of sync, and documented
+inline with its provenance (source URL, fetch date) for the next person who
+wonders where a non-Simple-Icons path came from. `TOOL_BRAND` in
+`connect-panel.tsx` now maps `google-antigravity` to its own id instead of
+borrowing `google`. Live-verified by screenshot on `/connect`; full suite
+(561 tests), `tsc`, and `next build` all clean.

@@ -661,4 +661,134 @@ h3 {
   .sidebar-brand .brand-name,
   .sidebar-section-label,
   .sidebar-version { transition: none; }
+  .netgraph-wire--on { animation: none; }
+}
+
+/* ===========================================================================
+   /network — the company connectivity map
+   Bipartite layout on purpose, not a force graph: the relationships here are
+   known ahead of time (which company uses which AI executor / integration),
+   not something worth discovering by simulation. Row Y-positions are plain
+   index * PITCH arithmetic (see network-graph.tsx) so the SVG never needs to
+   measure the real DOM — every .netgraph-node is exactly --pitch tall with
+   its content vertically centered, and the SVG's viewBox lines up with that
+   same PITCH grid.
+   =========================================================================== */
+.netgraph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 18px;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.netgraph-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.netgraph-legend-swatch { display: inline-block; width: 18px; height: 2px; border-radius: 2px; }
+.netgraph-legend-swatch--executor { background: var(--ember); }
+.netgraph-legend-swatch--on { background: var(--success); }
+.netgraph-legend-swatch--off {
+  background: repeating-linear-gradient(90deg, var(--muted-foreground) 0 4px, transparent 4px 8px);
+  opacity: 0.7;
+}
+
+.netgraph-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px minmax(0, 280px);
+  align-items: start;
+}
+.netgraph-col { display: flex; flex-direction: column; min-width: 0; }
+.netgraph-wires {
+  width: 100%;
+  height: var(--netgraph-h);
+  overflow: visible;
+}
+.netgraph-node {
+  height: var(--pitch);
+  display: flex;
+  align-items: center;
+  transition: opacity 0.25s var(--ease);
+}
+.netgraph-node.is-dimmed { opacity: 0.3; }
+.netgraph-card {
+  width: 100%;
+  border: 1px solid var(--glass-edge);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--card) 75%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.netgraph-company:hover .netgraph-card,
+.netgraph-service:hover .netgraph-card {
+  border-color: color-mix(in srgb, var(--primary) 50%, var(--glass-edge));
+}
+.netgraph-card-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.netgraph-card-top img { height: 22px !important; width: 22px !important; }
+.netgraph-card-name { font-family: var(--typeface-display); font-weight: 700; font-size: 0.875rem; min-width: 0; flex: 1; }
+.netgraph-card-kind {
+  flex-shrink: 0;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+.netgraph-chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 1px;
+}
+.netgraph-chips::-webkit-scrollbar { display: none; }
+
+.netgraph-card--service { flex-direction: row; align-items: center; gap: 8px; }
+.netgraph-service-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--secondary);
+}
+.netgraph-service-count { flex-shrink: 0; font-size: 0.7rem; color: var(--muted-foreground); font-family: var(--typeface-mono); }
+
+.netgraph-wire {
+  fill: none;
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+  transition: opacity 0.25s var(--ease);
+}
+.netgraph-wire--executor { stroke: var(--ember); opacity: 0.55; }
+.netgraph-wire--on {
+  stroke: var(--success);
+  opacity: 0.9;
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--success) 55%, transparent));
+  stroke-dasharray: 5 4;
+  animation: netgraph-flow 1.4s linear infinite;
+}
+.netgraph-wire--off {
+  stroke: var(--muted-foreground);
+  stroke-dasharray: 2 5;
+  opacity: 0.28;
+}
+.netgraph-wire.is-dimmed { opacity: 0.08; filter: none; }
+@keyframes netgraph-flow {
+  to { stroke-dashoffset: -18; }
+}
+
+/* Below ~880px the two columns no longer have a shared coordinate space
+   worth drawing cables across — collapse to a stacked list and let each
+   company's own chip row (already rendered for every card) carry the same
+   information without the connector art. */
+@media (max-width: 880px) {
+  .netgraph-grid { grid-template-columns: 1fr; }
+  .netgraph-wires { display: none; }
+  .netgraph-services { margin-top: 24px; }
+  .netgraph-node { height: auto; padding: 6px 0; }
+  .netgraph-node.is-dimmed { opacity: 1; }
 }

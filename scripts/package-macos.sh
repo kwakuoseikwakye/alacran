@@ -244,19 +244,58 @@ codesign -dv "$APP" 2>&1 | head -3
 if [ "$RUN_SELFTEST" = "1" ]; then
   echo "==> Self-test: booting the packaged server headlessly"
   SELFTEST_PORT="4321"
-  ( cd "$PAYLOAD" && PORT="$SELFTEST_PORT" HOSTNAME="127.0.0.1" node server.js > /tmp/package-selftest.log 2>&1 & echo $! > /tmp/package-selftest.pid )
+  # PID-scoped, not a fixed /tmp path: two runs of this script close enough
+  # together (a broken build fixed and immediately re-run, same as happened
+  # live while building this) must never share bookkeeping files.
+  SELFTEST_PID_FILE="/tmp/package-selftest.$$.pid"
+  SELFTEST_LOG_FILE="/tmp/package-selftest.$$.log"
+
+  # Belt-and-suspenders against exactly the failure this once shipped with:
+  # if anything from a previous run is still bound to this port, curl's
+  # health check below can pass against THAT stale process while this run's
+  # own node never even manages to bind (EADDRINUSE) — so the kill by this
+  # run's own captured PID silently no-ops against an already-dead process,
+  # and the real, still-running culprit is never touched. Confirmed live:
+  # this leaked an orphaned next-server twice in one session. Same
+  # lsof-based clear the launcher itself already does for the real app
+  # port, just never applied here too.
+  if command -v lsof >/dev/null 2>&1; then
+    STALE_PID="$(lsof -ti "tcp:$SELFTEST_PORT" 2>/dev/null || true)"
+    if [ -n "$STALE_PID" ]; then
+      echo "==> Clearing a stale process already on port $SELFTEST_PORT (pid $STALE_PID)"
+      kill $STALE_PID 2>/dev/null || true
+      sleep 0.5
+    fi
+  fi
+
+  ( cd "$PAYLOAD" && PORT="$SELFTEST_PORT" HOSTNAME="127.0.0.1" node server.js > "$SELFTEST_LOG_FILE" 2>&1 & echo $! > "$SELFTEST_PID_FILE" )
+  SELFTEST_PID="$(cat "$SELFTEST_PID_FILE")"
   ok="0"
   for i in $(seq 1 40); do
     code="$(curl -s -o /dev/null -w '%{http_code}' "http://127.0.0.1:$SELFTEST_PORT/" || true)"
     if [ "$code" = "200" ]; then ok="1"; break; fi
     sleep 0.25
   done
-  kill "$(cat /tmp/package-selftest.pid)" 2>/dev/null || true
-  rm -f /tmp/package-selftest.pid
+
+  # Kill by the PID captured above AND, belt-and-suspenders, whatever is
+  # actually on the port right now — they should be the same process, but
+  # this is exactly the assumption that broke before. Then actively confirm
+  # the port is free rather than trusting a fire-and-forget kill; escalate
+  # to -9 if a plain kill hasn't taken effect within a second.
+  kill "$SELFTEST_PID" 2>/dev/null || true
+  for i in $(seq 1 4); do
+    STILL_UP="$(lsof -ti "tcp:$SELFTEST_PORT" 2>/dev/null || true)"
+    [ -z "$STILL_UP" ] && break
+    kill -9 $STILL_UP 2>/dev/null || true
+    sleep 0.25
+  done
+  rm -f "$SELFTEST_PID_FILE"
+
   if [ "$ok" = "1" ]; then
     echo "==> Self-test PASSED (packaged server served / with HTTP 200)"
+    rm -f "$SELFTEST_LOG_FILE"
   else
-    echo "==> Self-test FAILED — see /tmp/package-selftest.log" >&2
+    echo "==> Self-test FAILED — see $SELFTEST_LOG_FILE" >&2
     exit 1
   fi
 fi

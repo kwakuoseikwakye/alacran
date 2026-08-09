@@ -180,28 +180,54 @@ caused a real incident: the public `Alacran.dmg`/`Alacran.zip` sat stale for
 the v30 starter-template expansion all shipped to `master` — a user
 downloaded the app from the live site and got none of it.
 
-**The rule going forward:** whenever a merged change is the kind a user
-would notice (a new feature, a UI change, updated templates — not an
-internal refactor or a docs-only commit), rebuild the macOS app
-(`bash scripts/package-macos.sh`) from current `master`, self-test it
-(the script already does this headlessly), and spot-check that the new
-change is actually present in the built payload (e.g. grep
-`dist/Alacrán.app/Contents/Resources/app/.next` for a string unique to the
-change) before proposing to publish.
+**Why this matters — the exact point the update checker actually sees a
+change:** `lib/updates/fetch-latest-release-impl.ts` polls
+`api.github.com/repos/kwakuoseikwakye/alacran-releases/releases/latest` — the
+separate public *releases mirror*, never `control-panel` itself. Every
+installed copy checks at most once every `CHECK_INTERVAL_MS`
+(`lib/updates/update-status-impl.ts`, 24h) per copy, and only in production
+builds (`app/layout.tsx` → `getUpdateStatus()`; disabled in `next dev`, or
+with `ALACRAN_NO_UPDATE_CHECK=1`). Merging to `master` — even a whole
+slice — moves that number **zero**: an installed user sees nothing until a
+new release is actually published on `alacran-releases`. That's the entire
+reason the steps below exist.
 
-**Always ask the user for explicit confirmation before the actual publish
-step** (`gh release upload` to the public `alacran-releases` repo) — this
-overwrites a live artifact real users are already downloading, so it
-follows the same "ask before shared-state, hard-to-reverse actions" rule as
-everything else in this project. Building and self-testing locally needs no
-confirmation; only the upload does.
+**The rule going forward — do this automatically, without being asked, at
+the end of any session that merges a user-visible change** (a new feature, a
+UI change, updated templates — not an internal refactor or a docs-only
+commit):
+
+1. Bump `package.json`'s version. It's `APP_VERSION`'s only source
+   (`lib/app-version.ts`) — the exact number the update checker compares
+   against.
+2. Rebuild the macOS app (`bash scripts/package-macos.sh`) from current
+   `master`, self-test it (the script already does this headlessly), and
+   spot-check that the new change is actually present in the built payload
+   (e.g. grep `dist/Alacrán.app/Contents/Resources/app/.next` for a string
+   unique to the change). There's no equivalent local Linux build to run —
+   this dev machine is macOS and has no `dpkg-deb`; Linux's rebuild is
+   entirely CI's job, triggered by step 4 below.
+3. Commit the version bump and push the commit to `master`.
+
+**Always ask the user for explicit confirmation before either publish
+step** — these are the two actions that make a new build live to real
+users, so both follow the same "ask before shared-state, hard-to-reverse
+actions" rule as everything else in this project:
+
+4. Pushing the matching `vX.Y.Z` tag. The tag push alone is what fires
+   `package-linux.yml` and publishes `Alacran.deb` to `alacran-releases` —
+   that workflow has no separate approval step of its own, so pushing the
+   tag *is* the Linux publish.
+5. `gh release upload` for the macOS `.dmg`/`.zip` to `alacran-releases`.
+
+Steps 1–3 (bump, rebuild + self-test, push the commit) need no confirmation.
+Steps 4 and 5 each do, every time — approval for one doesn't carry to the
+other, and approval in a past session doesn't carry to this one.
 
 Until this becomes a `.github/workflows/package-macos.yml` (not yet
 written — would need a signing/notarization story to be worth the same tag
--triggered automation as Linux), this is a manual step that's easy to
-forget after a merge. Treat "did the macOS release get rebuilt" as a
-standing question at the end of any session that merged a user-visible
-change.
+-triggered automation as Linux), the macOS half stays a manual local build
+plus a confirmed manual upload.
 
 ## Workflow (how every slice gets built)
 
@@ -579,6 +605,54 @@ field. `onboarding-welcome.tsx`'s Claude-only install gate now looks it
 up by id instead of a dedicated field. Live-verified: 6 independent
 cards (Claude Code, Codex, Aider, Antigravity, Google, GitHub), each
 correct for what's really installed on this machine.
+
+v43 added a "Network" tab — a graphical map of every company on the
+machine and exactly what it's plugged into (AI executor, GitHub backup,
+Google, Notion), requested directly by the user as an Obsidian-inspired
+but deliberately different visualization. Bipartite, not a force graph:
+companies on the left, services on the right, curved SVG "cable" edges
+between them — the relationships are already known from existing data,
+so there's nothing to simulate. `lib/build-network-map.ts` composes the
+per-company edge data from primitives that already existed for the
+Ownership Sheet and Connect page (`getConnectStatusImpl`,
+`getCompanyRemoteImpl`, `getAiExecutorIdForAgent`, `readGoogleAccounts`,
+`connectStatus.notion.companies`) — no new detection logic, only a
+structured shape instead of a formatted sentence. Edges are only ever
+drawn for a service a company's *kind* actually supports elsewhere in
+the app (a `pipeline` agent only ever gets a Google/email edge, a
+`report-log` agent gets none at all — a genuinely isolated node, which
+is honest, not a bug) rather than inventing a capability the rest of the
+app doesn't have. Wire color follows the app's own semantic palette, not
+per-vendor brand colors, matching `BrandIcon`'s existing house rule that
+vendor color is reserved for icons at a live moment: ember for "runs on"
+(always true), success-green for a real connection, muted dashes for
+"not yet" — `TOOL_BRAND` was exported from `connect-panel.tsx` rather
+than redefined, so both pages agree on which executor gets which mark.
+Row positions are plain `index * PITCH` arithmetic (no ResizeObserver, no
+client-side layout pass) — every node is a fixed-height flex-centered
+slot and the SVG viewBox lines up with the same grid, so it works
+server-rendered with only a small client component on top for hover-
+highlight. Responsive by CSS breakpoint, not JS: below ~880px the wires
+and services column disappear and each company's own chip row (already
+rendered on desktop too, for redundant non-color-dependent legibility)
+carries the same information alone. Live-verified on a throwaway dev
+server against real registered companies — hover-dimming, the mobile
+stacked layout, and the desktop cable view all confirmed by screenshot;
+`/connect` and `/` (Agents) re-verified unaffected by the `TOOL_BRAND`
+export. Full suite: 561 tests, `tsc`/`next build` clean.
+
+v44 gave Google Antigravity its own real product mark instead of the
+generic Google "G" it was borrowing on `/connect` and the Network tab —
+Simple Icons doesn't carry Antigravity yet, so per the "never hand-draw a
+vendor logo" rule the fix traced the real gradient arch mark straight from
+`antigravity.google`'s own hosted PNG/favicon (`potrace`, build-time-only
+like `simple-icons` itself) into a flat path on the same 24×24 grid,
+shipped as a `MANUAL_MARKS` array alongside `generate-brand-icons.mjs`'s
+existing Simple-Icons `SPEC` so it survives regeneration. `hex` is the
+mark's own area-weighted dominant color rather than an invented one — it
+lands on the same Google Blue every other Google mark already uses. See
+CHANGELOG.md for the affine-transform bug (chained vs. independent
+relative-curve control points) caught before this shipped.
 
 ## Roadmap (named, not yet designed)
 

@@ -11,14 +11,14 @@ import { CommandLine } from "@/components/copy-button"
 import { getConnectStatus } from "@/lib/connect/connect-actions"
 import type { ConnectStatus, ToolStatus, NotionStatus } from "@/lib/connect/connect-status-impl"
 
-// Each tool's real product mark, where one exists. `gog` and Antigravity CLI
-// have no mark of their own, so Google's stands in for what they actually
-// connect you to. OpenAI's mark was withdrawn from the Simple Icons dataset
-// and Aider (a smaller open-source project) was never in it — both fall back
-// to a generic icon in ToolCard rather than an approximated/redrawn logo.
-const TOOL_BRAND: Partial<Record<ToolStatus["id"], BrandId>> = {
+// Each tool's real product mark, where one exists. `gog` has no mark of its
+// own, so Google's stands in for what it actually connects you to.
+// OpenAI's mark was withdrawn from the Simple Icons dataset and Aider (a
+// smaller open-source project) was never in it — both fall back to a generic
+// icon in ToolCard rather than an approximated/redrawn logo.
+export const TOOL_BRAND: Partial<Record<ToolStatus["id"], BrandId>> = {
   "claude-code": "claude",
-  "google-antigravity": "google",
+  "google-antigravity": "google-antigravity",
   google: "google",
   github: "github",
 }
