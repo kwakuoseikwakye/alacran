@@ -160,7 +160,19 @@ if command -v lsof >/dev/null 2>&1; then
   OLD_PID="\$(lsof -ti "tcp:\$PORT" 2>/dev/null || true)"
   if [ -n "\$OLD_PID" ]; then
     kill \$OLD_PID 2>/dev/null || true
-    sleep 0.5
+    # A plain kill + fixed sleep isn't enough: a prior instance with a live
+    # browser tab still connected takes longer than 0.5s to actually release
+    # the port, this run's own \`node server.js &\` then silently loses the
+    # EADDRINUSE race in the background, and the health-check below happily
+    # talks to the OLD server instead — the exact "installed the update but
+    # it still shows the old app" failure. Confirm the port is actually
+    # free, escalating to -9, instead of trusting one signal + a guess.
+    for i in \$(seq 1 4); do
+      STILL_UP="\$(lsof -ti "tcp:\$PORT" 2>/dev/null || true)"
+      [ -z "\$STILL_UP" ] && break
+      kill -9 \$STILL_UP 2>/dev/null || true
+      sleep 0.25
+    done
   fi
 fi
 

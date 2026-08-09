@@ -654,6 +654,21 @@ lands on the same Google Blue every other Google mark already uses. See
 CHANGELOG.md for the affine-transform bug (chained vs. independent
 relative-curve control points) caught before this shipped.
 
+v45 fixed a real user-reported bug: a macOS update would install but the
+running app kept showing the old version. `scripts/package-macos.sh`'s
+launcher killed a prior stale instance with one `kill` + a fixed
+`sleep 0.5` and no confirmation the port was actually free — a slow-to-die
+prior instance (e.g. mid keep-alive with the very browser tab showing the
+update banner) loses the `EADDRINUSE` race silently, and the readiness
+check ends up talking to the OLD server. Same bug class already fixed once
+in this file (the self-test step's post-run cleanup), just never applied
+to the pre-launch clear real installs depend on — fixed by reusing that
+exact confirm-and-escalate-to-`-9` loop. Reproduced live with a stale
+process that delays its exit past 0.5s before fixing, confirmed cleared
+after, and confirmed the fix survives into a real generated launcher
+inside a fresh build. Patch version, diagnosed via
+`superpowers:systematic-debugging` like v36, no application-code change.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

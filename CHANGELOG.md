@@ -1552,3 +1552,42 @@ wonders where a non-Simple-Icons path came from. `TOOL_BRAND` in
 `connect-panel.tsx` now maps `google-antigravity` to its own id instead of
 borrowing `google`. Live-verified by screenshot on `/connect`; full suite
 (561 tests), `tsc`, and `next build` all clean.
+
+## v45 (2026-08-09): macOS update installs but doesn't replace the running app
+
+Real user report: on a second Mac, the in-app update banner appeared, the
+new `.dmg` was downloaded and dragged over the old `.app` in
+`/Applications`, but the running app kept showing the old version instead
+of picking up the new build.
+
+Root cause, in `scripts/package-macos.sh`'s launcher template: before
+starting, it kills whatever's already bound to the app's port (so a prior
+un-quit instance doesn't linger and get silently reused) — but the actual
+implementation was one `kill` plus a fixed `sleep 0.5`, with no check that
+the port was actually free afterward. If the prior instance takes longer
+than 0.5s to release the port (measured live: a plain `SIGTERM` to a
+process that delays its exit — the same shape as a Node server finishing
+an in-flight request/keep-alive from a browser tab that's actively showing
+the update banner, exactly the moment a user is mid-update) — this run's
+own `node server.js &` loses the `EADDRINUSE` race in the background with
+no visible error, and the readiness check that follows happily gets a 200
+from the OLD server that never actually died. The user sees "installed the
+update" and a running app that's still the old one.
+
+This is the same bug class already root-caused and fixed once in this same
+file — the self-test step's post-run cleanup (`kill` + confirm-via-`lsof`
++ escalate to `-9`) — just never applied to the pre-launch clear that real
+users' installs actually depend on. Fixed by reusing that exact pattern
+here too, rather than inventing a new one.
+
+Verified live, not just read: reproduced the failure with a bare Python
+socket server that delays 1.5s after `SIGTERM` before exiting (simulating
+the slow-shutdown case) — the old fixed-`sleep 0.5` logic left the port
+occupied every time; the new confirm-and-escalate loop cleared it within
+two 0.25s iterations. Confirmed the fix is what actually ships by
+inspecting the real generated launcher inside a fresh build (`bash -n`
+clean, the escaped `\$` template variables came through as literal
+runtime references, not expanded at package time). Shipped as a patch
+version (v0.7.14), diagnosed via `superpowers:systematic-debugging`
+rather than the usual brainstorm-spec-plan flow, same as v36's icon fix —
+a packaging-script fix with no application-code change.
