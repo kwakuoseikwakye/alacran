@@ -68,6 +68,9 @@ that runs on `127.0.0.1` and opens right in your browser.
   Aider, and Google Antigravity CLI selectable per company, so different
   companies can run on whichever agent (or whichever provider account)
   makes sense for them.
+- **Settings.** Switch between dark and light themes, check for updates
+  on demand instead of waiting for the daily check, and reset a couple of
+  one-time local hints if you want to see them again.
 
 ## Install
 

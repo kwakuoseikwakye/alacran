@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Bot, Activity, BookOpen, Plug, Network } from "lucide-react"
+import { Bot, Activity, BookOpen, Plug, Network, Settings } from "lucide-react"
 import { AlacranMark } from "@/components/alacran-mark"
 import { APP_VERSION } from "@/lib/app-version"
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: "/activity", label: "Activity", icon: Activity  },
   { href: "/skills",   label: "Skills",   icon: BookOpen  },
   { href: "/connect",  label: "Connect",  icon: Plug      },
+  { href: "/settings", label: "Settings", icon: Settings  },
 ]
 
 /**

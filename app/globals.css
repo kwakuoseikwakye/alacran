@@ -52,6 +52,50 @@
   --typeface-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 }
 
+/* "desert day" — the light half of the same brand, values ported straight
+   from landing/styles.css's already-shipped light theme (one brand, must
+   mirror). Opt-in only: set by the inline script in layout.tsx from a
+   localStorage flag, same mechanism and same key as the marketing site's
+   toggle. No [data-theme="dark"] block needed — the bare :root above already
+   is the dark palette, so "no attribute yet" and "dark" render identically. */
+:root[data-theme="light"] {
+  --background: #f6efe9;
+  --foreground: #1a1210;
+  --card: #fdf8f4;
+  --card-foreground: #1a1210;
+  --secondary: #f2e8e1;
+  --secondary-foreground: #382d29;
+  --muted: #f2e8e1;
+  --muted-foreground: #7a6862;
+  --accent: #f2e8e1;
+  --accent-foreground: #1a1210;
+  --border: #ece0d8;
+  --input: #ece0d8;
+
+  --primary: #dc1f31;
+  --primary-foreground: #ffffff;
+  --ring: #dc1f31;
+  --ember: #d1591f;
+
+  /* same "flatter than the brand accent" relationship as the dark values */
+  --destructive: #c23a2e;
+  --success: #14895c;
+  --warning: #b5720c;
+
+  --glow-soft: rgba(220, 31, 49, 0.12);
+  --glass: rgba(253, 248, 244, 0.6);
+  --glass-edge: rgba(26, 18, 16, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.6);
+}
+
+/* screen-blend orbs assume a near-black backdrop; on a light one they'd wash
+   out to invisible, so light mode swaps to multiply (darken) like landing
+   already does for its own ambient orbs. */
+:root[data-theme="light"] .surreal-orb {
+  mix-blend-mode: multiply;
+  opacity: 0.3;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

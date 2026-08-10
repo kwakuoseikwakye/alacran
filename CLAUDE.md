@@ -749,6 +749,29 @@ mount, so a stale, missing, or empty saved order never drops a card.
 Live-verified: dragged a card, watched it reorder, confirmed the new
 order survived a reload.
 
+v51 added a `/settings` page: a manual light/dark toggle, a manual
+"Check for updates" that bypasses the banner's 24h throttle
+(`lib/updates/check-for-updates-now-impl.ts`), resets for the two other
+one-time `localStorage` flags this app writes (v50's card order, v39's
+guide-seen), and an About card. Light mode is new — the app had been
+dark-only since v14/v29 — added by porting the marketing site's already-
+shipped light palette into a `:root[data-theme="light"]` override in
+`app/globals.css`; every primitive already ran on CSS custom properties
+with zero hardcoded colors, so it cascaded with no primitive edits.
+Known, disclosed, not fixed: `BrandIcon`'s `tone="brand"` colors stay
+tuned for a dark surface in light mode too (still legible, just not
+repainted — fixing it means regenerating `lib/brand-icons.ts` with a
+second per-icon tint, out of scope for this slice). Building the no-
+flash theme script surfaced a real, confirmed React Server Components
+bug — a Server Component importing a plain (non-component) value from a
+`"use client"` file silently gets `undefined` — fixed by moving
+`THEME_STORAGE_KEY` to a plain `lib/theme.ts` module; a second symptom
+that looked identical (a client-to-client plain-value import crashing)
+was tested in isolation and turned out to be dev-server cache corruption
+from rapid edits, not the same bug — the comment in
+`lib/updates/wait-for-server-then-reload.ts` says so rather than
+repeating the disproven claim.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

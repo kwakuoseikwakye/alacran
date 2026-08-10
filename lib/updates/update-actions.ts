@@ -6,6 +6,7 @@ import { readUpdate, writeUpdate } from "./update-store"
 import { fetchLatestReleaseImpl } from "./fetch-latest-release-impl"
 import { performLinuxUpdateImpl, type PerformUpdateResult } from "./perform-linux-update-impl"
 import { restartAppImpl } from "./restart-app-impl"
+import { checkForUpdatesNowImpl, type ManualCheckResult } from "./check-for-updates-now-impl"
 import { APP_VERSION } from "../app-version"
 
 // Only the packaged app checks. In `next dev` there is nothing to update to,
@@ -30,6 +31,18 @@ export async function getUpdateStatus(): Promise<UpdateStatus> {
     // here would blank the entire app over a cosmetic banner.
     return { available: false }
   }
+}
+
+/** The Settings page's "Check for updates" button — bypasses the 24h throttle. */
+export async function checkForUpdatesNow(): Promise<ManualCheckResult> {
+  return checkForUpdatesNowImpl({
+    enabled: isEnabled(),
+    currentVersion: APP_VERSION,
+    now: Date.now(),
+    read: () => readUpdate(),
+    write: (u) => writeUpdate(u),
+    fetchLatest: () => fetchLatestReleaseImpl(),
+  })
 }
 
 export async function dismissUpdate(version: string): Promise<void> {

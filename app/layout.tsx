@@ -5,6 +5,7 @@ import { AutoRefresh } from "@/components/auto-refresh"
 import { Sidebar } from "@/components/sidebar"
 import { getUpdateStatus } from "@/lib/updates/update-actions"
 import { UpdateBanner } from "@/components/update-banner"
+import { THEME_STORAGE_KEY } from "@/lib/theme"
 
 // next/font downloads and self-hosts at build time, so the packaged .app still
 // renders correctly with no network. Important for a local-first product.
@@ -29,8 +30,24 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const update = await getUpdateStatus()
+  // suppressHydrationWarning below: the blocking script sets data-theme
+  // directly on <html> before React hydrates, on purpose — without it,
+  // React logs a (harmless but noisy) hydration-mismatch warning for the
+  // one attribute it doesn't itself render. Standard fix for this exact
+  // no-flash-theme pattern.
   return (
-    <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`}>
+    <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`} suppressHydrationWarning>
+      <head>
+        {/* Blocking, pre-hydration: sets data-theme before first paint so a
+            saved "light" choice never flashes dark first. Server always
+            renders no attribute (= dark, see globals.css); this only ever
+            has anything to correct for a returning light-mode user. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{if(localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)})==='light')document.documentElement.setAttribute('data-theme','light')}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="relative overflow-x-hidden">
         <AutoRefresh />
 

@@ -4,24 +4,10 @@ import { useState } from "react"
 import { ArrowUpCircle, X } from "lucide-react"
 import { dismissUpdate, performLinuxUpdate, restartApp } from "@/lib/updates/update-actions"
 import { RELEASE_PAGE_URL } from "@/lib/updates/fetch-latest-release-impl"
+import { waitForServerThenReload } from "@/lib/updates/wait-for-server-then-reload"
 import { CommandLine } from "@/components/copy-button"
 
 type Phase = "idle" | "updating" | "restarting" | "error"
-
-/** Polls `/` until the relaunched server answers, then reloads to it. A fixed delay would either
- * jump the gun (dpkg + relaunch isn't instant) or make every update feel slower than it needs to. */
-async function waitForServerThenReload(): Promise<void> {
-  for (let i = 0; i < 30; i++) {
-    await new Promise((r) => setTimeout(r, 1000))
-    try {
-      const res = await fetch("/", { method: "HEAD", cache: "no-store" })
-      if (res.ok) break
-    } catch {
-      // Still down: the old process is gone and the new one hasn't bound the port yet.
-    }
-  }
-  window.location.reload()
-}
 
 /**
  * A quiet, dismissible "a newer version exists" strip.
