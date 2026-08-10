@@ -60,6 +60,13 @@ that runs on `127.0.0.1` and opens right in your browser.
   more than one account if you need it), GitHub, and Notion. Alacrán never
   holds a credential of its own; it just checks whether *your* CLI or
   account is already signed in.
+- **Connect MCP tools per company.** Point a company at Canva, Figma,
+  Lovable, Docusign, Vercel or a Google MCP server — no CLI to install, no
+  key to paste. Alacrán writes the company's own `.mcp.json`; you approve
+  and sign in once inside a real session, and the token stays in Claude
+  Code's own store. These tools are available in **Open in Terminal** and
+  **Get Started** sessions, deliberately *not* to the scoped jobs above,
+  which keep their own fixed narrow permissions.
 - **See the whole network at a glance.** A visual map of every company on
   your machine and exactly what it's plugged into (which AI runs it, and
   whether Google, GitHub, or Notion are actually connected), so it's
@@ -368,6 +375,12 @@ plainly:
   active at a time. Google is different: each company can be assigned its
   own account (or accounts) now, so this limitation doesn't apply there
   anymore.
+- **MCP tools are Claude Code only, and remote-only.** Claude Code is the
+  only one of the four agents with per-project MCP config; `codex mcp add`
+  is machine-wide, and Aider and Google Antigravity CLI have no MCP at all,
+  so the button only appears for a company set to Claude Code. Only remote
+  (`https://`) servers can be added from the app — a local, command-launched
+  server is still `claude mcp add` in a terminal.
 - **OpenAI Codex and Aider are wired up but not yet run end to end**
   against a live account from inside this app. Their flags are verified
   against each CLI's real `--help` output, but the full round trip isn't.

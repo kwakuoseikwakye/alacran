@@ -282,7 +282,10 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v39** (see `CHANGELOG.md` for the full per-slice changelog).
+**Shipped: v1–v61** (see `CHANGELOG.md` for the full per-slice changelog —
+that file, not this line, is the authority on the next free slice number;
+v61 was nearly built as "v58" because this line said v39 while the changelog
+was already at v60).
 **v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
 agents are now existence-gated (`lib/builtin-agents.ts`'s
 `buildBuiltins`), the company template is a committed in-repo snapshot
@@ -883,6 +886,49 @@ the running bundle from `process.cwd()` instead of hardcoding `/Applications`,
 and the swap rolls back to the original bundle if the second `rename` fails.
 **Both** `.dmg` and `.zip` must now be uploaded on every macOS release — see
 the release rule above.
+
+v61 added per-company MCP connectors — a second door onto external tools for
+users who don't want the CLI path (`gog`/`gh`/`api-connect` were the only ways
+in before this). A live probe run *before* any code collapsed the whole feature
+to one file write: a hand-written `.mcp.json` at the company root is picked up
+by the real CLI as `Scope: Project config (shared via .mcp.json)`, pending
+approval "(run `claude` to approve)" — and running `claude` in the company's
+directory is exactly what v38's "Open in Terminal" button already does. So
+**this slice ships no OAuth, no token storage and no login button**; Claude
+Code owns discovery, approval, the browser flow and the credential, and the
+Sheet ends with an instruction instead. New `lib/mcp-servers-config.ts` (read,
+fail-soft like `readGoogleAccounts`) and `lib/save-mcp-servers-impl.ts` (write,
+mirroring `saveGoogleAccountsImpl`), plus a `Connect tools` Sheet on the card.
+Verified against the real installed CLIs, not docs: `claude mcp add -s project`
+writes `.mcp.json`, but **`codex mcp add` has no scope flag at all** — it's
+machine-global `~/.codex/config.toml`, the fourth instance of the recurring
+per-machine-global-config shape after `gog` and `daily-team-log` — and `agy`
+(v1.1.11) has no `mcp` subcommand whatsoever. So the button is gated on the
+company's executor being Claude Code, which `app/page.tsx` had already
+resolved. **Known, disclosed limitations:** Claude Code only; remote `https://`
+servers only (stdio/local-command servers are out — that's the one input
+needing real command validation, and `claude mcp add` still covers it); and MCP
+tools are reachable **only** from Open in Terminal (v38) and Get Started (v46).
+That last one is a security decision, not a convenience one: those two paths
+have no tool allowlist, so this needed zero changes to the command sandbox,
+and the nine headless commands never see an `mcp__*` tool. An MCP tool sits
+outside the `Edit(...)`/`Bash(...)` model entirely, so putting one in scope for
+a command that splices attacker-authored text into its prompt (`triage-email`,
+`triage-issue`, `check-inbox`, `check-notion`) would hand an email author a
+write API to the user's Canva/Figma/Lovable account — the exact hole v56
+exists to close. Preset URLs came from a real `claude mcp list` where the CLI
+health-checked each one; Notion and GitHub are absent because theirs couldn't
+be verified that way. Two review catches before merge: `McpServer` must be a
+**type-only** import in the `"use client"` Sheet (the config module imports
+`node:fs/promises`; a value import would fail the build), and a failed commit
+must **not** fail the save here — `.mcp.json` is commonly gitignored in real
+repos, so a company registered from an existing directory would otherwise 500
+on every save. **Still open, deliberately not resolved:** whether `claude mcp
+login <name>` works on a still-pending project server. If it does, a one-click
+"Sign in" button is ~25 lines through the existing
+`resolveTerminalLaunchCommand`/`shQuote` path — but answering it requires a
+real OAuth flow against the user's own account, which is their action, not an
+automated one.
 
 ## Roadmap (named, not yet designed)
 

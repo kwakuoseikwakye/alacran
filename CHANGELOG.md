@@ -2368,3 +2368,99 @@ singular noun does.
 
 Checked all six pages against all six nav labels rather than only the two
 reported, so this can't be half-done.
+
+## v61: per-company MCP connectors
+
+Second door onto external tools. Everything Alacrán could connect before this
+went through a CLI — `gog` for Google, `gh` for GitHub, a `NOTION_TOKEN` in
+`.env` placed by the `api-connect` skill. That's a terminal-shaped path, and
+v39 and v53 both exist because real users of this app aren't CLI-literate. A
+company can now be pointed at Canva, Figma, Lovable, Docusign, Vercel or a
+Google MCP server with nothing installed and no key pasted.
+
+The slice is small because a live probe, run before any code was written,
+collapsed it to one file write. A hand-written `.mcp.json` at the company's
+root is picked up by the real CLI and reported as `Scope: Project config
+(shared via .mcp.json)`, status "⏸ Pending approval (run `claude` to
+approve)". That last clause is the finding that mattered: **approval happens
+by running `claude`, which is exactly what v38's already-shipped "Open in
+Terminal" button does.** So this slice ships no OAuth code, no token storage
+and no login button — Claude Code handles discovery, approval, the browser
+flow and the token store itself, and the Sheet ends with an instruction
+instead. `SECURITY.md`'s promises about what leaves the machine stay true
+because nothing new leaves it: the credential lands in the user's own CLI.
+
+Verified against the real installed CLIs, not docs (v42's rule):
+
+- `claude mcp add -s project` writes `.mcp.json`; scopes are `local`/`user`/`project`.
+- `claude mcp login <name>` / `logout <name>` do the OAuth, with `--no-browser` for headless.
+- `codex mcp add` has **no** scope or project flag — machine-global
+  `~/.codex/config.toml` only. A fourth instance of the recurring
+  per-machine-global-config shape, after `gog` and `daily-team-log`.
+- `agy --help` (Antigravity v1.1.11) has no `mcp` subcommand at all; it has `plugin`.
+- Aider has no MCP. Not installed on the dev machine, so stated as unknown
+  rather than asserted.
+
+So the button is gated on the company's assigned executor being Claude Code —
+free to check, since `app/page.tsx` already resolved `aiExecutorId` two lines
+above. `lib/company-guide-steps.ts` gets the same flag, so v39's guide can
+never explain a button a company hasn't got.
+
+The eight preset URLs came from `claude mcp list` on a real machine, where the
+CLI itself health-checked each one. Notion and GitHub are deliberately absent:
+their endpoints couldn't be verified that way, and Notion already has a
+working per-company path. `mcp-presets.test.ts` runs every preset through the
+same validators a user-typed value faces, so a typo'd addition fails the suite
+instead of being silently dropped at runtime.
+
+Where MCP tools are reachable is a security decision, not a convenience one.
+They work in **Open in Terminal** (v38) and **Get Started** (v46), which have
+no tool allowlist — so this needed zero changes to the command sandbox. The
+nine headless commands keep their fixed `--allowedTools` and never see an
+`mcp__*` tool. That's deliberate: an MCP tool sits outside the
+`Edit(...)`/`Bash(...)` model entirely, so putting one in scope for a command
+that splices attacker-authored text into its prompt (`triage-email`,
+`triage-issue`, `check-inbox`, `check-notion`) would hand an email author a
+write API to the user's design files — exactly the hole v56 exists to close.
+`run-company-command-impl.ts` and `ai-executors.ts` were named as untouchable
+in the plan's constraints and were not touched.
+
+Deliberate cuts, each with the condition that would reverse it: stdio/local
+command servers (all eight presets are HTTP, and a local server is the one
+input needing real command validation — `claude mcp add` still covers it);
+`mcp__*` in headless commands (no command needs one yet, and guarding it
+properly is its own slice); Codex/Aider/Antigravity; `enableAllProjectMcpServers`
+in the company template, since the approval prompt is free and auto-approving
+would mean a `.mcp.json` arriving via `git pull` connects silently; and MCP
+nodes on the Network tab, which `build-network-map.ts` can compose cheaply
+later.
+
+Two things a review of the plan caught before they shipped. `McpServer` must be
+a **type-only** import in the `"use client"` Sheet — `mcp-servers-config.ts`
+imports `node:fs/promises`, and a value import would drag it into the client
+bundle and fail the build (confirmed by a clean `next build`). And a failed
+commit must not fail the save, unlike `saveGoogleAccountsImpl`: `commitFile`
+throws when `git add` refuses, and `.mcp.json` is commonly gitignored in real
+repos, so a company registered from an existing directory (v11's flow) would
+have turned every save into a 500. The file write is the point; the commit is
+convenience. Scoped to this impl, not to `commitFile`, whose skill-edit
+callers want a failed commit to stay loud.
+
+Live-verified end to end against a disposable `/tmp` company and a disposable
+`ALACRAN_DATA_DIR`, so the real registry was never touched: added Canva
+through the UI, confirmed the written file *and* that the real `claude mcp get
+canva` reports it as project-scoped, confirmed it survived a reload, confirmed
+it appears in the Ownership Sheet's network-access list, removed it, and
+confirmed the real CLI no longer sees it — both writes committed in the
+company's own repo. Also confirmed the button and its guide entry disappear
+when that company is switched to Codex and come back when switched back. No
+`claude mcp login` was run and no model was spawned; the OAuth flow is the
+user's own action against their own accounts. Disposable dirs deleted;
+`email-pipeline-agent` and `plh-ops` confirmed untouched.
+
+One real UX finding from that pass, fixed in the same slice: the Address
+field's placeholder was a bare realistic URL, indistinguishable from an
+already-filled value at a glance — it fooled this slice's own review of its
+own screenshot. Both placeholders now read `e.g. …`.
+
+647 tests, `tsc` and `next build` clean.
