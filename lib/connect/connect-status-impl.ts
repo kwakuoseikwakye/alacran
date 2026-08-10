@@ -4,6 +4,7 @@ import { listGoogleAccountEmails } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { readNotionToken } from "../notion/read-notion-token"
+import { isClaudeCodeCli } from "../is-claude-code-cli"
 import type { Agent } from "../adapters/types"
 
 const execFileAsync = promisify(nodeExecFile)
@@ -46,7 +47,13 @@ async function isPresent(execFn: ExecFileFn, name: string): Promise<boolean> {
  *  be assigned any of these, so each gets its own real install status and
  *  install guidance instead of only ever checking Claude Code. */
 async function aiExecutorStatus(execFn: ExecFileFn, executor: AiExecutor): Promise<ToolStatus> {
-  const installed = await isPresent(execFn, executor.binaryName)
+  // Claude Code specifically gets a real behavior check, not just a PATH
+  // lookup: a real user had only the Claude desktop app installed, and
+  // something else already on their PATH named `claude` (almost certainly a
+  // Homebrew Cask launcher shim for the GUI app) made `which claude`
+  // succeed anyway — see is-claude-code-cli.ts.
+  const installed =
+    executor.id === "claude-code" ? await isClaudeCodeCli(execFn) : await isPresent(execFn, executor.binaryName)
   if (installed) {
     return {
       id: executor.id,
@@ -64,7 +71,17 @@ async function aiExecutorStatus(execFn: ExecFileFn, executor: AiExecutor): Promi
     connected: false,
     detail: `${executor.label} not found on your PATH.`,
     guidance: {
-      steps: [`Install ${executor.label}, then sign in with your own account.`, "Reopen this app or press Re-check."],
+      steps: [
+        `Install ${executor.label}, then sign in with your own account.`,
+        // "Reopen this app" is genuinely ambiguous for a freshly-installed
+        // CLI: refreshing the page or clicking Re-check alone doesn't help —
+        // this app's PATH is captured once when it launches (see
+        // scripts/package-macos.sh), so only a full quit-and-relaunch of
+        // the Alacrán app itself re-reads it. Real user confusion, not a
+        // hypothetical: someone installed the CLI and the app still
+        // couldn't find it because of exactly this.
+        "Fully quit and reopen the Alacrán app itself (not just this browser tab), then press Re-check.",
+      ],
       command: executor.installHint,
       link: executor.installLink,
     },

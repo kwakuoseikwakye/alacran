@@ -791,6 +791,23 @@ clears it, and falls through to the same create-and-push path a first-
 ever backup takes — one shared path instead of two. Any other push
 failure (network, auth) still surfaces as a real error.
 
+v53 fixed a real Claude Code false positive: `which claude` succeeded on a
+machine with only the Claude desktop app installed (likely a Homebrew Cask
+launcher shim also named `claude`), so this app reported "Connected" for a
+CLI that wasn't there. `lib/is-claude-code-cli.ts` now confirms with a real
+`claude --version` check for the real CLI's own output signature, used
+everywhere Claude Code specifically gets checked. Also reworded the AI-
+executor "not connected" guidance — "Reopen this app or press Re-check"
+was genuinely ambiguous (reads as "refresh the page," which does nothing,
+since `scripts/package-macos.sh`'s launcher captures PATH once at
+startup) — to explicitly say fully quit and reopen the app itself. And
+added `components/connect-help.tsx`, a step-by-step Connect page help
+guide (v39's `CompanyGuide` Sheet pattern, gated on "anything not
+connected yet") — requested after a non-technical user found the
+existing per-card guidance hard to follow alone; content is generic
+(terminal 101, copy/paste, the restart gotcha) rather than re-describing
+each tool, which is already on its own card.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

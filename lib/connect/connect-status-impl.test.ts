@@ -34,6 +34,7 @@ describe("getConnectStatusImpl", () => {
   it("reports both connected, with the Google account email in the detail", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
     })
@@ -47,6 +48,7 @@ describe("getConnectStatusImpl", () => {
   it("lists every stored account and pluralizes the detail when there's more than one", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog" && args[1] === "list")
         return { stdout: JSON.stringify({ accounts: [{ email: "user@example.com" }, { email: "second@example.com" }] }) }
       if (command === "gog") return { stdout: GOG_CONNECTED }
@@ -62,6 +64,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "claude") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
     })
@@ -73,10 +76,27 @@ describe("getConnectStatusImpl", () => {
     expect(status.google.connected).toBe(true)
   })
 
+  it("does not report Claude Code connected just because something else on the PATH is named claude", async () => {
+    // The reported bug: only the Claude desktop app was installed, and a
+    // launcher shim for it (not Claude Code) already satisfied `which
+    // claude`. Running it doesn't print the real CLI's version signature.
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "--version") return { stdout: "" }
+      if (command === "gog") return { stdout: GOG_CONNECTED }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, undefined, noAgents)
+
+    expect(findExecutor(status, "claude-code").connected).toBe(false)
+    expect(findExecutor(status, "claude-code").guidance.steps.join(" ")).toContain("Fully quit and reopen")
+  })
+
   it("gives every registered AI executor its own card, not just Claude Code", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "agy") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
     })
@@ -98,6 +118,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gog") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       return new Error(`unexpected ${command}`)
     })
     const status = await getConnectStatusImpl(exec, "darwin", noAgents)
@@ -111,6 +132,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && (args[0] === "gog" || args[0] === "gh")) return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       return new Error(`unexpected ${command}`)
     })
     const status = await getConnectStatusImpl(exec, "linux", noAgents)
@@ -124,6 +146,7 @@ describe("getConnectStatusImpl", () => {
   it("guides `gog auth setup` when gog is installed but no account is connected", async () => {
     const exec = fakeExec((command) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "", credentials_exists: false } }) }
       return new Error(`unexpected ${command}`)
@@ -137,6 +160,7 @@ describe("getConnectStatusImpl", () => {
   it("does not crash on malformed gog JSON", async () => {
     const exec = fakeExec((command) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: "not json {{{" }
       return new Error(`unexpected ${command}`)
     })
@@ -149,6 +173,7 @@ describe("getConnectStatusImpl", () => {
   it("reports GitHub signed in with the login name", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gh") return { stdout: "octocat\n" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
@@ -164,6 +189,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gh") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
       return new Error(`unexpected ${command}`)
@@ -177,6 +203,7 @@ describe("getConnectStatusImpl", () => {
   it("guides `gh auth login` when gh is installed but unauthenticated", async () => {
     const exec = fakeExec((command) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gh") return new Error("gh: not authenticated")
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }

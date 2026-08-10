@@ -1923,3 +1923,51 @@ points nowhere," instead of a second special case. A push failure with
 any *other* message (network, expired auth) still surfaces as-is rather
 than silently spawning a redundant second repo. Two new tests; full
 suite: 590 tests, `tsc`/`next build` clean.
+
+## v53 (2026-08-10): real Claude Code false positive, PATH-restart copy, a Connect help guide
+
+Two user reports plus a requested feature, all from the same non-technical
+setup session.
+
+**Claude Code showed "Connected" with only the Claude desktop app
+installed.** Root cause: `aiExecutorStatus` (and `checkDependenciesImpl`'s
+onboarding gate) trusted a bare `which claude` as proof — but something
+already on that machine's PATH named `claude` (almost certainly a
+Homebrew Cask launcher shim for the desktop app) satisfied `which`
+without being the real CLI at all. Fixed with a real behavior check,
+`lib/is-claude-code-cli.ts`: only trust `which claude` as a first-pass
+filter, then confirm by actually running `claude --version` and checking
+for the real CLI's own signature ("X.Y.Z (Claude Code)", confirmed live
+against a real install). Used in both places that were checking Claude
+Code specifically. 4 new tests for the shared check, plus one regression
+test proving `getConnectStatusImpl` itself no longer reports connected
+for a same-named non-CLI binary.
+
+**"Reopen this app" was ambiguous, and that was the second report.** A
+user installed Claude Code and the app still couldn't find it. Real
+mechanism, not a guess: `scripts/package-macos.sh`'s launcher captures
+PATH once, at app startup (v0.7.5's shell-login-PATH fix); "Re-check"
+re-runs the same probe against the same already-running process's already-
+fixed `process.env.PATH`, so it can never see a CLI installed after that
+launch. The guidance text said "Reopen this app or press Re-check" — read
+naturally as "refresh the page," which does nothing for this. Reworded to
+be unambiguous: "Fully quit and reopen the Alacrán app itself (not just
+this browser tab), then press Re-check."
+
+**New: a step-by-step Connect help guide**, requested directly — a non-
+technical user found the existing per-card guidance (which already
+assumes terminal comfort) hard to get through alone. `components/
+connect-help.tsx` mirrors v39's `CompanyGuide` Sheet pattern exactly (a
+"?" button, auto-opens once per browser via a `localStorage` flag) but
+gated on "is anything actually not connected yet" instead of v39's
+`hasOntology`. Content is deliberately generic — what a terminal is, how
+to open one per OS, how to copy/paste a command into it, and the PATH-
+restart gotcha above — rather than re-describing what each tool does
+(already on its own card, and would drift out of sync here if a new
+executor's ever added). Live-verified: auto-opens on a fresh browser
+when something's unconnected, stays closed after being dismissed, the
+"?" reopens it manually, and it renders correctly alongside the real
+card data on this machine (Claude Code correctly still shows Connected
+with the real CLI installed).
+
+Full suite: 596 tests, `tsc`/`next build` clean.

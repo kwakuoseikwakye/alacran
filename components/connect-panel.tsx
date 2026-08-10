@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
+import { ConnectHelp } from "@/components/connect-help"
 import { getConnectStatus } from "@/lib/connect/connect-actions"
 import type { ConnectStatus, ToolStatus, NotionStatus } from "@/lib/connect/connect-status-impl"
 
@@ -262,12 +263,18 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
     }
   }
 
+  const anyNotConnected =
+    status.aiExecutors.some((t) => !t.connected) || !status.google.connected || !status.github.connected
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <p className="text-sm text-muted-foreground">
-          These tools live on your machine. Connect them once and every company can use them.
-        </p>
+        <div className="flex items-center gap-1">
+          <p className="text-sm text-muted-foreground">
+            These tools live on your machine. Connect them once and every company can use them.
+          </p>
+          <ConnectHelp anyNotConnected={anyNotConnected} />
+        </div>
         <Button type="button" variant="outline" size="sm" onClick={recheck} disabled={pending}>
           <RefreshCw className={`h-3.5 w-3.5 ${pending ? "animate-spin" : ""}`} />
           {pending ? "Checking…" : "Re-check"}
