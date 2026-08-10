@@ -460,9 +460,15 @@ h3 {
   align-items: center;
   padding: 20px 0 24px;
   gap: 4px;
-  background: color-mix(in srgb, var(--card) 55%, transparent);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  /* Solid, not glass. The sidebar is fixed and full-height, so a translucent
+     surface meant page content scrolled visibly underneath it — the nav and
+     the content competed for the same pixels and both got harder to read.
+     A blur can't fix that: it softens what shows through, it doesn't stop it
+     showing through. Dropping backdrop-filter with it is deliberate — once
+     the surface is opaque the blur composites a layer nobody can see, on the
+     tallest element on the page. The border and shadow below now carry the
+     edge, which matters more, not less, without the frosting. */
+  background: var(--card);
   border-right: 1px solid var(--glass-edge);
   box-shadow:
     4px 0 40px -12px rgba(0,0,0,0.5),
@@ -642,9 +648,9 @@ h3 {
     position: fixed;
     bottom: 0; left: 0; right: 0;
     z-index: 60;
-    background: color-mix(in srgb, var(--card) 80%, transparent);
-    backdrop-filter: blur(28px) saturate(160%);
-    -webkit-backdrop-filter: blur(28px) saturate(160%);
+    /* Same reasoning as .app-sidebar above — this is that sidebar at the
+       mobile breakpoint, and content scrolls under it just the same. */
+    background: var(--card);
     border-top: 1px solid var(--glass-edge);
     padding: 8px 16px max(12px, env(safe-area-inset-bottom));
     justify-content: space-around;

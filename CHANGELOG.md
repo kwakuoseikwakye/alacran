@@ -2254,3 +2254,49 @@ browser still shows the Gatekeeper warning and still needs one `xattr -cr`.
 This slice only removes the manual steps for people who already have the app.
 
 15 new tests; full suite: 622 tests, `tsc`/`next build` clean.
+
+## v58: solid sidebar, plural nav labels
+
+UI-only, no behaviour change.
+
+**The sidebar is opaque now.** `.app-sidebar` was
+`color-mix(in srgb, var(--card) 55%, transparent)` — 45% transparent on a
+fixed, full-height element, so page content scrolled visibly behind the
+navigation and the two competed for the same pixels. Reported directly by the
+user as the background "interrupting the content". A blur was never going to
+fix that: `backdrop-filter` softens what shows through, it doesn't stop it
+showing through. Now `background: var(--card)`, solid in both themes
+(`#16100f` / `#fdf8f4`), with `backdrop-filter` removed alongside it — once
+the surface is opaque the blur composites a layer nobody can see, on the
+tallest element on the page. The border and shadow carry the edge instead.
+`.app-bottom-nav` (the same sidebar at the mobile breakpoint, previously 80%
+opaque) got the same treatment. The `--glass*` tokens are untouched: the
+floating nav pill and the Sheet still use them, and those are overlays where
+the frosting does real work.
+
+**Nav labels went plural:** Network → Networks, Activity → Activities,
+Connect → Connectors. One `NAV` array in `components/sidebar.tsx` drives both
+the desktop rail and the mobile strip, so it's a single edit for both.
+
+Verified live in both themes at desktop and mobile widths: computed
+backgrounds are fully opaque with no alpha channel and `backdrop-filter: none`,
+and no nav label clips inside the 228px expanded rail (the longest,
+"Connectors", ends at 124px).
+
+**Two things deliberately left alone, both disclosed rather than fixed:**
+
+1. `/network` and `/activity` still head their pages `Network` and `Activity`
+   (singular), which now disagrees with their nav labels. `/connect` doesn't
+   have this problem because its heading is a sentence ("Connect your
+   tools"). Scoped out — the request was for the sidebar.
+2. **The mobile bottom nav overflows on every phone width, and these renames
+   made it worse.** The six items need 548px of intrinsic width, up from
+   509px before the renames; on a 390px viewport that is 158px off-screen, up
+   from 119px. Two destinations are unreachable on a phone with no visible
+   scroll affordance. This is pre-existing — it arrived when v40 put six
+   items in that strip, confirmed by swapping the labels back and
+   re-measuring — so the renames changed the magnitude, not whether it's
+   broken. Wants its own fix (icons-only below ~420px, or an overflow "More"
+   item); not attempted here.
+
+Full suite: 622 tests, `tsc`/`next build` clean.

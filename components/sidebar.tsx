@@ -7,12 +7,12 @@ import { AlacranMark } from "@/components/alacran-mark"
 import { APP_VERSION } from "@/lib/app-version"
 
 const NAV = [
-  { href: "/",         label: "Agents",   icon: Bot      },
-  { href: "/network",  label: "Network",  icon: Network   },
-  { href: "/activity", label: "Activity", icon: Activity  },
-  { href: "/skills",   label: "Skills",   icon: BookOpen  },
-  { href: "/connect",  label: "Connect",  icon: Plug      },
-  { href: "/settings", label: "Settings", icon: Settings  },
+  { href: "/",         label: "Agents",     icon: Bot      },
+  { href: "/network",  label: "Networks",   icon: Network  },
+  { href: "/activity", label: "Activities", icon: Activity },
+  { href: "/skills",   label: "Skills",     icon: BookOpen },
+  { href: "/connect",  label: "Connectors", icon: Plug     },
+  { href: "/settings", label: "Settings",   icon: Settings },
 ]
 
 /**
