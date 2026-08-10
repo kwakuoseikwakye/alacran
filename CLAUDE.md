@@ -923,12 +923,18 @@ be verified that way. Two review catches before merge: `McpServer` must be a
 `node:fs/promises`; a value import would fail the build), and a failed commit
 must **not** fail the save here — `.mcp.json` is commonly gitignored in real
 repos, so a company registered from an existing directory would otherwise 500
-on every save. **Still open, deliberately not resolved:** whether `claude mcp
-login <name>` works on a still-pending project server. If it does, a one-click
-"Sign in" button is ~25 lines through the existing
-`resolveTerminalLaunchCommand`/`shQuote` path — but answering it requires a
-real OAuth flow against the user's own account, which is their action, not an
-automated one.
+on every save. **The one open question was then settled, and the answer is
+"don't build it":** `claude mcp login <name>` *refuses* a still-pending
+project server, with "is from .mcp.json and awaiting approval. Run `claude` in
+this directory to review it first." — bailing before any network call, writing
+nothing to the credential store. Measured directly against a
+disposable `/tmp` repo with `--no-browser` and stdin closed, so no OAuth was
+ever started. A one-click "Sign in" button is therefore **impossible as
+conceived**: login requires approval first, approval is only reachable by
+running `claude` interactively in the company's directory, and that is exactly
+what v38's Open in Terminal already does. Such a button could only open a
+terminal and then tell the user to approve and type `/mcp` — verbatim what the
+Sheet's instruction already says. Don't add it.
 
 ## Roadmap (named, not yet designed)
 

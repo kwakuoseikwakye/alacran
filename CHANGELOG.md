@@ -2464,3 +2464,18 @@ already-filled value at a glance — it fooled this slice's own review of its
 own screenshot. Both placeholders now read `e.g. …`.
 
 647 tests, `tsc` and `next build` clean.
+
+**Follow-up, measured right after the release:** the one question left open by
+the design — whether `claude mcp login <name>` works on a still-pending project
+server, which would have justified a one-click "Sign in" button — was settled,
+and the answer retires the idea rather than scheduling it. `claude mcp login`
+refuses outright, with "is from .mcp.json and awaiting approval. Run `claude`
+in this directory to review it first." It bails before any network call and
+writes nothing to the credential store. Probed against a disposable
+`/tmp` repo using `--no-browser` with stdin closed, so no authorization URL was
+ever fetched or visited and no real OAuth began. The consequence: login needs
+approval first, approval is only reachable by running `claude` interactively in
+the company's directory, and that is precisely what Open in Terminal already
+does — so a "Sign in" button could only open a terminal and repeat the
+instruction the Sheet already gives. It is not deferred; it is not worth
+building.
