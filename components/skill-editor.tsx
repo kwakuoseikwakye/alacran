@@ -20,13 +20,18 @@ import { saveSkillContent } from "@/lib/save-skill-content"
 export function SkillEditor({
   path,
   initialContent,
+  editing,
+  onEditingChange,
   onSaved,
 }: {
   path: string
   initialContent: string
+  /** Controlled: the "Edit" tab lives in the parent's own tab row now, not
+   *  here, so entering/leaving edit mode is driven from outside. */
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
   onSaved?: (newContent: string) => void
 }) {
-  const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(initialContent)
   const [savedContent, setSavedContent] = useState(initialContent)
   const [confirmOpen, setConfirmOpen] = useState(false)
@@ -34,17 +39,10 @@ export function SkillEditor({
   const [message, setMessage] = useState<string | null>(null)
   const [commitMessage, setCommitMessage] = useState("")
 
-  function startEditing() {
-    setDraft(savedContent)
-    setCommitMessage("")
-    setEditing(true)
-    setMessage(null)
-  }
-
   function cancelEditing() {
     setDraft(savedContent)
     setCommitMessage("")
-    setEditing(false)
+    onEditingChange(false)
     setMessage(null)
   }
 
@@ -56,7 +54,7 @@ export function SkillEditor({
     setMessage(result.message)
     if (result.saved) {
       setSavedContent(draft)
-      setEditing(false)
+      onEditingChange(false)
       onSaved?.(draft)
     }
   }
@@ -65,9 +63,6 @@ export function SkillEditor({
     return (
       <div className="space-y-2">
         <pre className="whitespace-pre-wrap text-sm">{savedContent}</pre>
-        <Button size="sm" variant="outline" onClick={startEditing}>
-          Edit
-        </Button>
         {message && <p className="text-xs text-muted-foreground">{message}</p>}
       </div>
     )

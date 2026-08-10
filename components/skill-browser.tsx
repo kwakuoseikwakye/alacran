@@ -27,7 +27,7 @@ export function SkillBrowser({
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
-  const [view, setView] = useState<"content" | "history" | "run">("content")
+  const [view, setView] = useState<"content" | "edit" | "history" | "run">("content")
 
   const selectedAgent = selected ? results.find((r) => r.agent.id === selected.agentId)?.agent : undefined
   const matchedCompanyCommand =
@@ -119,6 +119,14 @@ export function SkillBrowser({
             </button>
             <button
               className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
+                view === "edit" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
+              }`}
+              onClick={() => setView("edit")}
+            >
+              Edit
+            </button>
+            <button
+              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
                 view === "history" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
               }`}
               onClick={() => setView("history")}
@@ -137,11 +145,19 @@ export function SkillBrowser({
             )}
           </div>
           <ScrollArea className="h-[calc(100vh-140px)]">
-            {view === "content" && (
+            {(view === "content" || view === "edit") && (
               <>
                 {detailError && <p className="text-red-500 text-sm font-mono px-1">{detailError}</p>}
                 {!detailError && detail !== null && selected && (
-                  <div className="px-1"><SkillEditor path={selected.path} initialContent={detail} onSaved={(newContent) => setDetail(newContent)} /></div>
+                  <div className="px-1">
+                    <SkillEditor
+                      path={selected.path}
+                      initialContent={detail}
+                      editing={view === "edit"}
+                      onEditingChange={(editing) => setView(editing ? "edit" : "content")}
+                      onSaved={(newContent) => setDetail(newContent)}
+                    />
+                  </div>
                 )}
                 {!detailError && detail === null && <p className="px-1 text-dune font-mono text-sm">Loading…</p>}
               </>

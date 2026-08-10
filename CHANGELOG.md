@@ -1733,3 +1733,33 @@ the first place — `gogcli/tap` was never real; the actual tap was always
 `lib/connect/connect-status-impl.ts` (and its test's exact-match
 assertion) and `README.md`'s prerequisites table. Full suite: 580 tests,
 `tsc`/`next build` clean.
+
+## v49 (2026-08-10): move the skill Edit button out of the scroll
+
+User report: the Skills page's side drawer put "Edit" at the bottom of the
+full file dump in the Content tab — on a long skill file, that meant
+scrolling past the entire content just to find it. Moved it up into the
+tab row itself, alongside Content/History/Run, so it's always visible
+without scrolling: **Content | Edit | History | Run**.
+
+`SkillEditor`'s `editing` boolean was previously self-managed internal
+state with its own "Edit" button rendered at the bottom of the read-only
+view. Lifted to a controlled prop (`editing` + `onEditingChange`) driven
+by `SkillBrowser`'s existing `view` state, which just gained an `"edit"`
+value alongside `"content"`/`"history"`/`"run"` — no new state variable,
+reuses the tab machinery already there. Clicking "Edit" sets `view` to
+`"edit"`; Cancel or a successful Save call `onEditingChange(false)`,
+which sends `view` back to `"content"`.
+
+No component-level tests exist in this codebase for `.tsx` files (this
+project's test suite is `lib/*.ts` DI-seam logic only), so verified live
+instead — and hit a real tooling quirk doing it: the Playwright
+screenshot tool kept rendering a stale, pre-click frame even after
+clicking "Edit," while the accessibility snapshot correctly showed
+`button "Edit" [active]` and a live `textbox`. Didn't trust either
+alone — confirmed with a direct `document.querySelector` check in the
+real browser: the `Edit` button carries the active class and a real
+`<textarea>` with the file's actual content exists in the DOM. The
+screenshot tool's stale paint was the artifact, not the app. Full suite:
+580 tests (unchanged — this is a pure UI change), `tsc`/`next build`
+clean.

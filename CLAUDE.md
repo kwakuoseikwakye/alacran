@@ -724,6 +724,18 @@ README — the project moved (real tap is `openclaw/tap`, confirmed via
 (`brew install gogcli`, no tap needed anymore) now point there in both
 `lib/connect/connect-status-impl.ts` and `README.md`.
 
+v49 moved the Skills page's "Edit" button out of the Content tab's
+scroll (it sat below the full file dump) into the tab row itself:
+**Content | Edit | History | Run**. `SkillEditor`'s `editing` state
+became a controlled prop driven by `SkillBrowser`'s existing `view`
+state (an `"edit"` value added alongside the existing three) rather than
+self-managed internal state with its own button. Verified live; hit a
+real tooling quirk doing it — the screenshot tool kept showing a stale
+pre-click frame while the accessibility snapshot and a direct
+`document.querySelector` check both confirmed the real DOM was correct
+(`Edit` active, a real `<textarea>` present). Trusted the DOM query over
+the screenshot.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
