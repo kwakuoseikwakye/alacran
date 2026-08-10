@@ -772,6 +772,16 @@ from rapid edits, not the same bug — the comment in
 `lib/updates/wait-for-server-then-reload.ts` says so rather than
 repeating the disproven claim.
 
+**Real incident, caught while committing v51's own work:** v0.7.19's
+release commit only staged `package.json`/`package-lock.json` — v50's
+actual code was left uncommitted and never made it into that release at
+all. The published `Alacran.deb` for v0.7.19 (built by CI from a clean
+tag checkout) shipped without the reorderable-cards feature; the macOS
+`.dmg` (built from the local working tree) had it. Fixed forward as
+part of v0.7.20 rather than rewriting the public tag — see CHANGELOG.
+Lesson for every future release: `git status --short` before the
+version-bump commit, not just `git add package.json`.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

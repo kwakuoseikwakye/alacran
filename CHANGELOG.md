@@ -1888,3 +1888,18 @@ Full suite: 588 tests (8 new, `check-for-updates-now-impl.test.ts`),
 manual check's disabled-in-dev message, both reset buttons' confirmation
 text, and the theme toggle across Settings, Agents, and Connect, dark
 and light, with no console errors or hydration warnings.
+
+**Real incident found while committing this slice's own work, disclosed
+rather than quietly fixed:** the previous session's v0.7.19 "Release"
+commit only staged `package.json`/`package-lock.json` — v50's actual
+code (`app/page.tsx`'s edits, `components/reorderable-grid.tsx`) was
+left as uncommitted working-tree changes and never made it into that
+commit at all. The local macOS rebuild didn't catch this (it builds
+from the working tree, which had the real files), but the Linux CI
+build does a clean checkout of the pushed tag — so the **published
+`v0.7.19` `Alacran.deb` shipped without the reorderable-cards feature
+entirely**, while the macOS `.dmg` uploaded alongside it had it. Fixed
+forward rather than rewriting the already-public `v0.7.19` tag: v50's
+missing files were committed on their own (accurately labeled) commit,
+folded into this slice's v0.7.20 release so both platforms carry the
+same code from here on.
