@@ -2290,13 +2290,81 @@ and no nav label clips inside the 228px expanded rail (the longest,
    have this problem because its heading is a sentence ("Connect your
    tools"). Scoped out — the request was for the sidebar.
 2. **The mobile bottom nav overflows on every phone width, and these renames
-   made it worse.** The six items need 548px of intrinsic width, up from
-   509px before the renames; on a 390px viewport that is 158px off-screen, up
-   from 119px. Two destinations are unreachable on a phone with no visible
-   scroll affordance. This is pre-existing — it arrived when v40 put six
+   made it worse.** Two destinations are unreachable on a phone with no
+   visible scroll affordance. Pre-existing — it arrived when v40 put six
    items in that strip, confirmed by swapping the labels back and
    re-measuring — so the renames changed the magnitude, not whether it's
-   broken. Wants its own fix (icons-only below ~420px, or an overflow "More"
-   item); not attempted here.
+   broken. Wants its own fix; not attempted in this slice.
+   **Fixed in v59** (see below). The figures originally published here —
+   "548px of intrinsic width, up from 509px" — were wrong: they
+   double-counted the strip's own 32px of horizontal padding. The measured
+   requirement is 532px total with fonts loaded. The overflow was real and the
+   before/after direction was right; only the absolute numbers were inflated.
 
 Full suite: 622 tests, `tsc`/`next build` clean.
+
+## v59: the mobile bottom nav fits again
+
+Fixes the overflow v58 disclosed and made worse. Below **560px** the six tabs
+drop their text labels and the icons carry the bar; above it nothing changes.
+
+Sizes, measured with fonts loaded, as the total the strip requires — the six
+item boxes plus its own 32px of horizontal padding:
+
+| state | required |
+|---|---|
+| labelled, Nunito Sans loaded | 532px |
+| labelled, fallback face (during font swap) | 551px |
+| icons only | 296px |
+
+Against 320–430px on real handsets, the labelled bar pushed its last two
+destinations off-screen with no scroll affordance — Connectors and Settings
+were simply unreachable on a phone. Icon-only needs 296px, so it clears the
+narrowest handset with room to spare.
+
+**Why icons rather than shorter words or a "More" menu:** `.app-sidebar` on
+desktop is already an icon-only rail that reveals its labels when it expands.
+This is that existing pattern at a smaller size, not a new one invented for
+the occasion.
+
+**The labels are hidden visually only, never `display: none`.** The `<span>`
+is each link's accessible name, so removing it would leave a screen reader
+with six unlabelled destinations. Standard `clip-path` visually-hidden
+recipe; verified the accessibility tree still exposes all six names with
+`aria-current="page"` intact on the active tab.
+
+The 560px breakpoint has slack in both font states (28px loaded, 9px
+mid-swap) and was verified empirically at 561px — labels visible, zero
+overflow, nothing clipped, 18px spare. Item padding also became a uniform
+`11px`, giving every tab a 44px touch target (the platform minimum) instead
+of a box that varied with label length. That made the strip 65px tall rather
+than 74px, which `.app-shell-main`'s `padding-bottom: 72px` still clears —
+checked, with the last content ending at 596px against a nav top of 635px.
+
+Measured at 320 / 360 / 390 / 414 / 430 / 561 / 575px: zero overflow at every
+one, and every tab inside the strip's own box.
+
+**A correction this slice also lands:** the comment in `app/globals.css` and
+v58's changelog entry both quoted 548px/509px for the labelled requirement.
+Both double-counted the 32px padding, because `scrollWidth` already includes
+it. Caught in review, and worth fixing rather than leaving: taken at face
+value those numbers imply the 560px breakpoint is ~20px too low and that
+561–579px viewports still overflow, which they measurably do not. The
+comment now carries the real figures and an explicit note not to move the
+breakpoint on the strength of them.
+
+Full suite: 622 tests, `tsc`/`next build` clean.
+
+## v60: page headings match their nav labels
+
+Loose end from v58. Renaming the nav items to plural left `/network` and
+`/activity` heading their own pages `Network` and `Activity` — singular, and
+contradicting the label you just clicked. Now `Networks` and `Activities`.
+
+`/skills` ("Skills & Commands") and `/connect` ("Connect your tools") were
+already fine and are untouched: the first is a superset of its label, the
+second a sentence, so neither reads as a contradiction the way a bare
+singular noun does.
+
+Checked all six pages against all six nav labels rather than only the two
+reported, so this can't be half-done.

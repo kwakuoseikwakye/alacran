@@ -14,7 +14,7 @@ export default async function ActivityPage() {
       <header className="dash-topbar a-rise">
         <div>
           <p className="eyebrow">Everything that happened</p>
-          <h1>Activity</h1>
+          <h1>Activities</h1>
           <p>A live log of every action every agent has taken on this machine.</p>
         </div>
       </header>

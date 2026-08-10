@@ -14,7 +14,7 @@ export default async function NetworkPage() {
       <header className="dash-topbar a-rise">
         <div>
           <p className="eyebrow">Your machine</p>
-          <h1>Network</h1>
+          <h1>Networks</h1>
           <p>Every company on this computer, and exactly what it&apos;s actually plugged into.</p>
         </div>
       </header>
