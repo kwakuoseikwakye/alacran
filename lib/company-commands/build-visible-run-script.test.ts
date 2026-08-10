@@ -23,6 +23,23 @@ describe("buildInteractiveTerminalScript", () => {
     expect(script).toContain(`CWD=${shQuote(dangerous.cwd)}`)
     expect(script.split("\n").filter((l) => l.startsWith("cd "))).toEqual(['cd "$CWD" || exit 1'])
   })
+
+  it("appends introArgs, each safely quoted, after the binary on the exec line", () => {
+    const script = buildInteractiveTerminalScript({
+      binaryName: "claude",
+      cwd: "/companies/acme",
+      introArgs: ["read everyone's skills; please don't 'rm -rf' anything"],
+    })
+    const lines = script.split("\n")
+    expect(lines).toContain(
+      `exec "$BINARY" ${shQuote("read everyone's skills; please don't 'rm -rf' anything")}`
+    )
+  })
+
+  it("an empty introArgs array reproduces the exact no-argument exec line", () => {
+    const script = buildInteractiveTerminalScript({ binaryName: "claude", cwd: "/companies/acme", introArgs: [] })
+    expect(script.split("\n")).toContain('exec "$BINARY"')
+  })
 })
 
 describe("shQuote", () => {

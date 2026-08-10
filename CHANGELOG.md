@@ -1591,3 +1591,71 @@ runtime references, not expanded at package time). Shipped as a patch
 version (v0.7.14), diagnosed via `superpowers:systematic-debugging`
 rather than the usual brainstorm-spec-plan flow, same as v36's icon fix —
 a packaging-script fix with no application-code change.
+
+## v46 (2026-08-10): "Get Started" — a real answer to "I built this, now what?"
+
+Real user question, grounded in a concrete case: a user creates a company,
+writes custom skills for it, defines the company — then doesn't know how
+to actually use any of it. Investigation found the gap was real, not just
+a missing affordance: the Skills page's Run tab only recognizes the 9
+fixed built-in commands (`digest`/`decision`/`retro`/`handoff`/
+`define-company`/`check-inbox`/`check-notion`/`triage-email`/
+`triage-issue`) by exact filename match (`skill-browser.tsx`) — a custom
+skill the user writes has **no run affordance in the dashboard at all**.
+The only real path was already v38's "Open in Terminal" (a real
+interactive AI session, `cd`'d into the company's own files, full
+unscoped access) — but it opens completely blank, so a user who doesn't
+already know what to ask has nowhere to start.
+
+Closed that specific gap rather than rebuilding the mechanism: a new "Get
+Started" button reuses v38's exact interactive-terminal machinery (same
+executor, same directory, same unscoped access), just seeds the session's
+first message instead of opening blank — "read this company's skills and
+ontology, then introduce yourself and tell me what you can help me do."
+
+The seeding mechanism is per-executor, verified against each CLI's real
+`--help` (not assumed, same bar as v42's Antigravity flags) — installed
+Codex and ran `uvx --from aider-chat aider --help` specifically to check,
+rather than guessing from memory:
+
+- **Claude Code** and **OpenAI Codex**: a bare positional prompt starts
+  the interactive session with that as the first turn (`claude --help`:
+  "starts an interactive session by default"; `codex --help`: "[PROMPT]
+  Optional user prompt to start the session").
+- **Google Antigravity CLI**: needs its own explicit flag, `-i` /
+  `--prompt-interactive` — "Run an initial prompt interactively and
+  continue the session." A bare positional isn't documented to do this.
+- **Aider**: genuinely has no equivalent. Its only message flag,
+  `--message`/`-m`, is documented to "process reply then exit (disables
+  chat mode)" — the opposite of staying open. `AiExecutor.
+  buildInteractiveIntroArgs` is deliberately `undefined` for aider rather
+  than shipping a guessed flag; `openInteractiveTerminalImpl` detects the
+  missing capability and falls back to the exact same blank session
+  "Open in Terminal" already gives, with a message that says so
+  ("...can't be seeded with an intro — ask it directly") instead of
+  silently pretending the intro happened.
+
+Machinery: `buildInteractiveTerminalScript` gained an optional
+`introArgs` param (empty/absent reproduces its exact prior output, byte
+for byte — the existing test asserting `exec "$BINARY"` needed zero
+changes); `openInteractiveTerminalImpl` gained a trailing optional
+`introPrompt` param, so every existing call site and test keeps working
+unchanged. A new `openInteractiveTerminalWithHelp` server action and
+`GetStartedButton` component mirror the existing `openInteractiveTerminal`
+/ `OpenTerminalButton` pair exactly. Same gating as "Open in Terminal"
+(`command-set` kind only), its own guide step in
+`lib/company-guide-steps.ts` right above "Open in Terminal", and its own
+script filename (`<agent>.get-started.sh` vs. `<agent>.open-terminal.sh`)
+so the two buttons can never race each other's script file.
+
+**Not live-tested end to end, deliberately.** Unlike a blank terminal
+session, a seeded prompt is documented to submit and get a real reply the
+instant the process starts — the same real-API-call risk this project's
+standing safety rule already treats headless `-p` spawns as off-limits
+for in an unattended pass, just via a different flag shape. Verified
+instead down to the exact spawned argv: 8 new unit tests assert the
+literal generated shell-script content (including the exact seeded
+prompt string, safely quoted) for each executor and the aider fallback
+path, and a live screenshot confirmed the button renders — gated
+correctly, right label, right position — without ever clicking it. Full
+suite: 569 tests, `tsc`/`next build` clean.

@@ -31,6 +31,24 @@
  * the same shape as Aider's `--yes-always`. Not run end-to-end against a
  * live model account from this app yet, per this project's standing rule
  * against triggering real spawns from an automated pass.
+ *
+ * `buildInteractiveIntroArgs` is a second, optional capability: "start a
+ * real interactive session, seeded with this first message, and stay open"
+ * — different from `buildArgs`, which is always one-shot-and-exit. Verified
+ * per executor against the real installed `--help` (none of this from web
+ * docs, same bar as above): Claude Code and Codex both treat a bare
+ * positional prompt as the session's first turn and stay interactive
+ * (`claude --help`: "starts an interactive session by default"; `codex
+ * --help`: "[PROMPT] Optional user prompt to start the session"). Google
+ * Antigravity CLI needs its own explicit flag for this, `-i` /
+ * `--prompt-interactive`: "Run an initial prompt interactively and continue
+ * the session" — a bare positional there is not documented to do this.
+ * Aider has no equivalent at all: its only message flag, `--message`/`-m`,
+ * is documented to "process reply then exit (disables chat mode)" — the
+ * opposite of staying open — so aider deliberately has no
+ * `buildInteractiveIntroArgs`; callers must treat its absence as "this
+ * executor can't be seeded" and fall back to a plain blank interactive
+ * session instead of inventing a flag that doesn't exist.
  */
 
 export type AiExecutorId = "claude-code" | "openai-codex" | "aider" | "google-antigravity"
@@ -48,6 +66,10 @@ export type AiExecutor = {
   installHint: string
   installLink: string
   buildArgs: (input: AiExecutorBuildArgsInput) => string[]
+  /** Absent means this executor has no supported way to seed an interactive
+   *  session with a first message while staying open — see the file-level
+   *  comment above (aider's case). */
+  buildInteractiveIntroArgs?: (introPrompt: string) => string[]
 }
 
 export const DEFAULT_AI_EXECUTOR_ID: AiExecutorId = "claude-code"
@@ -79,6 +101,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
         "text",
       ]
     },
+    buildInteractiveIntroArgs: (introPrompt) => [introPrompt],
   },
   "openai-codex": {
     id: "openai-codex",
@@ -87,6 +110,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     installHint: "npm install -g @openai/codex",
     installLink: "https://developers.openai.com/codex/cli",
     buildArgs: ({ prompt }) => ["exec", prompt, "--skip-git-repo-check", "--sandbox", "workspace-write"],
+    buildInteractiveIntroArgs: (introPrompt) => [introPrompt],
   },
   aider: {
     id: "aider",
@@ -95,6 +119,9 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     installHint: "pipx install aider-chat",
     installLink: "https://aider.chat/docs/install.html",
     buildArgs: ({ prompt }) => ["--message", prompt, "--yes-always", "--no-auto-commits"],
+    // No buildInteractiveIntroArgs — see file-level comment. Aider's only
+    // message flag exits after one reply; there is no real flag to seed the
+    // first turn and keep chatting.
   },
   "google-antigravity": {
     id: "google-antigravity",
@@ -111,6 +138,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
       "accept-edits",
       "--dangerously-skip-permissions",
     ],
+    buildInteractiveIntroArgs: (introPrompt) => ["-i", introPrompt],
   },
 }
 

@@ -113,6 +113,7 @@ export default async function AgentTreePage() {
                   integrationStatus={integrationStatus}
                   showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                   showOpenTerminalButton={showVisibleRunOption}
+                  showGetStartedButton={showVisibleRunOption}
                   showAiExecutorPicker={isCommandSet}
                   showGoogleAccountsPicker={isCommandSet}
                   showCompanyGuide={isCommandSet}

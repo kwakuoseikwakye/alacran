@@ -13,6 +13,7 @@ describe("buildGuideSteps", () => {
   it("includes every flagged step, in a stable order, and nothing else", () => {
     const steps = buildGuideSteps({
       showOpenTerminalButton: true,
+      showGetStartedButton: true,
       showBackupButton: true,
       showOwnershipButton: true,
       showAiExecutorPicker: true,
@@ -22,6 +23,7 @@ describe("buildGuideSteps", () => {
     })
     expect(steps.map((s) => s.label)).toEqual([
       "Set up / edit company info",
+      "Get Started",
       "Open in Terminal",
       "Skills",
       "Back up to GitHub",
@@ -43,14 +45,20 @@ describe("buildGuideSteps", () => {
   })
 
   it("never renders a step whose flag is false", () => {
-    const steps = buildGuideSteps({ showOpenTerminalButton: false, showBackupButton: false })
+    const steps = buildGuideSteps({
+      showOpenTerminalButton: false,
+      showGetStartedButton: false,
+      showBackupButton: false,
+    })
     expect(steps.map((s) => s.label)).not.toContain("Open in Terminal")
+    expect(steps.map((s) => s.label)).not.toContain("Get Started")
     expect(steps.map((s) => s.label)).not.toContain("Back up to GitHub")
   })
 
   it("every step has non-empty label and blurb text", () => {
     const steps = buildGuideSteps({
       showOpenTerminalButton: true,
+      showGetStartedButton: true,
       showSetupCompanyButton: true,
       showBackupButton: true,
       showOwnershipButton: true,

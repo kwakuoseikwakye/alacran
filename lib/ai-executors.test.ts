@@ -94,4 +94,22 @@ describe("ai-executors", () => {
       "--dangerously-skip-permissions",
     ])
   })
+
+  describe("buildInteractiveIntroArgs — seeding an interactive session's first message", () => {
+    it("claude-code passes the prompt as a bare positional (its interactive-mode first turn)", () => {
+      expect(AI_EXECUTORS["claude-code"].buildInteractiveIntroArgs?.("hello")).toEqual(["hello"])
+    })
+
+    it("openai-codex passes the prompt as a bare positional (its interactive-mode first turn)", () => {
+      expect(AI_EXECUTORS["openai-codex"].buildInteractiveIntroArgs?.("hello")).toEqual(["hello"])
+    })
+
+    it("google-antigravity needs its own -i flag, not a bare positional", () => {
+      expect(AI_EXECUTORS["google-antigravity"].buildInteractiveIntroArgs?.("hello")).toEqual(["-i", "hello"])
+    })
+
+    it("aider has no supported way to seed and stay interactive, so the field is absent", () => {
+      expect(AI_EXECUTORS.aider.buildInteractiveIntroArgs).toBeUndefined()
+    })
+  })
 })

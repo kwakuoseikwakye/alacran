@@ -669,6 +669,34 @@ after, and confirmed the fix survives into a real generated launcher
 inside a fresh build. Patch version, diagnosed via
 `superpowers:systematic-debugging` like v36, no application-code change.
 
+v46 added a "Get Started" button, closing a real gap found by walking
+through a concrete case (a user builds a company, writes custom skills,
+defines it — then doesn't know how to use any of it): the Skills page's
+Run tab only recognizes the 9 fixed built-in commands by exact filename
+match, so a user's own custom skills have **no run affordance in the
+dashboard at all** — the only real path was already v38's "Open in
+Terminal," which opens a real interactive AI session with full file
+access but starts completely blank. Rather than building a new mechanism,
+"Get Started" reuses v38's exact machinery and just seeds the session's
+first message ("read this company's skills and ontology, then introduce
+yourself"). Per-executor, verified against each CLI's real `--help`
+(installed Codex and ran aider's `--help` specifically to check, same bar
+as v42): Claude Code and Codex both start interactive with a bare
+positional prompt as the first turn; Google Antigravity CLI needs its own
+`-i`/`--prompt-interactive` flag; Aider genuinely has no equivalent (its
+only message flag exits after one reply) — `AiExecutor.
+buildInteractiveIntroArgs` is deliberately absent for aider rather than a
+guessed flag, and the impl falls back to the same blank session with a
+message that says so. `buildInteractiveTerminalScript` and
+`openInteractiveTerminalImpl` both gained trailing-optional params, so
+every existing call site and test needed zero changes. Deliberately not
+live-tested end to end — a seeded prompt submits and gets a real reply
+the instant the process starts, the same real-API-call risk category this
+project already treats headless spawns as off-limits for in an unattended
+pass. Verified instead down to the exact spawned argv (8 new unit tests)
+and confirmed the button renders correctly gated without ever clicking
+it.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

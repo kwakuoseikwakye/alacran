@@ -17,6 +17,7 @@ import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
 import { AiExecutorPicker } from "@/components/ai-executor-picker"
 import { GoogleAccountsPicker } from "@/components/google-accounts-picker"
 import { OpenTerminalButton } from "@/components/open-terminal-button"
+import { GetStartedButton } from "@/components/get-started-button"
 import { CompanyGuide } from "@/components/company-guide"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
@@ -40,6 +41,7 @@ type AgentCardProps = {
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
   showOpenTerminalButton?: boolean
+  showGetStartedButton?: boolean
   showAiExecutorPicker?: boolean
   showGoogleAccountsPicker?: boolean
   showCompanyGuide?: boolean
@@ -78,6 +80,7 @@ export function AgentCard({
   integrationStatus,
   showInstallDailyTeamLogButton,
   showOpenTerminalButton,
+  showGetStartedButton,
   showAiExecutorPicker,
   showGoogleAccountsPicker,
   showCompanyGuide,
@@ -110,6 +113,7 @@ export function AgentCard({
                 companyName={agent.name}
                 hasOntology={Boolean(hasOntology)}
                 showOpenTerminalButton={showOpenTerminalButton}
+                showGetStartedButton={showGetStartedButton}
                 showSetupCompanyButton={showSetupCompanyButton}
                 showEditCompanyButton={showEditCompanyButton}
                 showBackupButton={showBackupButton}
@@ -178,6 +182,7 @@ export function AgentCard({
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
+          {showGetStartedButton && <GetStartedButton agentId={agent.id} />}
           {showOpenTerminalButton && <OpenTerminalButton agentId={agent.id} />}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}

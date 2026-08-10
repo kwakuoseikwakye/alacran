@@ -32,24 +32,31 @@ export type BuildVisibleRunScriptInput = {
 export type BuildInteractiveTerminalScriptInput = {
   binaryName: string
   cwd: string
+  /** Extra argv appended to the exec line (e.g. an executor's seeded-first-
+   *  message flags from AiExecutor.buildInteractiveIntroArgs). Omitted or
+   *  empty reproduces the exact plain `exec "$BINARY"` line this had before
+   *  introArgs existed. */
+  introArgs?: string[]
 }
 
 /**
  * Generates the wrapper script for "just open an interactive session here" —
- * no prompt, no allowlist, no lock, no gate. This is exactly what the user
- * would get by `cd`-ing into the company's directory and running the
- * executor themselves; the only thing this automates is the `cd` and the
- * Terminal window.
+ * no allowlist, no lock, no gate. This is exactly what the user would get by
+ * `cd`-ing into the company's directory and running the executor themselves;
+ * the only things this automates are the `cd`, the Terminal window, and
+ * optionally (`introArgs`) the executor's own flags for seeding the
+ * session's first message before handing control back to the user.
  */
 export function buildInteractiveTerminalScript(input: BuildInteractiveTerminalScriptInput): string {
-  const { binaryName, cwd } = input
+  const { binaryName, cwd, introArgs } = input
+  const execLine = ["exec \"$BINARY\"", ...(introArgs ?? []).map(shQuote)].join(" ")
   return [
     "#!/bin/bash",
     `BINARY=${shQuote(binaryName)}`,
     `CWD=${shQuote(cwd)}`,
     "",
     'cd "$CWD" || exit 1',
-    'exec "$BINARY"',
+    execLine,
     "",
   ].join("\n")
 }

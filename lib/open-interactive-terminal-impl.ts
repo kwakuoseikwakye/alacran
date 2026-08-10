@@ -30,6 +30,15 @@ export type OpenTerminalResult = { started: boolean; message: string }
  *
  * macOS and Linux each need a different command to open that window at all
  * (see terminal-launch-command.ts); everything past that point is identical.
+ *
+ * `introPrompt`, when given, seeds the session's first message instead of
+ * opening fully blank — used by the "Get Started" button to have the agent
+ * read the company's own skills/definitions and introduce itself, for a
+ * user who doesn't yet know what to type. Not every executor supports
+ * this (see ai-executors.ts's `buildInteractiveIntroArgs`); when it
+ * doesn't, this silently falls back to the same blank session `introPrompt`
+ * being unset gives, and says so in the returned message rather than
+ * pretending the intro happened.
  */
 export async function openInteractiveTerminalImpl(
   agentId: string,
@@ -38,7 +47,8 @@ export async function openInteractiveTerminalImpl(
   resolveExecutor: ResolveExecutorFn = resolveAiExecutorForAgent,
   platform: NodeJS.Platform = process.platform,
   dataDir: string = DATA_DIR,
-  execFn: ExecFileFn = defaultExecFile
+  execFn: ExecFileFn = defaultExecFile,
+  introPrompt?: string
 ): Promise<OpenTerminalResult> {
   const agents = await getAgents()
   const agent = agents.find((a) => a.id === agentId)
@@ -56,8 +66,11 @@ export async function openInteractiveTerminalImpl(
     }
   }
 
-  const scriptPath = path.join(dataDir, `${agent.id}.open-terminal.sh`)
-  const script = buildInteractiveTerminalScript({ binaryName: executor.binaryName, cwd: agent.rootPath })
+  const introArgs = introPrompt ? executor.buildInteractiveIntroArgs?.(introPrompt) : undefined
+  // Own filename so a "Get Started" launch never races the plain "Open in
+  // Terminal" button's script file if both are clicked close together.
+  const scriptPath = path.join(dataDir, `${agent.id}.${introPrompt ? "get-started" : "open-terminal"}.sh`)
+  const script = buildInteractiveTerminalScript({ binaryName: executor.binaryName, cwd: agent.rootPath, introArgs })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
   const child = spawnFn(launch.command, launch.args(scriptPath), {
@@ -66,5 +79,11 @@ export async function openInteractiveTerminalImpl(
     stdio: ["ignore", "ignore", "ignore"],
   })
   child.unref()
-  return { started: true, message: "Opened Terminal" }
+  const skippedIntro = Boolean(introPrompt) && !introArgs
+  return {
+    started: true,
+    message: skippedIntro
+      ? `Opened Terminal (${executor.label} can't be seeded with an intro — ask it directly)`
+      : "Opened Terminal",
+  }
 }

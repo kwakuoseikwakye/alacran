@@ -120,4 +120,54 @@ describe("openInteractiveTerminalImpl", () => {
       await rm(dir, { recursive: true, force: true })
     }
   })
+
+  it("with an introPrompt, seeds the script with the executor's interactive-intro args and uses its own script filename", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "open-terminal-"))
+    try {
+      const { spawnFn, calls } = fakeSpawn()
+      const agent: Agent = { ...AGENT, rootPath: dir }
+      const result = await openInteractiveTerminalImpl(
+        "acme",
+        spawnFn,
+        async () => [agent],
+        async () => AI_EXECUTORS["claude-code"],
+        "darwin",
+        dir,
+        undefined,
+        "read the skills and say hi"
+      )
+      expect(result).toEqual({ started: true, message: "Opened Terminal" })
+      const scriptPath = calls[0].args[2]
+      expect(scriptPath).toContain("get-started")
+      const script = await readFile(scriptPath, "utf-8")
+      expect(script).toContain("exec \"$BINARY\" 'read the skills and say hi'")
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("with an introPrompt but an executor that can't be seeded (aider), opens plain and says so", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "open-terminal-"))
+    try {
+      const { spawnFn, calls } = fakeSpawn()
+      const agent: Agent = { ...AGENT, rootPath: dir }
+      const result = await openInteractiveTerminalImpl(
+        "acme",
+        spawnFn,
+        async () => [agent],
+        async () => AI_EXECUTORS.aider,
+        "darwin",
+        dir,
+        undefined,
+        "read the skills and say hi"
+      )
+      expect(result.started).toBe(true)
+      expect(result.message).toContain("can't be seeded")
+      const scriptPath = calls[0].args[2]
+      const script = await readFile(scriptPath, "utf-8")
+      expect(script).toContain('exec "$BINARY"\n')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
 })
