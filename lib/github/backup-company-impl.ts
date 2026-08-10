@@ -81,6 +81,42 @@ async function ensurePushableRemote(execFn: ExecFileFn, root: string, remoteUrl:
   await execFn("gh", ["auth", "setup-git"]).catch(() => {})
 }
 
+// GitHub's real wording for "an OAuth-token push would create/update a
+// .github/workflows/* file, and this token has no `workflow` scope" — the
+// scope gh's own default `gh auth login` doesn't request.
+const WORKFLOW_SCOPE_PATTERN = /workflow.*scope|refusing to allow an oauth app/i
+
+/**
+ * Real user report: repo created fine, but the push right after it failed
+ * with "refusing to allow an OAuth App to create or update workflow
+ * `.github/workflows/verify.yml` without `workflow` scope." This app's own
+ * company-starter template used to ship exactly such a file (fixed in
+ * v55's manifest — see CHANGELOG.md) — every company created before that
+ * fix already has it committed, so their push keeps failing regardless.
+ * Rather than making the user re-authenticate `gh` with a wider scope just
+ * to unblock a backup, untrack it: it's a CI wrapper with no value in a
+ * solo, unreviewed repo (`scripts/verify.py` / `/verify` already run it
+ * directly, no CI needed) and retry once. A push that fails for any other
+ * reason still surfaces as-is.
+ */
+async function pushSelfHealingWorkflowScope(execFn: ExecFileFn, root: string): Promise<void> {
+  try {
+    await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    if (!WORKFLOW_SCOPE_PATTERN.test(message)) throw error
+    await execFn("git", ["-C", root, "rm", "-r", "--cached", ".github/workflows"])
+    await execFn("git", [
+      "-C",
+      root,
+      "commit",
+      "-m",
+      "Remove .github/workflows — needs gh's workflow OAuth scope to push, and isn't needed (scripts/verify.py runs it directly)",
+    ])
+    await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
+  }
+}
+
 /**
  * Make this company recoverable on another machine.
  *
@@ -109,7 +145,7 @@ export async function backupCompanyImpl(
   if (existing.remoteUrl) {
     try {
       await ensurePushableRemote(execFn, root, existing.remoteUrl)
-      await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
+      await pushSelfHealingWorkflowScope(execFn, root)
       const after = await getCompanyRemoteImpl(agentId, execFn)
       return { ok: true, remoteUrl: after.ok ? after.remoteUrl : existing.remoteUrl }
     } catch (error) {
@@ -128,7 +164,7 @@ export async function backupCompanyImpl(
 
     const created = await getCompanyRemoteImpl(agentId, execFn)
     await ensurePushableRemote(execFn, root, created.ok ? created.remoteUrl : null)
-    await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
+    await pushSelfHealingWorkflowScope(execFn, root)
 
     const after = await getCompanyRemoteImpl(agentId, execFn)
     return { ok: true, remoteUrl: after.ok ? after.remoteUrl : null }

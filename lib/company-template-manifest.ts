@@ -36,7 +36,14 @@ export const TEMPLATE_MANIFEST: string[] = [
   "scripts/verify.py",
   "scripts/cycle",
   "tests",
-  ".github",
+  // NOT ".github/workflows" — see v55 in CHANGELOG.md. That CI wrapper around
+  // scripts/verify.py needs the `workflow` OAuth scope just to be PUSHED at
+  // all, which gh's own default `gh auth login` scopes don't include, and it
+  // broke literally every new company's first-ever backup. `/verify` already
+  // runs scripts/verify.py directly with no CI involved — nothing is lost by
+  // not shipping the wrapper. Only the harmless issue-template config comes
+  // along from .github.
+  ".github/ISSUE_TEMPLATE/config.yml",
   ".gitignore",
   "LICENSE.md",
   "README.md",

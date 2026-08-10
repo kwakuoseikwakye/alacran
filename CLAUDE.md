@@ -821,6 +821,18 @@ runs `gh auth setup-git` (confirmed live — idempotent) to wire git's
 HTTPS credential helper to gh's own token, before every push, on both the
 first-backup and subsequent-backup paths.
 
+v55 fixed the same symptom's second real cause: the push was rejected
+with GitHub's real "refusing to allow an OAuth App to create or update
+workflow ... without `workflow` scope" — because `templates/company-
+starter/.github/workflows/verify.yml` was in `TEMPLATE_MANIFEST` and got
+copied into every new company, and `gh auth login`'s default scopes
+don't include `workflow`. Fixed for new companies (manifest now only
+copies `.github/ISSUE_TEMPLATE/config.yml`, not the workflows folder —
+`/verify` already runs `scripts/verify.py` directly, no CI needed) and
+for already-affected ones (`pushSelfHealingWorkflowScope` untracks
+`.github/workflows` and retries once on this exact rejection, same shape
+as v54's self-heal).
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

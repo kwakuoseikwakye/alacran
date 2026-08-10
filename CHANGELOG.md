@@ -2004,3 +2004,47 @@ every push after the first. Existing tests updated for the new call
 shape (create no longer implies push); one restructured into a stateful
 mock proving the self-heal path's retry succeeds against the *rewritten*
 remote. Full suite: 596 tests, `tsc`/`next build` clean.
+
+## v55 (2026-08-10): backup no longer blocked by the template's own CI workflow
+
+User report, with the exact error attached: repo created fine, but
+`git push` was rejected — `refusing to allow an OAuth App to create or
+update workflow .github/workflows/verify.yml without workflow scope`.
+v54 already fixed the SSH-protocol cause of a similar-looking failure;
+this was a real, different second cause, confirmed by checking what the
+company's own repo actually contains.
+
+**Root cause:** `templates/company-starter/.github/workflows/verify.yml`
+— a GitHub Actions CI wrapper around `scripts/verify.py` — was in
+`TEMPLATE_MANIFEST` and so got copied into *every* company created
+through this app's "Add a company" flow. Pushing any commit that
+contains a `.github/workflows/*` file needs the `workflow` OAuth scope,
+which `gh auth login`'s default scopes don't request (confirmed on a
+real `gh auth status`: `gist, read:org, repo` — no `workflow`). So the
+very first backup of *any* newly-created company was broken by its own
+starter content, for anyone whose `gh` token has the ordinary default
+scopes.
+
+**Fixed two ways, for two different companies:**
+1. New companies never get the file at all — `TEMPLATE_MANIFEST` now
+   copies only `.github/ISSUE_TEMPLATE/config.yml` from `.github`, not
+   the workflows folder. Nothing real is lost: `/verify` (the slash
+   command) and a human both already run `scripts/verify.py` directly;
+   the GitHub Actions wrapper only mattered for a collaborative,
+   PR-reviewed project, which isn't this app's audience. One new guard
+   test (`company-template-manifest.test.ts`) asserts no
+   `.github/workflows` entry can sneak back into the manifest.
+2. Companies created *before* this fix still have the file committed,
+   so their push would keep failing regardless of point 1.
+   `pushSelfHealingWorkflowScope` in `lib/github/backup-company-impl.ts`
+   catches this exact rejection, untracks `.github/workflows` (`git rm
+   -r --cached` + a commit), and retries once — same self-heal shape as
+   v52's stale-remote fix, applied to both the first-backup and
+   subsequent-backup push paths. A push that fails for a genuinely
+   different reason (including "nothing to untrack") still surfaces
+   as-is.
+
+3 new tests; full suite: 599 tests, `tsc`/`next build` clean. Not
+live-tested end to end (would mean creating a real GitHub repo as a side
+effect, outside this project's sanctioned live-test list) — verified via
+mocked exec calls the same way v52/v54's backup fixes were.

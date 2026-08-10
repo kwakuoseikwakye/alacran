@@ -149,6 +149,55 @@ describe("backupCompanyImpl", () => {
     expect(pushAttempts).toBe(2)
   })
 
+  it("self-heals a push rejected for the .github/workflows OAuth scope by untracking it and retrying", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    let pushAttempts = 0
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      if (command === "git" && args.includes("push")) {
+        pushAttempts++
+        if (pushAttempts === 1) {
+          return new Error(
+            "! [remote rejected] HEAD -> master (refusing to allow an OAuth App to create or update workflow `.github/workflows/verify.yml` without `workflow` scope)"
+          )
+        }
+        return { stdout: "" }
+      }
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(true)
+    expect(pushAttempts).toBe(2)
+    const untrack = calls.find((c) => c.command === "git" && c.args.includes("rm"))
+    expect(untrack).toBeDefined()
+    expect(untrack!.args).toContain(".github/workflows")
+    expect(calls.some((c) => c.command === "git" && c.args.includes("commit"))).toBe(true)
+    // Not treated as a missing repo — no remote removal, no second gh repo create.
+    expect(calls.some((c) => c.command === "git" && c.args.includes("remove"))).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
+  })
+
+  it("surfaces the workflow-scope error as-is if there's nothing to untrack (already removed)", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      if (command === "git" && args.includes("push")) {
+        return new Error("refusing to allow an OAuth App to create or update workflow `.github/workflows/verify.yml`")
+      }
+      if (command === "git" && args.includes("rm")) return new Error("pathspec '.github/workflows' did not match any files")
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.message).toContain("did not match any files")
+  })
+
   it("does not recreate the repo on an unrelated push failure (network, auth) — surfaces it instead", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
