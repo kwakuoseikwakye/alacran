@@ -7,6 +7,7 @@ import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activiti
 import { checkLaunchdJob } from "@/lib/adapters/launchd"
 import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
+import { ReorderableGrid } from "@/components/reorderable-grid"
 import { AddCompanyForm } from "@/components/add-company-form"
 import { getAvatars } from "@/lib/avatars-registry"
 import { companyOntologyExists } from "@/lib/company-ontology-exists"
@@ -67,8 +68,8 @@ export default async function AgentTreePage() {
 
       {/* Bento grid of agent cards */}
       <div className="dash-content">
-        <div className="bento-grid">
-          {await Promise.all(
+        <ReorderableGrid
+          items={await Promise.all(
             results.map(async (result, index) => {
               const latest = mergeAndSortActivities([result])[0] ?? null
               const ispipelineAgent = result.agent.id === "email-pipeline-agent"
@@ -92,41 +93,43 @@ export default async function AgentTreePage() {
                 !(await dailyTeamLogInstalled(result.agent.rootPath))
               const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
               const googleAccounts = isCommandSet ? await readGoogleAccounts(result.agent.rootPath) : undefined
-              return (
-                <AgentCard
-                  key={result.agent.id}
-                  agent={result.agent}
-                  latestActivity={latest}
-                  error={result.error}
-                  launchdHealth={ispipelineAgent ? launchdHealth : undefined}
-                  showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
-                  pollStatus={ispipelineAgent ? pollStatus : undefined}
-                  showVerifyButton={isAiCompanyStarterMain}
-                  showDailyTeamLogButton={isPlhOps}
-                  removable={isRegisteredCompany}
-                  avatarUrl={avatarByAgentId[result.agent.id] ?? null}
-                  showSetupCompanyButton={needsCompanySetup}
-                  showEditCompanyButton={hasOntology}
-                  showBackupButton={isCommandSet}
-                  showOwnershipButton={isCommandSet}
-                  showVisibleRunOption={showVisibleRunOption}
-                  integrationStatus={integrationStatus}
-                  showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
-                  showOpenTerminalButton={showVisibleRunOption}
-                  showGetStartedButton={showVisibleRunOption}
-                  showAiExecutorPicker={isCommandSet}
-                  showGoogleAccountsPicker={isCommandSet}
-                  showCompanyGuide={isCommandSet}
-                  hasOntology={hasOntology}
-                  aiExecutorId={aiExecutorId}
-                  googleAccounts={googleAccounts}
-                  availableGoogleAccounts={availableGoogleAccounts}
-                  index={index}
-                />
-              )
+              return {
+                id: result.agent.id,
+                node: (
+                  <AgentCard
+                    agent={result.agent}
+                    latestActivity={latest}
+                    error={result.error}
+                    launchdHealth={ispipelineAgent ? launchdHealth : undefined}
+                    showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
+                    pollStatus={ispipelineAgent ? pollStatus : undefined}
+                    showVerifyButton={isAiCompanyStarterMain}
+                    showDailyTeamLogButton={isPlhOps}
+                    removable={isRegisteredCompany}
+                    avatarUrl={avatarByAgentId[result.agent.id] ?? null}
+                    showSetupCompanyButton={needsCompanySetup}
+                    showEditCompanyButton={hasOntology}
+                    showBackupButton={isCommandSet}
+                    showOwnershipButton={isCommandSet}
+                    showVisibleRunOption={showVisibleRunOption}
+                    integrationStatus={integrationStatus}
+                    showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
+                    showOpenTerminalButton={showVisibleRunOption}
+                    showGetStartedButton={showVisibleRunOption}
+                    showAiExecutorPicker={isCommandSet}
+                    showGoogleAccountsPicker={isCommandSet}
+                    showCompanyGuide={isCommandSet}
+                    hasOntology={hasOntology}
+                    aiExecutorId={aiExecutorId}
+                    googleAccounts={googleAccounts}
+                    availableGoogleAccounts={availableGoogleAccounts}
+                    index={index}
+                  />
+                ),
+              }
             })
           )}
-        </div>
+        />
       </div>
     </>
   )
