@@ -104,4 +104,26 @@ describe("getCompanyOwnershipImpl", () => {
       ],
     })
   })
+
+  it("surfaces a real .mcp.json in the network-access summary", async () => {
+    await writeFile(
+      path.join(root, ".mcp.json"),
+      JSON.stringify({ mcpServers: { canva: { type: "http", url: "https://mcp.canva.com/mcp" } } }),
+      "utf-8"
+    )
+    const { getCompanyOwnershipImpl } = await import("./get-company-ownership-impl")
+    const exec = fakeExec(() => new Error("fatal: No such remote 'origin'"))
+    const result = await getCompanyOwnershipImpl("acme", exec, aiExecutorRegistryPath)
+    expect(result).toEqual({
+      ok: true,
+      rootPath: root,
+      remoteUrl: null,
+      integrationStatus: "none configured yet",
+      aiExecutorId: "claude-code",
+      networkAccess: [
+        { label: "Anthropic (Claude Code) — your own account" },
+        { label: "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account" },
+      ],
+    })
+  })
 })

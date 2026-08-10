@@ -5,6 +5,7 @@ import { getCompanyRemoteImpl } from "../github/backup-company-impl"
 import { getIntegrationStatus, NO_INTEGRATION_STATUS } from "../get-integration-status"
 import { getAiExecutorIdForAgent } from "../ai-executor-registry"
 import { getConnectStatusImpl } from "../connect/connect-status-impl"
+import { readMcpServers } from "../mcp-servers-config"
 import { summarizeNetworkAccess } from "./summarize-network-access"
 import type { ExecFileFn } from "../git-commit-file"
 import type { AiExecutorId } from "../ai-executors"
@@ -61,7 +62,9 @@ export async function getCompanyOwnershipImpl(
 
   const aiExecutorId = await getAiExecutorIdForAgent(agentId, aiExecutorRegistryPath)
 
-  const networkAccess = summarizeNetworkAccess({ aiExecutorId, hasIntegration, remoteUrl })
+  const mcpServers = await readMcpServers(agent.rootPath)
+
+  const networkAccess = summarizeNetworkAccess({ aiExecutorId, hasIntegration, remoteUrl, mcpServers })
 
   return {
     ok: true,

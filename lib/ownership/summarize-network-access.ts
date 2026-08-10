@@ -1,4 +1,5 @@
 import type { AiExecutorId } from "../ai-executors"
+import type { McpServer } from "../mcp-servers-config"
 
 export type NetworkAccessEntry = { label: string }
 
@@ -6,6 +7,8 @@ export type SummarizeNetworkAccessInput = {
   aiExecutorId: AiExecutorId
   hasIntegration: boolean
   remoteUrl: string | null
+  /** Optional so every pre-v58 caller and test keeps working unchanged. */
+  mcpServers?: McpServer[]
 }
 
 // Only claim what we actually know. Claude Code and Codex are always a real
@@ -26,6 +29,12 @@ export function summarizeNetworkAccess(input: SummarizeNetworkAccessInput): Netw
   }
   if (input.remoteUrl) {
     entries.push({ label: "GitHub — your own private repository" })
+  }
+  // A wired MCP server is external network access, so this list would be
+  // lying by omission without it. Each one is a real remote endpoint the
+  // company's interactive sessions can call, signed in as the user.
+  for (const server of input.mcpServers ?? []) {
+    entries.push({ label: `${server.name} (MCP) — ${server.url}, signed in with your own account` })
   }
   return entries
 }

@@ -59,4 +59,27 @@ describe("summarizeNetworkAccess", () => {
       { label: "GitHub — your own private repository" },
     ])
   })
+
+  it("lists every wired MCP server, which is real external network access", () => {
+    const result = summarizeNetworkAccess({
+      aiExecutorId: "claude-code",
+      hasIntegration: false,
+      remoteUrl: null,
+      mcpServers: [
+        { name: "canva", url: "https://mcp.canva.com/mcp" },
+        { name: "figma", url: "https://mcp.figma.com/mcp" },
+      ],
+    })
+    expect(result).toEqual([
+      { label: "Anthropic (Claude Code) — your own account" },
+      { label: "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account" },
+      { label: "figma (MCP) — https://mcp.figma.com/mcp, signed in with your own account" },
+    ])
+  })
+
+  it("is byte-identical to its pre-MCP output when no servers are wired", () => {
+    const base = { aiExecutorId: "claude-code" as const, hasIntegration: true, remoteUrl: "git@github.com:me/a.git" }
+    expect(summarizeNetworkAccess({ ...base, mcpServers: [] })).toEqual(summarizeNetworkAccess(base))
+    expect(summarizeNetworkAccess({ ...base, mcpServers: undefined })).toEqual(summarizeNetworkAccess(base))
+  })
 })
