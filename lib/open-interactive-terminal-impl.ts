@@ -78,6 +78,10 @@ export async function openInteractiveTerminalImpl(
     detached: true,
     stdio: ["ignore", "ignore", "ignore"],
   })
+  // Nothing to clean up (this path holds no lock), but an "error" event with
+  // no listener is an uncaught exception that would take the server down if
+  // the terminal launcher itself can't start.
+  child.on("error", () => {})
   child.unref()
   const skippedIntro = Boolean(introPrompt) && !introArgs
   return {

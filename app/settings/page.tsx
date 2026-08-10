@@ -17,7 +17,7 @@ export default function SettingsPage() {
         {/* Same platform gate update-banner.tsx uses: unsigned macOS builds
             get Gatekeeper-quarantined by a self-install, so only Linux gets
             an in-app "Update & Restart" — everyone else gets a download link. */}
-        <SettingsPanel currentVersion={APP_VERSION} canAutoUpdate={process.platform === "linux"} />
+        <SettingsPanel currentVersion={APP_VERSION} canAutoUpdate={process.platform === "linux" || process.platform === "darwin"} />
       </div>
     </>
   )

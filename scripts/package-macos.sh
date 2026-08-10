@@ -322,6 +322,18 @@ rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$DMG_STAGING" -ov -format UDZO "$DMG" >/dev/null
 echo "==> Built: $DMG"
 
+# The .zip is what the IN-APP updater downloads (lib/updates/perform-mac-update-impl.ts);
+# the .dmg stays because it's the human install gesture. `ditto -c -k` is
+# Apple's own way to archive a bundle: verified on this app to round-trip with
+# `codesign --verify --deep` still passing and the launcher's executable bit
+# intact, which a plain `zip -r` does not guarantee. Both must be uploaded to
+# the release — an updater pointed at a release with no Alacran.zip 404s.
+echo "==> Building the .zip (in-app update payload)"
+ZIP="$DIST/Alacran.zip"
+rm -f "$ZIP"
+ditto -c -k --sequesterRsrc --keepParent "$APP" "$ZIP"
+echo "==> Built: $ZIP"
+
 echo ""
 echo "Done. To try it: open \"$APP\"  (or double-click it in Finder),"
 echo "or mount \"$DMG\" and drag $APP_NAME to Applications."

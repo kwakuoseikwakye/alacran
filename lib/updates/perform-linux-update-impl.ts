@@ -32,12 +32,12 @@ export type PerformUpdateResult = { ok: true } | { ok: false; message: string; m
  * to a manual command instead of failing silently if pkexec isn't installed
  * or the user cancels the prompt.
  *
- * macOS has no equivalent: those builds are ad-hoc signed, not notarized
- * (see scripts/package-macos.sh), so a freshly downloaded copy is
- * Gatekeeper-quarantined and won't open until the user runs `xattr -cr`
- * themselves. Auto-installing it here would silently produce a build that
- * looks updated but refuses to launch — worse than the existing "download
- * it" link, so macOS deliberately keeps that instead of getting this path.
+ * macOS has its own path — see perform-mac-update-impl.ts. This comment used
+ * to say macOS *couldn't* have one, because a downloaded copy is
+ * Gatekeeper-quarantined until the user runs `xattr -cr`. That was measured
+ * and turned out to be wrong for this case: quarantine is applied by the
+ * downloading application (browsers do, `fetch` doesn't), so a payload the
+ * app downloads itself is never quarantined.
  */
 export async function performLinuxUpdateImpl(
   execFn: ExecFileFn = defaultExecFile,

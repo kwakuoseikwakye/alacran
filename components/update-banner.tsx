@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { ArrowUpCircle, X } from "lucide-react"
-import { dismissUpdate, performLinuxUpdate, restartApp } from "@/lib/updates/update-actions"
+import { dismissUpdate, performUpdate, restartApp } from "@/lib/updates/update-actions"
 import { RELEASE_PAGE_URL } from "@/lib/updates/fetch-latest-release-impl"
 import { waitForServerThenReload } from "@/lib/updates/wait-for-server-then-reload"
 import { CommandLine } from "@/components/copy-button"
@@ -12,10 +12,10 @@ type Phase = "idle" | "updating" | "restarting" | "error"
 /**
  * A quiet, dismissible "a newer version exists" strip.
  *
- * On Linux this can actually perform the update (download the .deb, install
- * it via a native pkexec password prompt, relaunch) instead of only linking
- * out. See lib/updates/perform-linux-update-impl.ts for why macOS can't
- * safely do the same (unsigned, unnotarized builds get Gatekeeper-quarantined).
+ * On Linux and macOS this can actually perform the update instead of only
+ * linking out — Linux downloads the .deb and installs it via a native pkexec
+ * password prompt; macOS swaps the running .app bundle in place (no prompt at
+ * all). Windows has no packaged build, so it keeps the download link only.
  */
 export function UpdateBanner({
   latestVersion,
@@ -34,7 +34,7 @@ export function UpdateBanner({
   async function handleUpdateAndRestart() {
     setPhase("updating")
     setError(null)
-    const result = await performLinuxUpdate()
+    const result = await performUpdate()
     if (!result.ok) {
       setPhase("error")
       setError({ message: result.message, manualCommand: result.manualCommand })

@@ -36,14 +36,20 @@ export const TEMPLATE_MANIFEST: string[] = [
   "scripts/verify.py",
   "scripts/cycle",
   "tests",
-  // NOT ".github/workflows" — see v55 in CHANGELOG.md. That CI wrapper around
+  // Nothing from ".github" — see v55/v56 in CHANGELOG.md.
+  //
+  // The workflows folder is the one that mattered: that CI wrapper around
   // scripts/verify.py needs the `workflow` OAuth scope just to be PUSHED at
   // all, which gh's own default `gh auth login` scopes don't include, and it
   // broke literally every new company's first-ever backup. `/verify` already
   // runs scripts/verify.py directly with no CI involved — nothing is lost by
-  // not shipping the wrapper. Only the harmless issue-template config comes
-  // along from .github.
-  ".github/ISSUE_TEMPLATE/config.yml",
+  // not shipping the wrapper.
+  //
+  // v55 kept ".github/ISSUE_TEMPLATE/config.yml" as the one harmless
+  // survivor; v56 dropped it too, because it was a no-op. Its entire content
+  // is `blank_issues_enabled: true`, which is GitHub's own default, and v37
+  // deleted every issue template it could have been configuring. A new
+  // company now gets no .github directory at all.
   ".gitignore",
   "LICENSE.md",
   "README.md",

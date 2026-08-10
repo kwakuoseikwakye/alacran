@@ -13,7 +13,7 @@ function fakeSpawn() {
   const calls: Array<{ command: string; args: string[]; opts: Record<string, unknown> }> = []
   const spawnFn: SpawnFn = vi.fn((command: string, args: string[], opts: Record<string, unknown>) => {
     calls.push({ command, args, opts })
-    return { unref: vi.fn() } as unknown as ChildProcess
+    return { unref: vi.fn(), on: vi.fn() } as unknown as ChildProcess
   })
   return { spawnFn, calls }
 }

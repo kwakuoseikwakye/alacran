@@ -1,7 +1,7 @@
 import { spawn as nodeSpawn, execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
 import { openSync, closeSync } from "node:fs"
-import { readdir, readFile, writeFile, mkdir } from "node:fs/promises"
+import { readdir, readFile, writeFile, mkdir, appendFile } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { readGoogleAccounts } from "../google-accounts-config"
@@ -29,7 +29,13 @@ export type SpawnOptions = {
 }
 export type SpawnedProcess = {
   unref: () => void
-  on: (event: "exit", listener: (code: number | null) => void) => void
+  on: {
+    (event: "exit", listener: (code: number | null) => void): void
+    // "error" is not optional decoration. When a binary isn't on PATH, Node
+    // emits "error" and never emits "exit" — and an "error" event with no
+    // listener is an uncaught exception that takes the whole server down.
+    (event: "error", listener: (err: Error) => void): void
+  }
 }
 export type SpawnFn = (command: string, args: string[], options: SpawnOptions) => SpawnedProcess
 
@@ -49,6 +55,17 @@ async function defaultExecFile(
   options: { cwd: string }
 ): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(command, args, options)
+}
+
+/**
+ * The run action has already returned "Started" by the time a spawn failure
+ * arrives, so the only place left to tell the user is the log the Run tab
+ * already tails. Best-effort by design — a failure to write the note must
+ * not become a second unhandled rejection on the same path.
+ */
+async function appendSpawnFailure(logPath: string, binaryName: string, err: Error): Promise<void> {
+  const note = `\nAlacrán: could not start "${binaryName}" — ${err.message}\nIs it installed and on this app's PATH? After installing it, fully quit and reopen Alacrán.\n`
+  await appendFile(logPath, note, "utf-8").catch(() => {})
 }
 
 function validateFields(command: CompanyCommand, fieldValues: Record<string, string>): string | null {
@@ -107,6 +124,21 @@ export async function runCompanyCommandImpl(
     return { started: false, message: `Unknown company "${agentId}"` }
   }
 
+  // Resolved before the lock and before any prefetch: a command that can't
+  // legally run on this company's executor must cost nothing at all — no
+  // lock to leak, and no `gog`/`gh` round-trip against the user's real
+  // mailbox or issue tracker for a run that was never going to spawn.
+  const executor = await resolveExecutor(agent.id)
+  if (command.untrustedInput && !executor.enforcesToolScope) {
+    return {
+      started: false,
+      message:
+        `/${command.id} reads content written by people outside this company, so it only runs on an AI tool that can be ` +
+        `restricted to this command's own output folder. ${executor.label} has no such restriction — it would run that ` +
+        `content with full write access to the whole repo. Switch this company to Claude Code to run /${command.id}.`,
+    }
+  }
+
   await mkdir(dataDir, { recursive: true })
   const acquired = await acquireRunLock(dataDir)
   if (!acquired) {
@@ -158,7 +190,6 @@ export async function runCompanyCommandImpl(
 
     const bashPatterns =
       typeof command.bashPatterns === "function" ? command.bashPatterns(accounts) : (command.bashPatterns ?? [])
-    const executor = await resolveExecutor(agent.id)
     const spawnArgs = executor.buildArgs({ prompt, editScopePattern, bashPatterns })
 
     const logPath = path.join(dataDir, `${command.id}.log`)
@@ -196,6 +227,14 @@ export async function runCompanyCommandImpl(
       // script's own `trap ... EXIT` releases the lock instead; attaching
       // this handler too would release it immediately and the app would
       // report "finished" while the gate is still waiting for Enter.
+      //
+      // "error" is different, and must be handled: if the terminal launcher
+      // itself never starts, the script never runs, so its trap never fires
+      // and nothing else would ever release the lock.
+      child.on("error", (err) => {
+        void appendSpawnFailure(logPath, terminalLaunch.command, err)
+        releaseRunLock(dataDir).catch(() => {})
+      })
       child.unref()
       return { started: true, message: "Started" }
     }
@@ -207,6 +246,14 @@ export async function runCompanyCommandImpl(
       stdio: ["ignore", outFd, outFd],
     })
     child.on("exit", () => {
+      releaseRunLock(dataDir).catch(() => {})
+    })
+    // Without this the run is unrecoverable twice over: the unhandled "error"
+    // event crashes the server, and because "exit" never fires for a failed
+    // spawn the lock survives the restart — lib/file-lock.ts has no staleness
+    // sweep, so every later run for this company reports "Already running".
+    child.on("error", (err) => {
+      void appendSpawnFailure(logPath, executor.binaryName, err)
       releaseRunLock(dataDir).catch(() => {})
     })
     child.unref()

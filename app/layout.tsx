@@ -67,7 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <UpdateBanner
               latestVersion={update.latestVersion}
               currentVersion={update.currentVersion}
-              canAutoUpdate={process.platform === "linux"}
+              canAutoUpdate={process.platform === "linux" || process.platform === "darwin"}
             />
           ) : null}
           {children}

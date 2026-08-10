@@ -112,4 +112,25 @@ describe("ai-executors", () => {
       expect(AI_EXECUTORS.aider.buildInteractiveIntroArgs).toBeUndefined()
     })
   })
+
+  describe("enforcesToolScope", () => {
+    // The flag decides whether untrusted-input commands are allowed to run at
+    // all, so it must never drift from what buildArgs really does. Proved
+    // against real output rather than restated as a list of ids.
+    it("is true exactly for the executors whose buildArgs consumes the scope inputs", () => {
+      for (const executor of listAiExecutors()) {
+        const args = executor.buildArgs({
+          prompt: "p",
+          editScopePattern: "notes/company/triage/**",
+          bashPatterns: ["gog -a a@b.com gmail get*"],
+        })
+        const honoursScope = args.some(
+          (a) => a.includes("notes/company/triage/**") || a.includes("gog -a a@b.com gmail get*")
+        )
+        expect(honoursScope, `${executor.id}: enforcesToolScope must match what buildArgs really emits`).toBe(
+          executor.enforcesToolScope
+        )
+      }
+    })
+  })
 })

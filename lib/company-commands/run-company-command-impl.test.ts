@@ -453,6 +453,7 @@ describe("runCompanyCommandImpl", () => {
       binaryName: "aider",
       installHint: "pipx install aider-chat",
       installLink: "https://aider.chat/docs/install.html",
+      enforcesToolScope: false,
       buildArgs: ({ prompt }: { prompt: string }) => ["--message", prompt, "--yes-always"],
     }
     const result = await runCompanyCommandImpl(
@@ -530,7 +531,11 @@ describe("runCompanyCommandImpl", () => {
     expect(scriptPath).toBe(path.join(dataDir, "digest.run.sh"))
     // The crux of the whole design: no exit handler in visible mode. The
     // script's own `trap ... EXIT` owns the lock's lifetime instead.
-    expect(onCalls).toEqual([])
+    expect(onCalls).not.toContain("exit")
+    // Always registered, on every path: an unhandled "error" event is an
+    // uncaught exception, and here it is also the only thing that can
+    // release a lock the script will never get far enough to trap.
+    expect(onCalls).toContain("error")
   })
 
   it("falls back to headless on Linux when visible runs is enabled but no terminal emulator is installed", async () => {
@@ -564,7 +569,7 @@ describe("runCompanyCommandImpl", () => {
 
     expect(calls).toHaveLength(1)
     expect(calls[0].command).toBe("claude")
-    expect(onCalls).toEqual(["exit"])
+    expect(onCalls).toEqual(["exit", "error"])
   })
 
   it("runs visibly on Linux using whichever terminal emulator the which-probe finds first", async () => {
@@ -603,7 +608,11 @@ describe("runCompanyCommandImpl", () => {
     // gnome-terminal takes `--` before the command, unlike the `-e` the rest use.
     expect(calls[0].args[0]).toBe("--")
     expect(calls[0].args[1]).toBe(path.join(dataDir, "digest.run.sh"))
-    expect(onCalls).toEqual([])
+    expect(onCalls).not.toContain("exit")
+    // Always registered, on every path: an unhandled "error" event is an
+    // uncaught exception, and here it is also the only thing that can
+    // release a lock the script will never get far enough to trap.
+    expect(onCalls).toContain("error")
   })
 
   it("stays headless on darwin when visible runs is not enabled for the company", async () => {
@@ -633,7 +642,7 @@ describe("runCompanyCommandImpl", () => {
 
     expect(calls).toHaveLength(1)
     expect(calls[0].command).toBe("claude")
-    expect(onCalls).toEqual(["exit"])
+    expect(onCalls).toEqual(["exit", "error"])
   })
 
   it("derives the visible-run script's lock path from the same runLockPath the rest of the app uses", async () => {
@@ -744,5 +753,101 @@ describe("runCompanyCommandImpl", () => {
     expect(result.started).toBe(false)
     expect(result.message).toContain("NUL byte")
     expect(calls).toHaveLength(0)
+  })
+
+  it("refuses an untrusted-input command on an executor that can't enforce a tool scope, before the lock or any prefetch", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    // If this ran, it would hit the user's real inbox — the point of refusing
+    // before the prefetch is that a doomed run costs nothing at all.
+    const prefetchCalls: unknown[] = []
+    vi.doMock("./prefetch", () => ({
+      runPrefetch: async (...args: unknown[]) => {
+        prefetchCalls.push(args)
+        return { ok: true, text: "" }
+      },
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const { checkRunLockStatus } = await import("./run-lock")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "triage-email",
+      {},
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir,
+      async () => AI_EXECUTORS.aider
+    )
+
+    expect(result.started).toBe(false)
+    expect(result.message).toContain("Aider")
+    expect(result.message).toContain("Claude Code")
+    expect(calls).toHaveLength(0)
+    expect(prefetchCalls).toHaveLength(0)
+    // No lock left behind for a run that never happened.
+    expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
+  })
+
+  it("still runs a command with no untrusted input on an executor that can't enforce a tool scope", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+
+    const calls: { command: string; args: string[]; options: unknown }[] = []
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      fakeSpawn(calls) as never,
+      undefined,
+      dataDir,
+      async () => AI_EXECUTORS.aider
+    )
+
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls[0].command).toBe("aider")
+  })
+
+  it("releases the lock and logs a note when the spawn itself fails, instead of leaving an unhandled error", async () => {
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
+    }))
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const { checkRunLockStatus } = await import("./run-lock")
+
+    // Mirrors what node really does for a missing binary: "error" fires,
+    // "exit" never does (measured on node v24 — see the type's own comment).
+    let errorListener: ((err: Error) => void) | undefined
+    const failingSpawn = (_c: string, _a: string[], _o: unknown) => ({
+      unref: () => {},
+      on: (event: string, listener: (err: Error) => void) => {
+        if (event === "error") errorListener = listener
+      },
+    })
+
+    const result = await runCompanyCommandImpl(
+      "digest",
+      { period: "" },
+      "ai-company-starter-main",
+      failingSpawn as never,
+      undefined,
+      dataDir
+    )
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(errorListener).toBeDefined()
+    expect(await checkRunLockStatus(dataDir)).toEqual({ running: true })
+
+    errorListener!(new Error("spawn claude ENOENT"))
+    await vi.waitFor(async () => {
+      expect(await checkRunLockStatus(dataDir)).toEqual({ running: false })
+    })
+
+    const log = await readFile(path.join(dataDir, "digest.log"), "utf-8")
+    expect(log).toContain("could not start")
+    expect(log).toContain("spawn claude ENOENT")
   })
 })

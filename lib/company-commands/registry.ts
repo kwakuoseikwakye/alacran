@@ -184,6 +184,8 @@ Do not move or archive older sections to a separate file even if there are more 
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/email-checks",
     bashPatterns: (accounts) => accounts.flatMap((a) => [`gog -a ${a} gmail search*`, `gog -a ${a} gmail get*`]),
+    // Reads real unread mail — from anyone, no sender allowlist.
+    untrustedInput: true,
     buildPrompt: (fields, today, prefetch, accounts) => `Run this repository's /check-inbox command as described in .claude/commands/check-inbox.md.
 
 This is a READ-ONLY inbox check via the gog CLI (an authenticated Google account). Never send, mark-as-read, label, or archive anything.
@@ -209,6 +211,8 @@ Only ever run the two gog commands above (search and get), and only with -a set 
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/notion-checks",
     prefetchKind: "check-notion",
+    // Notion page content is written by whoever has access to the workspace.
+    untrustedInput: true,
     buildPrompt: (fields, today, prefetch) => `Run this repository's /check-notion command as described in .claude/commands/check-notion.md.
 
 Today's date is ${today}. You have no Notion credentials and no Bash access for this command — everything has already been fetched for you:
@@ -232,6 +236,8 @@ Write ONE file to notes/company/notion-checks/${today}-notion-check.md (create t
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/triage",
     prefetchKind: "triage-email",
+    // The email body goes into the prompt verbatim, inside the nonced fence.
+    untrustedInput: true,
     buildPrompt: (fields, today, prefetch) => `Run this repository's /triage-email command as described in .claude/commands/triage-email.md.
 
 Today's date is ${today}. You have NO Bash access and no access to any repository other than this one. Everything you need has already been fetched for you:
@@ -279,6 +285,8 @@ Write exactly one file and stop. Do not run any commands, and do not attempt to 
     outputKind: "new-file-in-dir",
     outputPath: "notes/company/triage",
     prefetchKind: "triage-issue",
+    // The issue title/body are written by whoever filed it.
+    untrustedInput: true,
     buildPrompt: (fields, today, prefetch) => `Run this repository's /triage-issue command as described in .claude/commands/triage-issue.md.
 
 Today's date is ${today}. You have NO Bash access and no access to any repository other than this one. Everything you need has already been fetched for you:

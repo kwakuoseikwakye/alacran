@@ -14,6 +14,14 @@ export const RELEASE_PAGE_URL =
 export const DEB_ASSET_URL =
   "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb"
 
+// The macOS in-app update payload. A .zip, not the .dmg the landing page links
+// to: extracting with `ditto -x -k` avoids `hdiutil attach`/`detach` entirely,
+// and a failed detach would leave a mounted volume behind for no benefit.
+// Built by scripts/package-macos.sh — it must be uploaded alongside the .dmg
+// on every release, or this 404s for every macOS user.
+export const MAC_ASSET_URL =
+  "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.zip"
+
 const defaultFetch: FetchLike = (url, init) => fetch(url, init)
 
 /**

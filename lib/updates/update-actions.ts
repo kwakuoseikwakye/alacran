@@ -5,6 +5,7 @@ import type { UpdateStatus } from "./update-status-impl"
 import { readUpdate, writeUpdate } from "./update-store"
 import { fetchLatestReleaseImpl } from "./fetch-latest-release-impl"
 import { performLinuxUpdateImpl, type PerformUpdateResult } from "./perform-linux-update-impl"
+import { performMacUpdateImpl } from "./perform-mac-update-impl"
 import { restartAppImpl } from "./restart-app-impl"
 import { checkForUpdatesNowImpl, type ManualCheckResult } from "./check-for-updates-now-impl"
 import { APP_VERSION } from "../app-version"
@@ -54,12 +55,19 @@ export async function dismissUpdate(version: string): Promise<void> {
   })
 }
 
-/** Linux only — see perform-linux-update-impl.ts for why macOS has no equivalent. */
-export async function performLinuxUpdate(): Promise<PerformUpdateResult> {
-  if (process.platform !== "linux") {
-    return { ok: false, message: "Automatic updates are only available on Linux." }
-  }
-  return performLinuxUpdateImpl()
+/**
+ * Install the latest release in place, on whichever platform we're on.
+ *
+ * Linux downloads a .deb and installs it through a native pkexec prompt;
+ * macOS swaps the running .app bundle for a freshly downloaded one (see
+ * perform-mac-update-impl.ts — no password prompt, and no Gatekeeper problem,
+ * because a fetch-downloaded payload is never quarantined). Windows has no
+ * packaged build at all, so it keeps the download link.
+ */
+export async function performUpdate(): Promise<PerformUpdateResult> {
+  if (process.platform === "linux") return performLinuxUpdateImpl()
+  if (process.platform === "darwin") return performMacUpdateImpl()
+  return { ok: false, message: "Automatic updates aren't available on this platform." }
 }
 
 /**

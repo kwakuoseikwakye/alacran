@@ -216,4 +216,41 @@ describe("createCompanyFromTemplateImpl", () => {
       expect(result.ok).toBe(true)
     })
   })
+
+  // Every test above scaffolds from a synthetic source dir, which can't catch a
+  // manifest entry drifting away from what templates/company-starter really
+  // contains, or a shipped doc describing a file the company doesn't get. This
+  // one scaffolds from the REAL bundled template into a disposable /tmp dir.
+  describe("against the real bundled template", () => {
+    it("ships no .github, and no shipped doc claims otherwise", async () => {
+      const target = path.join(targetParentDir, "real-template-co")
+      const result = await createCompanyFromTemplateImpl(
+        "Real Template Co",
+        target,
+        path.join(process.cwd(), "templates", "company-starter"),
+        undefined,
+        registryPath,
+        fakeExecFn
+      )
+      expect(result.ok).toBe(true)
+
+      // .github/workflows needs gh's `workflow` OAuth scope just to be pushed,
+      // which breaks the company's first backup (v55/v56); the rest of .github
+      // had nothing left to ship once v37 deleted the issue templates.
+      await expect(stat(path.join(target, ".github"))).rejects.toThrow()
+
+      // The docs are copied too, so a stale reference is a doc that lies to
+      // every new company — the exact defect this pairs with.
+      const docs = [
+        "README.md",
+        "CLAUDE.md",
+        path.join("docs", "directory-map.md"),
+        path.join("docs", "starter-manual.md"),
+      ]
+      for (const doc of docs) {
+        const body = await readFile(path.join(target, doc), "utf-8")
+        expect(body, `${doc} describes a .github/ path this company doesn't have`).not.toContain(".github/")
+      }
+    })
+  })
 })

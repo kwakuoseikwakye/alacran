@@ -116,4 +116,30 @@ describe("COMPANY_COMMANDS registry", () => {
   it("getCompanyCommand returns the matching entry for a known id", () => {
     expect(getCompanyCommand("digest")?.outputPath).toBe("notes/company/digests")
   })
+
+  // untrustedInput is what stops a command running unsandboxed on an executor
+  // with no tool allowlist, so a new command that pulls in outside content and
+  // forgets the flag is a silent security regression. Every way a command can
+  // currently reach outside content is either a scoped Bash allowlist or a
+  // prefetch other than repo-status (which only reads the company's own git
+  // log and issue list) — so those must declare it.
+  it("marks every command that can reach outside content as untrustedInput", () => {
+    const reachesOutsideContent = COMPANY_COMMANDS.filter(
+      (c) => c.bashPatterns !== undefined || (c.prefetchKind !== undefined && c.prefetchKind !== "repo-status")
+    )
+    expect(reachesOutsideContent.map((c) => c.id).sort()).toEqual([
+      "check-inbox",
+      "check-notion",
+      "triage-email",
+      "triage-issue",
+    ])
+    for (const command of reachesOutsideContent) {
+      expect(command.untrustedInput, `${command.id} must declare untrustedInput`).toBe(true)
+    }
+  })
+
+  it("does not mark commands whose prompt is only user input and the company's own repo", () => {
+    const localOnly = COMPANY_COMMANDS.filter((c) => c.untrustedInput !== true).map((c) => c.id).sort()
+    expect(localOnly).toEqual(["decision", "define-company", "digest", "handoff", "retro"])
+  })
 })

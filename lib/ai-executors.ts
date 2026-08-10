@@ -65,6 +65,23 @@ export type AiExecutor = {
   binaryName: string
   installHint: string
   installLink: string
+  /**
+   * Whether this executor actually honours `editScopePattern` and
+   * `bashPatterns`, or only gets a coarse auto-approve flag instead.
+   *
+   * This is not a nuance — it decides whether a command's sandbox exists at
+   * all. Claude Code's per-path `Edit(...)` / per-command `Bash(...)`
+   * allowlist has no equivalent in Codex, Aider or Antigravity, so their
+   * `buildArgs` ignore both inputs entirely and pass `--sandbox
+   * workspace-write` / `--yes-always` / `--dangerously-skip-permissions`.
+   * That's fine for a command whose whole prompt is data the user typed.
+   * It is NOT fine for a command that splices attacker-authored text (an
+   * email body, a Notion page) into the prompt: there the allowlist is the
+   * layer that holds when the prompt doesn't. runCompanyCommandImpl refuses
+   * that combination rather than running it unscoped — see
+   * CompanyCommand.untrustedInput.
+   */
+  enforcesToolScope: boolean
   buildArgs: (input: AiExecutorBuildArgsInput) => string[]
   /** Absent means this executor has no supported way to seed an interactive
    *  session with a first message while staying open — see the file-level
@@ -81,6 +98,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     binaryName: "claude",
     installHint: "npm install -g @anthropic-ai/claude-code",
     installLink: "https://docs.claude.com/en/docs/claude-code/overview",
+    enforcesToolScope: true,
     buildArgs: ({ prompt, editScopePattern, bashPatterns }) => {
       const allowedTools =
         bashPatterns.length > 0
@@ -109,6 +127,9 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     binaryName: "codex",
     installHint: "npm install -g @openai/codex",
     installLink: "https://developers.openai.com/codex/cli",
+    // --sandbox workspace-write is workspace-wide, not the command's own
+    // outputPath, and carries no command allowlist.
+    enforcesToolScope: false,
     buildArgs: ({ prompt }) => ["exec", prompt, "--skip-git-repo-check", "--sandbox", "workspace-write"],
     buildInteractiveIntroArgs: (introPrompt) => [introPrompt],
   },
@@ -118,6 +139,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     binaryName: "aider",
     installHint: "pipx install aider-chat",
     installLink: "https://aider.chat/docs/install.html",
+    // --yes-always auto-approves everything, including /run shell commands.
+    enforcesToolScope: false,
     buildArgs: ({ prompt }) => ["--message", prompt, "--yes-always", "--no-auto-commits"],
     // No buildInteractiveIntroArgs — see file-level comment. Aider's only
     // message flag exits after one reply; there is no real flag to seed the
@@ -129,6 +152,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     binaryName: "agy",
     installHint: "curl -fsSL https://antigravity.google/cli/install.sh | bash",
     installLink: "https://antigravity.google/cli",
+    // --dangerously-skip-permissions is the opposite of an allowlist.
+    enforcesToolScope: false,
     buildArgs: ({ prompt }) => [
       "-p",
       prompt,

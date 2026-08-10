@@ -10,7 +10,17 @@ export type SpawnOptions = {
   stdio: ["ignore", number, number]
 }
 
-export type SpawnFn = (command: string, args: string[], options: SpawnOptions) => { unref: () => void }
+export type SpawnFn = (
+  command: string,
+  args: string[],
+  options: SpawnOptions
+) => {
+  unref: () => void
+  // A spawn that fails to start (bash missing, poll.sh gone) emits "error";
+  // with no listener that is an uncaught exception, not a caught one — the
+  // try/catch below cannot see it, because it fires after this call returns.
+  on: (event: "error", listener: (err: Error) => void) => void
+}
 
 const pipeline_AGENT_ID = "email-pipeline-agent"
 
@@ -43,6 +53,10 @@ export async function triggerPollImpl(
       detached: true,
       stdio: ["ignore", outFd, errFd],
     })
+    // The poll's own lock lives in the agent repo and is written by poll.sh
+    // itself, so there is nothing here to release — this listener exists
+    // purely so a failed spawn can't take the server down with it.
+    child.on("error", () => {})
     child.unref()
     return { started: true, message: "Poll started" }
   } catch (err) {

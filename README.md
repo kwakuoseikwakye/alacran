@@ -97,7 +97,10 @@ quarantine flag macOS attaches to anything downloaded from the internet.
 Right-click then **Open** is not enough on its own for an ad-hoc-signed app
 on current macOS.
 
-You only need to do this once per install, and again after each update.
+You only need to do this **once**, for this first install from the download.
+Later updates go through the app's own **Update & Restart** button, which
+downloads the new build itself — and a file the app downloads is never
+quarantined, so no `xattr` step is needed again.
 
 *A signed and notarized pipeline would be a welcome contribution. It needs
 a certificate, not code. See the [issue tracker](https://github.com/kwakuoseikwakye/alacran/issues) if you'd like to help.*
@@ -128,11 +131,12 @@ available.
   kind of prompt GNOME Software already uses), and restarts the app for
   you. If `pkexec` isn't installed, it shows you the exact
   `sudo apt install` command to run instead.
-- **macOS**: click **Download it** and repeat the install steps above
-  (including `xattr -cr`). There's no one-click updater here yet, because
-  these builds aren't notarized, and a silently installed update would just
-  get Gatekeeper-blocked on next launch, which would be worse than simply
-  asking you to download it yourself.
+- **macOS**: click **Update & Restart** in the banner. It downloads the new
+  build, swaps the installed app for it, and reopens it — no password
+  prompt, and no `xattr -cr` needed. That last part surprises people, so:
+  the quarantine flag that makes `xattr -cr` necessary is attached by your
+  *browser*, not by the file's origin. An update the app downloads itself is
+  never quarantined, so there's nothing to clear.
 
 Set `ALACRAN_NO_UPDATE_CHECK=1` if you'd rather turn the check off entirely.
 
@@ -356,8 +360,8 @@ project maintained by one person. Here are the rough edges, stated
 plainly:
 
 - **macOS builds aren't notarized.** You need to run `xattr -cr` on the
-  installed app before the first launch, and again after each update. See
-  [Install](#install).
+  installed app before the first launch. Only that first one — in-app
+  updates aren't affected. See [Install](#install).
 - **Windows isn't built.** Only macOS and Debian/Ubuntu for now.
 - **`daily-team-log` is per-machine global.** Its config lives at a single
   fixed path, so only one company can have a bootstrapped daily-log setup

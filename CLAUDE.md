@@ -218,7 +218,12 @@ actions" rule as everything else in this project:
    `package-linux.yml` and publishes `Alacran.deb` to `alacran-releases` —
    that workflow has no separate approval step of its own, so pushing the
    tag *is* the Linux publish.
-5. `gh release upload` for the macOS `.dmg`/`.zip` to `alacran-releases`.
+5. `gh release upload` for the macOS `.dmg` **and** `.zip` to
+   `alacran-releases`. Both, every time — this stopped being cosmetic in
+   v57: `.dmg` is the human download, `.zip` is what the in-app updater
+   fetches (`MAC_ASSET_URL`). A release published without `Alacran.zip`
+   makes every macOS user's "Update & Restart" 404. (Before v57 the `.zip`
+   didn't exist at all, despite this line claiming it did.)
 
 Steps 1–3 (bump, rebuild + self-test, push the commit) need no confirmation.
 Steps 4 and 5 each do, every time — approval for one doesn't carry to the
@@ -828,10 +833,56 @@ starter/.github/workflows/verify.yml` was in `TEMPLATE_MANIFEST` and got
 copied into every new company, and `gh auth login`'s default scopes
 don't include `workflow`. Fixed for new companies (manifest now only
 copies `.github/ISSUE_TEMPLATE/config.yml`, not the workflows folder —
-`/verify` already runs `scripts/verify.py` directly, no CI needed) and
-for already-affected ones (`pushSelfHealingWorkflowScope` untracks
-`.github/workflows` and retries once on this exact rejection, same shape
-as v54's self-heal).
+`/verify` already runs `scripts/verify.py` directly, no CI needed). The
+second half of that fix — a `pushSelfHealingWorkflowScope` that untracked
+`.github/workflows` at the tip and retried — was **removed in v56**: it
+could not have worked, because GitHub checks what a push *introduces*, not
+what the resulting tree contains, and the case it targeted (a pre-v55
+company's first-ever backup) pushes the whole history including the commit
+that added the file.
+
+v56 fixed three review findings and shipped no new capability. (a) Only
+Claude Code ever honoured `editScopePattern`/`bashPatterns` — Codex, Aider
+and Antigravity ignore both and pass one coarse auto-approve flag instead,
+so the four commands that splice attacker-authored text into a prompt
+(`triage-email`, `triage-issue`, `check-inbox`, `check-notion`) had no
+sandbox at all on 3 of the 4 selectable executors. New
+`AiExecutor.enforcesToolScope` + `CompanyCommand.untrustedInput` refuse that
+pairing before the lock and before any prefetch; no flag was invented to
+fake a sandbox those CLIs don't have. (b) `spawn` had no `'error'` listener
+at five sites — for a binary not on PATH node fires `'error'` and never
+`'exit'` (measured on v24.12.0), so the unhandled event killed the server
+*and* leaked the run lock, which `lib/file-lock.ts` never sweeps. (c) The
+backup fix above became `pushWithWorkflowScopeCheck`, which refuses up front
+when history contains a workflow and gh's token lacks the scope, and tells
+the user to run `gh auth refresh -s workflow` — deliberately reversing v55's
+"rather than making the user re-authenticate" call, since re-authenticating
+is the only fix short of rewriting their history. v56 also finished v55's
+template half: the three shipped docs that still described
+`.github/workflows/verify.yml` were corrected (README's Security Operations
+section had been claiming a gitleaks CI scan that no longer ships, and
+`scripts/verify.py` never scanned for committed secrets in the first place —
+it only checks that `.gitignore` effectively blocks `secrets/`/`.env`), and
+`.github` left `TEMPLATE_MANIFEST` entirely. A new test scaffolds from the
+REAL bundled template into a disposable `/tmp` dir, which is the only way
+this class of drift gets caught — every other test in that file uses a
+synthetic source directory.
+
+v57 gave macOS the "Update & Restart" button Linux already had. The reason it
+had been refused was measured and found false: `com.apple.quarantine` is
+attached by the *downloading application* (browsers opt in, `fetch` doesn't),
+so an update the app downloads itself is never quarantined and needs no
+`xattr -cr`. The one real unknown — whether macOS 13+ TCC "App Management"
+lets an **ad-hoc-signed** app (`TeamIdentifier=not set`, so outside the
+signing-identity-based self-update exemption) replace its own bundle — was
+settled with a purpose-built probe of this app's exact shape, launched by
+LaunchServices from `/Applications`: it succeeded, no prompt. `package-macos.sh`
+now also builds `Alacran.zip` (the updater's payload; `ditto -c -k` keeps the
+signature and exec bit, which `zip -r` doesn't), `resolveAppBundlePath` finds
+the running bundle from `process.cwd()` instead of hardcoding `/Applications`,
+and the swap rolls back to the original bundle if the second `rename` fails.
+**Both** `.dmg` and `.zip` must now be uploaded on every macOS release — see
+the release rule above.
 
 ## Roadmap (named, not yet designed)
 

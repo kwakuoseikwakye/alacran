@@ -149,20 +149,43 @@ describe("backupCompanyImpl", () => {
     expect(pushAttempts).toBe(2)
   })
 
-  it("self-heals a push rejected for the .github/workflows OAuth scope by untracking it and retrying", async () => {
+  // A workflow anywhere in history + a token without the scope is unpushable,
+  // full stop. These prove the app says so instead of committing on the user's
+  // behalf — the previous untrack-and-retry couldn't fix it (the offending
+  // commit stays in the pushed range) and left a junk commit trying.
+  it("refuses before pushing when history has a workflow and gh's token lacks the workflow scope", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
-    let pushAttempts = 0
     const exec = fakeExec((command, args) => {
       if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
-      if (command === "git" && args.includes("push")) {
-        pushAttempts++
-        if (pushAttempts === 1) {
-          return new Error(
-            "! [remote rejected] HEAD -> master (refusing to allow an OAuth App to create or update workflow `.github/workflows/verify.yml` without `workflow` scope)"
-          )
-        }
-        return { stdout: "" }
+      if (command === "git" && args.includes("log")) return { stdout: "deadbeef\n" }
+      if (command === "gh" && args[0] === "auth" && args[1] === "status") {
+        return { stdout: "  - Token scopes: 'gist', 'read:org', 'repo'\n" }
+      }
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.message).toContain("gh auth refresh -s workflow")
+    // Nothing attempted, nothing written: no push, no untrack, no commit.
+    expect(calls.some((c) => c.command === "git" && c.args.includes("push"))).toBe(false)
+    expect(calls.some((c) => c.command === "git" && c.args.includes("rm"))).toBe(false)
+    expect(calls.some((c) => c.command === "git" && c.args.includes("commit"))).toBe(false)
+    // Not mistaken for a missing repo — no remote removal, no second repo create.
+    expect(calls.some((c) => c.command === "git" && c.args.includes("remove"))).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
+  })
+
+  it("pushes normally when history has a workflow and the token does carry the scope", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      if (command === "git" && args.includes("log")) return { stdout: "deadbeef\n" }
+      if (command === "gh" && args[0] === "auth" && args[1] === "status") {
+        return { stdout: "  - Token scopes: 'gist', 'read:org', 'repo', 'workflow'\n" }
       }
       return { stdout: "" }
     })
@@ -170,32 +193,48 @@ describe("backupCompanyImpl", () => {
     const result = await backupCompanyImpl("acme", exec)
 
     expect(result.ok).toBe(true)
-    expect(pushAttempts).toBe(2)
-    const untrack = calls.find((c) => c.command === "git" && c.args.includes("rm"))
-    expect(untrack).toBeDefined()
-    expect(untrack!.args).toContain(".github/workflows")
-    expect(calls.some((c) => c.command === "git" && c.args.includes("commit"))).toBe(true)
-    // Not treated as a missing repo — no remote removal, no second gh repo create.
-    expect(calls.some((c) => c.command === "git" && c.args.includes("remove"))).toBe(false)
-    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
+    expect(calls.some((c) => c.command === "git" && c.args.includes("push"))).toBe(true)
   })
 
-  it("surfaces the workflow-scope error as-is if there's nothing to untrack (already removed)", async () => {
+  it("does not even read gh's scopes when no workflow appears in history", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
     const exec = fakeExec((command, args) => {
       if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
-      if (command === "git" && args.includes("push")) {
-        return new Error("refusing to allow an OAuth App to create or update workflow `.github/workflows/verify.yml`")
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(true)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "auth" && c.args[1] === "status")).toBe(false)
+  })
+
+  it("turns a push rejected for the workflow scope into the same guidance, without committing anything", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      // Pre-check sees nothing (history clean, scope present) — this is the
+      // backstop path: a second account, or a token changed mid-flight.
+      if (command === "gh" && args[0] === "auth" && args[1] === "status") {
+        return { stdout: "  - Token scopes: 'repo', 'workflow'\n" }
       }
-      if (command === "git" && args.includes("rm")) return new Error("pathspec '.github/workflows' did not match any files")
+      if (command === "git" && args.includes("push")) {
+        return new Error(
+          "! [remote rejected] HEAD -> master (refusing to allow an OAuth App to create or update workflow `.github/workflows/verify.yml` without `workflow` scope)"
+        )
+      }
       return { stdout: "" }
     })
 
     const result = await backupCompanyImpl("acme", exec)
 
     expect(result.ok).toBe(false)
-    if (!result.ok) expect(result.message).toContain("did not match any files")
+    if (!result.ok) expect(result.message).toContain("gh auth refresh -s workflow")
+    expect(calls.some((c) => c.command === "git" && c.args.includes("rm"))).toBe(false)
+    expect(calls.some((c) => c.command === "git" && c.args.includes("commit"))).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
   })
 
   it("does not recreate the repo on an unrelated push failure (network, auth) — surfaces it instead", async () => {

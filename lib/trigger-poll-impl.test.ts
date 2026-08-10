@@ -25,7 +25,7 @@ describe("triggerPollImpl", () => {
     const spawnCalls: { command: string; args: string[]; options: { cwd: string; detached: boolean } }[] = []
     const fakeSpawn = (command: string, args: string[], options: { cwd: string; detached: boolean; stdio: ["ignore", number, number] }) => {
       spawnCalls.push({ command, args, options })
-      return { unref: () => {} }
+      return { unref: () => {}, on: () => {} }
     }
 
     const result = await triggerPollImpl(fakeSpawn)
@@ -48,7 +48,7 @@ describe("triggerPollImpl", () => {
     let spawnCalled = false
     const fakeSpawn = () => {
       spawnCalled = true
-      return { unref: () => {} }
+      return { unref: () => {}, on: () => {} }
     }
 
     const result = await triggerPollImpl(fakeSpawn)
@@ -76,7 +76,7 @@ describe("triggerPollImpl", () => {
     vi.doMock("./config", () => ({ AGENTS: [] }))
     const { triggerPollImpl } = await import("./trigger-poll-impl")
 
-    const result = await triggerPollImpl(() => ({ unref: () => {} }))
+    const result = await triggerPollImpl(() => ({ unref: () => {}, on: () => {} }))
 
     expect(result).toEqual({ started: false, message: 'Agent "email-pipeline-agent" is not configured' })
   })

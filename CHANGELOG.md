@@ -2048,3 +2048,209 @@ scopes.
 live-tested end to end (would mean creating a real GitHub repo as a side
 effect, outside this project's sanctioned live-test list) — verified via
 mocked exec calls the same way v52/v54's backup fixes were.
+
+## v56: security + robustness review fixes
+
+Not a feature slice — three defects found by a whole-repo security and
+correctness review, fixed together. No new user-facing capability.
+
+**1. Permission scoping only ever existed for Claude Code.** Since v42 a
+company can be assigned any of four AI executors, but only Claude Code's
+`buildArgs` consumes `editScopePattern` and `bashPatterns` — Codex, Aider and
+Antigravity ignore both and substitute one coarse auto-approve flag
+(`--sandbox workspace-write` / `--yes-always` /
+`--dangerously-skip-permissions`). That's fine for a command whose prompt is
+only what the user typed. It is not fine for `triage-email`, `triage-issue`,
+`check-inbox` and `check-notion`, which splice attacker-authored text (an
+email body, an issue, a Notion page) straight into the prompt: the tool
+allowlist is precisely the layer that's supposed to hold when a
+prompt-injection payload gets past v32's nonced fence, and for three of the
+four executors there was no allowlist at all. The picker offered all four with
+no warning.
+
+No flag was invented to fake the missing sandbox — those CLIs genuinely have
+no per-path/per-command allowlist, so the honest fix is to refuse the pairing.
+New `AiExecutor.enforcesToolScope` (true only for `claude-code`) and
+`CompanyCommand.untrustedInput` (set on those four commands);
+`runCompanyCommandImpl` refuses the combination **before** taking the run lock
+and **before** any prefetch, so a doomed run never touches the user's real
+mailbox or issue tracker either. Everything else (`digest`, `decision`,
+`retro`, `handoff`, `define-company`) still runs on any executor, unchanged.
+Two guards against drift: `ai-executors.test.ts` derives `enforcesToolScope`
+from what `buildArgs` really emits rather than restating a list of ids, and
+`registry.test.ts` fails if a command that can reach outside content (a scoped
+Bash allowlist, or any prefetch other than `repo-status`) forgets the flag.
+
+**2. A missing executor binary crashed the whole server and permanently
+wedged the company.** `spawn` was called with no `'error'` listener at five
+sites. Measured directly on node v24.12.0: for a binary that isn't on PATH,
+`'error'` fires and `'exit'` never does — so the unhandled event is an
+uncaught exception that kills the Next.js process, *and* the `'exit'` handler
+that releases the run lock never runs. `lib/file-lock.ts` has no PID liveness,
+TTL or sweep, so the lock survived the restart and every later run for that
+company reported "Already running" until someone deleted the file by hand.
+Trivially reachable: the executor picker offers all four with no
+installed-check anywhere. Fixed at all five sites
+(`run-company-command-impl.ts` on both the headless and visible paths,
+`trigger-poll-impl.ts`, `open-interactive-terminal-impl.ts`,
+`restart-app-impl.ts`); where a lock is held the handler releases it and
+appends a plain-language note to the log the Run tab already tails. The
+visible path needs it too: if the terminal launcher never starts, the wrapper
+script's own `trap` never fires and nothing else would free the lock. Only
+`trigger-daily-team-log-impl.ts` already had it.
+
+**3. v55's workflow-scope self-heal could not have worked.** It untracked
+`.github/workflows` at the tip and retried the push — but GitHub's check is on
+what the push *introduces*, not what the final tree contains, and the case it
+was written for is a pre-v55 company's first-ever backup, where the push
+carries the whole history including the commit that added the file. The retry
+would be rejected identically, leaving the user with a junk commit and the
+original error. Three further problems came free with it: a bare `git commit`
+that could sweep up unrelated staged work (against this repo's own rule and
+`lib/git-commit-file.ts`'s pattern), a `git rm` failure that masked the real
+push error behind `fatal: pathspec ... did not match any files`, and a heal
+that wasn't durable anyway (`--cached` leaves the file on disk untracked, so
+any later `git add -A` re-adds it).
+
+All four go away by deleting the untrack-and-retry rather than patching each.
+`pushWithWorkflowScopeCheck` now refuses *before* pushing when the repo's
+history contains a workflow (`git log --all -- .github/workflows`, which still
+finds it when the tip no longer has it) and gh's token lacks the scope
+(`gh auth status`), with the one instruction that actually resolves it:
+`gh auth refresh -s workflow`. The same guidance is the backstop if a push is
+still rejected for the scope. Nothing is committed or rewritten on the user's
+behalf. This deliberately reverses v55's "rather than making the user
+re-authenticate" call — re-authenticating is the only fix short of rewriting
+their history.
+
+Both probes were verified against real output rather than mocks: `gh auth
+status` on a real machine (`Token scopes: 'gist', 'read:org', 'repo'` — no
+`workflow`, i.e. the affected case) parsed correctly by the shipped regex, and
+the history probe checked in a disposable `/tmp` repo through all three states
+— never had a workflow, has one at the tip, and had one that was later removed
+(the exact case the old tip-level fix got wrong). The end-to-end push is still
+not live-tested, since that means creating a real GitHub repo as a side
+effect — but unlike v55's fix, this one is correct regardless of whether
+GitHub evaluates the push per-commit or on the resulting tree.
+
+**4. The template's own docs described a CI file new companies don't get.**
+`README.md`, `docs/directory-map.md` and `docs/starter-manual.md` are all in
+`TEMPLATE_MANIFEST`, so they're copied into every new company — and all three
+still listed `.github/workflows/verify.yml` in their directory tours after v55
+stopped shipping it. The worst of them was README's Security Operations
+section, which claimed the template "ships a **gitleaks (free) scan** in its
+CI" as the answer for private repos without GitHub Advanced Security, plus a
+whole bullet on registering a `GITLEAKS_LICENSE` for org-owned repos. Neither
+is true: no CI ships at all, and `scripts/verify.py` only checks that
+`.gitignore` *effectively* blocks `secrets/` and `.env` — it never scans
+history for committed credentials. That section now says exactly that, and
+points at running a scanner yourself rather than implying one is already
+running. `directory-map.md`'s entry was doubly stale: it also described "the
+feedback-* templates", which v37 deleted.
+
+**5. `.github` left the manifest entirely.** v55 kept
+`.github/ISSUE_TEMPLATE/config.yml` as the one harmless survivor, but its
+whole content is `blank_issues_enabled: true` — GitHub's own default — and
+v37 had already deleted every issue template it could configure. A new company
+now gets no `.github` directory at all. `templates/company-starter/.github/`
+was deleted too: nothing copied or read it, and an uncopied file sitting in a
+template directory is a trap for whoever edits the manifest next.
+(`scripts/verify.py`'s `:(exclude).github/workflows/verify.yml` pathspec and
+its matching test stay — the test writes its own fixture, and the exclusion
+still protects a user who later adds CI of their own.)
+
+The manifest guard test broadened from "no `.github/workflows` entry" to "no
+`.github` entry", and a new test scaffolds a company from the **real** bundled
+template into a disposable `/tmp` dir and asserts both halves at once: no
+`.github` directory, and no shipped doc mentioning a `.github/` path. Every
+other test in that file uses a synthetic source dir, so none of them could
+have caught this. Confirmed to have teeth by running it against the pre-fix
+tree, where it fails.
+
+Full suite: 608 tests, `tsc`/`next build` clean. `templates/company-starter`'s
+own pytest suite is unchanged at 117 passed / 1 failed — the same pre-existing
+PATHREF-01 failure (dangling `examples/harukaze-ec/` references) recorded in
+v37, verified identical against a `git stash`'d baseline.
+
+## v57: macOS in-app updates
+
+macOS gets the "Update & Restart" button Linux has had since the update
+checker shipped. Before this, a macOS user had to open the releases page,
+download the `.dmg`, drag it to Applications, and run `xattr -cr` by hand —
+every single update.
+
+**The reason this was previously refused turned out to be false.**
+`perform-linux-update-impl.ts` documented macOS as impossible: ad-hoc signed,
+unnotarized builds are Gatekeeper-quarantined, so an auto-installed update
+"would silently produce a build that looks updated but refuses to launch."
+Measured on macOS 26.2 rather than reasoned about: `com.apple.quarantine` is
+attached by the **downloading application** — browsers opt in via
+`LSFileQuarantineEnabled`, `curl` and Node's `fetch` do not. The real
+published `Alacran.dmg`, fetched with Node and mounted, carried only
+`com.apple.provenance` on every file including the `.app` inside — **zero
+quarantine attributes**. The blocker is real for a Safari download and absent
+on the path this slice builds. `xattr -cr` is still run on the staged bundle,
+now as insurance rather than a prerequisite.
+
+**The second unknown was real and had to be probed.** macOS 13+ TCC "App
+Management" gates one app modifying another's bundle, and its self-update
+exemption is defined in terms of signing identity — which an ad-hoc build
+(`TeamIdentifier=not set`) hasn't got, so whether this app may replace itself
+was genuinely unanswerable from docs. Probed with a purpose-built bundle of
+this app's exact shape (ad-hoc signed, installed in `/Applications`, started
+by LaunchServices, bash launcher running `node` from inside its own bundle):
+the self-replace **succeeded, no prompt, no EPERM**. A shell-run version of
+the same test also passed but wasn't trusted — a shell can hold TCC rights an
+app doesn't.
+
+**What shipped:**
+
+- `scripts/package-macos.sh` now also builds `dist/Alacran.zip`
+  (`ditto -c -k --sequesterRsrc --keepParent`). Chosen over reusing the
+  `.dmg` because it drops `hdiutil attach`/`detach` entirely — a failed
+  detach leaves a mounted volume behind for no benefit — and because `ditto`
+  round-trips the bundle with `codesign --verify --deep` still passing and
+  the launcher's exec bit intact, which `zip -r` does not guarantee. It's
+  also 19 MB against the `.dmg`'s 30 MB. The `.dmg` stays: it's the human
+  install gesture.
+- `lib/updates/resolve-app-bundle.ts` finds the running bundle from
+  `process.cwd()` (the launcher cd's to `<bundle>/Contents/Resources/app`),
+  never a hardcoded `/Applications` — a copy on an external disk or a second
+  test install updates *itself*. Returns null outside a `.app`, which is what
+  keeps the updater away from a developer's working tree.
+- `lib/updates/perform-mac-update-impl.ts` downloads the zip, extracts to a
+  staging dir **on the same volume as the install** (`rename()` can't cross
+  volumes, and staging beside the bundle keeps that true on an external
+  disk), sanity-checks the payload before touching anything live, then swaps
+  with rollback: move the live bundle aside, move the new one in, and if that
+  second step fails move the original straight back. Replacing a running
+  bundle is safe — the live process holds the old inodes open. Failing to
+  delete the old copy afterwards is treated as litter, not a failed update.
+- `restartAppImpl` gained a darwin branch: `open -a <resolved bundle>`, so
+  LaunchServices starts it the way a double-click would.
+- `performLinuxUpdate` became `performUpdate`, dispatching on platform, so
+  the banner and the Settings card each keep one code path. `canAutoUpdate`
+  now covers darwin.
+
+**Verified live, against the real installed app.** `/Applications/Alacrán.app`
+(v0.7.24, installed from the published DMG) was swapped by the real
+`performMacUpdateImpl` — real `ditto`, real `xattr`, real `rename`, only the
+network stubbed to serve a locally built zip — and came out at **0.8.0** with
+`codesign --verify --deep` passing, the launcher executable, and no
+quarantine attribute. Then launched it and confirmed the swapped bundle
+serves HTTP 200 reporting 0.8.0, with the listening process's cwd traced to
+`/Applications/Alacrán.app/Contents/Resources/app` and its parent to that
+bundle's own launcher — checked specifically because a `next dev` server on
+the same machine would have reported the same version number and looked
+identical.
+
+**Sequencing, which is easy to get wrong:** the updater fetches the *latest*
+release's `Alacran.zip`. v0.8.0's release must include that asset or every
+macOS update attempt 404s. Anyone on ≤ v0.7.24 has no macOS updater at all,
+so they take one last manual update to v0.8.0; auto-update works from there.
+
+Still out of scope: signing and notarization. A first install downloaded in a
+browser still shows the Gatekeeper warning and still needs one `xattr -cr`.
+This slice only removes the manual steps for people who already have the app.
+
+15 new tests; full suite: 622 tests, `tsc`/`next build` clean.

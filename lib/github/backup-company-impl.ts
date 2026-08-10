@@ -87,33 +87,85 @@ async function ensurePushableRemote(execFn: ExecFileFn, root: string, remoteUrl:
 const WORKFLOW_SCOPE_PATTERN = /workflow.*scope|refusing to allow an oauth app/i
 
 /**
- * Real user report: repo created fine, but the push right after it failed
- * with "refusing to allow an OAuth App to create or update workflow
- * `.github/workflows/verify.yml` without `workflow` scope." This app's own
- * company-starter template used to ship exactly such a file (fixed in
- * v55's manifest — see CHANGELOG.md) — every company created before that
- * fix already has it committed, so their push keeps failing regardless.
- * Rather than making the user re-authenticate `gh` with a wider scope just
- * to unblock a backup, untrack it: it's a CI wrapper with no value in a
- * solo, unreviewed repo (`scripts/verify.py` / `/verify` already run it
- * directly, no CI needed) and retry once. A push that fails for any other
- * reason still surfaces as-is.
+ * What the user has to do, in the only terms that actually resolve this.
+ *
+ * An earlier version of this file tried to self-heal instead, by untracking
+ * `.github/workflows` at the tip and retrying the push. That cannot work on
+ * the case it was written for. The failure's home turf is a company's
+ * FIRST-ever backup, where the push carries the entire history — including
+ * the commit that added the workflow file. GitHub's check is on what the
+ * push introduces, not on what the final tree happens to contain, so a new
+ * tip commit deleting the file leaves the offending commit right where it
+ * was: the retry gets rejected identically, and the user is left with a junk
+ * commit AND the original error. (It also can't help a later push: if a new
+ * commit touches a workflow, that commit is still in the range.)
+ *
+ * Widening the token is the only fix that doesn't involve rewriting the
+ * user's history, so this asks for it plainly instead of guessing.
  */
-async function pushSelfHealingWorkflowScope(execFn: ExecFileFn, root: string): Promise<void> {
+const WORKFLOW_SCOPE_HELP =
+  "This company's git history includes a GitHub Actions workflow (a file under .github/workflows/), and " +
+  "GitHub refuses any push containing one unless the GitHub CLI's sign-in includes the “workflow” permission — " +
+  "which `gh auth login` doesn't ask for by default.\n\n" +
+  "Run this once in a terminal, then click Back up again:\n\n" +
+  "    gh auth refresh -s workflow"
+
+/** Whether gh's own token carries the `workflow` scope. */
+async function hasWorkflowScope(execFn: ExecFileFn): Promise<boolean> {
+  let text: string
+  try {
+    // gh prints this block to stdout on current versions and to stderr on
+    // older ones; read both rather than depending on which.
+    const { stdout, stderr } = await execFn("gh", ["auth", "status"])
+    text = `${stdout}\n${stderr}`
+  } catch {
+    // Can't read the scopes — don't invent a blocking error out of it. The
+    // push itself is still gated by the real check on GitHub's side, and
+    // WORKFLOW_SCOPE_PATTERN below turns that into the same guidance.
+    return true
+  }
+  const scopes = /token scopes:(.*)/i.exec(text)
+  return scopes !== null && /'workflow'/i.test(scopes[1])
+}
+
+/** Whether anything under .github/workflows/ appears anywhere in this repo's
+ *  history — not just at the tip, because the push carries the commits. */
+async function historyContainsWorkflows(execFn: ExecFileFn, root: string): Promise<boolean> {
+  try {
+    const { stdout } = await execFn("git", [
+      "-C",
+      root,
+      "log",
+      "--all",
+      "--max-count=1",
+      "--format=%H",
+      "--",
+      ".github/workflows",
+    ])
+    return stdout.trim() !== ""
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Push, but refuse up front when the token provably can't carry this repo's
+ * history, so the user gets the one instruction that fixes it instead of
+ * git's raw rejection — and nothing is committed or rewritten on their behalf.
+ */
+async function pushWithWorkflowScopeCheck(execFn: ExecFileFn, root: string): Promise<void> {
+  if ((await historyContainsWorkflows(execFn, root)) && !(await hasWorkflowScope(execFn))) {
+    throw new Error(WORKFLOW_SCOPE_HELP)
+  }
   try {
     await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
-    if (!WORKFLOW_SCOPE_PATTERN.test(message)) throw error
-    await execFn("git", ["-C", root, "rm", "-r", "--cached", ".github/workflows"])
-    await execFn("git", [
-      "-C",
-      root,
-      "commit",
-      "-m",
-      "Remove .github/workflows — needs gh's workflow OAuth scope to push, and isn't needed (scripts/verify.py runs it directly)",
-    ])
-    await execFn("git", ["-C", root, "push", "-u", "origin", "HEAD"])
+    // Backstop for whatever the pre-check couldn't see (a second gh account,
+    // a token changed mid-flight, an enterprise host): same guidance, still
+    // no junk commit.
+    if (WORKFLOW_SCOPE_PATTERN.test(message)) throw new Error(WORKFLOW_SCOPE_HELP)
+    throw error
   }
 }
 
@@ -145,7 +197,7 @@ export async function backupCompanyImpl(
   if (existing.remoteUrl) {
     try {
       await ensurePushableRemote(execFn, root, existing.remoteUrl)
-      await pushSelfHealingWorkflowScope(execFn, root)
+      await pushWithWorkflowScopeCheck(execFn, root)
       const after = await getCompanyRemoteImpl(agentId, execFn)
       return { ok: true, remoteUrl: after.ok ? after.remoteUrl : existing.remoteUrl }
     } catch (error) {
@@ -164,7 +216,7 @@ export async function backupCompanyImpl(
 
     const created = await getCompanyRemoteImpl(agentId, execFn)
     await ensurePushableRemote(execFn, root, created.ok ? created.remoteUrl : null)
-    await pushSelfHealingWorkflowScope(execFn, root)
+    await pushWithWorkflowScopeCheck(execFn, root)
 
     const after = await getCompanyRemoteImpl(agentId, execFn)
     return { ok: true, remoteUrl: after.ok ? after.remoteUrl : null }

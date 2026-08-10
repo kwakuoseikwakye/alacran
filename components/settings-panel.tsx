@@ -8,7 +8,7 @@ import { BrandIcon } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GUIDE_SEEN_KEY } from "@/components/company-guide"
-import { checkForUpdatesNow, performLinuxUpdate, restartApp } from "@/lib/updates/update-actions"
+import { checkForUpdatesNow, performUpdate, restartApp } from "@/lib/updates/update-actions"
 import { waitForServerThenReload } from "@/lib/updates/wait-for-server-then-reload"
 import { RELEASE_PAGE_URL } from "@/lib/updates/fetch-latest-release-impl"
 import type { ManualCheckResult } from "@/lib/updates/check-for-updates-now-impl"
@@ -39,7 +39,7 @@ function UpdatesCard({ currentVersion, canAutoUpdate }: { currentVersion: string
   async function updateAndRestart() {
     setUpdatePhase("updating")
     setUpdateError(null)
-    const outcome = await performLinuxUpdate()
+    const outcome = await performUpdate()
     if (!outcome.ok) {
       setUpdatePhase("error")
       setUpdateError({ message: outcome.message, manualCommand: outcome.manualCommand })
