@@ -1,8 +1,8 @@
 "use server"
 
-import { openInteractiveTerminalImpl, type OpenTerminalResult } from "./open-interactive-terminal-impl"
-import { HELP_INTRO_PROMPT } from "./help-intro-prompt"
+import { openInteractiveTerminalWithHelpImpl } from "./open-interactive-terminal-with-help-impl"
+import type { OpenTerminalResult } from "./open-interactive-terminal-impl"
 
 export async function openInteractiveTerminalWithHelp(agentId: string): Promise<OpenTerminalResult> {
-  return openInteractiveTerminalImpl(agentId, undefined, undefined, undefined, undefined, undefined, undefined, HELP_INTRO_PROMPT)
+  return openInteractiveTerminalWithHelpImpl(agentId)
 }

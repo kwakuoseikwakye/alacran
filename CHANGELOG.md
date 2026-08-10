@@ -1659,3 +1659,55 @@ prompt string, safely quoted) for each executor and the aider fallback
 path, and a live screenshot confirmed the button renders — gated
 correctly, right label, right position — without ever clicking it. Full
 suite: 569 tests, `tsc`/`next build` clean.
+
+## v47 (2026-08-10): "Get Started" stops re-reading everything it already knows
+
+Direct follow-up to v46, from the user watching it work: every click re-read
+every skill file and the ontology from scratch to re-derive the same
+introduction it gave last time, even when nothing had changed — real,
+wasted tokens on every repeat click.
+
+Fixed with a cache the app decides is stale **without any AI call**, not by
+asking the agent to judge freshness itself (asking it to "check if this
+looks current" still costs tokens re-deriving the answer on every click,
+defeating the point). `lib/company-summary.ts`: a plain `git log -1
+--format=%H -- <watched paths>` comparison against a `source_commit:`
+field stored in a new file, `docs/company-summary.md`'s own frontmatter —
+watched paths are `.claude/skills`, `.claude/commands`, and
+`definitions/ontology/company.yaml`, the same three things the seeded
+intro already asks the agent to read. Match → the seeded prompt just says
+"read `docs/company-summary.md` and introduce yourself, don't re-read the
+underlying files." Mismatch, or no summary yet, or git can't answer at
+all (no repo, no commits touching those paths yet — treated as "can't
+prove this is fresh," not as fresh) → the original full read-everything
+prompt, with one addition: write `docs/company-summary.md` back with
+today's date and the real current commit SHA, preserving its existing
+`created:` date on update rather than resetting it (same "if it exists,
+update in place" shape as `HANDOFF.md`'s own command). Portable core, not
+a `.claude/*` executor artifact, alongside `docs/decisions/` and
+`HANDOFF.md` — matches this project's own stated principle that `.claude/*`
+is one adapter on top of the real data, not the data itself.
+
+Lazy, not a watcher: the check only happens the next time someone clicks
+Get Started, matching every other piece of automation in this app — no
+daemon, nothing runs unless a button is clicked.
+
+`openInteractiveTerminalWithHelp` is now a real impl (`open-interactive-
+terminal-with-help-impl.ts`, previously just a hardcoded-constant pass-
+through) that looks up the agent a second time before calling the
+existing `openInteractiveTerminalImpl` — needed because the freshness
+check requires `agent.rootPath` before that call can even happen. A small,
+deliberate duplication rather than reshaping the already-tested inner
+function's contract. `lib/help-intro-prompt.ts` (v46's single fixed
+prompt) is retired; both prompt variants now live in `company-summary.ts`
+next to the logic that picks between them.
+
+Verified three ways: unit tests with mocked git/fs for both the freshness
+module and its new caller (11 new tests); a real, disposable `/tmp` git
+repo (this project's own sanctioned live-test pattern) exercising the
+actual module against real `git log` and real file writes through all
+three transitions — no summary → stale with the real SHA embedded; a
+matching summary written → fresh; a new commit → stale again with the new
+SHA — deleted after; and, same discipline as v46, no real AI spawn
+triggered (a seeded prompt still fires a real, costed reply the instant
+the process starts). Full suite: 580 tests, `tsc`/`next build` clean.

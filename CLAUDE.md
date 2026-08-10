@@ -697,6 +697,25 @@ pass. Verified instead down to the exact spawned argv (8 new unit tests)
 and confirmed the button renders correctly gated without ever clicking
 it.
 
+v47, a direct follow-up from watching v46 in use: Get Started was
+re-reading every skill file and the ontology from scratch on every click,
+even when nothing changed. Fixed with a cache the app decides is stale
+without any AI call (asking the agent to judge freshness itself still
+costs tokens every click) — `lib/company-summary.ts` compares a plain
+`git log -1` against the watched paths (`.claude/skills`,
+`.claude/commands`, `definitions/ontology/company.yaml`) to a
+`source_commit:` field stored in a new file, `docs/company-summary.md`'s
+own frontmatter. Match → seeded prompt just says "read the summary."
+Mismatch, missing, or git can't answer at all → the full read-everything
+prompt, now also writing the summary back with today's date and the real
+commit SHA (preserving its existing `created:` date on update, same shape
+as `HANDOFF.md`'s command). Lazy, not a watcher — checked only on the next
+click, no daemon, matching everything else in this app. Portable core
+(`docs/`), not a `.claude/*` executor artifact. Verified with mocked-git
+unit tests plus a real disposable `/tmp` git repo exercising all three
+transitions against real `git log` and real file writes, deleted after —
+still no real AI spawn triggered, same discipline as v46.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
