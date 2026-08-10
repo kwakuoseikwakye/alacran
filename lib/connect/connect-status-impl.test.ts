@@ -116,7 +116,7 @@ describe("getConnectStatusImpl", () => {
     const status = await getConnectStatusImpl(exec, "linux", noAgents)
 
     expect(status.google.guidance.command).toBeUndefined()
-    expect(status.google.guidance.link).toBe("https://github.com/gogcli/gog")
+    expect(status.google.guidance.link).toBe("https://gogcli.sh")
     expect(status.github.guidance.command).toBeUndefined()
     expect(status.github.guidance.link).toBe("https://cli.github.com")
   })

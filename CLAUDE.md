@@ -716,6 +716,14 @@ unit tests plus a real disposable `/tmp` git repo exercising all three
 transitions against real `git log` and real file writes, deleted after —
 still no real AI spawn triggered, same discipline as v46.
 
+v48 fixed the `gog` install link 404ing on the Connect page and in
+README — the project moved (real tap is `openclaw/tap`, confirmed via
+`brew info gogcli` on this machine) and has since landed in
+`homebrew-core` itself with its own canonical site, `https://gogcli.sh`
+(verified live). Links and the install command
+(`brew install gogcli`, no tap needed anymore) now point there in both
+`lib/connect/connect-status-impl.ts` and `README.md`.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

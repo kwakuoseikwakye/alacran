@@ -1711,3 +1711,25 @@ matching summary written → fresh; a new commit → stale again with the new
 SHA — deleted after; and, same discipline as v46, no real AI spawn
 triggered (a seeded prompt still fires a real, costed reply the instant
 the process starts). Full suite: 580 tests, `tsc`/`next build` clean.
+
+## v48 (2026-08-10): the `gog` install link 404'd — real cause, real fix
+
+User report. `https://github.com/gogcli/gog` (the Connect page's Google
+guidance link, `lib/connect/connect-status-impl.ts`, and README's own
+prerequisites table) 404s — confirmed directly (`curl -sI`), not just
+taken on the report. Root cause, found by checking how `gog` is actually
+installed on a real machine rather than guessing a fixed URL: the project
+moved. `brew info gogcli` on this machine shows it was installed from
+`openclaw/tap` (`https://github.com/openclaw/homebrew-tap`, homepage
+`https://github.com/openclaw/gogcli`) — and, further, `gogcli` has since
+been accepted into `homebrew-core` itself (`brew info homebrew/core/
+gogcli`), with its own canonical site, `https://gogcli.sh` (verified live,
+200). That homepage is what the app now links to and what README points
+at — more official than either GitHub URL, and it simplifies the install
+command too: `brew install gogcli`, no tap needed anymore, replacing the
+stale `brew install gogcli/tap/gog` (which was never a valid tap path in
+the first place — `gogcli/tap` was never real; the actual tap was always
+`openclaw/tap`). Same fix in both places that had the stale link:
+`lib/connect/connect-status-impl.ts` (and its test's exact-match
+assertion) and `README.md`'s prerequisites table. Full suite: 580 tests,
+`tsc`/`next build` clean.

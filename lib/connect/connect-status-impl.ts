@@ -98,8 +98,8 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
     // just point at the repo instead of guessing a command that won't run.
     return notConnected(
       "The gog (Google CLI) is not installed.",
-      platform === "darwin" ? "brew install gogcli/tap/gog" : undefined,
-      "https://github.com/gogcli/gog"
+      platform === "darwin" ? "brew install gogcli" : undefined,
+      "https://gogcli.sh"
     )
   }
 

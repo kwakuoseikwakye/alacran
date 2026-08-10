@@ -152,7 +152,7 @@ never stores an API key and never proxies a request to a model provider.
 
 **Optional**
 
-- **[`gog`](https://github.com/gogcli/gog)** (`brew install gogcli/tap/gog`) -
+- **[`gog`](https://gogcli.sh)** (`brew install gogcli`) -
   a Google API CLI, needed only for the `check-inbox` command (read-only Gmail
   summaries). Alacrán detects it and guides you if it's missing.
 - **[GitHub CLI](https://cli.github.com/) (`gh`)** - needed only for the
