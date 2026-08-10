@@ -736,6 +736,19 @@ pre-click frame while the accessibility snapshot and a direct
 (`Edit` active, a real `<textarea>` present). Trusted the DOM query over
 the screenshot.
 
+v50 let users drag-and-drop reorder the Agents-page cards. Two decisions
+checked with the user first (both took the simpler, recommended path):
+all cards reorder together — the 3 gated built-ins mixed in with
+registered companies, not pinned separately — and the order persists to
+`localStorage` (same per-browser mechanism as v39's guide-seen flag)
+rather than `companies.json`, which also sidesteps built-ins not being
+registry entries. New `components/reorderable-grid.tsx` wraps
+`.bento-grid` in a client component using native HTML5 drag-and-drop (no
+library) and reconciles the saved id order against the live agent list on
+mount, so a stale, missing, or empty saved order never drops a card.
+Live-verified: dragged a card, watched it reorder, confirmed the new
+order survived a reload.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

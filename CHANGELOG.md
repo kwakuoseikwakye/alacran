@@ -1763,3 +1763,33 @@ real browser: the `Edit` button carries the active class and a real
 screenshot tool's stale paint was the artifact, not the app. Full suite:
 580 tests (unchanged — this is a pure UI change), `tsc`/`next build`
 clean.
+
+## v50 (2026-08-10): drag-and-drop reorderable agent cards
+
+User request: let users rearrange the Agents-page cards by hand. Two
+decisions checked with the user before building — both took the
+recommended, simpler option: all cards are reorderable together (the 3
+gated built-ins mixed in with registered companies, not pinned separately),
+and the saved order lives in `localStorage` (per-browser, same mechanism
+v39's company-guide flag already uses), not written to `companies.json` —
+no server change, and it naturally covers the built-ins too since they
+aren't registry entries.
+
+New `components/reorderable-grid.tsx` — a client component wrapping the
+`.bento-grid` — replaces the bare array map in `app/page.tsx`. Each card
+becomes a plain `draggable` `div` using the native HTML5 drag-and-drop
+API (no library); dropping one onto another moves it in a local `order`
+array and writes the new id order to `localStorage`
+(`alacran-card-order`). On mount, a `useEffect` reconciles that saved
+order against the current agent list — known ids sort first in their
+saved positions, any id missing from the saved list (a newly registered
+company) falls in afterward in its original position — so a stale or
+empty saved order never drops a card. Server-rendered order (registration
+order) is the first paint; the saved order applies once the effect runs
+client-side, same one-render-later tradeoff v39's flag already accepted.
+
+Live-verified on a throwaway dev server: dragged the third card in front
+of the first, watched the DOM reorder immediately, confirmed the new
+order landed in `localStorage`, and confirmed it survived a full reload.
+Full suite: 580 tests (no server-side logic changed), `tsc`/`next build`
+clean.
