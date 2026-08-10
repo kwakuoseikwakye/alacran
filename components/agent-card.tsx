@@ -18,6 +18,8 @@ import { AiExecutorPicker } from "@/components/ai-executor-picker"
 import { GoogleAccountsPicker } from "@/components/google-accounts-picker"
 import { OpenTerminalButton } from "@/components/open-terminal-button"
 import { GetStartedButton } from "@/components/get-started-button"
+import { McpServersSheet } from "@/components/mcp-servers-sheet"
+import type { McpServer } from "@/lib/mcp-servers-config"
 import { CompanyGuide } from "@/components/company-guide"
 import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
@@ -44,9 +46,11 @@ type AgentCardProps = {
   showGetStartedButton?: boolean
   showAiExecutorPicker?: boolean
   showGoogleAccountsPicker?: boolean
+  showMcpButton?: boolean
   showCompanyGuide?: boolean
   hasOntology?: boolean
   aiExecutorId?: string
+  mcpServers?: McpServer[]
   googleAccounts?: string[]
   availableGoogleAccounts?: string[]
   /** Position in the grid, which drives the staggered entrance animation. */
@@ -83,9 +87,11 @@ export function AgentCard({
   showGetStartedButton,
   showAiExecutorPicker,
   showGoogleAccountsPicker,
+  showMcpButton,
   showCompanyGuide,
   hasOntology,
   aiExecutorId,
+  mcpServers,
   googleAccounts,
   availableGoogleAccounts,
   index = 0,
@@ -120,6 +126,7 @@ export function AgentCard({
                 showOwnershipButton={showOwnershipButton}
                 showAiExecutorPicker={showAiExecutorPicker}
                 showGoogleAccountsPicker={showGoogleAccountsPicker}
+                showMcpButton={showMcpButton}
                 removable={removable}
               />
             )}
@@ -184,6 +191,9 @@ export function AgentCard({
           )}
           {showGetStartedButton && <GetStartedButton agentId={agent.id} />}
           {showOpenTerminalButton && <OpenTerminalButton agentId={agent.id} />}
+          {showMcpButton && (
+            <McpServersSheet agentId={agent.id} companyName={agent.name} currentServers={mcpServers ?? []} />
+          )}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}
           {showAiExecutorPicker && (

@@ -17,6 +17,7 @@ import { OnboardingWelcome } from "@/components/onboarding-welcome"
 import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
 import { listGoogleAccountEmails } from "@/lib/google-accounts"
 import { readGoogleAccounts } from "@/lib/google-accounts-config"
+import { readMcpServers } from "@/lib/mcp-servers-config"
 
 export const dynamic = "force-dynamic"
 
@@ -93,6 +94,12 @@ export default async function AgentTreePage() {
                 !(await dailyTeamLogInstalled(result.agent.rootPath))
               const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
               const googleAccounts = isCommandSet ? await readGoogleAccounts(result.agent.rootPath) : undefined
+              // Claude Code is the only executor with per-project MCP config:
+              // `codex mcp add` has no scope flag (machine-global
+              // ~/.codex/config.toml only) and neither Aider nor Antigravity CLI
+              // has MCP at all.
+              const showMcpButton = isCommandSet && aiExecutorId === "claude-code"
+              const mcpServers = showMcpButton ? await readMcpServers(result.agent.rootPath) : undefined
               return {
                 id: result.agent.id,
                 node: (
@@ -118,9 +125,11 @@ export default async function AgentTreePage() {
                     showGetStartedButton={showVisibleRunOption}
                     showAiExecutorPicker={isCommandSet}
                     showGoogleAccountsPicker={isCommandSet}
+                    showMcpButton={showMcpButton}
                     showCompanyGuide={isCommandSet}
                     hasOntology={hasOntology}
                     aiExecutorId={aiExecutorId}
+                    mcpServers={mcpServers}
                     googleAccounts={googleAccounts}
                     availableGoogleAccounts={availableGoogleAccounts}
                     index={index}

@@ -1,5 +1,6 @@
 import { OPEN_TERMINAL_BLURB } from "@/components/open-terminal-button"
 import { GET_STARTED_BLURB } from "@/components/get-started-button"
+import { MCP_BLURB } from "@/components/mcp-servers-sheet"
 import { COMPANY_SETUP_BLURB } from "@/components/company-setup-wizard"
 import { BACKUP_BLURB } from "@/components/backup-company-button"
 import { OWNERSHIP_BLURB } from "@/components/company-ownership-sheet"
@@ -22,6 +23,7 @@ export type CompanyGuideFlags = {
   showOwnershipButton?: boolean
   showAiExecutorPicker?: boolean
   showGoogleAccountsPicker?: boolean
+  showMcpButton?: boolean
   removable?: boolean
 }
 
@@ -41,6 +43,7 @@ export function buildGuideSteps(flags: CompanyGuideFlags): GuideStep[] {
     },
     { show: flags.showGetStartedButton, label: "Get Started", blurb: GET_STARTED_BLURB },
     { show: flags.showOpenTerminalButton, label: "Open in Terminal", blurb: OPEN_TERMINAL_BLURB },
+    { show: flags.showMcpButton, label: "Connect tools", blurb: MCP_BLURB },
     { show: true, label: "Skills", blurb: SKILLS_POINTER_BLURB },
     { show: flags.showBackupButton, label: "Back up to GitHub", blurb: BACKUP_BLURB },
     { show: flags.showOwnershipButton, label: "View ownership", blurb: OWNERSHIP_BLURB },
