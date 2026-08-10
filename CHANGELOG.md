@@ -2479,3 +2479,37 @@ the company's directory, and that is precisely what Open in Terminal already
 does — so a "Sign in" button could only open a terminal and repeat the
 instruction the Sheet already gives. It is not deferred; it is not worth
 building.
+
+## v61.1 (2026-08-11): approval isn't missable
+
+Copy-only follow-up to v61, from a real gap in its own shipped wording. The
+Sheet's first sentence said these tools "are available in Open in Terminal and
+Get Started sessions" — true only *after* the server is approved, which the
+section below the form explained but which a user reading only the top would
+miss. That mattered more than usual because approval turned out to have no
+bypass at all (see v61's follow-up: `mcp login` refuses a pending server,
+`enableAllProjectMcpServers` doesn't clear it), so a missed approval is a tool
+that silently never works.
+
+Three changes, no logic:
+
+- The blurb (shared with v39's company guide) now says adding a tool is "step
+  one of two" and that it doesn't work until approved and signed in.
+- Adding a tool raises a warning-toned banner naming that tool — "Added
+  <name> — one more step before it works" — stated at the moment the user
+  acts rather than only in a paragraph further down.
+- The instruction section became "Making a tool actually work" with two
+  numbered steps, the first flagged as "the step people miss."
+
+One thing the live pass caught: a bare "Saved" was still rendering under the
+Add button beside the new banner, which reads as *finished* — the exact wrong
+impression. It's suppressed while the banner is up.
+
+Also re-confirmed a documented trap rather than chasing it: a React Client
+Manifest 500 appeared mid-edit and was dev-server cache corruption from rapid
+edits (v51 documented this same symptom), gone after a clean restart with
+`.next` removed.
+
+Verified on a disposable `/tmp` company and disposable `ALACRAN_DATA_DIR`: all
+six copy assertions pass against the real DOM. 647 tests, `tsc` and
+`next build` clean.

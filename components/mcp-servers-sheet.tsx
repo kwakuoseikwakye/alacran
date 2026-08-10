@@ -12,7 +12,7 @@ import { MCP_PRESETS } from "@/lib/mcp-presets"
 import type { McpServer } from "@/lib/mcp-servers-config"
 
 export const MCP_BLURB =
-  "Connect tools like Canva, Figma or Lovable so this company's AI can use them directly, without installing anything. You sign in once in your browser — no keys are kept here."
+  "Connect tools like Canva, Figma or Lovable so this company's AI can use them directly, without installing anything. Adding one here is step one of two: it doesn't work until you approve it and sign in, which takes about a minute in Open in Terminal. No keys are kept here."
 
 /**
  * Manages the company's own .mcp.json — Claude Code's project-scope MCP
@@ -37,12 +37,14 @@ export function McpServersSheet({
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [failed, setFailed] = useState(false)
+  const [justAdded, setJustAdded] = useState<string | null>(null)
 
   async function save(next: McpServer[]): Promise<boolean> {
     const previous = servers
     setServers(next)
     setPending(true)
     setMessage(null)
+    setJustAdded(null)
     const result = await saveMcpServers(agentId, next)
     setPending(false)
     setMessage(result.message)
@@ -55,9 +57,14 @@ export function McpServersSheet({
   }
 
   async function add() {
-    if (await save([...servers, { name: name.trim(), url: url.trim() }])) {
+    const added = name.trim()
+    if (await save([...servers, { name: added, url: url.trim() }])) {
       setName("")
       setUrl("")
+      // Overrides save()'s plain "Saved". The approval step is the one users
+      // miss, so it's stated at the moment they act rather than only in the
+      // section below the form.
+      setJustAdded(added)
     }
   }
 
@@ -75,8 +82,22 @@ export function McpServersSheet({
             <SheetDescription>{MCP_BLURB}</SheetDescription>
           </SheetHeader>
           <div className="space-y-4 overflow-y-auto px-4 pb-4 text-sm">
+            {/* The approval step is the one users miss, so it is stated here —
+                the moment after they act — and not only in the section below
+                the form. */}
+            {justAdded && (
+              <div className="border-warning/40 bg-warning/10 space-y-1 rounded-md border px-3 py-2">
+                <p className="font-medium">
+                  Added {justAdded} — one more step before it works
+                </p>
+                <p className="text-muted-foreground text-xs">
+                  Click <strong>Open in Terminal</strong> on this card, approve {justAdded} when Claude Code asks, then
+                  type <code className="font-mono">/mcp</code> to sign in. Until then the AI can&apos;t use it.
+                </p>
+              </div>
+            )}
             <section className="space-y-1.5">
-              <h3 className="font-medium">Connected tools</h3>
+              <h3 className="font-medium">Added tools</h3>
               {servers.length === 0 ? (
                 <p className="text-muted-foreground text-xs">None yet — pick one below.</p>
               ) : (
@@ -143,15 +164,29 @@ export function McpServersSheet({
               </div>
             </section>
 
-            {message && <p className={failed ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>{message}</p>}
+            {/* Suppressed while the just-added banner is up: a bare "Saved"
+                next to it reads as "finished", which is the exact wrong
+                impression — the tool doesn't work until it's approved. */}
+            {message && !justAdded && (
+              <p className={failed ? "text-destructive text-xs" : "text-muted-foreground text-xs"}>{message}</p>
+            )}
 
             <section className="space-y-1.5">
-              <h3 className="font-medium">Signing in</h3>
+              <h3 className="font-medium">Making a tool actually work</h3>
               <p className="text-muted-foreground text-xs">
-                Click <strong>Open in Terminal</strong> on this company&apos;s card. Claude Code will ask you to approve
-                the tool the first time — say yes, then type <code className="font-mono">/mcp</code> and pick the tool
-                to sign in with your browser. You only do this once per tool.
+                Adding a tool above only writes it down. Every tool needs these two steps once, or the AI can&apos;t use
+                it:
               </p>
+              <ol className="text-muted-foreground list-decimal space-y-1 pl-4 text-xs">
+                <li>
+                  Click <strong>Open in Terminal</strong> on this card. Claude Code asks whether you trust the tool the
+                  first time — say yes. This is the step people miss.
+                </li>
+                <li>
+                  In that same window, type <code className="font-mono">/mcp</code>, pick the tool, and sign in with
+                  your browser.
+                </li>
+              </ol>
               <p className="text-muted-foreground text-xs">
                 These tools are available in <strong>Open in Terminal</strong> and <strong>Get Started</strong>{" "}
                 sessions. They are deliberately not available to the commands on the Skills page, which run on their
