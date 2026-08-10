@@ -68,7 +68,7 @@ describe("getCompanyRemoteImpl", () => {
 })
 
 describe("backupCompanyImpl", () => {
-  it("creates a PRIVATE repo from the company directory and pushes", async () => {
+  it("creates a PRIVATE repo from the company directory, then pushes over HTTPS with gh's credential helper", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
     const exec = fakeExec((command, args) => {
@@ -83,12 +83,18 @@ describe("backupCompanyImpl", () => {
     expect(create).toBeDefined()
     // private is non-negotiable: a company repo holds real business context
     expect(create!.args).toContain("--private")
-    expect(create!.args).toContain("--push")
     expect(create!.args).toContain(`--source=${root}`)
     expect(create!.args).not.toContain("--public")
+    // Push happens explicitly, after wiring gh's own credential helper —
+    // not via `gh repo create --push`, which would push over whatever
+    // protocol (possibly SSH) gh's account settings prefer.
+    expect(calls.some((c) => c.command === "gh" && c.args.join(" ") === "auth setup-git")).toBe(true)
+    const push = calls.find((c) => c.command === "git" && c.args.includes("push"))
+    expect(push).toBeDefined()
+    expect(push!.args).toEqual(["-C", root, "push", "-u", "origin", "HEAD"])
   })
 
-  it("pushes to the existing remote instead of creating a second repo", async () => {
+  it("pushes to the existing remote instead of creating a second repo, forcing HTTPS first", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
     const exec = fakeExec((command, args) => {
@@ -99,7 +105,13 @@ describe("backupCompanyImpl", () => {
     const result = await backupCompanyImpl("acme", exec)
 
     expect(result.ok).toBe(true)
-    expect(calls.some((c) => c.command === "gh")).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args.join(" ") === "auth setup-git")).toBe(true)
+    // The SSH remote from getCompanyRemoteImpl gets rewritten to HTTPS
+    // before the push is attempted.
+    const setUrl = calls.find((c) => c.command === "git" && c.args.includes("set-url"))
+    expect(setUrl).toBeDefined()
+    expect(setUrl!.args).toContain("https://github.com/me/acme.git")
     const push = calls.find((c) => c.command === "git" && c.args.includes("push"))
     expect(push).toBeDefined()
     expect(push!.args).toEqual(["-C", root, "push", "-u", "origin", "HEAD"])
@@ -108,12 +120,19 @@ describe("backupCompanyImpl", () => {
   it("self-heals a stale origin (repo never created) by creating it instead of surfacing git's raw error", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")
+    let pushAttempts = 0
     const exec = fakeExec((command, args) => {
       if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
       if (command === "git" && args.includes("push")) {
-        return new Error(
-          "fatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists."
-        )
+        pushAttempts++
+        // First push (against the stale remote) fails; the retry after
+        // self-healing succeeds.
+        if (pushAttempts === 1) {
+          return new Error(
+            "fatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists."
+          )
+        }
+        return { stdout: "" }
       }
       if (command === "git" && args.includes("remove")) return { stdout: "" }
       if (command === "gh") return { stdout: "" }
@@ -127,6 +146,7 @@ describe("backupCompanyImpl", () => {
     const create = calls.find((c) => c.command === "gh" && c.args[0] === "repo")
     expect(create).toBeDefined()
     expect(create!.args).toContain("--private")
+    expect(pushAttempts).toBe(2)
   })
 
   it("does not recreate the repo on an unrelated push failure (network, auth) — surfaces it instead", async () => {
@@ -142,7 +162,7 @@ describe("backupCompanyImpl", () => {
 
     expect(result.ok).toBe(false)
     if (!result.ok) expect(result.message).toContain("network is unreachable")
-    expect(calls.some((c) => c.command === "gh")).toBe(false)
+    expect(calls.some((c) => c.command === "gh" && c.args[0] === "repo")).toBe(false)
   })
 
   it("surfaces a failure message instead of throwing", async () => {

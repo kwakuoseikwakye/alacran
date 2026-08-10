@@ -808,6 +808,19 @@ existing per-card guidance hard to follow alone; content is generic
 (terminal 101, copy/paste, the restart gotcha) rather than re-describing
 each tool, which is already on its own card.
 
+v54 fixed a real backup bug: the repo got created on GitHub fine, but the
+push right after it failed with "correct access rights" even though `gh`
+was confirmed signed in. Root cause, confirmed on a real machine: `gh
+auth status`'s per-account git-operations protocol was `ssh` (independent
+of `gh`'s global config default, and not overridable per-call on `gh repo
+create`), so the wired-up remote needed a working SSH key — a completely
+separate credential from whatever made `gh auth login` work. Fixed by no
+longer trusting gh's chosen protocol: `ensurePushableRemote` in
+`lib/github/backup-company-impl.ts` rewrites an SSH remote to HTTPS and
+runs `gh auth setup-git` (confirmed live — idempotent) to wire git's
+HTTPS credential helper to gh's own token, before every push, on both the
+first-backup and subsequent-backup paths.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

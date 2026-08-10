@@ -1971,3 +1971,36 @@ card data on this machine (Claude Code correctly still shows Connected
 with the real CLI installed).
 
 Full suite: 596 tests, `tsc`/`next build` clean.
+
+## v54 (2026-08-10): backup pushes over HTTPS with gh's own credential helper
+
+User report: the GitHub repo gets created fine, but the push right after
+it fails with git's raw "make sure you have the correct access rights" —
+despite the user having real push/pull access, and despite `gh` being
+confirmed signed in (this button doesn't even show until `githubStatus()`
+verifies that).
+
+Root cause, confirmed on a real machine: `gh auth status` shows a
+per-account "Git operations protocol" (`ssh` here) that's independent of
+`gh`'s global `git_protocol` config default and isn't something `gh repo
+create` lets a caller override per-call. So `gh repo create --remote
+=origin` wires up an **SSH** remote regardless — and pushing over SSH
+needs a working, unlocked SSH key, which is a completely separate
+credential from whatever made `gh auth login` succeed. A user can have
+real GitHub access and a perfectly working `gh` CLI and still have no
+SSH key at all.
+
+Fixed by no longer trusting whatever protocol `gh` picked: `gh repo
+create` now runs without `--push`; `git@github.com:owner/repo.git`
+remotes get rewritten to the HTTPS form (`ensurePushableRemote` in
+`lib/github/backup-company-impl.ts`), `gh auth setup-git` wires git's
+HTTPS credential helper to `gh`'s own already-verified token (confirmed
+live — idempotent, writes a real `credential.https://github.com.helper`
+git-config entry), and only then does the push happen, as its own
+explicit step. Applied uniformly to both the first-backup (create) path
+and every subsequent-backup (existing remote) path, not just the one the
+report named — the same SSH-without-a-key problem would have recurred on
+every push after the first. Existing tests updated for the new call
+shape (create no longer implies push); one restructured into a stateful
+mock proving the self-heal path's retry succeeds against the *rewritten*
+remote. Full suite: 596 tests, `tsc`/`next build` clean.
