@@ -1903,3 +1903,23 @@ forward rather than rewriting the already-public `v0.7.19` tag: v50's
 missing files were committed on their own (accurately labeled) commit,
 folded into this slice's v0.7.20 release so both platforms carry the
 same code from here on.
+
+## v52 (2026-08-10): backup self-heals a stale GitHub remote instead of erroring
+
+User report: GitHub showed "Connected" and the backup button ran, but
+failed with git's raw "Please make sure you have the correct access
+rights and the repository exists." Root cause: `backupCompanyImpl`
+treated any configured `origin` as proof a real, reachable GitHub repo
+was behind it, and went straight to `git push`. A company whose `.git`
+came with an `origin` already set (by hand, or from wherever the
+directory was registered from) but whose GitHub repo was never actually
+created hits exactly that git error every time.
+
+Fixed at the root: a push failure matching that exact wording (or the
+HTTPS "not found" form) now clears the stale `origin` and falls through
+to the same `gh repo create --private --source --push` path a first-ever
+backup already took — one shared code path for "no remote" and "remote
+points nowhere," instead of a second special case. A push failure with
+any *other* message (network, expired auth) still surfaces as-is rather
+than silently spawning a redundant second repo. Two new tests; full
+suite: 590 tests, `tsc`/`next build` clean.

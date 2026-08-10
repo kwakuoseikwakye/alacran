@@ -105,6 +105,46 @@ describe("backupCompanyImpl", () => {
     expect(push!.args).toEqual(["-C", root, "push", "-u", "origin", "HEAD"])
   })
 
+  it("self-heals a stale origin (repo never created) by creating it instead of surfacing git's raw error", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      if (command === "git" && args.includes("push")) {
+        return new Error(
+          "fatal: Could not read from remote repository.\n\nPlease make sure you have the correct access rights\nand the repository exists."
+        )
+      }
+      if (command === "git" && args.includes("remove")) return { stdout: "" }
+      if (command === "gh") return { stdout: "" }
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(true)
+    expect(calls.some((c) => c.command === "git" && c.args.includes("remove"))).toBe(true)
+    const create = calls.find((c) => c.command === "gh" && c.args[0] === "repo")
+    expect(create).toBeDefined()
+    expect(create!.args).toContain("--private")
+  })
+
+  it("does not recreate the repo on an unrelated push failure (network, auth) — surfaces it instead", async () => {
+    await mockAgents()
+    const { backupCompanyImpl } = await import("./backup-company-impl")
+    const exec = fakeExec((command, args) => {
+      if (command === "git" && args.includes("get-url")) return { stdout: "git@github.com:me/acme.git\n" }
+      if (command === "git" && args.includes("push")) return new Error("fatal: unable to access: network is unreachable")
+      return { stdout: "" }
+    })
+
+    const result = await backupCompanyImpl("acme", exec)
+
+    expect(result.ok).toBe(false)
+    if (!result.ok) expect(result.message).toContain("network is unreachable")
+    expect(calls.some((c) => c.command === "gh")).toBe(false)
+  })
+
   it("surfaces a failure message instead of throwing", async () => {
     await mockAgents()
     const { backupCompanyImpl } = await import("./backup-company-impl")

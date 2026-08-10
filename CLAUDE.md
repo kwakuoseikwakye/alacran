@@ -782,6 +782,15 @@ part of v0.7.20 rather than rewriting the public tag — see CHANGELOG.
 Lesson for every future release: `git status --short` before the
 version-bump commit, not just `git add package.json`.
 
+v52 fixed a real user-reported backup bug: a company whose `.git` already
+had an `origin` remote (set by hand, or inherited from wherever the
+directory was registered from) but whose GitHub repo was never actually
+created failed every backup with git's raw "correct access rights" error.
+`backupCompanyImpl` now treats that specific failure as "stale remote,"
+clears it, and falls through to the same create-and-push path a first-
+ever backup takes — one shared path instead of two. Any other push
+failure (network, auth) still surfaces as a real error.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
