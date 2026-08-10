@@ -92,11 +92,19 @@ AI-Native instance through the UI" product. Concretely:
   size otherwise defeats `truncate`).
 - **One brand across app + marketing (v29)**: the palette is Alacrán
   "venom-night" (`#0c0708`/`#16100f` surfaces, bone text, one red accent
-  `#ff2e43`) and the type is Nunito / Nunito Sans, in BOTH
+  `#ff2e43`) and the type is **Sora (display) / Inter (body)**, in BOTH
   `app/globals.css` and `landing/styles.css`. **A change to one must be
   mirrored in the other.** The app is dark-only, so the landing site
   defaults to dark too (its light theme is an opt-in toggle persisted to
-  `localStorage`).
+  `localStorage`). The app must keep loading type through `next/font/google`
+  (self-hosted at build time) and never a `fonts.googleapis.com` link, which
+  would make every launch phone home; the landing site may use the CDN. The
+  type has now changed twice (Geist → Nunito in v29, Nunito → Sora/Inter in
+  v62), so **do not name the font in a CSS variable** — the app's tokens are
+  `--font-display-face` / `--font-body-face` for exactly that reason. Any type
+  change must re-measure the mobile bottom nav (see the long note in
+  `app/globals.css` beside `.bottom-nav-item`): it is the one layout a font
+  swap can silently break.
 - **The logo is generated, not hand-edited.** `scripts/generate-logo.py`
   keys and recolours the user-supplied artwork (`landing/scorpion.png` —
   a JPEG with no alpha, despite the name) into FOUR committed outputs:

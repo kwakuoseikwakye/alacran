@@ -2,7 +2,7 @@
    Red scorpion brand. Dark = venom-night (committed); light = desert day.
    One stylesheet for the whole marketing site (index + section pages). */
 
-@import url("https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&family=Nunito+Sans:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap");
 
 :root {
   --void: #0c0708;
@@ -20,10 +20,12 @@
   --glass: rgba(22, 16, 15, 0.55);
   --glass-edge: rgba(241, 233, 229, 0.14);
   --glass-sheen: rgba(241, 233, 229, 0.16);
-  /* Same type stack the app loads via next/font — Nunito for display weight,
-     Nunito Sans for running text, system mono for technical labels. */
-  --font-display: "Nunito", ui-rounded, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-body: "Nunito Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  /* Same type stack the app loads via next/font — Sora for display weight,
+     Inter for running text, system mono for technical labels. The app
+     self-hosts these; this site may use the CDN, but the two families must
+     stay identical (one brand). */
+  --font-display: "Sora", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 
   /* mirrors of the app's semantic tokens, so shared chrome reads identically */
@@ -68,9 +70,10 @@ body { margin: 0; background: var(--void); color: var(--bone); font-family: var(
 a { color: inherit; text-decoration: none; }
 .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 30px; }
 .eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red); }
-/* Nunito is rounder and optically wider than the old Geist, so it needs less
-   negative tracking and one weight step up to hold the same presence. */
-h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+/* Sora is geometric and optically narrower than Nunito, so it takes more
+   negative tracking to keep headings tight. Weight stays 800 — Sora draws a
+   real 800, so nothing here is synthesized. */
+h1, h2, h3 { font-family: var(--font-display); font-weight: 800; letter-spacing: -0.03em; text-wrap: balance; margin: 0; }
 p { margin: 0; }
 .muted { color: var(--dune); }
 .soon { font-family: var(--font-mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ember); border: 1px solid color-mix(in srgb, var(--ember) 40%, transparent); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Nunito, Nunito_Sans } from "next/font/google"
+import { Sora, Inter } from "next/font/google"
 import "./globals.css"
 import { AutoRefresh } from "@/components/auto-refresh"
 import { Sidebar } from "@/components/sidebar"
@@ -8,18 +8,31 @@ import { UpdateBanner } from "@/components/update-banner"
 import { THEME_STORAGE_KEY } from "@/lib/theme"
 
 // next/font downloads and self-hosts at build time, so the packaged .app still
-// renders correctly with no network. Important for a local-first product.
-const nunito = Nunito({
+// renders correctly with no network. Important for a local-first product —
+// never swap this for a fonts.googleapis.com link, which would make every
+// launch phone home.
+//
+// Sora (display) + Inter (body) replaced Nunito/Nunito Sans: Nunito's rounded
+// terminals read soft and consumer-friendly, which fought the venom-night
+// brand, and rounded shapes lose crispness at the 11-13px this dashboard uses
+// almost everywhere. Sora is geometric and precise and still carries an 800
+// weight, so every heading that asked for 800 keeps a real drawn weight
+// instead of a synthesized one. Deliberately NOT a return to Geist, which
+// v29 replaced on purpose.
+//
+// The token names are font-agnostic now. They named the font through two
+// changes of it, which is exactly how a comment becomes a lie.
+const displayFace = Sora({
   subsets: ["latin"],
-  weight: ["600", "700", "800", "900"],
-  variable: "--font-nunito",
+  weight: ["600", "700", "800"],
+  variable: "--font-display-face",
   display: "swap",
 })
 
-const nunitoSans = Nunito_Sans({
+const bodyFace = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
-  variable: "--font-nunito-sans",
+  variable: "--font-body-face",
   display: "swap",
 })
 
@@ -36,7 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // one attribute it doesn't itself render. Standard fix for this exact
   // no-flash-theme pattern.
   return (
-    <html lang="en" className={`${nunito.variable} ${nunitoSans.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${displayFace.variable} ${bodyFace.variable}`} suppressHydrationWarning>
       <head>
         {/* Blocking, pre-hydration: sets data-theme before first paint so a
             saved "light" choice never flashes dark first. Server always

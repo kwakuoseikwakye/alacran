@@ -6,7 +6,8 @@
 /* ===========================================================================
    Alacrán: "venom-night"
    One design language shared with the marketing site (landing/styles.css).
-   Warm near-black shell, bone text, a single red accent, rounded Nunito type.
+   Warm near-black shell, bone text, a single red accent, geometric Sora/Inter
+   type.
    Token NAMES are unchanged from v14 on purpose: every components/ui/*
    primitive already consumes them, so re-skinning needs zero primitive edits.
    =========================================================================== */
@@ -47,8 +48,10 @@
 
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
 
-  --typeface-display: var(--font-nunito), ui-rounded, "Nunito", system-ui, sans-serif;
-  --typeface-body: var(--font-nunito-sans), "Nunito Sans", system-ui, sans-serif;
+  /* Sora (display) + Inter (body) — see app/layout.tsx for why, and mirror any
+     change here into landing/styles.css, which must stay the same brand. */
+  --typeface-display: var(--font-display-face), "Sora", system-ui, sans-serif;
+  --typeface-body: var(--font-body-face), "Inter", system-ui, sans-serif;
   --typeface-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
 }
 
@@ -678,9 +681,15 @@ h3 {
    total the strip requires (the six item boxes plus its own 32px of horizontal
    padding), NOT as a bare content width:
 
-     labelled, Nunito Sans loaded ... 532px
+     labelled, Inter loaded ......... 541px
      labelled, fallback face (FOUT)... 551px
      icons only ..................... 296px
+
+   (Re-measured when the type changed to Sora/Inter. Inter is 9px wider here
+   than Nunito Sans was, so the loaded figure moved 532 -> 541 and the
+   breakpoint's slack narrowed from 29px to 20px. Still safe in both font
+   states, but this is the number to re-check on any future type change —
+   it is the one measurement a font swap can silently break.)
 
    Against 320-430px on real handsets, the labelled bar put its last two
    destinations off-screen with no scroll affordance — unreachable, not merely
@@ -688,8 +697,8 @@ h3 {
    widened it.
 
    The 560px breakpoint is therefore chosen with slack in BOTH font states
-   (28px loaded, 9px mid-swap), and verified empirically at 561px: labels
-   visible, zero overflow, nothing clipped, 18px spare. If you are here because
+   (20px loaded, 10px mid-swap), and re-verified empirically at 561px after the
+   type change: labels visible, zero overflow, nothing clipped. If you are here because
    these numbers look tight, re-measure before moving the breakpoint — an
    earlier version of this comment overstated the requirement by double-counting
    the 32px padding, which makes the breakpoint look ~20px too low when it is

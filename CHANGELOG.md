@@ -2513,3 +2513,53 @@ edits (v51 documented this same symptom), gone after a clean restart with
 Verified on a disposable `/tmp` company and disposable `ALACRAN_DATA_DIR`: all
 six copy assertions pass against the real DOM. 647 tests, `tsc` and
 `next build` clean.
+
+## v62 (2026-08-11): new type — Sora + Inter replace Nunito
+
+Asked to pick a better typeface and decide rather than present options. Nunito
+had two real problems for this product: its rounded terminals read soft and
+consumer-friendly, which pulls against a brand built on a scorpion, a warm
+near-black shell and one venom red — and rounded shapes lose crispness at the
+11–13px this dashboard uses almost everywhere (`text-xs` is the most common
+size in the app).
+
+**Sora for display, Inter for body**, mirrored in `app/globals.css` and
+`landing/styles.css` per the one-brand rule. Sora is geometric and precise,
+which suits a control panel that is mostly dense status text and file paths,
+and it draws a real 800 weight — so every heading already asking for 800 keeps
+a genuine drawn weight instead of a synthesized one, and not a single
+`font-weight` in the landing markup had to change. Inter is the strongest
+available face for small dark-UI text and deliberately neutral, leaving Sora to
+carry the personality. Headings went from `-0.02em` to `-0.03em`, since Sora is
+optically narrower than Nunito.
+
+**Deliberately not a return to Geist**, which v29 replaced on purpose — the
+landing CSS still carried a comment comparing Nunito to "the old Geist," which
+is how the previous decision was found before repeating it in reverse.
+
+The two properties that had to survive, both verified rather than assumed:
+
+- **Self-hosting.** The app still loads type via `next/font/google`, so the
+  packaged `.app` renders with no network: 9 `.woff2` in
+  `.next/static/media`, zero `fonts.gstatic.com`/`fonts.googleapis.com`
+  references in the server output. A CDN `@import` in the app would be a
+  phone-home, which this project forbids; the landing site keeps its CDN
+  import, which is fine for a website.
+- **The mobile bottom nav.** v59/v60 shipped a 560px breakpoint with the
+  labelled six-tab strip needing 532px with Nunito Sans — the one layout in
+  this app a font swap can silently break. Re-measured on the real production
+  build with fonts loaded: **Inter needs 541px**, 9px wider, leaving 20px slack
+  at 561px instead of 29px, and 551px mid-swap in the fallback face leaving
+  10px. Both fit; nothing clipped; verified empirically at 561px. The note in
+  `app/globals.css` now carries the new numbers and says explicitly that this
+  is the measurement to re-check on any future type change.
+
+Token names stopped naming the font: `--font-nunito`/`--font-nunito-sans`
+became `--font-display-face`/`--font-body-face`. The type has now changed twice,
+and a variable named after a font is a comment that becomes a lie on the next
+change. `CLAUDE.md`'s standing one-brand rule was updated with the new families,
+the self-hosting requirement, and the nav-measurement obligation.
+
+Verified live in both themes on the app and the landing site (light and dark),
+plus the app's real registered companies. 647 tests, `tsc`/`next build`/lint
+clean.
