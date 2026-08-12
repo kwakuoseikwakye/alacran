@@ -24,7 +24,10 @@ jobs:
 
       - uses: actions/setup-node@v5
         with:
-          node-version: 20
+          # Matches package-linux.yml, which builds the shipped .deb, and the
+          # dev machine (v24.x). CI testing on an older Node than the one that
+          # actually ships is a gap, not a safety margin.
+          node-version: 24
           cache: npm
 
       # `npm ci` cannot be used here, and this is not laziness — it's the same
