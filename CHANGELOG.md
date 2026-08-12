@@ -2997,3 +2997,44 @@ writes and commits a real `.mcp.json` into a real repo, which the standing
 safety rule forbids for a test. Selectors were taken from scoped snapshot
 refs inside the open Sheet, per v66's note about page-wide selectors reaching
 live auto-saving controls on the cards behind it.
+
+### Release note (v0.13.1): the Linux half nearly didn't ship
+
+The tag push fired `package-linux.yml` as designed and it **failed** — not
+from anything in this slice. Its publish step reads `GH_TOKEN` from a repo
+secret `RELEASES_REPO_TOKEN`, and that secret does not exist (`gh secret
+list` on the repo is empty), so `gh` exited 4 with "To use GitHub CLI in a
+GitHub Actions workflow, set the GH_TOKEN environment variable". The `.deb`
+had already built fine; the workflow has no `upload-artifact` step, so the
+build was simply lost with it.
+
+**Why this couldn't be worked around by publishing the macOS half alone.**
+`DEB_ASSET_URL`, `MAC_ASSET_URL` and both landing-page download buttons all
+point at `releases/latest/download/<name>`. A v0.13.1 release carrying only
+the mac assets would immediately become `latest` and 404 every Linux user's
+in-app update — surfacing as `performLinuxUpdateImpl`'s "Couldn't download
+the update. Check your connection and try again", which would be a lie. That
+is the same failure shape v57 recorded for the then-missing `Alacran.zip`,
+pointed at the other platform.
+
+**So the `.deb` was built locally in Docker instead**, disproving this
+project's own standing claim that Linux packaging can only happen in CI
+because the dev machine has no `dpkg-deb`: a `node:24-bookworm` container
+has one. `npm install` (not `npm ci`, per the lockfile drift CI already
+documents), then `scripts/package-linux.sh` unmodified — including its own
+headless self-test, so the artifact was boot-tested on real Debian, and
+`dpkg-deb -x` confirmed `mcp.freee.co.jp` in the extracted payload and
+`Version: 0.13.1` in the control file. One transient failure worth knowing
+about: `next/font/google` fetches at build time, and a flaky fetch kills the
+whole build with an opaque webpack error — re-running fixed it.
+
+All three assets were then published in a single `gh release create`, so
+`latest` was never observed missing one. Verified after the fact by
+downloading all three public URLs in full (200, real byte counts) rather
+than trusting the upload's own output.
+
+**Still open, needs the maintainer:** create a PAT with write access to
+`alacran-releases` and add it as the `RELEASES_REPO_TOKEN` secret on the
+`alacran` repo, or Linux packaging stays a manual Docker step. Adding an
+`upload-artifact` step would also stop a failed publish from throwing away a
+good build.

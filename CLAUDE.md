@@ -216,6 +216,29 @@ commit):
    unique to the change). There's no equivalent local Linux build to run —
    this dev machine is macOS and has no `dpkg-deb`; Linux's rebuild is
    entirely CI's job, triggered by step 4 below.
+
+   **Both halves of that last sentence turned out to be wrong in v69.**
+   (a) CI's publish step is broken: `package-linux.yml`'s final step needs a
+   repo secret `RELEASES_REPO_TOKEN` (a PAT with write access to
+   `alacran-releases` — the default `GITHUB_TOKEN` is scoped to the repo the
+   workflow runs in), and that secret is **not set** (`gh secret list --repo
+   kwakuoseikwakye/alacran` is empty). The v0.13.1 run built a perfectly good
+   `.deb`, then died on `gh: To use GitHub CLI in a GitHub Actions workflow,
+   set the GH_TOKEN environment variable` (exit 4). The workflow has no
+   `upload-artifact` step, so a failed publish **loses the build entirely**.
+   (b) There IS a local Linux route — Docker. This is what actually shipped
+   v0.13.1's `.deb`:
+
+       docker run --rm -v "$PWD":/src -w /work node:24-bookworm bash -c '
+         cp -r /src/. /work/; rm -rf /work/node_modules /work/.next /work/dist
+         cd /work && npm install && bash scripts/package-linux.sh
+         mkdir -p /src/dist && cp /work/dist/*.deb /src/dist/'
+
+   `npm install`, not `npm ci` (the same lockfile drift CI documents). The
+   script's own headless self-test runs inside the container, so the `.deb`
+   is boot-tested on real Debian before it ships. One transient failure to
+   expect: `next/font/google` fetches at build time, and a flaky fetch fails
+   the whole build with a webpack error — just re-run it.
 3. Commit the version bump and push the commit to `master`.
 
 **Always ask the user for explicit confirmation before either publish
@@ -232,7 +255,15 @@ actions" rule as everything else in this project:
    v57: `.dmg` is the human download, `.zip` is what the in-app updater
    fetches (`MAC_ASSET_URL`). A release published without `Alacran.zip`
    makes every macOS user's "Update & Restart" 404. (Before v57 the `.zip`
-   didn't exist at all, despite this line claiming it did.)
+   didn't exist at all, despite this line claiming it did.) **v69 generalizes
+   this to all three assets: never publish a release that is missing one.**
+   `DEB_ASSET_URL`, `MAC_ASSET_URL` and both landing-page download buttons all
+   resolve against `releases/latest/download/...`, so a release carrying only
+   some of them silently breaks the *other* platform the moment it becomes
+   latest — the Linux updater reports "Couldn't download the update. Check
+   your connection and try again", which is a lie. If one platform's artifact
+   can't be built, publish nothing and say so. Note GitHub stores the macOS
+   `.dmg` unaccented (`Alacran.dmg`), which is what every link expects.
 
 Steps 1–3 (bump, rebuild + self-test, push the commit) need no confirmation.
 Steps 4 and 5 each do, every time — approval for one doesn't carry to the
