@@ -2833,3 +2833,66 @@ No user impact: `package-linux.yml` runs tests before publishing, so v0.11.0
 produced no release at all and `latest` stayed v0.10.3 throughout. Fixed forward
 as v0.11.1 rather than re-pointing the public v0.11.0 tag — the same call this
 repo made for v0.7.19.
+
+## v67 (2026-08-12): replace the bundled company template with own-authored scaffolding
+
+Not a feature — a provenance fix, and the one v37 should have been.
+
+**v37 treated a licensing problem as a branding problem.** It replaced the
+bundled template's restrictive third-party license with MIT, stripped the
+originating program's name out of ~25 files, and deleted the pure
+event-logistics docs. What it did not do is stop shipping the material. Of the
+96 files in `templates/company-starter/` before this slice, **91 descended
+from the kit bundled at `b2692db`** — 12 byte-identical to it, the other 79
+differing mostly because of the July 29 pass that *translated* them, which
+produces a derivative work rather than an original one. The template was still
+someone else's, now under this repo's own copyright line.
+
+Measured, not assumed: `git ls-tree` at `b2692db` versus `HEAD`, comparing
+blob SHAs file by file, is what produced those three numbers.
+
+**What replaced it.** The template is now 33 files, written for this repo:
+
+- `README.md`, `CLAUDE.md` — a scaffold's worth of orientation, not a manual.
+- `.claude/commands/` — exactly the commands the app's own registry runs
+  (`define-company`, `digest`, `decision`, `retro`, `handoff`, `verify`,
+  plus the four read-only connectors), each written against the real
+  `outputPath` in `lib/company-commands/registry.ts` so a command file can't
+  promise a path the commit gate won't accept.
+- `docs/templates/ontology-starter.yaml` — rewritten from scratch, because it
+  is a hard dependency of `lib/save-company-ontology-impl.ts` and
+  `registry.ts`'s `define-company` prompt, not an optional doc.
+- `scripts/verify.py` — rewritten. Three checks that are cheap to get wrong
+  and expensive to find late: `secrets/`/`.env` really are git-ignored (via
+  `git check-ignore`, with a text fallback outside a repo), the ontology
+  exists with no `<<TODO>>` left, and every decision file has a
+  Why/Reasoning section. It does **not** claim to scan for already-committed
+  secrets; the docstring says so, since the previous script's docs implied a
+  scan it never performed.
+- Folder skeletons with a README each explaining what belongs there.
+
+**Kept, because it was provably this project's own work:**
+`check-inbox.md` (v22), `check-notion.md`, `triage-email.md`,
+`triage-issue.md` (v32), the two `definitions/triage/*.example.yaml`, and all
+28 files of `templates/packs/` — zero of which existed at `b2692db`.
+
+**Dropped rather than rewritten**, because rewriting them would have meant
+inventing features to fill a shape: `.claude/rules/` and `.claude/hooks/`
+(5 each), `.claude/skills/` (11 files, including an "AI readiness diagnostic"
+that was pure program material), `docs/concepts/`, four narrative docs,
+`definitions/hitl|kpi|cycles|retro`, `scripts/cycle/`, the template's own
+pytest suite, and the `create-epic`/`ingest-context`/`stock-note` commands —
+none of which the app ever ran. `TEMPLATE_MANIFEST` shrank from 34 entries to
+19 to match.
+
+**Two stale cross-references this surfaced**, both of which would have shipped
+into every new company as a doc that lies: `FRESH_HANDOFF_CONTENT` cited
+`CLAUDE.md` "§2.6" and "§5" — section numbers the new `CLAUDE.md` doesn't
+have — and the two kept connector commands pointed at an `api-connect` skill
+that no longer ships in the template. Both fixed.
+
+**Verified** with `tsc`, 660/660 vitest (including the v56 test that scaffolds
+from the REAL bundled template, whose pinned doc list needed updating for the
+deleted files), and a real scaffold into a disposable `/tmp` git repo where
+`verify.py` was exercised through all three of its states — fresh company,
+decision missing its reasoning, and fully clean — then deleted.

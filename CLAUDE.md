@@ -507,6 +507,24 @@ version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
 than the usual brainstorm-spec-plan flow, since it's a packaging fix with
 no application-code change.
 
+v67 replaced `templates/company-starter/` with own-authored scaffolding, which
+is what v37 (below) should have done. v37 fixed the license and the branding
+but kept shipping the material: 91 of the 96 files still descended from the
+kit bundled at `b2692db`, and the 79 that differed did so mostly because they
+had been *translated*, which is a derivative work, not an original one. The
+template is now 33 files written for this repo — the commands the app's
+registry actually runs (each checked against its real `outputPath`), a
+rewritten `docs/templates/ontology-starter.yaml` (a hard dependency of
+`save-company-ontology-impl.ts`, not an optional doc), a rewritten
+`scripts/verify.py` with three checks it can honestly claim, and folder
+skeletons. **Provably-own files were kept** (`check-inbox`/`check-notion`/
+`triage-*` commands, the triage example YAMLs, all of `templates/packs/` —
+none existed at `b2692db`); everything else was dropped rather than rewritten,
+since rewriting would have meant inventing features to fill a shape.
+`TEMPLATE_MANIFEST` went 34 → 19 entries. **The check to reuse:** compare blob
+SHAs at the bundling commit against `HEAD` file by file — that, not reading
+the files, is what showed how little of it was ever this project's.
+
 v37 relicensed and de-branded `templates/company-starter/` — the real
 bundled source `create-company-from-template.ts` copies into every new
 company. It still carried the external license and branding of the
