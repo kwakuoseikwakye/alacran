@@ -48,7 +48,7 @@ describe("extractSenderAddress", () => {
   })
 
   it("prefers the bracketed address over anything in the display name", () => {
-    expect(extractSenderAddress("Owner Sato <owner@example.com>")).toBe("owner@example.com")
+    expect(extractSenderAddress("Owner Name <owner@example.com>")).toBe("owner@example.com")
   })
 
   it("lowercases and trims", () => {
@@ -81,7 +81,7 @@ describe("isAllowlistedSender", () => {
   })
 
   it("matches an address inside a display-name header", () => {
-    expect(isAllowlistedSender("Owner Sato <owner@example.com>", senders)).toBe(true)
+    expect(isAllowlistedSender("Owner Name <owner@example.com>", senders)).toBe(true)
   })
 
   it("rejects an address not on the list", () => {
@@ -104,14 +104,14 @@ describe("isAllowlistedSender", () => {
 describe("readTriageRepos", () => {
   it("reads name, path and description", async () => {
     const read = async () =>
-      "repos:\n  - name: plh-platform\n    path: /Users/x/ExampleOrg/plh/plh-platform\n    description: Main PLH web platform\n"
+      "repos:\n  - name: app-platform\n    path: /Users/x/work/app-platform\n    description: Main PLH web platform\n"
     const result = await readTriageRepos("/c", read)
     expect(result).toEqual({
       ok: true,
       repos: [
         {
-          name: "plh-platform",
-          path: "/Users/x/ExampleOrg/plh/plh-platform",
+          name: "app-platform",
+          path: "/Users/x/work/app-platform",
           description: "Main PLH web platform",
         },
       ],

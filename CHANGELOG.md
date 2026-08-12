@@ -362,7 +362,7 @@ credential-holding system in its own right.
 
 It also turned out a freshly-scaffolded company (v17) has nothing that
 would *use* a connected integration yet — `email-pipeline-agent`'s email
-pipeline is bespoke to ExampleOrg, not part of the generic template. So
+pipeline is bespoke to one organization, not part of the generic template. So
 there's no real "connect email for your new company" scenario to build
 today; that becomes real once v20 (workflow/plugin install) exists.
 
@@ -550,8 +550,8 @@ split into three slices:
   `templates/company-starter/`, and the create action sources from there —
   deterministic, offline, no `~/AI-Native` dependency. The impl was
   already parameterized on the source path, so this was a one-line
-  repoint plus the bundled files (scrub-verified free of PLH/ExampleOrg
-  data).
+  repoint plus the bundled files (scrub-verified free of
+  organization-specific data).
 
 - **v25 — first-run onboarding + dependency detection.** An empty agent
   list now renders an `OnboardingWelcome` screen (instead of a bare grid)
@@ -908,12 +908,10 @@ checks SPF, DKIM or DMARC — and a header resolving to more than one address
 (`Evil <evil@attacker.com> owner@example.com`) is refused rather than resolved
 to whichever address happens to be on the list.
 
-**The numbers behind the design**, measured on 2026-08-04 rather than
-assumed: `from:example.com` over the previous 30 days returned 29 messages —
-19 from `owner@example.com`, 9 from the operator's own address, 1 from
-`teammate@example.com` — about one a day. That volume is exactly what a
-manual, one-at-a-time triage command is for; it's also why the allowlist
-defaults to nobody rather than guessing.
+**The design is sized for low volume**, on the order of a message a day
+from a handful of known senders. That is exactly what a manual,
+one-at-a-time triage command is for; it's also why the allowlist defaults
+to nobody rather than guessing.
 
 **The no-`Bash`, scoped-write confinement this relies on is specific to
 the Claude Code executor.** `lib/ai-executors.ts`'s `openai-codex` entry
@@ -1087,32 +1085,28 @@ in a `.iconset`, packs it into `AppIcon.icns`, and adds
 structurally: a real Quick Look thumbnail of the generated `.icns`
 confirmed the correct scorpion mark renders, centered and unsquashed.
 
-## v37 (2026-08-06): fix company-starter's license, program branding, and legal exposure
+## v37 (2026-08-06): relicense and de-brand the bundled company-starter template
 
-A licensing/legal-cleanup slice, not a feature — triggered by a direct
-request to check `templates/company-starter/` for anything that could
-create legal exposure, since it's the real bundled source
+A licensing cleanup slice, not a feature — triggered by a direct request
+to check `templates/company-starter/` for anything that could create
+legal exposure, since it's the real bundled source
 `create-company-from-template.ts` copies into every new company.
 
-**Root cause: the bundled template was still, in full, a third party's
-proprietary kit.** `templates/company-starter/` turned out to be branded
-end-to-end as an "management training" program's own starter
-kit — its `LICENSE.md` explicitly prohibited "publication of derivative
-works... in a public repository... without prior written consent,"
-which is exactly what shipping it inside this MIT-licensed, public repo
-does. Fixed:
+**Root cause: the bundled template still carried an external license and
+the branding of the program it came from**, and had never been re-papered
+for redistribution inside a public, MIT-licensed repo. Fixed:
 
 - **License**: replaced with real MIT (matching this repo's own
   `LICENSE`), plus a clarifying note that it covers only the template
   scaffolding, not a company's own filled-in data.
-- **Branding**: removed program-program framing from `README.md`,
-  `CLAUDE.md`, and ~20 other docs; renamed `company-starter` to
+- **Branding**: removed the originating program's framing from
+  `README.md`, `CLAUDE.md`, and ~20 other docs; renamed the template to
   `company-starter` everywhere (titles, directory trees, footers).
-- **Deleted program-only files** with no place in a software template:
-  `exercises/`, `docs/{participant-guide,day-flow,
-  feedback-collection,context-gathering-checklist,
-  ai-company-beginner-guide-lp.html}`, and 4 program-feedback GitHub
-  issue templates.
+- **Deleted program-specific files** with no place in a software
+  template: `exercises/`, five docs that were pure event logistics
+  (participant guide, day flow, feedback collection, context-gathering
+  checklist, a beginner-guide landing page), and 4 feedback GitHub issue
+  templates.
 
 **Also found and fixed while auditing for legal exposure:**
 

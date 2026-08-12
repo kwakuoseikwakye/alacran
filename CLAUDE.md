@@ -426,8 +426,8 @@ a caveat, not a fix.
 **Standing context for the coming slices that retire the daemon:**
 `~/AI-Native/email-pipeline-agent/claude-agent-settings.json` lines 26-27
 point their `PreToolUse` guardrail hook at
-`/Users/nanaosei/ExampleOrg/email-pipeline-agent/bin/guardrail.sh`, a
-pre-reorg path that stopped existing when that repo moved to
+a pre-reorg absolute path under a former parent directory — a
+path that stopped existing when that repo moved to
 `~/AI-Native/` on 2026-07-22. The guardrail has therefore been inactive
 since then — found while investigating v31, out of scope to fix (that
 repo must not be mutated by this project), but relevant when the daemon
@@ -507,18 +507,16 @@ version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
 than the usual brainstorm-spec-plan flow, since it's a packaging fix with
 no application-code change.
 
-v37 fixed real legal/licensing exposure in `templates/company-starter/` —
-the real bundled source `create-company-from-template.ts` copies into
-every new company. It was discovered to still be branded, in full, as a
-third-party "management training" program's proprietary,
-non-redistributable starter kit: its own `LICENSE.md` explicitly
-prohibited "publication of derivative works in a public repository
-without prior written consent" — exactly what this repo does. Fixed:
-replaced that license with real MIT (matching this repo's own), removed
-program-program branding throughout ~25 files, and deleted files that
-were pure program-logistics content (`exercises/`, participant/program-
-day/feedback docs, program-organizer feedback issue templates) with no
-place in a software template. Also translated all remaining Japanese
+v37 relicensed and de-branded `templates/company-starter/` — the real
+bundled source `create-company-from-template.ts` copies into every new
+company. It still carried the external license and branding of the
+program it was derived from, and had never been re-papered for
+redistribution inside a public, MIT-licensed repo. Fixed: replaced that
+license with real MIT (matching this repo's own), removed the
+originating program's branding throughout ~25 files, and deleted files
+that were pure event-logistics content (`exercises/`, participant/day
+-flow/feedback docs, feedback issue templates) with no place in a
+software template. Also translated all remaining Japanese
 content to English (`scripts/cycle/`, a CI sanitize-gate pattern, and a
 stale Japanese heading reference in this repo's own
 `lib/company-commands/registry.ts`) and removed two features found to be

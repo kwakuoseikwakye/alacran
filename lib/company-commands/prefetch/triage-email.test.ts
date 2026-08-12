@@ -3,7 +3,7 @@ import { buildTriageEmailPrefetch } from "./triage-email"
 import type { PrefetchContext, PrefetchExecFileFn } from "./types"
 
 const SENDERS = "senders:\n  - owner@example.com\n"
-const REPOS = "repos:\n  - name: plh-mobile\n    path: /r/plh-mobile\n    description: Mobile app\n"
+const REPOS = "repos:\n  - name: app-mobile\n    path: /r/app-mobile\n    description: Mobile app\n"
 
 const configReader = async (p: string) => {
   if (p.endsWith("senders.yaml")) return SENDERS
@@ -11,7 +11,7 @@ const configReader = async (p: string) => {
   throw Object.assign(new Error("ENOENT"), { code: "ENOENT" })
 }
 
-const SEARCH_ROW = "ID\tDATE\tFROM\tSUBJECT\n19f0\t2026-08-04\towner@example.com\tplh-mobile login broken"
+const SEARCH_ROW = "ID\tDATE\tFROM\tSUBJECT\n19f0\t2026-08-04\towner@example.com\tapp-mobile login broken"
 
 /**
  * Splits prefetch output on the control-panel-emitted fence. Deliberately not
@@ -65,7 +65,7 @@ describe("buildTriageEmailPrefetch", () => {
     if (!result.ok) return
     expect(result.text).toContain("external-untrusted")
     expect(result.text).toContain("the login button 500s")
-    expect(result.text).toContain("plh-mobile")
+    expect(result.text).toContain("app-mobile")
   })
 
   it("always passes --readonly and --gmail-no-send to gog", async () => {
@@ -262,14 +262,14 @@ describe("buildTriageEmailPrefetch", () => {
     // Everything the sender controls is inside the fence.
     expect(parts.inside).toContain("owner@example.com")
     expect(parts.inside).toContain("2026-08-04")
-    expect(parts.inside).toContain("plh-mobile login broken")
+    expect(parts.inside).toContain("app-mobile login broken")
     expect(parts.inside).toContain("the login button 500s")
 
     // The region the prompt presents as trustworthy carries only what the control
     // panel itself resolved — the message id — and none of the sender's text.
     expect(parts.before).toContain("19f0")
     expect(parts.before).not.toContain("owner@example.com")
-    expect(parts.before).not.toContain("plh-mobile login broken")
+    expect(parts.before).not.toContain("app-mobile login broken")
     expect(parts.before).not.toContain("the login button 500s")
 
     // Repo context stays outside, after the close marker.

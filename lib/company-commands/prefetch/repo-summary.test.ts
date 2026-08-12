@@ -4,18 +4,18 @@ import type { TriageRepo } from "./triage-config"
 import type { PrefetchExecFileFn } from "./types"
 
 const repos: TriageRepo[] = [
-  { name: "plh-platform", path: "/r/plh-platform", description: "Main PLH web platform SSO" },
-  { name: "plh-mobile", path: "/r/plh-mobile", description: "Mobile app" },
+  { name: "app-platform", path: "/r/app-platform", description: "Main PLH web platform SSO" },
+  { name: "app-mobile", path: "/r/app-mobile", description: "Mobile app" },
   { name: "plh-car-rental-website", path: "/r/car", description: "Carshare billing site" },
 ]
 
 describe("matchRepos", () => {
   it("matches on repo name", () => {
-    expect(matchRepos("please fix plh-mobile login", repos).map((r) => r.name)).toEqual(["plh-mobile"])
+    expect(matchRepos("please fix app-mobile login", repos).map((r) => r.name)).toEqual(["app-mobile"])
   })
 
   it("matches case-insensitively", () => {
-    expect(matchRepos("PLH-MOBILE is broken", repos).map((r) => r.name)).toEqual(["plh-mobile"])
+    expect(matchRepos("PLH-MOBILE is broken", repos).map((r) => r.name)).toEqual(["app-mobile"])
   })
 
   it("matches on a description word", () => {
@@ -25,9 +25,9 @@ describe("matchRepos", () => {
   })
 
   it("returns every match when the text is ambiguous", () => {
-    expect(matchRepos("plh-mobile and plh-platform both broken", repos).map((r) => r.name)).toEqual([
-      "plh-platform",
-      "plh-mobile",
+    expect(matchRepos("app-mobile and app-platform both broken", repos).map((r) => r.name)).toEqual([
+      "app-platform",
+      "app-mobile",
     ])
   })
 
@@ -86,15 +86,15 @@ describe("buildRepoContext", () => {
   }
 
   it("gives a full summary for exactly one match", async () => {
-    const text = await buildRepoContext("plh-mobile is broken", repos, execFn)
-    expect(text).toContain("routed to plh-mobile")
+    const text = await buildRepoContext("app-mobile is broken", repos, execFn)
+    expect(text).toContain("routed to app-mobile")
   })
 
   it("lists every repo without file lists when ambiguous", async () => {
-    const text = await buildRepoContext("plh-mobile and plh-platform", repos, execFn)
+    const text = await buildRepoContext("app-mobile and app-platform", repos, execFn)
     expect(text).toContain("could not be routed confidently")
-    expect(text).toContain("plh-platform")
-    expect(text).toContain("plh-mobile")
+    expect(text).toContain("app-platform")
+    expect(text).toContain("app-mobile")
   })
 
   it("lists every repo when nothing matched", async () => {
