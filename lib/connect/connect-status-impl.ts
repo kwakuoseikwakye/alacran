@@ -15,6 +15,17 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
   return execFileAsync(command, args)
 }
 
+/**
+ * Which of Google's three setup gates the user is actually behind. `gog auth
+ * setup` is a GUIDE command, not an action — run bare it prints next_steps and
+ * exits with `status: guided`, `credentials_saved: false`, having done
+ * nothing. This app used to offer it as THE Google command with "complete the
+ * Google sign-in," so users ran it, nothing connected, and there was no next
+ * step on screen. Splitting the stages is what lets each one show only the
+ * command that actually advances it.
+ */
+export type GoogleStage = "install" | "client" | "account"
+
 export type ToolStatus = {
   id: AiExecutorId | "google" | "github"
   label: string
@@ -24,6 +35,11 @@ export type ToolStatus = {
   /** google only: every account gog auth list knows about, not just the one
    *  -a auto resolves to. Undefined for every AI executor/github. */
   accounts?: string[]
+  /** google only: which setup gate is next. The commands for the `client` and
+   *  `account` stages need the user's own email spliced in, so those are built
+   *  in the client component from a typed address rather than shipped here
+   *  with a you@example.com placeholder baked in. */
+  googleStage?: GoogleStage
 }
 
 /** Unlike the other cards, Notion has no single machine-wide connected state:
@@ -94,45 +110,53 @@ type GogAuthStatus = {
 
 async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<ToolStatus> {
   const label = "Google (Gmail & Calendar)"
-  const notConnected = (detail: string, command?: string, link?: string): ToolStatus => ({
+  const installStage = (detail: string): ToolStatus => ({
     id: "google",
     label,
     connected: false,
     detail,
+    googleStage: "install",
     guidance: {
-      steps: [
-        "Run the command below in your terminal and complete the Google sign-in.",
-        "Come back and press Re-check.",
-      ],
-      command,
-      link,
+      steps: ["Install the Google CLI, then press Re-check."],
+      // brew is macOS-only — on Linux there's no verified one-line install, so
+      // just point at the repo instead of guessing a command that won't run.
+      command: platform === "darwin" ? "brew install gogcli" : undefined,
+      link: "https://gogcli.sh",
     },
   })
 
+  /** The Google Cloud half. Irreducibly manual: creating an OAuth client is
+   *  console-only — Google publishes no API for it, which is exactly why gog's
+   *  own quickstart says to download the JSON by hand. `--open-console` was
+   *  measured and rejected as the shortcut here: it refuses without gcloud
+   *  ("--open-console requires --gcloud-project or an active gcloud project"),
+   *  and a non-technical user has no gcloud. So this stage links the console
+   *  and the client component builds the one command that finishes it. */
+  const clientStage = (detail: string): ToolStatus => ({
+    id: "google",
+    label,
+    connected: false,
+    detail,
+    googleStage: "client",
+    guidance: { steps: [], link: "https://gogcli.sh/quickstart" },
+  })
+
   const installed = await isPresent(execFn, "gog")
-  if (!installed) {
-    // brew is macOS-only — on Linux there's no verified one-line install, so
-    // just point at the repo instead of guessing a command that won't run.
-    return notConnected(
-      "The gog (Google CLI) is not installed.",
-      platform === "darwin" ? "brew install gogcli" : undefined,
-      "https://gogcli.sh"
-    )
-  }
+  if (!installed) return installStage("The gog (Google CLI) is not installed.")
 
   let raw: string
   try {
     const res = await execFn("gog", ["auth", "status", "-j"])
     raw = res.stdout
   } catch {
-    return notConnected("Couldn't read Google auth status.", "gog auth setup")
+    return clientStage("Couldn't read Google auth status.")
   }
 
   let parsed: GogAuthStatus
   try {
     parsed = JSON.parse(raw) as GogAuthStatus
   } catch {
-    return notConnected("Couldn't read Google auth status.", "gog auth setup")
+    return clientStage("Couldn't read Google auth status.")
   }
 
   const email = typeof parsed.account?.email === "string" ? parsed.account.email.trim() : ""
@@ -156,7 +180,21 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
     }
   }
 
-  return notConnected("No Google account connected yet.", "gog auth setup")
+  // credentials_exists is file-backed (credentials_path under gog's own home),
+  // so it flips independently of `email` — measured against a disposable
+  // `gog --home` where credentials_exists went false while email still read
+  // back from the OS keyring. That's what makes it the reliable discriminator
+  // between "no OAuth client yet" and "client stored, just needs authorizing."
+  if (!hasCredentials) return clientStage("No Google sign-in set up yet.")
+
+  return {
+    id: "google",
+    label,
+    connected: false,
+    detail: "Almost there — the hard part is done, one command left.",
+    googleStage: "account",
+    guidance: { steps: [] },
+  }
 }
 
 /**

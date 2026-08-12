@@ -290,7 +290,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v61** (see `CHANGELOG.md` for the full per-slice changelog —
+**Shipped: v1–v64** (see `CHANGELOG.md` for the full per-slice changelog —
 that file, not this line, is the authority on the next free slice number;
 v61 was nearly built as "v58" because this line said v39 while the changelog
 was already at v60).
@@ -988,3 +988,41 @@ that slice to one command), or richer operations on top of what's now
 connectable. But given how far v19–v22 each diverged from their one-line
 descriptions, investigate what's actually real and buildable before
 proposing anything, the same discipline every recent slice followed.
+
+v64 fixed two user-reported Google connection bugs with the same shape — the
+app advertising a next step that connected nothing — both root-caused by
+probing the live systems rather than reading docs. **(a)** v61's three Google
+MCP presets could never authenticate: their authorization server is
+`accounts.google.com`, which advertises **no `registration_endpoint`**, and
+Claude Code has no pre-registered client for an arbitrary MCP server, so
+Dynamic Client Registration is its only route to a `client_id`. They compound
+it by answering unauthenticated `initialize`/`tools/list` with `200` instead of
+a `401`, so no OAuth flow is ever triggered and the failure only appears per
+tool call. Deleted rather than repaired — they'd need a user-created Google
+Cloud OAuth client, which a dropdown preset can't supply. **Any new preset must
+be DCR-checked first**; the two-curl recipe is in `lib/mcp-presets.ts` and a
+test now fails on any re-added `*.googleapis.com` entry. **(b)** The Connect
+page offered `gog auth setup` as *the* Google command, wrapped in "complete the
+Google sign-in" — but that command is a **guide printer**: bare, it emits
+`status: guided`, `credentials_saved: false` and exits having done nothing.
+Every not-connected state returned it, so users ran it, nothing happened, and
+no further step was shown. Now split into three stages
+(`install`/`client`/`account`) off `credentials_exists`, a boolean the code
+already parsed and discarded — it's file-backed and flips independently of
+`email`, which reads back from the OS keyring (measured against a disposable
+`gog --home`), making it the only reliable way to tell "no OAuth client yet"
+from "client stored, needs authorizing." The irreducible part is Google's, not
+this app's: an OAuth client can only be created by a human in the Cloud console
+(no API exists), so the card links all six console pages, says what to click on
+each, and ends with one command that stores the download and runs the browser
+sign-in. `--open-console` and the gcloud-assisted `--create-project
+--enable-apis` path were both measured and rejected for this audience — the
+first refuses without gcloud, the second trades console clicks for a ~500MB SDK
+install plus a second browser sign-in. Scopes narrowed to `gmail,calendar`
+(what `check-inbox`/`triage-email` actually call), which dry-run-verified as
+dropping the must-enable APIs from six to exactly the two the card links;
+`GOOGLE_SURFACE` lost its Drive/Chat marks to stay honest. **Standing rule this
+establishes:** before putting any third-party CLI command on screen as the
+thing that completes a step, dry-run it (`--dry-run --json --no-input` here) and
+confirm it *acts* — `gog auth setup` looked like an action and was a no-op, and
+nothing in the app's own tests could have caught that.

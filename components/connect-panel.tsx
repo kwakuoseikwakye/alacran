@@ -25,8 +25,21 @@ export const TOOL_BRAND: Partial<Record<ToolStatus["id"], BrandId>> = {
 }
 
 // The Google services a connected `gog` unlocks. These are real marks, so the payoff of
-// connecting is legible at a glance.
-const GOOGLE_SURFACE: BrandId[] = ["gmail", "googlecalendar", "googledrive", "googlechat"]
+// connecting is legible at a glance. Kept in step with GOOGLE_SERVICES below —
+// showing a Drive or Chat mark for a scope we never ask Google for is a promise
+// the connection doesn't keep.
+const GOOGLE_SURFACE: BrandId[] = ["gmail", "googlecalendar"]
+
+/**
+ * The scopes every `gog` command in this app actually uses: `check-inbox` and
+ * `triage-email` call Gmail, and Calendar is what this card has always been
+ * named for. gog's own default is six services (adding drive, docs, sheets,
+ * contacts), each of which is another API the user must click Enable on in the
+ * Cloud console — so asking for only what's used is three fewer manual steps,
+ * not just a tighter grant. More can be added later by re-running `auth add`
+ * with a longer list.
+ */
+const GOOGLE_SERVICES = "gmail,calendar"
 
 /** Lets you connect a 2nd, 3rd, ... Google account. Same pattern as every
  *  other guidance flow here: show the exact command, the user runs it in
@@ -46,7 +59,128 @@ function AddGoogleAccount() {
           className="h-8 text-xs"
         />
       </div>
-      {email.trim() && <CommandLine command={`gog auth add ${email.trim()}`} />}
+      {email.trim() && (
+        <CommandLine command={`gog auth add ${email.trim()} --services ${GOOGLE_SERVICES}`} />
+      )}
+    </div>
+  )
+}
+
+/** Each link opens the exact console page for that step, pre-filled where
+ *  Google allows it, so "go to the Cloud console and find X" is never an
+ *  instruction. Enabling an API has a direct per-API URL; creating the OAuth
+ *  client does not, hence the click path spelled out in `then`. */
+const GOOGLE_CONSOLE_STEPS: { title: string; href: string; then: string }[] = [
+  {
+    title: "Create a project",
+    href: "https://console.cloud.google.com/projectcreate",
+    then: "Give it any name — “My AI” is fine — and click Create. Wait for it to finish before the next step.",
+  },
+  {
+    title: "Turn on Gmail",
+    href: "https://console.cloud.google.com/apis/library/gmail.googleapis.com",
+    then: "Click the blue Enable button. That is the whole step.",
+  },
+  {
+    title: "Turn on Calendar",
+    href: "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com",
+    then: "Click Enable here too.",
+  },
+  {
+    title: "Say who can use it",
+    href: "https://console.cloud.google.com/auth/overview",
+    then: "Pick External, put your own email in the boxes it asks for, and save. This is just Google asking who owns the app — it stays private to you.",
+  },
+  {
+    title: "Create the key and download it",
+    href: "https://console.cloud.google.com/auth/clients",
+    then: "Click Create client, choose Desktop app as the type, click Create, then Download JSON. It lands in your Downloads folder.",
+  },
+  {
+    title: "Publish it (don't skip)",
+    href: "https://console.cloud.google.com/auth/audience",
+    then: "Click Publish app, then Confirm. Skip this and Google cuts the connection after 7 days. It does not submit anything for review.",
+  },
+]
+
+function ConsoleLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <a
+      className="inline-flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+    >
+      {children} <ExternalLink className="h-3 w-3" />
+    </a>
+  )
+}
+
+/**
+ * Replaces the old single `gog auth setup` button, which was the bug the user
+ * hit: that command only PRINTS a plan, so following the card's "complete the
+ * Google sign-in" connected nothing and left no visible next step.
+ *
+ * Google's own rules set the shape here and no amount of UI removes it — an
+ * OAuth client can only be created by a human in the Cloud console (there is
+ * no API for it), so the honest best version is to link every console page
+ * directly, say what to click on each, and then hand over a single command
+ * that stores the download AND runs the browser sign-in in one go.
+ */
+function GoogleSetup({ stage }: { stage: "client" | "account" }) {
+  const [email, setEmail] = useState("")
+  const address = email.trim()
+
+  const emailField = (
+    <Input
+      type="email"
+      placeholder="you@example.com"
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+      className="h-8 text-xs"
+    />
+  )
+
+  if (stage === "account") {
+    return (
+      <div className="space-y-2">
+        <p className="text-sm text-muted-foreground">
+          The one-time Google setup is already done on this machine. Only one step left: say which address to
+          connect, then run this. A browser window opens — approve it, come back, press Re-check.
+        </p>
+        {emailField}
+        {address && <CommandLine command={`gog auth add ${address} --services ${GOOGLE_SERVICES}`} />}
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Google makes every person create their own free key before a tool can read their mail. It is a one-time
+        setup, about five minutes, all in your browser. Nothing here costs money and you never need to understand
+        Google Cloud — just click what each step says.
+      </p>
+      <ol className="list-decimal space-y-2 pl-5 text-xs text-muted-foreground">
+        {GOOGLE_CONSOLE_STEPS.map((step) => (
+          <li key={step.title}>
+            <ConsoleLink href={step.href}>{step.title}</ConsoleLink>
+            <span className="block">{step.then}</span>
+          </li>
+        ))}
+      </ol>
+      <div className="space-y-1.5 border-t border-border pt-3">
+        <p className="text-xs text-muted-foreground">
+          <strong>Last step.</strong> Type the Google address you just set this up for, then run the command. It
+          picks up the downloaded file and opens the sign-in for you. Approve it, come back, press Re-check.
+        </p>
+        {emailField}
+        {address && (
+          <CommandLine
+            command={`gog auth setup ${address} --credentials ~/Downloads/client_secret_*.json --login --services ${GOOGLE_SERVICES}`}
+          />
+        )}
+      </div>
     </div>
   )
 }
@@ -136,6 +270,14 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
 
         {!live && (
           <div className="space-y-3">
+            {/* Google is the one tool whose setup isn't "run this one command":
+                Google requires a per-person OAuth client that only a human can
+                create in their console. Rendered before the generic block,
+                which for these two stages carries no command of its own. */}
+            {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
+              <GoogleSetup stage={tool.googleStage} />
+            )}
+
             {tool.guidance.steps.length > 0 && (
               <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
                 {tool.guidance.steps.map((step, i) => (

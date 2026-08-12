@@ -126,4 +126,13 @@ describe("MCP_PRESETS", () => {
     const names = MCP_PRESETS.map((p) => p.name)
     expect(new Set(names).size).toBe(names.length)
   })
+
+  // These looked correct and shipped once. accounts.google.com advertises no
+  // registration_endpoint, so Claude Code can never complete DCR against them
+  // and sign-in always fails — see the long note in mcp-presets.ts. Google's
+  // working path in this app is `gog`, not MCP.
+  it("has no *.googleapis.com preset — their auth server has no DCR", () => {
+    const hosts = MCP_PRESETS.map((p) => new URL(p.url).hostname)
+    expect(hosts.filter((h) => h.endsWith(".googleapis.com"))).toEqual([])
+  })
 })

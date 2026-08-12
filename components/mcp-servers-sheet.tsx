@@ -192,6 +192,15 @@ export function McpServersSheet({
                 sessions. They are deliberately not available to the commands on the Skills page, which run on their
                 own fixed, narrow permissions.
               </p>
+              {/* Gmail/Calendar/Drive used to be offered here and could never
+                  sign in — see the note in lib/mcp-presets.ts. Anyone who
+                  added one still has the dead entry listed above, so say why
+                  here rather than only in a changelog. */}
+              <p className="text-muted-foreground text-xs">
+                <strong>Gmail, Google Calendar and Google Drive don&apos;t work this way.</strong> Google&apos;s sign-in
+                won&apos;t accept Claude Code as a tool, so those never get past the sign-in step. Connect Google on the{" "}
+                <strong>Connect</strong> page instead. If one is listed above, remove it — it can&apos;t work.
+              </p>
             </section>
           </div>
         </SheetContent>

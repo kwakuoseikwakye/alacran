@@ -2612,3 +2612,95 @@ wrapper's overflow forced back to `visible`). After: 1293px of content in the
 still at `top: 16`; a 1450px alert dialog clamps to 528px inside the 560px
 viewport and scrolls 924px. Both were dismissed at their gates — nothing saved,
 nothing installed. 647 tests, `tsc`/`next build` clean.
+
+## v64 (2026-08-12): the two Google connect paths that could never work
+
+Two user-reported bugs, same shape: the app offered a Google connection whose
+advertised next step connected nothing. Both root causes were measured against
+the live tools rather than inferred, and both turned out to be *this app
+describing someone else's system wrongly*, not a defect in gog or Claude Code.
+
+**1. The Gmail / Calendar / Drive MCP presets could never authenticate.**
+v61 shipped eight `MCP_PRESETS`, three of them Google
+(`gmailmcp.googleapis.com`, `calendarmcp.googleapis.com`,
+`drivemcp.googleapis.com`). Every attempt to sign in errored. Probing the real
+endpoints found two independent reasons, either one fatal:
+
+- Their OAuth protected-resource metadata names `https://accounts.google.com/`
+  as the authorization server, and that server advertises **no
+  `registration_endpoint`** in either `.well-known` document. Claude Code holds
+  no pre-registered client for an arbitrary MCP server, so Dynamic Client
+  Registration (RFC 7591) is its only route to a `client_id` — without it,
+  sign-in cannot succeed by any path the user could take. Every other preset
+  (Canva, Figma, Lovable, Vercel) does advertise one, which is exactly why only
+  the Google three failed.
+- They also answer unauthenticated `initialize` **and** `tools/list` with `200`
+  and a full tool list, and never a `401` with `WWW-Authenticate`. So the client
+  sees a healthy server, no OAuth flow is ever triggered, and the failure
+  surfaces only per tool call as `isError: true` "Request is missing required
+  authentication credential." That is why it read as "always throwing errors"
+  rather than as a login prompt.
+
+Removed, not repaired — making them work needs a Google Cloud OAuth client the
+user creates, which a preset URL in a dropdown cannot supply. Google's working
+path in this app has always been `gog` (v22/v41). `mcp-presets.ts` now carries
+the two-curl DCR check to run before adding any preset, a test fails on any
+re-added `*.googleapis.com` entry, and the Sheet says so on screen — anyone who
+already added one still has a dead entry only they can remove.
+
+**2. The Connect page's Google card offered `gog auth setup`, which is a guide,
+not an action.** Run bare it prints `status: guided`, `project_created: false`,
+`apis_enabled: false`, `credentials_saved: false` and five next_steps, then
+exits — having done nothing. The card wrapped it in "Run the command below in
+your terminal and complete the Google sign-in. Come back and press Re-check,"
+so users ran it, nothing connected, and the card showed no further step. Every
+not-connected Google state returned that same one command.
+
+The fix splits the three real gates and shows only the one the user is behind,
+using `credentials_exists` — a boolean `googleStatus` already parsed and threw
+away. It is file-backed (`credentials_path` under gog's own home) and flips
+independently of `email`, which reads back from the OS keyring; measured
+against a disposable `gog --home` where `credentials_exists` went false while
+`email` still resolved. That is what makes it the reliable discriminator
+between "no OAuth client yet" and "client stored, just needs authorizing" —
+two states the old code could not tell apart.
+
+- `install` — gog missing. Unchanged: `brew install gogcli` + link.
+- `client` — no OAuth client. Google's rules set the shape and no UI removes
+  it: an OAuth client can only be created by a human in the Cloud console,
+  there being no API for it, which is why gog's own quickstart says to download
+  the JSON by hand. So the card links all six console pages directly, says what
+  to click on each, and hands over one command that stores the download **and**
+  runs the browser sign-in: `gog auth setup <email> --credentials
+  ~/Downloads/client_secret_*.json --login --services gmail,calendar`.
+- `account` — client stored, no account. Just `gog auth add <email> --services
+  gmail,calendar`.
+
+`--open-console` was evaluated as the shortcut and rejected on measurement: it
+refuses without gcloud ("--open-console requires --gcloud-project or an active
+gcloud project"), and a non-technical user has no gcloud. The gcloud-assisted
+path (`--create-project --enable-apis`) was rejected for the same audience on
+step count — it adds a ~500MB SDK install and a second browser sign-in
+(`gcloud auth login`) to save console clicks, making four browser trips where
+the manual path needs two.
+
+Scopes narrowed from gog's six-service default to `gmail,calendar` — what
+`check-inbox` and `triage-email` actually call, and what the card has always
+been named for. Verified by dry-run that this drops the APIs the user must
+click Enable on from six to exactly the two the card links, so the console
+steps and the command agree. `GOOGLE_SURFACE` lost its Drive and Chat marks to
+match: showing a mark for a scope never requested is a promise the connection
+doesn't keep. Every command on screen was dry-run verified against the real
+installed gog (v0.34.1) before shipping, and the "Publish app" step is called
+out as not-skippable because Testing-mode refresh tokens expire after 7 days —
+the one that would otherwise return later as "it stopped working."
+
+Live-verified on a throwaway port with a disposable `GOG_HOME`, which makes the
+app see a fresh machine without touching the real auth store: the `client`
+stage rendered all six console links with no stray command, and typing an
+address produced the exact dry-run-verified command. The `account` stage is
+unit-tested only — reproducing it live would need the real keyring cleared,
+which is not a sanctioned test target. Onboarding's Google row reads the same
+`guidance` and now correctly shows no command where it used to show the
+inert one; its existing "Open the full Connect page →" link is the real route.
+654 tests, `tsc`/`next build` clean.

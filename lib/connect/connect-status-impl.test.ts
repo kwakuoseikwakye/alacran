@@ -143,7 +143,11 @@ describe("getConnectStatusImpl", () => {
     expect(status.github.guidance.link).toBe("https://cli.github.com")
   })
 
-  it("guides `gog auth setup` when gog is installed but no account is connected", async () => {
+  // These three cover the reported bug: every not-connected Google state used
+  // to hand back the single command `gog auth setup`, which only PRINTS a plan
+  // and connects nothing. The stage is what lets the card show the step the
+  // user is actually on, and no stage may offer that command again.
+  it("sends a user with no OAuth client to the client stage, not `gog auth setup`", async () => {
     const exec = fakeExec((command) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
@@ -154,7 +158,26 @@ describe("getConnectStatusImpl", () => {
     const status = await getConnectStatusImpl(exec, undefined, noAgents)
 
     expect(status.google.connected).toBe(false)
-    expect(status.google.guidance.command).toBe("gog auth setup")
+    expect(status.google.googleStage).toBe("client")
+    expect(status.google.guidance.command).toBeUndefined()
+  })
+
+  // credentials_exists is file-backed and flips independently of `email`,
+  // which reads back from the OS keyring — so this state is real, and it used
+  // to be indistinguishable from "nothing set up at all".
+  it("sends a user who already has an OAuth client to the account stage", async () => {
+    const exec = fakeExec((command) => {
+      if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
+      if (command === "gog")
+        return { stdout: JSON.stringify({ account: { email: "", credentials_exists: true } }) }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, undefined, noAgents)
+
+    expect(status.google.connected).toBe(false)
+    expect(status.google.googleStage).toBe("account")
+    expect(status.google.guidance.command).toBeUndefined()
   })
 
   it("does not crash on malformed gog JSON", async () => {
@@ -167,7 +190,21 @@ describe("getConnectStatusImpl", () => {
     const status = await getConnectStatusImpl(exec, undefined, noAgents)
 
     expect(status.google.connected).toBe(false)
-    expect(status.google.guidance.command).toBe("gog auth setup")
+    expect(status.google.googleStage).toBe("client")
+  })
+
+  it("marks a missing gog as the install stage", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which" && args[0] === "gog") return new Error("not found")
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
+      if (command === "gh") return { stdout: "octocat\n" }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, "darwin", noAgents)
+
+    expect(status.google.googleStage).toBe("install")
+    expect(status.google.guidance.command).toBe("brew install gogcli")
   })
 
   it("reports GitHub signed in with the login name", async () => {
