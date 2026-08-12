@@ -28,8 +28,8 @@ async function mockAgents() {
     const actual = await importOriginal<typeof import("./config")>()
     return {
       ...actual,
-      AGENTS: [{ id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" }],
-      SKILL_ADAPTERS: { "email-pipeline-agent": (agent: { id: string; rootPath: string }) => scanSkillsDir(agent.id, path.join(agent.rootPath, "skills")) },
+      AGENTS: [{ id: "legacy-pipeline", name: "Legacy Pipeline", rootPath: root, kind: "pipeline" }],
+      SKILL_ADAPTERS: { "legacy-pipeline": (agent: { id: string; rootPath: string }) => scanSkillsDir(agent.id, path.join(agent.rootPath, "skills")) },
     }
   })
 }

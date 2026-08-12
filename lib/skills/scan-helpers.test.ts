@@ -67,7 +67,7 @@ describe("scanSkillsDir", () => {
   })
 
   it("returns an empty array when the skills directory doesn't exist", async () => {
-    const entries = await scanSkillsDir("email-pipeline-agent", path.join(root, "does-not-exist"))
+    const entries = await scanSkillsDir("legacy-pipeline", path.join(root, "does-not-exist"))
     expect(entries).toEqual([])
   })
 })

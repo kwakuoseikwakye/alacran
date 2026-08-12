@@ -116,7 +116,7 @@ describe("restoreCompanyImpl", () => {
   })
 
   // A missing `.claude` is no longer a rejection — it never actually proved
-  // anything about being a company (email-pipeline-agent is one and has none), so
+  // anything about being a company (a real one can have none), so
   // requiring it only blocked real imports. `.git` is the guard that survives,
   // and it's the one that catches a clone which reported success but produced
   // nothing usable.

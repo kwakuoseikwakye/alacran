@@ -38,7 +38,7 @@ beforeEach(async () => {
   aiExecutorRegistryPath = path.join(dataDir, "ai-executors.json")
   vi.doMock("./get-effective-agents", () => ({
     getEffectiveAgents: async () => [
-      { id: "pipeline", name: "Owner", rootPath: pipelineRoot, kind: "pipeline" },
+      { id: "legacy-pipeline", name: "Legacy Pipeline", rootPath: pipelineRoot, kind: "pipeline" },
       { id: "ops", name: "Ops", rootPath: reportLogRoot, kind: "report-log" },
       { id: "acme", name: "Acme", rootPath: commandSetRoot, kind: "command-set" },
     ],
@@ -54,13 +54,18 @@ afterEach(async () => {
 })
 
 describe("buildNetworkMap", () => {
-  it("gives the pipeline agent only a Google edge, read from its own config.json", async () => {
+  // The email-reading branch this used to assert is gone: no kind surfaces a
+  // mailbox on the graph any more, so an unrecognised kind must fall through
+  // to no edges rather than inventing one — and crucially must NOT leak an
+  // address even when a config.json beside it holds one.
+  it("gives an unrecognised kind no edges, and never reads an email from its config.json", async () => {
     await writeFile(path.join(pipelineRoot, "config.json"), JSON.stringify({ account: "ops@acme.co" }))
     const { buildNetworkMap } = await import("./build-network-map")
     const map = await buildNetworkMap(baseExec(), aiExecutorRegistryPath)
-    const pipeline = map.companies.find((c) => c.id === "pipeline")!
-    expect(pipeline.aiExecutorId).toBeNull()
-    expect(pipeline.edges).toEqual([{ service: "google", connected: true, detail: "Email connected (ops@acme.co)" }])
+    const legacy = map.companies.find((c) => c.id === "legacy-pipeline")!
+    expect(legacy.aiExecutorId).toBeNull()
+    expect(legacy.edges).toEqual([])
+    expect(JSON.stringify(legacy)).not.toContain("ops@acme.co")
   })
 
   it("gives the report-log agent no edges at all — a genuinely isolated node", async () => {

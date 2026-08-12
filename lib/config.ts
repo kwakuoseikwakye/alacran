@@ -7,5 +7,3 @@ const builtins = loadBuiltins()
 export const AGENTS: Agent[] = builtins.agents
 export const ADAPTERS: Record<string, Adapter> = builtins.adapters
 export const SKILL_ADAPTERS: Record<string, SkillAdapter> = builtins.skillAdapters
-
-export const PIPELINE_LAUNCHD_LABEL = "com.example.email-pipeline"

@@ -15,13 +15,9 @@ afterEach(async () => {
 })
 
 describe("buildBuiltins", () => {
-  it("includes all 3 builtins when every dir exists", () => {
+  it("includes both builtins when every dir exists", () => {
     const b = buildBuiltins(() => true)
-    expect(b.agents.map((a) => a.id).sort()).toEqual([
-      "ai-company-starter-main",
-      "plh-ops",
-      "email-pipeline-agent",
-    ])
+    expect(b.agents.map((a) => a.id).sort()).toEqual(["ai-company-starter-main", "plh-ops"])
   })
 
   it("includes none when no dir exists", () => {
@@ -42,7 +38,7 @@ describe("buildBuiltins", () => {
     const gates: Array<(p: string) => boolean> = [
       () => true,
       () => false,
-      (p) => p.includes("pipeline"),
+      (p) => p.includes("plh-ops"),
     ]
     for (const exists of gates) {
       const b = buildBuiltins(exists)
@@ -50,29 +46,6 @@ describe("buildBuiltins", () => {
       expect(Object.keys(b.adapters).sort()).toEqual(ids)
       expect(Object.keys(b.skillAdapters).sort()).toEqual(ids)
     }
-  })
-
-  it("email-pipeline-agent's skillAdapter scans skills/ (not .claude/skills — it isn't a generic command-set agent)", async () => {
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    await writeFile(
-      path.join(root, "skills", "plh-dev-team", "SKILL.md"),
-      "---\nname: plh-dev-team\ndescription: Runs the dev team pipeline.\n---\n"
-    )
-    const agent = { id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" as const }
-
-    const b = buildBuiltins(() => true)
-    const entries = await b.skillAdapters["email-pipeline-agent"](agent)
-
-    expect(entries).toEqual([
-      {
-        id: path.join(root, "skills", "plh-dev-team", "SKILL.md"),
-        agentId: "email-pipeline-agent",
-        kind: "skill",
-        name: "plh-dev-team",
-        description: "Runs the dev team pipeline.",
-        path: path.join(root, "skills", "plh-dev-team", "SKILL.md"),
-      },
-    ])
   })
 
   it("plh-ops's skillAdapter scans workflow/", async () => {
@@ -98,12 +71,10 @@ describe("buildBuiltins", () => {
     ])
   })
 
-  it("both skillAdapters return an empty array when their scanned directory doesn't exist", async () => {
+  it("plh-ops's skillAdapter returns an empty array when workflow/ doesn't exist", async () => {
     const b = buildBuiltins(() => true)
-    const pipelineAgent = { id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: root, kind: "pipeline" as const }
     const opsAgent = { id: "plh-ops", name: "PLH Ops", rootPath: root, kind: "report-log" as const }
 
-    expect(await b.skillAdapters["email-pipeline-agent"](pipelineAgent)).toEqual([])
     expect(await b.skillAdapters["plh-ops"](opsAgent)).toEqual([])
   })
 })

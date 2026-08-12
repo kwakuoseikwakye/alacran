@@ -15,54 +15,36 @@ afterEach(async () => {
   await rm(root, { recursive: true, force: true })
 })
 
-function pipelineAgent(rootPath: string): Agent {
-  return { id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath, kind: "pipeline" }
-}
+const company = (rootPath: string): Agent => ({
+  id: "ai-company-starter-main",
+  name: "AI Company Starter",
+  rootPath,
+  kind: "command-set",
+})
 
 describe("getIntegrationStatus", () => {
-  it("reports the connected email account for email-pipeline-agent when config.json has one", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "owner@example.com" }))
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("Email connected (owner@example.com)")
+  it("reports none configured when the company has no .env at all", async () => {
+    expect(await getIntegrationStatus(company(path.join(root, "does-not-exist")))).toBe("none configured yet")
   })
 
-  it("reports none configured when config.json is missing", async () => {
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
-  })
-
-  it("reports none configured when config.json is malformed JSON", async () => {
-    await writeFile(path.join(root, "config.json"), "{ not json")
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
-  })
-
-  it("reports none configured when the account field is missing", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ sender: "sender@example.com" }))
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
-  })
-
-  it("reports none configured when the account field is an empty string", async () => {
-    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "   " }))
-    expect(await getIntegrationStatus(pipelineAgent(root))).toBe("none configured yet")
-  })
-
-  it("reports none configured for any other agent when it has no .env at all", async () => {
-    const otherAgent: Agent = {
-      id: "ai-company-starter-main",
-      name: "AI Company Starter",
-      rootPath: path.join(root, "does-not-exist"),
-      kind: "command-set",
-    }
-    expect(await getIntegrationStatus(otherAgent)).toBe("none configured yet")
-  })
-
-  it("reports Notion connected for any other agent when its own .env has NOTION_TOKEN (via api-connect)", async () => {
-    const otherAgent: Agent = { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }
+  it("reports Notion connected when the company's own .env has NOTION_TOKEN", async () => {
     await writeFile(path.join(root, ".env"), "NOTION_TOKEN=secret_real\n")
-    expect(await getIntegrationStatus(otherAgent)).toBe("Notion connected")
+    expect(await getIntegrationStatus(company(root))).toBe("Notion connected")
   })
 
-  it("reports none configured for any other agent when .env has the empty NOTION_TOKEN= placeholder api-connect writes before the user pastes a value", async () => {
-    const otherAgent: Agent = { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }
+  it("reports none configured for the empty NOTION_TOKEN= placeholder written before a value is pasted", async () => {
     await writeFile(path.join(root, ".env"), "NOTION_TOKEN=\n")
-    expect(await getIntegrationStatus(otherAgent)).toBe("none configured yet")
+    expect(await getIntegrationStatus(company(root))).toBe("none configured yet")
+  })
+
+  // This function used to read a config.json from one hardcoded agent id and
+  // surface the email address inside it — the only place this app ever printed
+  // a real mailbox on screen. That branch is gone, so a config.json with an
+  // account in it must now be ignored entirely rather than reported.
+  it("never surfaces an email address, even when a config.json holds one", async () => {
+    await writeFile(path.join(root, "config.json"), JSON.stringify({ account: "someone@example.com" }))
+    const status = await getIntegrationStatus(company(root))
+    expect(status).toBe("none configured yet")
+    expect(status).not.toContain("@")
   })
 })

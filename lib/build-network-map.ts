@@ -1,7 +1,5 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
-import { readFile } from "node:fs/promises"
-import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
 import { getCompanyRemoteImpl } from "./github/backup-company-impl"
 import { getAiExecutorIdForAgent } from "./ai-executor-registry"
@@ -30,16 +28,6 @@ export type NetworkCompany = {
 
 export type NetworkMap = { companies: NetworkCompany[]; executorsInUse: AiExecutorId[] }
 
-async function readPipelineEmail(agent: Agent): Promise<string | null> {
-  try {
-    const raw = await readFile(path.join(agent.rootPath, "config.json"), "utf-8")
-    const config = JSON.parse(raw) as { account?: unknown }
-    return typeof config.account === "string" && config.account.trim() ? config.account.trim() : null
-  } catch {
-    return null
-  }
-}
-
 /**
  * Composes the "what is this company actually plugged into" view for the
  * /network page out of the same primitives the Ownership Sheet
@@ -49,11 +37,14 @@ async function readPipelineEmail(agent: Agent): Promise<string | null> {
  * connected/not-connected line per service.
  *
  * Only ever produces edges for a service a company's *kind* actually
- * supports elsewhere in this app (see AgentCard's show* flags): a pipeline
- * agent has no GitHub-backup button anywhere, so it gets no GitHub edge
- * here either, rather than inventing a capability that isn't real. A
- * report-log agent (e.g. plh-ops) has none of these buttons, so it's a
- * genuinely isolated node — that's honest, not a bug.
+ * supports elsewhere in this app (see AgentCard's show* flags), rather than
+ * inventing a capability that isn't real. A report-log agent (e.g. plh-ops)
+ * has none of those buttons, so it's a genuinely isolated node — that's
+ * honest, not a bug.
+ *
+ * NOTE: the final branch is a fall-through, not an exhaustive Record, so tsc
+ * cannot catch a newly-added AgentKind silently acquiring github/google/notion
+ * edges. Any new kind must be checked against this file by hand.
  */
 export async function buildNetworkMap(
   execFn: ExecFileFn = defaultExecFile,
@@ -65,30 +56,18 @@ export async function buildNetworkMap(
 
   const companies = await Promise.all(
     agents.map(async (agent): Promise<NetworkCompany> => {
-      if (agent.kind === "pipeline") {
-        const email = await readPipelineEmail(agent)
-        return {
-          id: agent.id,
-          name: agent.name,
-          kind: agent.kind,
-          aiExecutorId: null,
-          edges: [
-            {
-              service: "google",
-              connected: Boolean(email),
-              detail: email ? `Email connected (${email})` : "No email connected yet",
-            },
-          ],
-        }
-      }
 
-      // Both are genuinely isolated nodes. `external` must be listed here and
-      // not left to fall through to the company branch below: that branch
-      // draws github/google/notion/executor edges, and an external folder
-      // supports none of those anywhere else in the app — no executor picker,
-      // no Google picker, no MCP, no backup. Drawing them would invent a
-      // capability, which is the one thing this map must not do.
-      if (agent.kind === "report-log" || agent.kind === "external") {
+      // All three are genuinely isolated nodes, and must be listed here rather
+      // than left to fall through to the company branch below: that branch
+      // draws github/google/notion/executor edges, and these kinds support
+      // none of those anywhere else in the app — no executor picker, no Google
+      // picker, no MCP, no backup. Drawing them would invent a capability,
+      // which is the one thing this map must not do.
+      //
+      // `pipeline` is currently unreachable (no built-in or registered company
+      // uses it) but stays listed: it is still a valid AgentKind, and the
+      // fall-through below is what would silently grant it every edge.
+      if (agent.kind === "report-log" || agent.kind === "external" || agent.kind === "pipeline") {
         return { id: agent.id, name: agent.name, kind: agent.kind, aiExecutorId: null, edges: [] }
       }
 

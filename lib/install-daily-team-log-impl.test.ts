@@ -59,7 +59,7 @@ describe("installDailyTeamLogImpl", () => {
     expect(config).toEqual({ person: null, projects: [], output_repo: null })
   })
 
-  it("writes a SKILL.md with the target company's name and no PLH/Owner references", async () => {
+  it("writes a SKILL.md with the target company's name and no upstream org or repo slug", async () => {
     await mockAgents()
     const { installDailyTeamLogImpl } = await import("./install-daily-team-log-impl")
 
@@ -71,7 +71,7 @@ describe("installDailyTeamLogImpl", () => {
     )
     expect(skillMd).toContain("business: Second Co")
     expect(skillMd).not.toMatch(/PLH/i)
-    expect(skillMd).not.toMatch(/Owner/i)
+    expect(skillMd).not.toMatch(/github\.com\/[\w.-]+\/[\w.-]+/)
   })
 
   it("writes a Setup.md with no plh-ops-specific references", async () => {

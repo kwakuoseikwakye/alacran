@@ -98,7 +98,7 @@ describe("companies-registry", () => {
   })
 
   // A git repo with no `.claude` is a real, importable company —
-  // `email-pipeline-agent` is exactly that shape. `.claude` is a Claude-Code
+  // A real agent can be exactly that shape. `.claude` is a Claude-Code
   // adapter artifact, not the portable core, and requiring it only blocked
   // legitimate imports.
   it("accepts a git repo with no .claude directory", async () => {

@@ -1,8 +1,5 @@
 import { Badge } from "@/components/ui/badge"
 import type { Agent, Activity } from "@/lib/adapters/types"
-import type { LaunchdHealth } from "@/lib/adapters/launchd"
-import type { PollLockStatus } from "@/lib/adapters/poll-lock"
-import { TriggerPollButton } from "@/components/trigger-poll-button"
 import { VerifyButton } from "@/components/verify-button"
 import { DailyTeamLogButton } from "@/components/daily-team-log-button"
 import { RemoveCompanyButton } from "@/components/remove-company-button"
@@ -21,16 +18,12 @@ import { GetStartedButton } from "@/components/get-started-button"
 import { McpServersSheet } from "@/components/mcp-servers-sheet"
 import type { McpServer } from "@/lib/mcp-servers-config"
 import { CompanyGuide } from "@/components/company-guide"
-import { ScheduledJobToggle } from "@/components/scheduled-job-toggle"
 import { NO_INTEGRATION_STATUS } from "@/lib/get-integration-status"
 
 type AgentCardProps = {
   agent: Agent
   latestActivity: Activity | null
   error: string | null
-  launchdHealth?: LaunchdHealth
-  showScheduledJobToggle?: boolean
-  pollStatus?: PollLockStatus
   showVerifyButton?: boolean
   showDailyTeamLogButton?: boolean
   removable?: boolean
@@ -72,9 +65,6 @@ export function AgentCard({
   agent,
   latestActivity,
   error,
-  launchdHealth,
-  showScheduledJobToggle,
-  pollStatus,
   showVerifyButton,
   showDailyTeamLogButton,
   removable,
@@ -153,15 +143,6 @@ export function AgentCard({
             </p>
           </div>
         )}
-        {launchdHealth &&
-          (showScheduledJobToggle ? (
-            <ScheduledJobToggle health={launchdHealth} />
-          ) : (
-            <p className="text-xs text-muted-foreground">
-              launchd: {launchdHealth.loaded ? "loaded" : "not loaded"}
-              {launchdHealth.lastExitStatus !== null && ` (last exit ${launchdHealth.lastExitStatus})`}
-            </p>
-          ))}
         <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
           {hasIntegration ? (
             <BrandIcon id="gmail" tone="brand" className="size-3.5" />
@@ -171,7 +152,6 @@ export function AgentCard({
           <span className="truncate">{integrationStatus}</span>
         </p>
         <div className="space-y-2 pt-1">
-          {pollStatus && <TriggerPollButton pollStatus={pollStatus} />}
           {showVerifyButton && <VerifyButton />}
           {showDailyTeamLogButton && <DailyTeamLogButton />}
           {showSetupCompanyButton && (

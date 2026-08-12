@@ -44,10 +44,9 @@ export async function getCompanyOwnershipImpl(
   const connectStatus = await getConnectStatusImpl(execFn)
   const googleConnected = connectStatus.google.connected
 
-  // getIntegrationStatus only ever reports a real per-company connection for
-  // email-pipeline-agent (which can never reach this Sheet — it isn't a
-  // command-set agent). For every company that CAN open this Sheet, fall
-  // back to the machine-wide Google connection: gog's auth is per-machine,
+  // getIntegrationStatus only reports a per-company Notion connection, never
+  // a Google one. So fall back to the machine-wide Google connection here:
+  // gog's auth is per-machine,
   // not per-company, so if it's connected at all, any company's commands
   // could use it, and this dashboard should say so rather than a blanket
   // "none configured yet" that isn't true.

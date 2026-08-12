@@ -2,7 +2,6 @@ import path from "node:path"
 import os from "node:os"
 import { existsSync } from "node:fs"
 import type { Agent, Adapter } from "./adapters/types"
-import { emailPipelineAdapter } from "./adapters/email-pipeline-agent"
 import { aiCompanyStarterMainAdapter } from "./adapters/ai-company-starter-main"
 import { plhOpsAdapter } from "./adapters/plh-ops"
 import type { SkillAdapter } from "./skills/types"
@@ -23,19 +22,6 @@ type BuiltinDescriptor = {
 const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
   {
     agent: {
-      id: "email-pipeline-agent",
-      name: "Email Pipeline Agent",
-      rootPath: path.join(AI_NATIVE_ROOT, "email-pipeline-agent"),
-      kind: "pipeline",
-    },
-    adapter: emailPipelineAdapter,
-    // The only one of the 3 built-ins whose skills live directly under
-    // skills/ rather than .claude/skills — not a generic command-set agent,
-    // so genericCommandSetSkillAdapter doesn't apply.
-    skillAdapter: (agent) => scanSkillsDir(agent.id, path.join(agent.rootPath, "skills")),
-  },
-  {
-    agent: {
       id: "ai-company-starter-main",
       name: "AI Company Starter",
       rootPath: path.join(AI_NATIVE_ROOT, "ai-company-starter-main"),
@@ -52,8 +38,8 @@ const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
       kind: "report-log",
     },
     adapter: plhOpsAdapter,
-    // plh-ops's skills live under workflow/, not .claude/skills — same
-    // reasoning as email-pipeline-agent above.
+    // plh-ops's skills live under workflow/, not .claude/skills, so the
+    // generic command-set skill adapter doesn't apply.
     skillAdapter: (agent) => scanSkillsDir(agent.id, path.join(agent.rootPath, "workflow")),
   },
 ]

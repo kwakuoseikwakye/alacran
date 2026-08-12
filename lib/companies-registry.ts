@@ -70,8 +70,8 @@ export async function registerCompanyImpl(
   // downstream needs it — genericCommandSetSkillAdapter returns an empty list
   // when the directory is absent, and Open in Terminal / Get Started just run
   // the configured executor in the root. It blocked importing
-  // `email-pipeline-agent`, a real working agent with a git repo and no `.claude`,
-  // and would equally block restoring a backup of any such repo.
+  // real working agents that have a git repo and no `.claude`, and would
+  // equally block restoring a backup of any such repo.
 
   const companies = await getRegisteredCompanies(registryPath)
   if (companies.some((c) => c.rootPath === rootPath)) {

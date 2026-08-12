@@ -1,11 +1,6 @@
-import fs from "node:fs"
 import os from "node:os"
-import { PIPELINE_LAUNCHD_LABEL } from "@/lib/config"
-import { PIPELINE_LAUNCHD_PLIST_PATH } from "@/lib/scheduled-job/paths"
 import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
-import { checkLaunchdJob } from "@/lib/adapters/launchd"
-import { checkPollLockStatus } from "@/lib/adapters/poll-lock"
 import { AgentCard } from "@/components/agent-card"
 import { ReorderableGrid } from "@/components/reorderable-grid"
 import { AddCompanyForm } from "@/components/add-company-form"
@@ -37,21 +32,12 @@ export default async function AgentTreePage() {
   }
 
   const avatarByAgentId = Object.fromEntries(avatars.map((a) => [a.agentId, a.imageUrl]))
-  const pipelineAgent = agents.find((agent) => agent.id === "email-pipeline-agent")
   const plhOpsSource = agents.find((agent) => agent.id === "plh-ops")
 
-  const [results, launchdHealth, pollStatus, availableGoogleAccounts] = await Promise.all([
+  const [results, availableGoogleAccounts] = await Promise.all([
     getAllActivities(agents, adapters),
-    checkLaunchdJob(PIPELINE_LAUNCHD_LABEL),
-    pipelineAgent
-      ? checkPollLockStatus(pipelineAgent.rootPath)
-      : Promise.resolve({ running: false, lockAgeSeconds: null }),
     listGoogleAccountEmails(),
   ])
-
-  // The toggle needs a plist to load/unload. A fresh install has neither the
-  // agent nor the plist, so it sees nothing.
-  const pipelinePlistExists = Boolean(pipelineAgent) && fs.existsSync(PIPELINE_LAUNCHD_PLIST_PATH)
 
   return (
     <>
@@ -73,12 +59,9 @@ export default async function AgentTreePage() {
           items={await Promise.all(
             results.map(async (result, index) => {
               const latest = mergeAndSortActivities([result])[0] ?? null
-              const ispipelineAgent = result.agent.id === "email-pipeline-agent"
               const isAiCompanyStarterMain = result.agent.id === "ai-company-starter-main"
               const isPlhOps = result.agent.id === "plh-ops"
-              const isRegisteredCompany = !["email-pipeline-agent", "ai-company-starter-main", "plh-ops"].includes(
-                result.agent.id
-              )
+              const isRegisteredCompany = !["ai-company-starter-main", "plh-ops"].includes(result.agent.id)
               const isCommandSet = result.agent.kind === "command-set"
               // A folder the user added that follows none of this app's
               // conventions. Open in Terminal is the ONLY action it gets —
@@ -113,9 +96,6 @@ export default async function AgentTreePage() {
                     agent={result.agent}
                     latestActivity={latest}
                     error={result.error}
-                    launchdHealth={ispipelineAgent ? launchdHealth : undefined}
-                    showScheduledJobToggle={ispipelineAgent && pipelinePlistExists}
-                    pollStatus={ispipelineAgent ? pollStatus : undefined}
                     showVerifyButton={isAiCompanyStarterMain}
                     showDailyTeamLogButton={isPlhOps}
                     removable={isRegisteredCompany}

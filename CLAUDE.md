@@ -2,10 +2,9 @@
 
 Local Next.js 15 / React 19 / Tailwind v4 dashboard for managing AI
 "companies." As of v23 it is a **product-shaped** app: a fresh install
-starts empty and onboards the user to create their first company. The 3
-example agents (`email-pipeline-agent`, `ai-company-starter-main`,
-`plh-ops`) are no longer hardcoded — they load as **existence-gated
-built-ins** (`lib/builtin-agents.ts`): present only if their
+starts empty and onboards the user to create their first company. The 2
+example agents (`ai-company-starter-main`, `plh-ops`) are no longer
+hardcoded — they load as **existence-gated built-ins** (`lib/builtin-agents.ts`): present only if their
 `~/AI-Native/*` directories exist, so a developer machine keeps full
 daily use while a shipped install starts clean. Any number of additional
 companies can be registered at runtime through the UI (see v11 in
@@ -39,8 +38,9 @@ This is a **read/manage dashboard for tools you already set up via the
 terminal** — it is not yet a self-service "download and configure your
 AI-Native instance through the UI" product. Concretely:
 
-- The 3 built-in agents (`email-pipeline-agent`, `ai-company-starter-main`,
-  `plh-ops`) are hardcoded local paths in `lib/config.ts`.
+- The 2 built-in agents (`ai-company-starter-main`, `plh-ops`) are
+  hardcoded local paths in `lib/config.ts`. A third, an email-polling
+  daemon, was removed in v68 — see "Current state" below.
 - "Add a company" can now do two things (v17): **register** an
   already-existing local directory (has `.git` + `.claude`, v11's
   original flow, unchanged), or **create** one from scratch when the
@@ -62,7 +62,7 @@ AI-Native instance through the UI" product. Concretely:
 - **`export const dynamic = "force-dynamic"`** on every page — this app
   reads live filesystem/git state, never statically cached.
 - **Adapter-per-agent pattern**: `AGENTS` / `ADAPTERS` / `SKILL_ADAPTERS`
-  in `lib/config.ts` for the 3 built-ins, generalized via
+  in `lib/config.ts` for the 2 built-ins, generalized via
   `lib/get-effective-agents.ts` (v11) to merge in runtime-registered
   companies. `lib/config.test.ts` fails if `AGENTS`/`ADAPTERS` ever drift
   out of sync.
@@ -169,13 +169,14 @@ AI-Native instance through the UI" product. Concretely:
    detail view, running the existing "Run verify" button) are always
    fine — they don't write anything.
 
-**Never write to, commit in, or otherwise mutate
-`~/AI-Native/email-pipeline-agent` or `~/AI-Native/plh-ops` directly, for
-any test or verification purpose.** This rule exists because of a real
+**Never write to, commit in, or otherwise mutate any real repo under
+`~/AI-Native/` directly — including `~/AI-Native/plh-ops` — for any test
+or verification purpose.** This rule exists because of a real
 production-content-corruption incident early in this project's history.
-If a new feature's live test would need to touch either of those two
-repos specifically, stop and ask the user how to verify instead of
-improvising a workaround.
+If a new feature's live test would need to touch one of those repos
+specifically, stop and ask the user how to verify instead of improvising
+a workaround. (v68 removed the app's only write path into the
+email-daemon repo, but the rule stands for every other one.)
 
 ## Standing release rule — rebuild + republish on every shipped change
 
@@ -423,15 +424,13 @@ without actually starting the job — only this toggle's own Start path
 clears the override. That repo can't be modified by this project, so it's
 a caveat, not a fix.
 
-**Standing context for the coming slices that retire the daemon:**
-`~/AI-Native/email-pipeline-agent/claude-agent-settings.json` lines 26-27
-point their `PreToolUse` guardrail hook at
-a pre-reorg absolute path under a former parent directory — a
-path that stopped existing when that repo moved to
-`~/AI-Native/` on 2026-07-22. The guardrail has therefore been inactive
-since then — found while investigating v31, out of scope to fix (that
-repo must not be mutated by this project), but relevant when the daemon
-itself is eventually retired.
+**This whole daemon surface was removed from the app in v68** — the card,
+the poll trigger, the schedule toggle, the launchd helpers and the
+built-in itself. Everything above is kept as the record of what was built
+and what was measured about `launchctl`'s exit codes, not as a
+description of code that still exists. The daemon repo itself is
+untouched on disk and still runs on its own; this app simply no longer
+knows about it.
 
 v32 added two more read-only commands, `triage-email` and
 `triage-issue`, and the machinery neither could exist without: a
@@ -506,6 +505,21 @@ full `.iconset`, and packing it with `iconutil`. Shipped as a patch
 version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
 than the usual brainstorm-spec-plan flow, since it's a packaging fix with
 no application-code change.
+
+v68 removed the email-polling daemon surface entirely — the built-in, its
+card, the poll trigger (v2), v31's schedule toggle, the launchd/poll-lock
+helpers, and 6 test files. The app now loads **2** existence-gated built-ins.
+**The finding to reuse:** a real mailbox was printed on screen from **two**
+unrelated places — `getIntegrationStatus` (the card) and `buildNetworkMap`'s
+`readPipelineEmail` (the Network tab's Google edge) — and only grepping for the
+*symbol* rather than the feature surfaced the second. Fixing the one you were
+told about would have left the other live. **A bug caught in the same pass:**
+removing the `pipeline` early-return made that kind fall through to the
+company branch and silently acquire github/google/notion/executor edges —
+exactly what v66's note warns about, since that branch is a fall-through and
+not an exhaustive `Record`. `pipeline` is now listed in the isolated-node
+guard; the kind itself was kept because ~15 unrelated tests use it as a
+fixture.
 
 v67 replaced `templates/company-starter/` with own-authored scaffolding, which
 is what v37 (below) should have done. v37 fixed the license and the branding

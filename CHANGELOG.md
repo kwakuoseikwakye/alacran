@@ -2897,3 +2897,48 @@ from the REAL bundled template, whose pinned doc list needed updating for the
 deleted files), and a real scaffold into a disposable `/tmp` git repo where
 `verify.py` was exercised through all three of its states — fresh company,
 decision missing its reasoning, and fully clean — then deleted.
+
+## v68 (2026-08-12): remove the email-polling daemon surface
+
+The app no longer knows about the email-polling agent. Requested directly:
+that built-in existed to watch one specific mailbox, and the app was the
+thing surfacing and triggering it.
+
+**Deleted outright** — every file that existed only to serve it:
+`lib/adapters/email-pipeline-agent.ts`, `get-poll-log-tail.ts`, `poll-lock.ts`,
+`launchd.ts`, `lib/get-poll-status.ts`, `lib/trigger-poll{,-impl}.ts`, all of
+`lib/scheduled-job/` (v31's on/off control), and the two client components
+`trigger-poll-button.tsx` / `scheduled-job-toggle.tsx`. The built-in
+descriptor and `PIPELINE_LAUNCHD_LABEL` went with them, so the app now
+loads 2 existence-gated built-ins instead of 3. 32 tests and 6 test files
+went too — they tested the removed features, and keeping them would have
+meant keeping the code.
+
+**Two places printed a real mailbox on screen, not one.** The obvious one was
+`getIntegrationStatus`, which read a hardcoded agent id's `config.json` and
+rendered `Email connected (<address>)` on its card. The second was
+`buildNetworkMap`'s `readPipelineEmail`, which did the same thing again for
+the Network tab's Google edge — found only by grepping for the *symbol*
+rather than the feature, which is the lesson worth keeping: the same data can
+surface through two unrelated pages, and fixing the one you were told about
+leaves the other live. Both are gone; a new test asserts an address is never
+surfaced even when a `config.json` beside the company holds one.
+
+**A real bug this introduced and caught before commit.** Removing the
+`pipeline` early-return in `buildNetworkMap` made that kind fall through to
+the company branch, which draws github/google/notion/executor edges — the
+exact trap CLAUDE.md's v66 note warns about, since the last branch is a
+fall-through and not an exhaustive `Record`, so `tsc` says nothing. Fixed by
+listing `pipeline` alongside `report-log`/`external` in the isolated-node
+guard. The `pipeline` AgentKind itself was **kept**: it's used as an arbitrary
+fixture kind in ~15 unrelated test files, so deleting it would have churned
+all of them to remove one now-unreachable branch.
+
+**Guards that named people were reshaped, not deleted.** Three tests proved a
+regenerated `SKILL.md`/`Setup.md` carries none of the upstream team's
+identity — by spelling out a GitHub owner and three first names, putting the
+identifiers into the repo that the guard exists to keep out of a generated
+file. They now assert shape: no `github.com/<owner>/<repo>`, no
+`reports/<Capitalized>`. Verified they still fail on a regression.
+
+`tsc` clean, vitest 628/628, `next build` clean across all 8 routes.

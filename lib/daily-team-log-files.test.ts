@@ -14,10 +14,10 @@ describe("daily-team-log-files", () => {
     expect(md).toContain("business: Second Co")
   })
 
-  it("buildDailyTeamLogSkillMd contains no PLH- or Owner-specific references", () => {
+  it("buildDailyTeamLogSkillMd carries no upstream org or repo slug", () => {
     const md = buildDailyTeamLogSkillMd("Second Co")
     expect(md).not.toMatch(/PLH/i)
-    expect(md).not.toMatch(/Owner/i)
+    expect(md).not.toMatch(/github\.com\/[\w.-]+\/[\w.-]+/)
   })
 
   // Asserted by shape, not by naming the upstream owner/teammates: the

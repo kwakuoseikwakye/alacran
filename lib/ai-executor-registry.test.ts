@@ -11,7 +11,7 @@ beforeEach(async () => {
   registryPath = path.join(dataDir, "ai-executors.json")
   vi.doMock("./get-effective-agents", () => ({
     getEffectiveAgents: async () => [
-      { id: "email-pipeline-agent", name: "Email Pipeline Agent", rootPath: "/fake", kind: "pipeline" },
+      { id: "legacy-pipeline", name: "Legacy Pipeline", rootPath: "/fake", kind: "pipeline" },
       { id: "ai-company-starter-main", name: "AI Company Starter", rootPath: "/fake", kind: "command-set" },
     ],
   }))
