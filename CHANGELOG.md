@@ -2942,3 +2942,58 @@ file. They now assert shape: no `github.com/<owner>/<repo>`, no
 `reports/<Capitalized>`. Verified they still fail on a regression.
 
 `tsc` clean, vitest 628/628, `next build` clean across all 8 routes.
+
+## v69 (2026-08-12): freee as an MCP connector
+
+Added freee — Japanese accounting, HR, invoicing, payroll and e-signature
+software — to the per-company MCP connector presets (v61). One entry in
+`MCP_PRESETS`; no new mechanism, no new file, no new dependency. `.mcp.json`
+writing, approval, OAuth and credential storage are Claude Code's, exactly as
+they were for the five presets already there.
+
+**The gate this had to pass first.** `lib/mcp-presets.ts` carries a standing
+rule written by v64: a preset must be Dynamic-Client-Registration-checked
+against the live endpoint before it's added, because v64 shipped three Google
+presets that could never authenticate and had to delete them. freee was
+checked the same way, before any code changed:
+
+- `POST /mcp` unauthenticated answers **`401`** with
+  `WWW-Authenticate: Bearer error="invalid_token"` and a `resource_metadata`
+  pointer. This is precisely what the Google presets never did — they
+  answered `200` with a full tool list, so no client ever started an OAuth
+  flow and the failure only showed up per tool call.
+- `/.well-known/oauth-protected-resource/mcp` names its authorization server
+  as its own origin (`https://mcp.freee.co.jp/`), whose metadata advertises
+  **`registration_endpoint: https://mcp.freee.co.jp/register`**. DCR is the
+  only way Claude Code can obtain a `client_id` for an arbitrary MCP server,
+  so this is the check that separates a preset that works from one that
+  can't.
+
+**freee's local server was deliberately not used.** freee ships both a hosted
+server and a local stdio one (`npx freee-mcp configure`, OAuth PKCE against a
+user-created freee app, callback on `127.0.0.1:54321`). The stdio shape is
+explicitly out of scope for this UI — `isSafeServerUrl` is https-only by
+design, since a local server means a user-supplied command line, the one
+input that would need real command validation. `claude mcp add` still covers
+that for power users. The hosted endpoint is the same shape as every other
+entry, which is why this slice is one line.
+
+**No new tests.** `mcp-presets.test.ts`'s existing assertions already cover
+any addition: every preset must pass the same `isSafeServerName` /
+`isSafeServerUrl` validation a user-typed value passes, names must be unique,
+and no `*.googleapis.com` host may reappear. That was the point of writing
+them as loops over `MCP_PRESETS` rather than per-entry cases.
+
+**A stale doc line fixed in passing.** README still advertised "Canva, Figma,
+Lovable, Docusign, Vercel or a Google MCP server" — the Google half was
+deleted in v64 and the sentence was never updated. Corrected in the same line
+that gained freee.
+
+`tsc` clean, vitest 628/628, `next build` clean across all 8 routes. Live-
+verified on a throwaway dev server (port 3117): the freee preset renders in
+the Connect tools Sheet and fills the form with `freee` /
+`https://mcp.freee.co.jp/mcp`. **"Add" was deliberately not clicked** — it
+writes and commits a real `.mcp.json` into a real repo, which the standing
+safety rule forbids for a test. Selectors were taken from scoped snapshot
+refs inside the open Sheet, per v66's note about page-wide selectors reaching
+live auto-saving controls on the cards behind it.

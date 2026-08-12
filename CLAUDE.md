@@ -291,7 +291,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v66** (see `CHANGELOG.md` for the full per-slice changelog —
+**Shipped: v1–v69** (see `CHANGELOG.md` for the full per-slice changelog —
 that file, not this line, is the authority on the next free slice number;
 v61 was nearly built as "v58" because this line said v39 while the changelog
 was already at v60).
@@ -992,6 +992,22 @@ issues, which belong in a token or a consumer's className — a structurally
 missing scroll container that every caller routes through is the case where the
 rule's own logic points at the primitive. It is not a precedent for colour,
 spacing, or width fixes, which still belong in the consumer (see v16/v29).
+
+v69 added **freee** (Japanese accounting/HR/invoicing/payroll/e-signature) to
+v61's per-company MCP connector presets — one entry in `MCP_PRESETS`, no new
+mechanism. It shipped as one line because it passed v64's standing gate first:
+unauthenticated `POST https://mcp.freee.co.jp/mcp` returns a real **401 with
+`WWW-Authenticate`** (the exact thing the deleted Google presets never did —
+they answered 200 with a tool list, so no OAuth flow ever started), and its
+authorization server is its own origin advertising
+`registration_endpoint: https://mcp.freee.co.jp/register`, so Claude Code can
+complete DCR. **freee's local stdio server (`npx freee-mcp`) was deliberately
+not used** — `isSafeServerUrl` is https-only by design, because a stdio server
+means a user-supplied command line, the one input needing real command
+validation; `claude mcp add` still covers it. No new tests: the preset
+assertions are loops over `MCP_PRESETS`, so any addition is already covered.
+README's connector line was corrected in passing — it still named "a Google
+MCP server", deleted back in v64.
 
 ## Roadmap (named, not yet designed)
 

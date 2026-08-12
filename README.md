@@ -61,7 +61,7 @@ that runs on `127.0.0.1` and opens right in your browser.
   holds a credential of its own; it just checks whether *your* CLI or
   account is already signed in.
 - **Connect MCP tools per company.** Point a company at Canva, Figma,
-  Lovable, Docusign, Vercel or a Google MCP server — no CLI to install, no
+  Lovable, Docusign, Vercel or freee (accounting/HR) — no CLI to install, no
   key to paste. Alacrán writes the company's own `.mcp.json`; you approve
   and sign in once inside a real session, and the token stays in Claude
   Code's own store. These tools are available in **Open in Terminal** and

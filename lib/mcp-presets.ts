@@ -49,4 +49,14 @@ export const MCP_PRESETS: McpPreset[] = [
   { name: "lovable", label: "Lovable", url: "https://mcp.lovable.dev" },
   { name: "docusign", label: "Docusign", url: "https://mcp.docusign.com/mcp" },
   { name: "vercel", label: "Vercel", url: "https://mcp.vercel.com" },
+  // freee (Japanese accounting/HR/invoicing). Added after the two-curl check
+  // above, run live against the real endpoint rather than read off the README:
+  // unauthenticated POST /mcp answers 401 with a WWW-Authenticate challenge
+  // (the thing the Google presets never did), its own origin is the
+  // authorization server, and it advertises
+  // registration_endpoint https://mcp.freee.co.jp/register — so Claude Code
+  // can complete DCR. freee also ships a local stdio server (`npx freee-mcp`),
+  // which this UI deliberately doesn't support; the hosted one is the same
+  // shape as every other entry here.
+  { name: "freee", label: "freee", url: "https://mcp.freee.co.jp/mcp" },
 ]
