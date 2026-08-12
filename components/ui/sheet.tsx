@@ -73,7 +73,12 @@ function SheetContent({
         )}
         {...props}
       >
-        {children}
+        {/* Own scroll container: SheetContent is a fixed, full-height flex column,
+            so without this any content taller than the viewport is unreachable.
+            Kept outside the close button so the X stays pinned while content scrolls. */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+          {children}
+        </div>
         {showCloseButton && (
           <SheetPrimitive.Close className="absolute top-4 right-4 rounded-xs opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none data-[state=open]:bg-secondary">
             <XIcon className="size-4" />

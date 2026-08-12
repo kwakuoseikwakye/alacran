@@ -944,6 +944,25 @@ what v38's Open in Terminal already does. Such a button could only open a
 terminal and then tell the user to approve and type `/mcp` — verbatim what the
 Sheet's instruction already says. Don't add it.
 
+v63 fixed a user-reported bug: a drawer with a lot of text in it "got stuck" —
+its bottom, including the Save/Next buttons, was unreachable. The cause was in
+two primitives, not in any drawer. `SheetContent` is a `fixed`, `h-full`,
+`flex flex-col` panel that **had no scroll container at all**, so anything
+taller than the viewport was clipped with nothing to scroll; only 2 of its 10
+consumers had hand-patched an inner `overflow-y-auto`, and the 4 with plain
+content were all broken. `AlertDialogContent` had no `max-height` while centred
+with `translate-y-[-50%]`, so a tall confirm dialog overflowed *both* ends. Both
+fixed in the primitive: `SheetContent` wraps `children` in a
+`min-h-0 flex-1 overflow-y-auto` flex column (wrapping rather than scrolling
+`SheetContent` itself, so the `absolute` close button stays pinned), and
+`AlertDialogContent` got `max-h-[calc(100dvh-2rem)] overflow-y-auto`.
+**This is the one sanctioned exception to the "never edit `components/ui/*`"
+rule above, confirmed with the maintainer:** that rule governs *styling*
+issues, which belong in a token or a consumer's className — a structurally
+missing scroll container that every caller routes through is the case where the
+rule's own logic points at the primitive. It is not a precedent for colour,
+spacing, or width fixes, which still belong in the consumer (see v16/v29).
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

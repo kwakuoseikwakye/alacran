@@ -2563,3 +2563,52 @@ the self-hosting requirement, and the nav-measurement obligation.
 Verified live in both themes on the app and the landing site (light and dark),
 plus the app's real registered companies. 647 tests, `tsc`/`next build`/lint
 clean.
+
+## v63 (2026-08-12): tall drawers and dialogs scroll
+
+A user-reported bug: pasting a lot of text into the company-details drawer made
+it "get stuck" — the bottom of the form, including the Next/Save buttons, was
+unreachable. Diagnosed as a defect in two primitives rather than in any drawer.
+
+`SheetContent` is a `fixed`, `h-full`, `flex flex-col` panel with **no scroll
+container anywhere** — any child taller than the viewport was simply clipped,
+with nothing to scroll. Two of the ten consumers had each hand-patched their own
+inner `flex-1 overflow-y-auto` (`add-company-form.tsx`,
+`mcp-servers-sheet.tsx`); the four that hadn't were all broken by definition:
+the company-setup wizard (the one reported), the company guide, the ownership
+sheet, and the connect help. The remaining consumers use a fixed-height
+`ScrollArea` and were never affected.
+
+`AlertDialogContent` had the same class of bug from the opposite direction: no
+`max-height` at all, while centred with `translate-y-[-50%]`. A confirm dialog
+taller than the viewport therefore overflows *both* ends with no way to reach
+either — which the skill-editor, skill-history and command-runner dialogs can
+each do, since they already contain a `max-h-[60vh]` diff preview plus a header
+and a footer.
+
+Fixed once in each primitive instead of per-consumer, since every caller routes
+through them and a per-drawer patch leaves the next drawer broken too:
+
+- `SheetContent` now wraps `children` in a
+  `flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain` div. It
+  wraps `children` rather than putting `overflow-y-auto` on `SheetContent`
+  itself (the actual one-liner) so the close button — `absolute`, and therefore
+  a scrolling descendant of any scroll container it sits inside — stays pinned.
+  The wrapper keeps `flex flex-col` so the two consumers already relying on
+  flex semantics for their own inner scroll behave exactly as before.
+- `AlertDialogContent` gained `max-h-[calc(100dvh-2rem)] overflow-y-auto
+  overscroll-contain`.
+
+**This deliberately edits `components/ui/*`, which `CLAUDE.md` forbids** — that
+rule is about styling issues, where the fix belongs in a token or a consumer's
+className. This is a structurally missing scroll container shared by every
+caller, so the rule's own logic (one fix where everything routes through, rather
+than N) points at the primitive. Confirmed with the maintainer before shipping.
+
+Measured live at 1000×560 rather than eyeballed. The pre-fix shape was proved
+genuinely stuck first (`canScroll: false`, `scrollTop` pinned at 0 with the
+wrapper's overflow forced back to `visible`). After: 1293px of content in the
+560px drawer scrolls its full 733px with Back/Next reachable and the close X
+still at `top: 16`; a 1450px alert dialog clamps to 528px inside the 560px
+viewport and scrolls 924px. Both were dismissed at their gates — nothing saved,
+nothing installed. 647 tests, `tsc`/`next build` clean.
