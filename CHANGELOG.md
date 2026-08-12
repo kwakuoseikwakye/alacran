@@ -136,7 +136,7 @@ routine already registered as a nightly (22:00) scheduled task on this
 machine — reading `~/.claude/daily-team-log/config.json`, summarizing the
 operator's own local Claude Code session history, and committing the
 result to the shared `plh-ops` repo. Unlike every other write action in
-this app, this one **pushes to a remote shared with Owner's analysis
+this app, this one **pushes to a remote shared with the analysis
 agent and teammates** — the confirm dialog discloses this plainly before
 the run starts, since there's no local diff to preview beforehand (the
 routine's job is to summarize and commit autonomously, same as its
@@ -158,13 +158,13 @@ ready.
 
 ## v10: live log streaming for in-flight runs
 
-The Owner-agent poll button, every company-command's "Run" tab, and the
+The email-pipeline poll button, every company-command's "Run" tab, and the
 plh-ops daily-team-log button all now show the growing tail of their log
 file while running, instead of only a static "Running…" label — polled
 the same ~3s interval each already used for its running/idle status, not
 a separate mechanism. No websockets or SSE; it's the same file each
 feature already writes, just read a little more of it on every tick. The
-Owner-agent button also gained a real client-side poll loop for the
+email-pipeline button also gained a real client-side poll loop for the
 first time (`getPollStatus`), including a mount-time resume so loading the
 dashboard while the automated 5-minute cron job happens to be running
 doesn't leave the button stuck — previously it only reflected the page's
@@ -397,7 +397,7 @@ in this whole ecosystem that was already designed to be portable — its
 own `config.example.json` and self-bootstrapping `Setup.md` already
 auto-detect who's using it and which projects to include, entirely
 locally (no OAuth, no external API). Its extractor script, `gather.py`,
-is copied verbatim (confirmed zero PLH/Owner-specific content); its
+is copied verbatim (confirmed zero org- or person-specific content); its
 `SKILL.md` and `Setup.md` are regenerated rather than copied, since the
 originals hardcode both the upstream owner/repo to clone and a fixed set
 of per-teammate report folders — copying them as-is would have pointed a
@@ -758,7 +758,7 @@ previously stale (it said "more starters soon" while packs already
 shipped), now names all 7 real packs with real descriptions, grouped the
 same way.
 
-## v31: scheduled-runs toggle for the Owner agent
+## v31: scheduled-runs toggle for the email-pipeline agent
 
 The `email-pipeline-agent` card's launchd status line becomes an interactive
 on/off control for the job's recurring schedule
@@ -800,9 +800,9 @@ deliberately bespoke to one agent id — the population is one; generalise
 if a second scheduled agent ever exists.
 
 Live verification used a disposable `com.alacran.testjob` (running
-`/usr/bin/true`), never the real Owner job, per the standing safety
+`/usr/bin/true`), never the real scheduled job, per the standing safety
 rule: toggled through the real `launchctl` code path, confirmed via
-`launchctl list` before and after, then deleted. The real Owner job's
+`launchctl list` before and after, then deleted. The real scheduled job's
 state was confirmed unchanged at three checkpoints during the session;
 the toggle's confirm dialog was opened and cancelled against the real
 card, never confirmed. The real button is left for the maintainer to
