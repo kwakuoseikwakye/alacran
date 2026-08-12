@@ -2818,3 +2818,24 @@ dialog under test**, because a page-wide selector in this app can reach live
 controls that write to real repos on change. The same ambiguity on the
 "Update & Restart" button had errored loudly instead, which is what a
 strict-mode locator does and what an unscoped `querySelector` never will.
+
+### v0.11.1 — same-day fix: v0.11.0's tag failed CI and published nothing
+
+v66's own new test, `opens a terminal for an external folder`, passed locally
+and failed on CI with `ENOENT ... .data/acme.open-terminal.sh`. It was the only
+test in that file to run *past* the kind guard to the launcher-script write, and
+it never passed a `dataDir` — so it used the default `process.cwd()/.data`,
+which exists on this dev machine (it holds the dev company registry) and does
+not exist in a clean CI checkout. Every other test there that reaches the write
+already used `mkdtemp`; this one now does too.
+
+A test that depends on untracked local state is the failure mode worth naming:
+`npx vitest run` was green here and red on a clean tree, so the suite could not
+have caught it. Verified this time by temporarily moving `.data` aside and
+re-running the whole suite — 660 passed with it absent, which is the state CI
+actually builds in.
+
+No user impact: `package-linux.yml` runs tests before publishing, so v0.11.0
+produced no release at all and `latest` stayed v0.10.3 throughout. Fixed forward
+as v0.11.1 rather than re-pointing the public v0.11.0 tag — the same call this
+repo made for v0.7.19.

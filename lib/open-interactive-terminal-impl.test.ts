@@ -48,18 +48,29 @@ describe("openInteractiveTerminalImpl", () => {
 
   // Open in Terminal is the ONE action an external folder gets. This is the
   // only kind check that opens to it — Get Started guards separately.
+  //
+  // dataDir must be a real temp dir: this test runs past the guard to the
+  // launcher-script write, and the default DATA_DIR is process.cwd()/.data,
+  // which exists on a dev machine but not on a clean CI checkout. Every other
+  // test here that reaches the write does the same.
   it("opens a terminal for an external folder", async () => {
-    const { spawnFn } = fakeSpawn()
-    const externalAgent: Agent = { ...AGENT, kind: "external" }
-    const result = await openInteractiveTerminalImpl(
-      "acme",
-      spawnFn,
-      async () => [externalAgent],
-      async () => AI_EXECUTORS["claude-code"],
-      "darwin"
-    )
-    expect(result.started).toBe(true)
-    expect(spawnFn).toHaveBeenCalled()
+    const dir = await mkdtemp(path.join(tmpdir(), "open-terminal-external-"))
+    try {
+      const { spawnFn, calls } = fakeSpawn()
+      const externalAgent: Agent = { ...AGENT, kind: "external", rootPath: dir }
+      const result = await openInteractiveTerminalImpl(
+        "acme",
+        spawnFn,
+        async () => [externalAgent],
+        async () => AI_EXECUTORS["claude-code"],
+        "darwin",
+        dir
+      )
+      expect(result.started).toBe(true)
+      expect(calls).toHaveLength(1)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it("refuses on Linux without spawning anything when no terminal emulator is installed", async () => {
