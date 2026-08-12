@@ -65,8 +65,25 @@ jobs:
         # hard-failing on that drift.
         run: npm install
 
+      # The dispatch input reaches the shell through env, never through `${{ }}`
+      # interpolated into the script text: an expression is pasted in verbatim
+      # before bash ever sees it, so a tag like `v1.0.0"; curl … | sh; #` would
+      # run as a command, and an embedded newline would write extra lines into
+      # $GITHUB_ENV and set arbitrary variables for every later step. Only
+      # someone with write access can dispatch this, which is why it's a
+      # hardening fix and not an incident — but it's the shape that turns any
+      # future trigger into a real one. Validating here (not in the next step)
+      # matters: interpolation would execute before any later check could run.
       - name: Resolve the target tag
-        run: echo "TARGET_TAG=${{ github.event.inputs.tag || github.ref_name }}" >> "$GITHUB_ENV"
+        env:
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+        run: |
+          TARGET_TAG="${INPUT_TAG:-$GITHUB_REF_NAME}"
+          if [[ ! "$TARGET_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Refusing target tag '$TARGET_TAG' — expected vX.Y.Z."
+            exit 1
+          fi
+          printf 'TARGET_TAG=%s\n' "$TARGET_TAG" >> "$GITHUB_ENV"
 
       - name: Verify the target tag matches package.json's version
         run: |
