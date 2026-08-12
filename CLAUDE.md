@@ -290,7 +290,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v64** (see `CHANGELOG.md` for the full per-slice changelog —
+**Shipped: v1–v65** (see `CHANGELOG.md` for the full per-slice changelog —
 that file, not this line, is the authority on the next free slice number;
 v61 was nearly built as "v58" because this line said v39 while the changelog
 was already at v60).
@@ -1026,3 +1026,36 @@ establishes:** before putting any third-party CLI command on screen as the
 thing that completes a step, dry-run it (`--dry-run --json --no-input` here) and
 confirm it *acts* — `gog auth setup` looked like an action and was a no-op, and
 nothing in the app's own tests could have caught that.
+
+v65 removed the `.claude` requirement from company registration, leaving `.git`
+as the only structural check. It was a proxy for "is this an Alacrán company"
+that never tested that: `.claude` is a Claude-Code adapter artifact, not the
+portable core (v17), so a real company can lack one — `email-pipeline-agent` is
+exactly that shape — while any unrelated repo with one passed. Nothing
+downstream needs it (`genericCommandSetSkillAdapter` returns empty when absent;
+Open in Terminal / Get Started just run the executor in the root), so deleting
+the one check at the shared chokepoint fixed all four callers of
+`registerCompanyImpl`. `restoreCompanyImpl`'s matching claim was corrected
+rather than preserved behind a flag — a clone producing no git repo is still
+rejected, but one without `.claude` now restores.
+**Two things worth not re-deriving**, both found while importing the
+`~/AI-Native/` companies: (1) **registration already grants the full feature
+set** — `getEffectiveAgents` maps every registered company to
+`kind: "command-set"` unconditionally, and that single flag gates Get Started,
+Open in Terminal, Connect tools, Backup, Ownership, the executor/Google
+pickers and the guide. There is no app-created privilege; v17's create flow
+ends by calling the same `registerCompanyImpl`. (2) **dev and production keep
+separate registries by design** (`data-dir.ts`): `next dev` writes the repo's
+`.data/`, production writes `~/Library/Application Support/Alacrán/`, because
+the packaged launcher `cd`s into the bundle and an update replaces it
+wholesale. A company registered in dev is therefore invisible in the installed
+app, and the failure looks exactly like a broken registration — it is not.
+**Relocating a built-in's directory is a non-solution** and was rejected: card
+features come from the hardcoded `kind` in `builtin-agents.ts`, not from
+location, so a move changes nothing visible while breaking the live launchd job
+(absolute `.../email-pipeline-agent/logs/poll.{out,err}.log`) and un-loading both
+built-ins, which are existence-gated on that exact path. Registering such a
+directory *alongside* its built-in card is the supported way to get company
+features — nothing dedupes by rootPath, so both cards show, which is the
+intended outcome here (the built-in card keeps Run now / Stop / the schedule
+toggle, which a command-set card does not have).

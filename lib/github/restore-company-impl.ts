@@ -33,9 +33,11 @@ async function exists(p: string): Promise<boolean> {
 
 /**
  * Bring a backed-up company onto this machine: clone it, then register it
- * through the SAME path as any other company — `registerCompanyImpl` already
- * enforces the `.git` + `.claude` membership checks, so a repo that isn't
- * actually an Alacrán company is rejected here too.
+ * through the SAME path as any other company — `registerCompanyImpl` enforces
+ * the `.git` check, so a clone that reported success but produced nothing
+ * usable is still rejected here. It deliberately does NOT verify the repo is
+ * "really" an Alacrán company: the old `.claude` requirement claimed to and
+ * didn't (a company need not have one), while blocking real repos.
  */
 export async function restoreCompanyImpl(
   name: string,

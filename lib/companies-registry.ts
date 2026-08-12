@@ -55,9 +55,14 @@ export async function registerCompanyImpl(
   if (!(await exists(path.join(rootPath, ".git")))) {
     return { ok: false, message: "Path is not a git repository (no .git found)" }
   }
-  if (!(await exists(path.join(rootPath, ".claude")))) {
-    return { ok: false, message: "Path has no .claude directory" }
-  }
+  // `.git` is the only structural requirement. A `.claude` directory used to be
+  // demanded too, and it turned out to gate-keep real repos for nothing: it is
+  // a Claude-Code adapter artifact, not the portable core (v17), and nothing
+  // downstream needs it — genericCommandSetSkillAdapter returns an empty list
+  // when the directory is absent, and Open in Terminal / Get Started just run
+  // the configured executor in the root. It blocked importing
+  // `email-pipeline-agent`, a real working agent with a git repo and no `.claude`,
+  // and would equally block restoring a backup of any such repo.
 
   const companies = await getRegisteredCompanies(registryPath)
   if (companies.some((c) => c.rootPath === rootPath)) {

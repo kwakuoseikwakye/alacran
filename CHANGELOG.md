@@ -2704,3 +2704,51 @@ which is not a sanctioned test target. Onboarding's Google row reads the same
 `guidance` and now correctly shows no command where it used to show the
 inert one; its existing "Open the full Connect page →" link is the real route.
 654 tests, `tsc`/`next build` clean.
+
+## v65 (2026-08-12): importing a repo that isn't shaped like a company
+
+Registering an existing directory required both `.git` and `.claude`. The
+second check was doing no work: it was a proxy for "is this an Alacrán
+company", and it never actually tested that. `.claude` is a Claude-Code
+adapter artifact, not the portable core (v17's own principle), so a repo can
+be a perfectly good company without one — `email-pipeline-agent` is exactly that
+shape, a real working agent with a git repo and no `.claude` — while any
+unrelated repo that happens to have one sailed through. It rejected the real
+case and admitted the fake one.
+
+Removed, leaving `.git` as the only structural requirement. Nothing downstream
+needed it: `genericCommandSetSkillAdapter` returns an empty list when the
+directory is absent, and Open in Terminal / Get Started just run the
+configured executor in the company root. One check deleted at the shared
+chokepoint fixes all four callers of `registerCompanyImpl`, rather than the
+UI path alone.
+
+`restoreCompanyImpl` leaned on the same check to reject "a clone that produced
+something that isn't a company," and its doc comment claimed to enforce
+membership. Both corrected to the honest behaviour: a clone that reports
+success but leaves no git repository is still rejected (that guard is real and
+now has its own test), while a cloned repo without `.claude` restores instead
+of failing. The weak heuristic was not replaced with a flag to keep it alive
+for one caller — it was wrong for every caller.
+
+Context: this came from importing the three companies under `~/AI-Native/`.
+Two findings that needed no code. Feature availability is decided by
+`kind === "command-set"`, which every registered company gets
+unconditionally — so registering an existing directory already grants the
+full set (Get Started, Open in Terminal, Connect tools, Back up, Ownership,
+guide), and there is no app-created privilege; v17's create flow ends by
+calling the same `registerCompanyImpl`. And a company registered in `next dev`
+is invisible to the installed app on purpose: dev writes the repo's own
+`.data/`, production writes `~/Library/Application Support/Alacrán/`
+(`data-dir.ts`, so an update replacing the bundle can't destroy the registry).
+Registering PLH Triage in the installed app gave it all nine card actions
+immediately, with no change to the repo itself.
+
+Moving `email-pipeline-agent`/`plh-ops` out of `~/AI-Native/` was considered and
+rejected as a non-solution: their card features are gated by the hardcoded
+`kind` in `builtin-agents.ts`, not by location, so relocating changes nothing
+visible — while breaking the live launchd job (which writes to absolute
+`.../email-pipeline-agent/logs/poll.{out,err}.log`) and un-loading both built-ins,
+which are existence-gated on that exact path. Registering them alongside their
+built-in cards gets the company features with no move and no write to either
+protected repo. 655 tests, `tsc`/`next build` clean.

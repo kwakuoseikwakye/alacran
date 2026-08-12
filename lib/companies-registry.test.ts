@@ -66,12 +66,16 @@ describe("companies-registry", () => {
     }
   })
 
-  it("rejects a path missing .claude", async () => {
+  // A git repo with no `.claude` is a real, importable company —
+  // `email-pipeline-agent` is exactly that shape. `.claude` is a Claude-Code
+  // adapter artifact, not the portable core, and requiring it only blocked
+  // legitimate imports.
+  it("accepts a git repo with no .claude directory", async () => {
     const noClaude = await mkdtemp(path.join(tmpdir(), "companies-registry-noclaude-"))
     await mkdir(path.join(noClaude, ".git"))
     try {
       const result = await registerCompanyImpl("X", noClaude, registryPath)
-      expect(result).toEqual({ ok: false, message: "Path has no .claude directory" })
+      expect(result.ok).toBe(true)
     } finally {
       await rm(noClaude, { recursive: true, force: true })
     }

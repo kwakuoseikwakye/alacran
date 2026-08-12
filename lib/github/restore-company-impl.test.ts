@@ -115,14 +115,35 @@ describe("restoreCompanyImpl", () => {
     expect(clone!.args).toEqual(["clone", "--", "https://github.com/me/x.git", target])
   })
 
-  it("reports a clone that produced something that isn't a company", async () => {
+  // A missing `.claude` is no longer a rejection — it never actually proved
+  // anything about being a company (email-pipeline-agent is one and has none), so
+  // requiring it only blocked real imports. `.git` is the guard that survives,
+  // and it's the one that catches a clone which reported success but produced
+  // nothing usable.
+  it("rejects a clone that produced no git repository", async () => {
     const { restoreCompanyImpl } = await import("./restore-company-impl")
     const target = path.join(parent, "empty")
 
-    // clone "succeeds" but leaves no .claude — not an Alacrán company
     const result = await restoreCompanyImpl(
       "Empty",
       "https://github.com/me/empty.git",
+      target,
+      registryPath,
+      fakeExec(async (t) => {
+        await mkdir(t, { recursive: true })
+      })
+    )
+
+    expect(result.ok).toBe(false)
+  })
+
+  it("restores a cloned repo that has no .claude directory", async () => {
+    const { restoreCompanyImpl } = await import("./restore-company-impl")
+    const target = path.join(parent, "bare-company")
+
+    const result = await restoreCompanyImpl(
+      "Bare",
+      "https://github.com/me/bare.git",
       target,
       registryPath,
       fakeExec(async (t) => {
@@ -130,6 +151,6 @@ describe("restoreCompanyImpl", () => {
       })
     )
 
-    expect(result.ok).toBe(false)
+    expect(result.ok).toBe(true)
   })
 })
