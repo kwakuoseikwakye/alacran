@@ -2752,3 +2752,69 @@ visible — while breaking the live launchd job (which writes to absolute
 which are existence-gated on that exact path. Registering them alongside their
 built-in cards gets the company features with no move and no write to either
 protected repo. 655 tests, `tsc`/`next build` clean.
+
+## v66 (2026-08-12): external folders — add anything, get one button
+
+Adds a fourth `AgentKind`, `external`: a folder the user already works in that
+follows none of this app's conventions. A checkbox on "Add a company" — *"This
+is an existing project or workflow, not an Alacrán company"* — registers it,
+and it gets exactly one action, **Open in Terminal**. No setup wizard, no
+backup, no ownership, no MCP, no Get Started, no skills, and nothing is ever
+written into the folder.
+
+Until now the only two outcomes were "a full command-set company" or "not
+registered at all". v65 had already removed the `.claude` requirement, so any
+git repo could be added — but registration hands out `kind: "command-set"`
+unconditionally, meaning an unrelated project got the whole company surface,
+including a "Set up your company" button that writes
+`definitions/ontology/company.yaml` into it. Offering that for someone else's
+repo is the wrong default; this kind is the honest third answer.
+
+Shape of the change, in the direction that keeps future features safe: every
+other flag in `app/page.tsx` stays keyed to `isCommandSet`, and only
+`showOpenTerminalButton` ORs in `isExternal`. A new company feature is
+therefore off for external folders by default rather than needing to be
+excluded one at a time.
+
+- `RegisteredCompany.kind?: "external"` — optional, so every entry written
+  before this release keeps working with no migration; absent means
+  command-set.
+- `.git` is skipped **only** for external. The point of the kind is folders
+  that follow no convention, and demanding a repo would exclude most of them.
+  Companies still require it: backup, the activity feed and commit-on-save are
+  all git operations. `genericGitLogActivityAdapter` already returns `[]` when
+  `git log` fails, so a non-repo folder needed no special-casing there.
+- The create-from-template branch is skipped when the box is ticked —
+  scaffolding a company into someone's unrelated project is the opposite of
+  what the option means — so a missing path simply fails registration.
+- **Get Started deliberately did not follow.** It delegates *through*
+  `openInteractiveTerminalImpl`, so relaxing that shared guard could have
+  leaked it; `open-interactive-terminal-with-help-impl` keeps its own
+  `command-set` check, and a test now pins that. Its intro prompt reads skills
+  and an ontology an external folder has no reason to own.
+- `build-network-map`'s final branch is a **fall-through**, not an exhaustive
+  map, so `tsc` could not catch that an external folder would silently acquire
+  github/google/notion/executor edges. Found by reading it. It now returns an
+  isolated node alongside `report-log`, matching v43's rule that an edge is
+  only ever drawn for a service a kind actually supports elsewhere in the app.
+  `KIND_BADGE_CLASS` is a real `Record<AgentKind, string>` and did fail at
+  `tsc`, which is the difference worth noting between the two.
+
+Live-verified against a throwaway `/tmp` folder with no `.git` and no
+`.claude` — the case both pre-v65 rules rejected outright. It registered as
+`kind: "external"`, the card showed the `external` badge with Open in Terminal
+and Remove only, and the folder was byte-for-byte untouched afterwards.
+660 tests, `tsc`/`next build` clean.
+
+**Incident during this slice's own live verification, worth recording.**
+Filling the form via `document.querySelector('input[type="checkbox"]')` hit the
+*first* checkbox on the page — the Google-accounts picker on a company card
+behind the open Sheet — not the new one. That picker auto-saves, so it wrote
+and committed `definitions/integrations/google.yaml` into the real
+`plh-triage` repo. Caught immediately, scoped (one commit, one file, not
+pushed), reported, and undone with `git reset --hard HEAD~1` after asking. The
+lesson is narrow and mechanical: **scope every automated selector to the
+dialog under test**, because a page-wide selector in this app can reach live
+controls that write to real repos on change. The same ambiguity on the
+"Update & Restart" button had errored loudly instead, which is what a
+strict-mode locator does and what an unscoped `querySelector` never will.

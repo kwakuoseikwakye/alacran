@@ -66,6 +66,37 @@ describe("companies-registry", () => {
     }
   })
 
+  // The whole point of an external folder is that it follows none of this
+  // app's conventions, so requiring a git repo would exclude most of them.
+  it("registers an external folder that is not a git repository", async () => {
+    const plain = await mkdtemp(path.join(tmpdir(), "companies-registry-plain-"))
+    try {
+      const result = await registerCompanyImpl("Some Project", plain, registryPath, "external")
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.company.kind).toBe("external")
+    } finally {
+      await rm(plain, { recursive: true, force: true })
+    }
+  })
+
+  // Without `kind`, the same folder is a company — and companies really do
+  // need git (backup, activity feed, commit-on-save).
+  it("still requires git for a normal company", async () => {
+    const plain = await mkdtemp(path.join(tmpdir(), "companies-registry-plain2-"))
+    try {
+      const result = await registerCompanyImpl("Some Project", plain, registryPath)
+      expect(result).toEqual({ ok: false, message: "Path is not a git repository (no .git found)" })
+    } finally {
+      await rm(plain, { recursive: true, force: true })
+    }
+  })
+
+  // An external folder must exist — registering one is never a create.
+  it("rejects an external path that does not exist", async () => {
+    const result = await registerCompanyImpl("Ghost", path.join(tmpdir(), "no-such-dir-xyz"), registryPath, "external")
+    expect(result).toEqual({ ok: false, message: "Path does not exist or is not a directory" })
+  })
+
   // A git repo with no `.claude` is a real, importable company —
   // `email-pipeline-agent` is exactly that shape. `.claude` is a Claude-Code
   // adapter artifact, not the portable core, and requiring it only blocked

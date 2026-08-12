@@ -52,7 +52,11 @@ export async function openInteractiveTerminalImpl(
 ): Promise<OpenTerminalResult> {
   const agents = await getAgents()
   const agent = agents.find((a) => a.id === agentId)
-  if (!agent || agent.kind !== "command-set") {
+  // The one action an `external` folder gets. Get Started is NOT relaxed with
+  // it: that path guards separately in open-interactive-terminal-with-help,
+  // and its intro prompt reads skills and an ontology an external folder has
+  // no reason to own.
+  if (!agent || (agent.kind !== "command-set" && agent.kind !== "external")) {
     return { started: false, message: "Unknown company" }
   }
 

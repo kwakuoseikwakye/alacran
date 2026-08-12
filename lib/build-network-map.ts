@@ -82,7 +82,13 @@ export async function buildNetworkMap(
         }
       }
 
-      if (agent.kind === "report-log") {
+      // Both are genuinely isolated nodes. `external` must be listed here and
+      // not left to fall through to the company branch below: that branch
+      // draws github/google/notion/executor edges, and an external folder
+      // supports none of those anywhere else in the app — no executor picker,
+      // no Google picker, no MCP, no backup. Drawing them would invent a
+      // capability, which is the one thing this map must not do.
+      if (agent.kind === "report-log" || agent.kind === "external") {
         return { id: agent.id, name: agent.name, kind: agent.kind, aiExecutorId: null, edges: [] }
       }
 

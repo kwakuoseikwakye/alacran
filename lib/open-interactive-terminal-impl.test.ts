@@ -46,6 +46,22 @@ describe("openInteractiveTerminalImpl", () => {
     expect(spawnFn).not.toHaveBeenCalled()
   })
 
+  // Open in Terminal is the ONE action an external folder gets. This is the
+  // only kind check that opens to it — Get Started guards separately.
+  it("opens a terminal for an external folder", async () => {
+    const { spawnFn } = fakeSpawn()
+    const externalAgent: Agent = { ...AGENT, kind: "external" }
+    const result = await openInteractiveTerminalImpl(
+      "acme",
+      spawnFn,
+      async () => [externalAgent],
+      async () => AI_EXECUTORS["claude-code"],
+      "darwin"
+    )
+    expect(result.started).toBe(true)
+    expect(spawnFn).toHaveBeenCalled()
+  })
+
   it("refuses on Linux without spawning anything when no terminal emulator is installed", async () => {
     const { spawnFn } = fakeSpawn()
     const execFn = async () => {

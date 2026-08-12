@@ -52,6 +52,7 @@ export function AddCompanyForm({
   const [confirmCreateOpen, setConfirmCreateOpen] = useState(false)
   const [restoreUrl, setRestoreUrl] = useState("")
   const [showRestore, setShowRestore] = useState(false)
+  const [external, setExternal] = useState(false)
 
   const suggestedPath = homeDir
     ? `${homeDir}/${COMPANIES_DIR_NAME}${name.trim() ? `/${slugify(name)}` : ""}`
@@ -63,13 +64,19 @@ export function AddCompanyForm({
   async function handleSubmit() {
     setPending(true)
     setMessage(null)
-    const status = await getCompanyPathStatus(rootPath)
-    if (status === "creatable") {
-      setPending(false)
-      setConfirmCreateOpen(true)
-      return
+    // An external folder must already exist — scaffolding a company into
+    // someone's unrelated project is the opposite of what this option means,
+    // so the create-from-template branch is skipped entirely and a missing
+    // path just fails registration.
+    if (!external) {
+      const status = await getCompanyPathStatus(rootPath)
+      if (status === "creatable") {
+        setPending(false)
+        setConfirmCreateOpen(true)
+        return
+      }
     }
-    const result = await registerCompany(name, rootPath)
+    const result = await registerCompany(name, rootPath, external)
     setPending(false)
     if (result.ok) {
       setName("")
@@ -153,6 +160,26 @@ export function AddCompanyForm({
         </p>
       </div>
       {!showRestore && (
+        <label className="flex cursor-pointer gap-2.5 rounded-md border border-border p-2.5 text-xs">
+          <input
+            type="checkbox"
+            checked={external}
+            onChange={(e) => setExternal(e.target.checked)}
+            className="mt-0.5 shrink-0"
+          />
+          <span>
+            <span className="block font-medium text-foreground">
+              This is an existing project or workflow, not an Alacrán company
+            </span>
+            <span className="mt-0.5 block text-muted-foreground">
+              Add any folder you already work in, whatever it&apos;s built with. It gets one button — Open in
+              Terminal — and nothing else: no setup, no backup, no files written to it. The folder must already
+              exist.
+            </span>
+          </span>
+        </label>
+      )}
+      {!showRestore && !external && (
         <div className="space-y-2.5">
           <label className="text-xs text-muted-foreground">
             Starter template{" "}

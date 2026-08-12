@@ -80,6 +80,12 @@ export default async function AgentTreePage() {
                 result.agent.id
               )
               const isCommandSet = result.agent.kind === "command-set"
+              // A folder the user added that follows none of this app's
+              // conventions. Open in Terminal is the ONLY action it gets —
+              // every other flag below stays keyed to isCommandSet, so a new
+              // company feature is off for it by default rather than needing
+              // to be excluded one at a time.
+              const isExternal = result.agent.kind === "external"
               // Both features open a real terminal window which is supported on macOS
               // and Linux (see lib/terminal-launch-command.ts); if neither
               // finds an actual terminal emulator installed, the action itself
@@ -121,7 +127,7 @@ export default async function AgentTreePage() {
                     showVisibleRunOption={showVisibleRunOption}
                     integrationStatus={integrationStatus}
                     showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
-                    showOpenTerminalButton={showVisibleRunOption}
+                    showOpenTerminalButton={showVisibleRunOption || isExternal}
                     showGetStartedButton={showVisibleRunOption}
                     showAiExecutorPicker={isCommandSet}
                     showGoogleAccountsPicker={isCommandSet}

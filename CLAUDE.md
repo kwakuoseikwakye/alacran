@@ -290,7 +290,7 @@ or `git worktree add`), branch `worktree-control-panel-vNN-<slug>`.
 
 ## Current state
 
-**Shipped: v1–v65** (see `CHANGELOG.md` for the full per-slice changelog —
+**Shipped: v1–v66** (see `CHANGELOG.md` for the full per-slice changelog —
 that file, not this line, is the authority on the next free slice number;
 v61 was nearly built as "v58" because this line said v39 while the changelog
 was already at v60).
@@ -1059,3 +1059,32 @@ directory *alongside* its built-in card is the supported way to get company
 features — nothing dedupes by rootPath, so both cards show, which is the
 intended outcome here (the built-in card keeps Run now / Stop / the schedule
 toggle, which a command-set card does not have).
+
+v66 added a fourth `AgentKind`, `external` — a folder the user already works in
+that follows none of this app's conventions, added via a checkbox on "Add a
+company" and given exactly one action, **Open in Terminal**. Before it, the only
+outcomes were "full command-set company" or "not registered", so v65's relaxed
+rules meant an unrelated project got the whole company surface, including a
+"Set up your company" button that writes `definitions/ontology/company.yaml`
+into it. `RegisteredCompany.kind?: "external"` is optional (absent =
+command-set, so no migration), `.git` is skipped **only** for this kind, and
+the create-from-template branch is skipped when it's ticked.
+**The pattern to preserve:** every other flag in `app/page.tsx` stays keyed to
+`isCommandSet` and only `showOpenTerminalButton` ORs in `isExternal`, so a new
+company feature is off for external folders by default instead of needing to be
+excluded one at a time. Get Started deliberately did NOT follow — it delegates
+*through* `openInteractiveTerminalImpl`, so relaxing that shared guard could
+have leaked it; the `-with-help` wrapper keeps its own `command-set` check with
+a test pinning it.
+**Two traps found here, both general:** (1) `build-network-map`'s last branch is
+a *fall-through*, not an exhaustive `Record`, so `tsc` cannot catch a new kind
+silently acquiring github/google/notion edges — any future `AgentKind` must be
+checked against that file by hand (`KIND_BADGE_CLASS` is a real
+`Record<AgentKind, string>` and does fail at `tsc`, which is the contrast).
+(2) **Scope every automated-test selector to the dialog under test.** A
+page-wide `document.querySelector('input[type="checkbox"]')` during this
+slice's live pass hit the Google-accounts picker on a card *behind* the open
+Sheet; it auto-saves, so it wrote and committed a real file into `plh-triage`.
+Caught, reported and reset immediately — but a page-wide selector in this app
+can reach live controls that write to real repos on change, and unlike a
+Playwright strict-mode locator it will never error on ambiguity.

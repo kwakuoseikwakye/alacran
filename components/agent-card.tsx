@@ -63,6 +63,9 @@ const KIND_BADGE_CLASS: Record<Agent["kind"], string> = {
   pipeline: "border-ember/30 bg-ember/10 text-ember",
   "command-set": "border-warning/30 bg-warning/10 text-warning",
   "report-log": "border-success/30 bg-success/10 text-success",
+  // Muted on purpose: an external folder is the one kind this app doesn't
+  // manage, so its badge shouldn't compete with the ones it does.
+  external: "border-border bg-muted/40 text-muted-foreground",
 }
 
 export function AgentCard({

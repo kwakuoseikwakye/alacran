@@ -37,6 +37,25 @@ describe("openInteractiveTerminalWithHelpImpl", () => {
     expect(execFn).not.toHaveBeenCalled()
   })
 
+  // Open in Terminal opens to external folders; Get Started must NOT follow.
+  // Its intro prompt reads skills and an ontology an external folder has no
+  // reason to own, so relaxing the shared impl's check must not leak here.
+  it("refuses an external folder", async () => {
+    const { spawnFn } = fakeSpawn()
+    const execFn = vi.fn(async () => ({ stdout: "", stderr: "" }))
+    const result = await openInteractiveTerminalWithHelpImpl(
+      "acme",
+      spawnFn,
+      async () => [{ ...AGENT, kind: "external" as const }],
+      async () => AI_EXECUTORS["claude-code"],
+      "darwin",
+      undefined,
+      execFn
+    )
+    expect(result).toEqual({ started: false, message: "Unknown company" })
+    expect(spawnFn).not.toHaveBeenCalled()
+  })
+
   it("refuses a non-command-set agent", async () => {
     const { spawnFn } = fakeSpawn()
     const pipelineAgent: Agent = { ...AGENT, kind: "pipeline" }

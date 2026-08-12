@@ -10,7 +10,13 @@ export async function getEffectiveAgents(): Promise<Agent[]> {
   const companies = await getRegisteredCompanies()
   const companyAgents: Agent[] = companies
     .filter((c) => !staticIds.has(c.id))
-    .map((c) => ({ id: c.id, name: c.name, rootPath: c.rootPath, kind: "command-set" as const }))
+    .map((c) => ({
+      id: c.id,
+      name: c.name,
+      rootPath: c.rootPath,
+      // Absent kind means command-set — see RegisteredCompany.
+      kind: c.kind === "external" ? ("external" as const) : ("command-set" as const),
+    }))
   return [...AGENTS, ...companyAgents]
 }
 

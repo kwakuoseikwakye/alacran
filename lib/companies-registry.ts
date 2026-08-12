@@ -3,7 +3,10 @@ import path from "node:path"
 import crypto from "node:crypto"
 import { dataPath } from "./data-dir"
 
-export type RegisteredCompany = { id: string; name: string; rootPath: string }
+/** `kind` is absent on every entry written before external folders existed,
+ *  and absent means "command-set" — so no migration, and an existing registry
+ *  keeps behaving exactly as it did. */
+export type RegisteredCompany = { id: string; name: string; rootPath: string; kind?: "external" }
 
 const DEFAULT_REGISTRY_PATH = dataPath("companies.json")
 
@@ -44,7 +47,8 @@ async function exists(p: string): Promise<boolean> {
 export async function registerCompanyImpl(
   name: string,
   rootPath: string,
-  registryPath: string = DEFAULT_REGISTRY_PATH
+  registryPath: string = DEFAULT_REGISTRY_PATH,
+  kind?: "external"
 ): Promise<{ ok: true; company: RegisteredCompany } | { ok: false; message: string }> {
   if (!name.trim()) {
     return { ok: false, message: "Name is required" }
@@ -52,7 +56,12 @@ export async function registerCompanyImpl(
   if (!(await isDirectory(rootPath))) {
     return { ok: false, message: "Path does not exist or is not a directory" }
   }
-  if (!(await exists(path.join(rootPath, ".git")))) {
+  // An external folder is only ever opened in a terminal, so a repo is not
+  // required — the point of that kind is folders that don't follow any of this
+  // app's conventions, and demanding `.git` would exclude most of them. Real
+  // companies still need it: backup, the activity feed and the commit-on-save
+  // paths are all git operations.
+  if (kind !== "external" && !(await exists(path.join(rootPath, ".git")))) {
     return { ok: false, message: "Path is not a git repository (no .git found)" }
   }
   // `.git` is the only structural requirement. A `.claude` directory used to be
@@ -69,7 +78,12 @@ export async function registerCompanyImpl(
     return { ok: false, message: "This directory is already registered" }
   }
 
-  const company: RegisteredCompany = { id: crypto.randomUUID(), name: name.trim(), rootPath }
+  const company: RegisteredCompany = {
+    id: crypto.randomUUID(),
+    name: name.trim(),
+    rootPath,
+    ...(kind === "external" ? { kind } : {}),
+  }
   await mkdir(path.dirname(registryPath), { recursive: true })
   await writeFile(registryPath, JSON.stringify([...companies, company], null, 2), "utf-8")
   return { ok: true, company }

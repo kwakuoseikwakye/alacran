@@ -1,4 +1,12 @@
-export type AgentKind = "pipeline" | "command-set" | "report-log"
+/**
+ * `external` is a folder the user pointed at that does NOT follow this app's
+ * conventions — someone else's project, a workflow repo, anything. It gets
+ * exactly one action, Open in Terminal, and is deliberately excluded from
+ * everything that assumes company structure (skills, setup wizard, backup,
+ * ownership, MCP, Get Started). Registering one must never imply the app can
+ * manage it.
+ */
+export type AgentKind = "pipeline" | "command-set" | "report-log" | "external"
 
 export type Agent = {
   id: string
