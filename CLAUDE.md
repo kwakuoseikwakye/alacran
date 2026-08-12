@@ -337,8 +337,8 @@ hand-built a one-off installer for exactly one already-portable
 workflow instead: `plh-ops`'s `daily-team-log` skill
 (`lib/install-daily-team-log-impl.ts`) — copies its generic `gather.py`
 extractor verbatim, regenerates its `SKILL.md`/`Setup.md` to point at
-the installing company's own repo instead of PLH's shared one (the
-originals hardcode `example-user/plh-ops` and `Teammate1`/`Teammate2`/`Nana`), and
+the installing company's own repo instead of the upstream shared one (the
+originals hardcode an owner/repo slug and per-teammate folder names), and
 commits the result. **Known, disclosed limitation:** `gather.py`'s
 config is a fixed, global, per-machine path
 (`~/.claude/daily-team-log/config.json`), so only one company's copy can

@@ -84,9 +84,12 @@ describe("installDailyTeamLogImpl", () => {
       path.join(targetRoot, ".claude", "skills", "daily-team-log", "Setup.md"),
       "utf-8"
     )
-    expect(setupMd).not.toMatch(/example-user/i)
+    // By shape, not by name — see the matching guard in
+    // daily-team-log-files.test.ts for why the upstream owner and teammates
+    // are not spelled out here.
+    expect(setupMd).not.toMatch(/github\.com\/[\w.-]+\/[\w.-]+/)
+    expect(setupMd).not.toMatch(/reports\/[A-Z][a-z]+/)
     expect(setupMd).not.toMatch(/plh-ops/i)
-    expect(setupMd).not.toMatch(/Teammate1|Teammate2|Nana/)
   })
 
   it("commits the installed skill directory via the injected exec function", async () => {

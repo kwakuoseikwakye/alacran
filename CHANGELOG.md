@@ -399,9 +399,10 @@ auto-detect who's using it and which projects to include, entirely
 locally (no OAuth, no external API). Its extractor script, `gather.py`,
 is copied verbatim (confirmed zero PLH/Owner-specific content); its
 `SKILL.md` and `Setup.md` are regenerated rather than copied, since the
-originals hardcode cloning `example-user/plh-ops` and writing into
-`reports/{Teammate1,Teammate2,Nana}` — copying them as-is would have pointed a
-new company's daily reports at PLH's shared repo instead of its own. The
+originals hardcode both the upstream owner/repo to clone and a fixed set
+of per-teammate report folders — copying them as-is would have pointed a
+new company's daily reports at the upstream shared repo instead of its
+own. The
 "Install daily-team-log" button appears on any `command-set`-kind
 agent's card that doesn't have it yet; the actual bootstrap (who you
 are, which projects, scheduling) still happens inside Claude Code

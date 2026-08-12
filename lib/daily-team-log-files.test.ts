@@ -20,9 +20,14 @@ describe("daily-team-log-files", () => {
     expect(md).not.toMatch(/Owner/i)
   })
 
-  it("DAILY_TEAM_LOG_SETUP_MD contains no plh-ops-specific references", () => {
-    expect(DAILY_TEAM_LOG_SETUP_MD).not.toMatch(/example-user/i)
+  // Asserted by shape, not by naming the upstream owner/teammates: the
+  // original hardcoded a specific GitHub owner/repo to clone and a fixed set
+  // of per-person report folders, and the rewritten version detects both at
+  // runtime. Naming them here would put back the very identifiers this
+  // guard exists to keep out.
+  it("DAILY_TEAM_LOG_SETUP_MD carries no upstream identity", () => {
+    expect(DAILY_TEAM_LOG_SETUP_MD).not.toMatch(/github\.com\/[\w.-]+\/[\w.-]+/)
+    expect(DAILY_TEAM_LOG_SETUP_MD).not.toMatch(/reports\/[A-Z][a-z]+/)
     expect(DAILY_TEAM_LOG_SETUP_MD).not.toMatch(/plh-ops/i)
-    expect(DAILY_TEAM_LOG_SETUP_MD).not.toMatch(/Teammate1|Teammate2|Nana/)
   })
 })
