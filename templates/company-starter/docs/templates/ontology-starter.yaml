@@ -1,0 +1,57 @@
+# Ontology starter — the shape of definitions/ontology/company.yaml
+#
+# This is a reference shape, not live data. `/define-company` reads it to
+# learn the structure, then writes definitions/ontology/company.yaml. Do not
+# fill this file in; fill in the one it generates.
+#
+# Three domains, always. They answer three different questions, and mixing
+# them is the most common way an ontology stops being useful:
+#
+#   customer — who you serve, and what they are trying to get done
+#   org      — who does the work, and who decides what
+#   product  — what you actually sell, and how it reaches someone
+#
+# Unknowns are `<<TODO>>`. A confidently wrong entry is worse than a blank
+# one, because everything downstream trusts this file.
+
+meta:
+  version: 1
+  updated: <<TODO: YYYY-MM-DD>>
+
+customer:
+  segments:
+    - id: <<TODO: short-slug>>
+      name: <<TODO: what you'd call this group out loud>>
+      # The job they're hiring you for — in their words, not your feature list.
+      job_to_be_done: <<TODO>>
+      # What they do today instead of using you.
+      alternative: <<TODO>>
+  # One entry per way a customer first hears about you.
+  acquisition:
+    - channel: <<TODO>>
+      notes: <<TODO>>
+
+org:
+  roles:
+    - id: <<TODO: short-slug>>
+      name: <<TODO: role, not person's name>>
+      owns: <<TODO: the outcome this role is accountable for>>
+  # Who can approve what, so an agent knows when to stop and ask.
+  decisions:
+    - decision: <<TODO: e.g. pricing changes>>
+      approver: <<TODO: a role id from above>>
+
+product:
+  offerings:
+    - id: <<TODO: short-slug>>
+      name: <<TODO>>
+      # What the customer gets. Not how it's built.
+      promise: <<TODO>>
+      pricing: <<TODO>>
+  # The path from "interested" to "paid and delivered". One step per line.
+  value_flow:
+    - step: <<TODO>>
+      owner: <<TODO: a role id from org.roles>>
+  # The step that currently limits throughput. Be specific; there is usually
+  # exactly one that matters.
+  bottleneck: <<TODO>>
