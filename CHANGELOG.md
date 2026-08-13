@@ -3038,3 +3038,81 @@ than trusting the upload's own output.
 `alacran` repo, or Linux packaging stays a manual Docker step. Adding an
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
+
+## v70 (2026-08-13): stop re-asking macOS for the Keychain on every page render
+
+Fixes a user-reported bug: after connecting Google, a macOS popup saying *"gog
+wants to use your confidential information stored in 'gogcli' in your
+keychain"* kept coming back — notably on every press of Re-check.
+
+**The prompt itself is not this app's bug, and can't be fixed here.** Homebrew
+ships `gog` ad-hoc / linker-signed, so its code hash changes with every
+release, and a macOS Keychain ACL binds to the writing process's Designated
+Requirement — so the grant "Always Allow" creates stops matching as soon as gog
+updates. That's [openclaw/gogcli#569](https://github.com/openclaw/gogcli/issues/569),
+opened 2026-05-09 and closed without a fix.
+
+**What this app *was* doing wrong is the frequency.** Every page is
+`force-dynamic`, and the `gog auth *` probes that read gog's keyring were
+re-run from scratch on every render of Agents (`listGoogleAccountEmails`),
+Connect, Network and the Ownership sheet — plus OnboardingWelcome's
+refresh-on-window-focus. Two separate bugs stacked on top of that:
+
+1. `googleStatus` ran `gog auth status -j` **and then** `gog auth list -j`.
+   Those read *different* Keychain items (`auth status` reports
+   `client_secret_in_keyring`; `auth list` reads the token entries), so an
+   already-connected user was being asked **twice** per render for an answer
+   one call gives. `auth list` now runs first and returns on its own when it
+   finds a stored account; `auth status` is only consulted when there is no
+   account, which is exactly when its `credentials_exists` discriminator (v64)
+   is the thing being asked for.
+2. Nothing was cached at all. New `lib/exec-memo.ts` memoizes these read-only
+   probes process-wide for 5 minutes, keyed on command + args. Failures are
+   never cached — a dismissed Keychain prompt or a one-off `which` failure must
+   not pin the answer. It is installed as the *default* `execFn` of
+   `connect-status-impl.ts` and `google-accounts.ts`, so every caller is
+   covered at once and every DI test (which injects its own `execFn`) is
+   untouched.
+
+`recheckConnectStatus()` clears the memo before reading — a separate Server
+Action rather than a `force` parameter, per the zero-extra-parameter rule, same
+shape as v51's `checkForUpdatesNow` beside the throttled banner check. Both the
+Connect page's Re-check button and OnboardingWelcome's refresh-on-focus use it:
+those are the two moments whose entire purpose is "the user just changed
+something in their terminal," where a cached answer is the wrong answer.
+
+**Measured, not asserted**, against a real production build with a logging
+shim in front of the real `gog` on `PATH`, over the same 9 page loads
+(`/`, `/network`, `/connect`, three rounds):
+
+| | `gog` spawns |
+|---|---|
+| before | **15** (9 × `auth list`, 6 × `auth status`) |
+| after | **3** (one per route, then cached) |
+
+Five plain reloads of `/connect` afterwards spawned **0**; one Re-check click
+spawned exactly **1**, confirming the button still really re-checks. The
+Connect page also gained a collapsed explainer on the Google card saying what
+the popup is, that `Always Allow` is the right button, that it can return when
+the CLI updates, and offering `gog auth keyring file` for anyone who would
+rather move the sign-in out of the Keychain entirely.
+
+**Known, disclosed behaviour change, not fixed:** a machine with a stored token
+but a deleted `credentials.json` used to land on the `client` stage and now
+reads as connected — gog will fail to refresh, and that surfaces on first use.
+Detecting it means the second Keychain prompt on every render for every
+correctly-configured user, which is the bug this ordering exists to fix.
+
+**Worth not re-deriving:** the memo is per-route, not per-process — Next.js
+bundles the server module separately for each route, so `/`, `/network` and
+`/connect` each hold their own cache. That's why the "after" number is 3 and
+not 1. It's still bounded per route rather than per render, which is the whole
+point; making it truly global would mean a shared store the framework doesn't
+hand out for free, and buys two spawns.
+
+**Also measured and worth keeping:** `gog auth list -j` returns the same
+accounts, scopes and subject under a disposable `--home`, so gog's account list
+lives in the Keychain, not on disk (there is no `config.json` until something
+writes one). There is no file-backed way to answer "is Google connected"
+without touching the keyring — which is why the fix is caching rather than
+avoidance.

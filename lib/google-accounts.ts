@@ -1,12 +1,12 @@
-import { execFile as nodeExecFile } from "node:child_process"
-import { promisify } from "node:util"
-
-const execFileAsync = promisify(nodeExecFile)
+import { memoizedExecFile } from "./exec-memo"
 
 export type ExecFileFn = (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
+// Memoized, not raw: `gog auth list -j` reads gog's keyring, and on macOS that
+// can raise a Keychain prompt every single time. The Agents page calls this on
+// every render. See lib/exec-memo.ts.
 async function defaultExecFile(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(command, args)
+  return memoizedExecFile(command, args)
 }
 
 type GogAuthList = { accounts?: Array<{ email?: unknown }> }

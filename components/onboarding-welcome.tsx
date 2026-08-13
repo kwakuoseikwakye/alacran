@@ -8,7 +8,7 @@ import { AddCompanyForm } from "@/components/add-company-form"
 import { CommandLine } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import { checkDependencies } from "@/lib/check-dependencies"
-import { getConnectStatus } from "@/lib/connect/connect-actions"
+import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import type { DependencyStatus } from "@/lib/check-dependencies-impl"
 import type { ConnectStatus, ToolStatus } from "@/lib/connect/connect-status-impl"
 
@@ -162,7 +162,11 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
     setPending(true)
     setFailed(false)
     try {
-      const [d, c] = await Promise.all([checkDependencies(), getConnectStatus()])
+      // recheck*, not the plain read: this refresh fires on window focus, whose
+      // whole point is "the user just came back from doing something in their
+      // terminal." A memoized answer (lib/exec-memo.ts) would be the stale one
+      // at exactly the moment it matters.
+      const [d, c] = await Promise.all([checkDependencies(), recheckConnectStatus()])
       setDeps(d)
       setConnect(c)
     } catch {

@@ -1,5 +1,4 @@
-import { execFile as nodeExecFile } from "node:child_process"
-import { promisify } from "node:util"
+import { memoizedExecFile } from "../exec-memo"
 import { listGoogleAccountEmails } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 import { getEffectiveAgents } from "../get-effective-agents"
@@ -7,12 +6,14 @@ import { readNotionToken } from "../notion/read-notion-token"
 import { isClaudeCodeCli } from "../is-claude-code-cli"
 import type { Agent } from "../adapters/types"
 
-const execFileAsync = promisify(nodeExecFile)
-
 export type ExecFileFn = (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
+// Memoized, not raw: this whole module is re-run on every render of Connect,
+// Network and the Ownership sheet, and its `gog auth *` probes read gog's
+// keyring — which on macOS can raise a Keychain prompt each time. See
+// lib/exec-memo.ts; Re-check clears it.
 async function defaultExecFile(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
-  return execFileAsync(command, args)
+  return memoizedExecFile(command, args)
 }
 
 /**
@@ -144,6 +145,35 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
   const installed = await isPresent(execFn, "gog")
   if (!installed) return installStage("The gog (Google CLI) is not installed.")
 
+  // Ask `gog auth list -j` FIRST and stop there when it answers. A stored
+  // account means a stored token, which is the connection — and the account
+  // list is what this card actually renders. `gog auth status -j` is only
+  // needed for its `credentials_exists` discriminator, i.e. exactly when there
+  // is no account yet.
+  //
+  // This ordering is not a micro-optimization: the two commands read DIFFERENT
+  // macOS Keychain items (`auth status` reports `client_secret_in_keyring`,
+  // `auth list` reads the token entries), so an already-connected user was
+  // being asked twice per page render instead of once. See lib/exec-memo.ts
+  // for why gog can never remember the answer.
+  //
+  // Known, deliberate behaviour change: a machine with a stored token but a
+  // DELETED credentials.json used to land on the `client` stage and now reads
+  // as connected (gog will fail to refresh, and that surfaces on first use).
+  // Detecting it costs the second Keychain prompt on every render for every
+  // correctly-configured user, which is the bug this ordering exists to fix.
+  const stored = await listGoogleAccountEmails(execFn)
+  if (stored.length > 0) {
+    return {
+      id: "google",
+      label,
+      connected: true,
+      detail: stored.length > 1 ? `Connected: ${stored.join(", ")}.` : `Connected as ${stored[0]}.`,
+      guidance: { steps: [] },
+      accounts: stored,
+    }
+  }
+
   let raw: string
   try {
     const res = await execFn("gog", ["auth", "status", "-j"])
@@ -163,20 +193,17 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
   const hasCredentials = parsed.account?.credentials_exists === true
 
   if (email && hasCredentials) {
-    // gog already supports more than one stored account (gog auth add,
-    // -a <email|alias|auto> per call) — list every one of them, not just
-    // whichever "auto" happens to resolve to, so a second/third account can
-    // be assigned to a different company.
-    const accounts = await listGoogleAccountEmails(execFn)
-    const detail =
-      accounts.length > 1 ? `Connected: ${accounts.join(", ")}.` : `Connected as ${email}.`
+    // Reached only when `gog auth list -j` gave us nothing (it failed, or its
+    // JSON was malformed) yet `auth status` still names an account — so there
+    // is no second account to enumerate here, and re-running `auth list` for
+    // one would just be a second Keychain prompt for an answer we already have.
     return {
       id: "google",
       label,
       connected: true,
-      detail,
+      detail: `Connected as ${email}.`,
       guidance: { steps: [] },
-      accounts: accounts.length > 0 ? accounts : [email],
+      accounts: [email],
     }
   }
 

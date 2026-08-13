@@ -1040,6 +1040,36 @@ assertions are loops over `MCP_PRESETS`, so any addition is already covered.
 README's connector line was corrected in passing — it still named "a Google
 MCP server", deleted back in v64.
 
+v70 fixed a user-reported bug: after connecting Google, macOS kept popping "gog
+wants to use your confidential information stored in 'gogcli' in your keychain",
+especially on every Re-check. **The prompt is gog's, not ours, and is
+unfixable here** — Homebrew ships `gog` ad-hoc/linker-signed, so its code hash
+changes every release and a Keychain ACL binds to the writing process's
+Designated Requirement, so "Always Allow" stops matching after any gog update
+(openclaw/gogcli#569, closed without a fix). What *was* this app's bug is the
+frequency: every page is `force-dynamic`, so the keyring-reading `gog auth *`
+probes re-ran on every render of Agents/Connect/Network/Ownership plus
+OnboardingWelcome's refresh-on-focus, and `googleStatus` ran `auth status` **and**
+`auth list` — which read **different** Keychain items, so a connected user was
+asked twice per render for what one call answers. Now `auth list` runs first and
+returns on its own when it finds an account (`auth status` only when there is
+none, which is exactly when its `credentials_exists` discriminator from v64 is
+what's being asked), and new `lib/exec-memo.ts` memoizes these read-only probes
+for 5 minutes, keyed on command+args, installed as the *default* `execFn` of
+`connect-status-impl.ts` and `google-accounts.ts` so every caller is covered at
+once and every DI test is untouched. Failures are never cached. Measured against
+a real build with a logging shim in front of the real `gog`: **15 spawns → 3**
+over the same 9 page loads; 5 plain reloads spawn 0; one Re-check spawns exactly
+1. **Two things not to re-derive:** (1) the memo is **per-route, not
+per-process** — Next bundles the server module separately per route, which is
+why "after" is 3 and not 1; (2) `gog auth list -j` returns the same accounts and
+scopes under a disposable `--home`, so gog's account list lives in the Keychain,
+not on disk — there is no file-backed way to answer "is Google connected", which
+is why the fix is caching rather than avoidance. **Standing rule this reinforces
+(v64's, from the other direction):** a `force-dynamic` page calling a third-party
+CLI calls it on *every render* — before adding one to a page, ask what it costs
+when it runs 50 times an hour, because here the cost was a GUI dialog, not CPU.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

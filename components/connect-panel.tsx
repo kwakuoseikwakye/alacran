@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
-import { getConnectStatus } from "@/lib/connect/connect-actions"
+import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import type { ConnectStatus, ToolStatus, NotionStatus } from "@/lib/connect/connect-status-impl"
 
 // Each tool's real product mark, where one exists. `gog` has no mark of its
@@ -185,6 +185,40 @@ function GoogleSetup({ stage }: { stage: "client" | "account" }) {
   )
 }
 
+/**
+ * Answers a real user question: "a popup says gog wants to use your confidential
+ * information stored in 'gogcli' in your keychain, and it keeps coming back."
+ *
+ * It is not a sign anything is broken, and it is not something this app can fix.
+ * Homebrew ships `gog` ad-hoc/linker-signed, so its code hash changes on every
+ * release, and a macOS Keychain ACL binds to the writing process's Designated
+ * Requirement — so "Always Allow" stops sticking as soon as gog updates
+ * (openclaw/gogcli#569). All this app can do is stop asking gog on every page
+ * render, which lib/exec-memo.ts now does, and say what the prompt is.
+ */
+function KeychainNote() {
+  return (
+    <details className="rounded-lg border border-border bg-background/40 p-2.5">
+      <summary className="cursor-pointer text-xs text-muted-foreground">
+        Seeing a &ldquo;gog wants to use your confidential information&rdquo; popup?
+      </summary>
+      <div className="space-y-2 pt-2">
+        <p className="text-xs text-muted-foreground">
+          That&apos;s macOS asking whether the Google CLI may read the sign-in it saved in your Keychain. It is
+          expected, and nothing is wrong. Click <strong>Always Allow</strong> rather than Allow. It can come back
+          after the Google CLI updates &mdash; that&apos;s a known issue in the CLI itself, not something this app
+          controls.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          If it keeps asking and you&apos;d rather never see it, you can move the sign-in out of the Keychain into
+          a password-protected file instead:
+        </p>
+        <CommandLine command="gog auth keyring file" />
+      </div>
+    </details>
+  )
+}
+
 function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
   const live = tool.connected
   const brand = TOOL_BRAND[tool.id]
@@ -265,6 +299,7 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
               Assign specific accounts to a company from that company&apos;s card.
             </p>
             <AddGoogleAccount />
+            <KeychainNote />
           </>
         )}
 
@@ -275,7 +310,10 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
                 create in their console. Rendered before the generic block,
                 which for these two stages carries no command of its own. */}
             {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
-              <GoogleSetup stage={tool.googleStage} />
+              <>
+                <GoogleSetup stage={tool.googleStage} />
+                <KeychainNote />
+              </>
             )}
 
             {tool.guidance.steps.length > 0 && (
@@ -397,7 +435,7 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
     setPending(true)
     setError(false)
     try {
-      setStatus(await getConnectStatus())
+      setStatus(await recheckConnectStatus())
     } catch {
       setError(true)
     } finally {
