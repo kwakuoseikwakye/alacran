@@ -118,7 +118,31 @@ describe("getConnectStatusImpl", () => {
     const status = await getConnectStatusImpl(exec, undefined, noAgents)
 
     expect(findExecutor(status, "claude-code").connected).toBe(false)
-    expect(findExecutor(status, "claude-code").guidance.steps.join(" ")).toContain("Fully quit and reopen")
+    // This used to assert the guidance said "Fully quit and reopen." That
+    // advice was wrong for the installs this app performs: PATH fixes the
+    // DIRECTORY list at launch, but their contents are read at exec time, and
+    // both `~/.local/bin` and `/opt/homebrew/bin` are already in COMMON_BINS.
+    // The load-bearing contract now is that a missing binary offers an
+    // Install button rather than a paragraph.
+    expect(findExecutor(status, "claude-code").installId).toBe("claude-code")
+    expect(findExecutor(status, "claude-code").guidance.steps.join(" ")).toContain("Press Re-check")
+  })
+
+  it("offers an install button only where there's a verified installer", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return new Error("not found")
+      if (command === "claude") return new Error("not found")
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, undefined, noAgents)
+
+    expect(findExecutor(status, "claude-code").installId).toBe("claude-code")
+    expect(status.google.installId).toBe("gog")
+    expect(status.github.installId).toBe("gh")
+    // Codex and Aider have no installer this project has ever verified, so
+    // they must keep instructions instead of gaining a button that guesses.
+    expect(findExecutor(status, "openai-codex").installId).toBeUndefined()
+    expect(findExecutor(status, "aider").installId).toBeUndefined()
   })
 
   it("gives every registered AI executor its own card, not just Claude Code", async () => {

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, ExternalLink, Bot } from "lucide-react"
+import { RefreshCw, ExternalLink, Bot, Download, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -10,6 +10,12 @@ import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
+import { installTool } from "@/lib/install-tool"
+import { signInClaude } from "@/lib/sign-in-claude"
+// Type-only, and it must stay that way: install-tool-impl imports
+// node:child_process, so a value import would drag it into the client bundle
+// and fail the build (v61 hit exactly this with McpServer).
+import type { InstallableId } from "@/lib/install-tool-impl"
 import type { ConnectStatus, ToolStatus, NotionStatus } from "@/lib/connect/connect-status-impl"
 
 // Each tool's real product mark, where one exists. `gog` has no mark of its
@@ -219,7 +225,102 @@ function KeychainNote() {
   )
 }
 
-function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
+/**
+ * Installs one tool, in place, with no terminal. The whole point of the
+ * non-technical path: a user who doesn't know what a PATH is should never be
+ * asked to paste `brew install` into anything.
+ *
+ * ponytail: no streaming — the log appears when the command finishes, not as
+ * it runs. A cold Homebrew install can sit on this spinner for a minute. Add
+ * a tailed log (the run-log pattern in lib/company-commands/) if that silence
+ * actually generates confusion; a spinner plus "this can take a minute" is
+ * the cheaper thing to try first.
+ */
+function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const [log, setLog] = useState<string | null>(null)
+  const [needsAgent, setNeedsAgent] = useState(false)
+
+  async function run() {
+    setBusy(true)
+    setLog(null)
+    setNeedsAgent(false)
+    try {
+      const result = await installTool(id)
+      if (result.ok) {
+        onDone()
+        return
+      }
+      setNeedsAgent(Boolean(result.needsAgent))
+      setLog(result.log.trim() || null)
+    } catch {
+      setNeedsAgent(true)
+      setLog(null)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Button size="sm" onClick={run} disabled={busy}>
+        {busy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Download className="mr-1.5 size-3.5" />}
+        {busy ? "Installing… this can take a minute" : "Install it for me"}
+      </Button>
+      {needsAgent && (
+        <p className="text-xs text-muted-foreground">
+          That didn&apos;t work automatically. The steps below still do it by hand.
+        </p>
+      )}
+      {log && (
+        <pre className="max-h-40 overflow-auto rounded-md border border-border bg-background/60 p-2 text-[11px] text-muted-foreground">
+          {log}
+        </pre>
+      )}
+    </div>
+  )
+}
+
+/** Claude Code is installed but nobody is signed in. One button, one browser
+ *  trip. The email only pre-populates the login page (`--email`), so a typo
+ *  costs nothing — but getting it right is what makes Google line up on the
+ *  same account later. */
+function SignInButton({ onDone }: { onDone: () => void }) {
+  const [email, setEmail] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function run() {
+    setBusy(true)
+    try {
+      const result = await signInClaude(email)
+      setMessage(result.message)
+      if (result.started) onDone()
+    } catch {
+      setMessage("Couldn't open a terminal to sign in.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <Input
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@example.com (optional)"
+        aria-label="Email to sign in with"
+      />
+      <Button size="sm" onClick={run} disabled={busy}>
+        {busy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : null}
+        Sign in
+      </Button>
+      {message && <p className="text-xs text-muted-foreground">{message}</p>}
+    </div>
+  )
+}
+
+function ToolCard({ tool, delay, onChanged }: { tool: ToolStatus; delay: number; onChanged: () => void }) {
   const live = tool.connected
   const brand = TOOL_BRAND[tool.id]
   return (
@@ -305,6 +406,10 @@ function ToolCard({ tool, delay }: { tool: ToolStatus; delay: number }) {
 
         {!live && (
           <div className="space-y-3">
+            {/* Buttons before instructions: the whole point is that a
+                non-technical user never has to reach the instructions. */}
+            {tool.installId && <InstallButton id={tool.installId} onDone={onChanged} />}
+            {tool.needsSignIn && <SignInButton onDone={onChanged} />}
             {/* Google is the one tool whose setup isn't "run this one command":
                 Google requires a per-person OAuth client that only a human can
                 create in their console. Rendered before the generic block,
@@ -467,10 +572,10 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
 
       <div className="grid gap-4 sm:grid-cols-2">
         {status.aiExecutors.map((tool, i) => (
-          <ToolCard key={tool.id} tool={tool} delay={i * 90} />
+          <ToolCard key={tool.id} tool={tool} delay={i * 90} onChanged={recheck} />
         ))}
-        <ToolCard tool={status.google} delay={status.aiExecutors.length * 90} />
-        <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} />
+        <ToolCard tool={status.google} delay={status.aiExecutors.length * 90} onChanged={recheck} />
+        <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} onChanged={recheck} />
         <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
       </div>
     </div>

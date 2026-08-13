@@ -5,6 +5,7 @@ import { getEffectiveAgents } from "../get-effective-agents"
 import { readNotionToken } from "../notion/read-notion-token"
 import { isClaudeCodeCli } from "../is-claude-code-cli"
 import { readClaudeAuthStatus } from "../claude-auth-status"
+import type { InstallableId } from "../install-tool-impl"
 import type { Agent } from "../adapters/types"
 
 export type ExecFileFn = (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
@@ -48,6 +49,10 @@ export type ToolStatus = {
    *  buttons. Only ever set for Claude Code, the one executor whose login
    *  state is actually readable (see lib/claude-auth-status.ts). */
   needsSignIn?: boolean
+  /** Set only when this tool's BINARY is missing and there is something the
+   *  app can run to fix that. The UI renders an Install button off this and
+   *  nothing else — no parsing of `guidance.command`, which would guess. */
+  installId?: InstallableId
 }
 
 /** Unlike the other cards, Notion has no single machine-wide connected state:
@@ -118,17 +123,26 @@ async function aiExecutorStatus(execFn: ExecFileFn, executor: AiExecutor): Promi
     label: executor.label,
     connected: false,
     detail: `${executor.label} not found on your PATH.`,
+    // Only the executors with a verified install command get a button; Codex
+    // and Aider keep instructions, because inventing their installers is the
+    // thing v64's rule exists to prevent.
+    installId:
+      executor.id === "claude-code" ? "claude-code" : executor.id === "google-antigravity" ? "google-antigravity" : undefined,
     guidance: {
       steps: [
         `Install ${executor.label}, then sign in with your own account.`,
-        // "Reopen this app" is genuinely ambiguous for a freshly-installed
-        // CLI: refreshing the page or clicking Re-check alone doesn't help —
-        // this app's PATH is captured once when it launches (see
-        // scripts/package-macos.sh), so only a full quit-and-relaunch of
-        // the Alacrán app itself re-reads it. Real user confusion, not a
-        // hypothetical: someone installed the CLI and the app still
-        // couldn't find it because of exactly this.
-        "Fully quit and reopen the Alacrán app itself (not just this browser tab), then press Re-check.",
+        // This used to say "Fully quit and reopen the Alacrán app itself,"
+        // on the belief that a freshly-installed CLI can't be seen because
+        // the launcher captures PATH once at startup. Only half true, and
+        // the half that matters is the other one: PATH is a list of
+        // DIRECTORIES fixed at launch, but their contents are read at exec
+        // time. `$HOME/.local/bin` and `/opt/homebrew/bin` are both already
+        // in COMMON_BINS (scripts/package-macos.sh), and that's where the
+        // native installer and Homebrew put things — so Re-check alone
+        // really does find them. A relaunch is only needed for an install
+        // into some directory nowhere in that list, which the buttons on
+        // this page never do.
+        "Press Re-check. (Installed it somewhere unusual by hand? Then quit and reopen the app.)",
       ],
       command: executor.installHint,
       link: executor.installLink,
@@ -148,6 +162,7 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
     connected: false,
     detail,
     googleStage: "install",
+    installId: "gog",
     guidance: {
       steps: ["Install the Google CLI, then press Re-check."],
       // brew is macOS-only — on Linux there's no verified one-line install, so
@@ -286,11 +301,14 @@ async function githubStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
     // brew is macOS-only. gh's own docs actively discourage the Linux snap
     // package, and the real apt-repo install is multi-step, not a one-liner —
     // so Linux gets the install link instead of a fabricated command.
-    return notConnected(
-      "The GitHub CLI (gh) is not installed.",
-      platform === "darwin" ? "brew install gh" : undefined,
-      "https://cli.github.com"
-    )
+    return {
+      ...notConnected(
+        "The GitHub CLI (gh) is not installed.",
+        platform === "darwin" ? "brew install gh" : undefined,
+        "https://cli.github.com"
+      ),
+      installId: "gh",
+    }
   }
 
   // `gh api user` is the cleanest signed-in probe: it returns the login name
