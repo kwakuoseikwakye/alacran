@@ -30,10 +30,16 @@ const GOG_CONNECTED = JSON.stringify({
   account: { email: "user@example.com", credentials_exists: true },
 })
 
+// `claude auth status` is a genuinely new async dependency of aiExecutorStatus
+// (Claude Code is now the one executor whose login state is readable), so every
+// fake exec that reports Claude Code installed needs it to answer too.
+const CLAUDE_SIGNED_IN = JSON.stringify({ loggedIn: true, email: "dev@example.com", subscriptionType: "max" })
+
 describe("getConnectStatusImpl", () => {
   it("reports both connected, with the Google account email in the detail", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
@@ -43,11 +49,33 @@ describe("getConnectStatusImpl", () => {
     expect(findExecutor(status, "claude-code").connected).toBe(true)
     expect(status.google.connected).toBe(true)
     expect(status.google.detail).toContain("user@example.com")
+    expect(findExecutor(status, "claude-code").detail).toBe("Signed in as dev@example.com (max).")
+  })
+
+  it("separates installed-but-signed-out from not-installed for Claude Code", async () => {
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return new Error("not logged in")
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
+      if (command === "gog") return { stdout: GOG_CONNECTED }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, undefined, noAgents)
+
+    const claude = findExecutor(status, "claude-code")
+    // Installed but signed out is NOT connected — it's the state where the UI
+    // must offer Sign in rather than Install, which is why the flag exists.
+    expect(claude.connected).toBe(false)
+    expect(claude.needsSignIn).toBe(true)
+    // Every other executor is only ever probed for presence, so it must not
+    // acquire a sign-in state it can't actually detect.
+    expect(findExecutor(status, "openai-codex").needsSignIn).toBeUndefined()
   })
 
   it("lists every stored account and pluralizes the detail when there's more than one", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog" && args[1] === "list")
         return { stdout: JSON.stringify({ accounts: [{ email: "user@example.com" }, { email: "second@example.com" }] }) }
@@ -64,6 +92,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "claude") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
@@ -96,6 +125,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "agy") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: GOG_CONNECTED }
       return new Error(`unexpected ${command}`)
@@ -118,6 +148,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gog") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       return new Error(`unexpected ${command}`)
     })
@@ -132,6 +163,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && (args[0] === "gog" || args[0] === "gh")) return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       return new Error(`unexpected ${command}`)
     })
@@ -148,8 +180,9 @@ describe("getConnectStatusImpl", () => {
   // and connects nothing. The stage is what lets the card show the step the
   // user is actually on, and no stage may offer that command again.
   it("sends a user with no OAuth client to the client stage, not `gog auth setup`", async () => {
-    const exec = fakeExec((command) => {
+    const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "", credentials_exists: false } }) }
@@ -166,8 +199,9 @@ describe("getConnectStatusImpl", () => {
   // which reads back from the OS keyring — so this state is real, and it used
   // to be indistinguishable from "nothing set up at all".
   it("sends a user who already has an OAuth client to the account stage", async () => {
-    const exec = fakeExec((command) => {
+    const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "", credentials_exists: true } }) }
@@ -181,8 +215,9 @@ describe("getConnectStatusImpl", () => {
   })
 
   it("does not crash on malformed gog JSON", async () => {
-    const exec = fakeExec((command) => {
+    const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog") return { stdout: "not json {{{" }
       return new Error(`unexpected ${command}`)
@@ -197,6 +232,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gog") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gh") return { stdout: "octocat\n" }
       return new Error(`unexpected ${command}`)
@@ -210,6 +246,7 @@ describe("getConnectStatusImpl", () => {
   it("reports GitHub signed in with the login name", async () => {
     const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gh") return { stdout: "octocat\n" }
       if (command === "gog")
@@ -226,6 +263,7 @@ describe("getConnectStatusImpl", () => {
     const exec = fakeExec((command, args) => {
       if (command === "which" && args[0] === "gh") return new Error("not found")
       if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gog")
         return { stdout: JSON.stringify({ account: { email: "a@b.c", credentials_exists: true } }) }
@@ -238,8 +276,9 @@ describe("getConnectStatusImpl", () => {
   })
 
   it("guides `gh auth login` when gh is installed but unauthenticated", async () => {
-    const exec = fakeExec((command) => {
+    const exec = fakeExec((command, args) => {
       if (command === "which") return { stdout: "/usr/local/bin/x" }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
       if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
       if (command === "gh") return new Error("gh: not authenticated")
       if (command === "gog")

@@ -4,6 +4,7 @@ import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-execu
 import { getEffectiveAgents } from "../get-effective-agents"
 import { readNotionToken } from "../notion/read-notion-token"
 import { isClaudeCodeCli } from "../is-claude-code-cli"
+import { readClaudeAuthStatus } from "../claude-auth-status"
 import type { Agent } from "../adapters/types"
 
 export type ExecFileFn = (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
@@ -41,6 +42,12 @@ export type ToolStatus = {
    *  in the client component from a typed address rather than shipped here
    *  with a you@example.com placeholder baked in. */
   googleStage?: GoogleStage
+  /** AI executors only: the binary is installed but nobody is signed in yet.
+   *  Distinct from `!connected`, which also covers "not installed" — the UI
+   *  offers Install for one and Sign in for the other, and they are different
+   *  buttons. Only ever set for Claude Code, the one executor whose login
+   *  state is actually readable (see lib/claude-auth-status.ts). */
+  needsSignIn?: boolean
 }
 
 /** Unlike the other cards, Notion has no single machine-wide connected state:
@@ -72,12 +79,36 @@ async function aiExecutorStatus(execFn: ExecFileFn, executor: AiExecutor): Promi
   const installed =
     executor.id === "claude-code" ? await isClaudeCodeCli(execFn) : await isPresent(execFn, executor.binaryName)
   if (installed) {
+    // Claude Code can actually answer "is the user signed in" — `claude auth
+    // status` prints JSON. Every other executor genuinely can't be probed
+    // without spawning a session, so they keep the installed-only answer.
+    if (executor.id === "claude-code") {
+      const auth = await readClaudeAuthStatus(execFn)
+      if (!auth.loggedIn) {
+        return {
+          id: executor.id,
+          label: executor.label,
+          connected: false,
+          needsSignIn: true,
+          detail: "Installed, but not signed in yet.",
+          guidance: { steps: ["Press Sign in — it opens your browser once, then you're done."] },
+        }
+      }
+      const who = auth.email ? `Signed in as ${auth.email}` : "Signed in"
+      return {
+        id: executor.id,
+        label: executor.label,
+        connected: true,
+        detail: auth.subscriptionType ? `${who} (${auth.subscriptionType}).` : `${who}.`,
+        guidance: { steps: [] },
+      }
+    }
     return {
       id: executor.id,
       label: executor.label,
       connected: true,
-      // Login state can't be detected without spawning the CLI; the honest
-      // proof is running a company command assigned to it.
+      // Only Claude Code exposes a readable login state; for the rest the
+      // honest proof is running a company command assigned to it.
       detail: "Installed — run an assigned company command to confirm you're signed in.",
       guidance: { steps: [] },
     }
