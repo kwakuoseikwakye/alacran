@@ -3,17 +3,22 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Bot, Activity, BookOpen, Plug, Network, Settings } from "lucide-react"
+import { useAdvancedMode } from "@/components/advanced-only"
 import { AlacranMark } from "@/components/alacran-mark"
 import { APP_VERSION } from "@/lib/app-version"
 
 const NAV = [
   { href: "/",         label: "Agents",     icon: Bot      },
-  { href: "/network",  label: "Networks",   icon: Network  },
   { href: "/activity", label: "Activities", icon: Activity },
   { href: "/skills",   label: "Skills",     icon: BookOpen },
   { href: "/connect",  label: "Connectors", icon: Plug     },
   { href: "/settings", label: "Settings",   icon: Settings },
 ]
+
+/** Network is a map of what every company is plugged into — genuinely useful,
+ *  and genuinely meaningless to someone who hasn't connected anything yet.
+ *  Inserted before Settings so Settings stays last in both modes. */
+const NETWORK_ITEM = { href: "/network", label: "Networks", icon: Network }
 
 /**
  * Collapsible glassmorphic sidebar. Collapses to 72px of icon-only rail on
@@ -22,6 +27,8 @@ const NAV = [
  */
 export function Sidebar() {
   const pathname = usePathname()
+  const advanced = useAdvancedMode()
+  const nav = advanced ? [...NAV.slice(0, -1), NETWORK_ITEM, NAV[NAV.length - 1]] : NAV
 
   return (
     <>
@@ -34,7 +41,7 @@ export function Sidebar() {
 
         <span className="sidebar-section-label">Navigation</span>
 
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
             <Link
@@ -59,7 +66,7 @@ export function Sidebar() {
 
       {/* ---- MOBILE BOTTOM NAV ---- */}
       <nav className="app-bottom-nav" aria-label="Mobile navigation">
-        {NAV.map(({ href, label, icon: Icon }) => {
+        {nav.map(({ href, label, icon: Icon }) => {
           const active = pathname === href
           return (
             <Link

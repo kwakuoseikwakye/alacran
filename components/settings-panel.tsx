@@ -1,12 +1,13 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { RefreshCw, ArrowUpCircle, ExternalLink, RotateCcw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { readAdvancedMode, setAdvancedMode } from "@/components/advanced-only"
 import { GUIDE_SEEN_KEY } from "@/components/company-guide"
 import { checkForUpdatesNow, performUpdate, restartApp } from "@/lib/updates/update-actions"
 import { waitForServerThenReload } from "@/lib/updates/wait-for-server-then-reload"
@@ -134,6 +135,45 @@ function ResetButton({ storageKey, label, doneLabel }: { storageKey: string; lab
   )
 }
 
+/**
+ * The one switch that turns the terminal-literate half of the app back on.
+ *
+ * Off by default. Everything it reveals — the Network map, MCP connectors,
+ * Open in Terminal, the other three AI executors, Notion, the company path
+ * field — is either meaningless or actively confusing to someone who has
+ * never used a terminal, which is who this app is for now.
+ */
+function AdvancedModeCard() {
+  const [on, setOn] = useState(false)
+  useEffect(() => setOn(readAdvancedMode()), [])
+
+  return (
+    <Card className="a-rise gap-4">
+      <CardHeader>
+        <CardTitle>Advanced mode</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Shows the extra tools: the network map, MCP connectors, opening a company in a terminal, other AI agents,
+          Notion, and choosing where a company&apos;s folder lives. Leave this off if you&apos;re not sure — nothing
+          here is needed for day-to-day use.
+        </p>
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm">
+          <input
+            type="checkbox"
+            checked={on}
+            onChange={(e) => {
+              setOn(e.target.checked)
+              setAdvancedMode(e.target.checked)
+            }}
+          />
+          <span>{on ? "Advanced mode is on" : "Advanced mode is off"}</span>
+        </label>
+      </CardContent>
+    </Card>
+  )
+}
+
 export function SettingsPanel({ currentVersion, canAutoUpdate }: { currentVersion: string; canAutoUpdate: boolean }) {
   return (
     <div className="max-w-2xl space-y-4">
@@ -146,6 +186,8 @@ export function SettingsPanel({ currentVersion, canAutoUpdate }: { currentVersio
           <ThemeToggle />
         </CardContent>
       </Card>
+
+      <AdvancedModeCard />
 
       <UpdatesCard currentVersion={currentVersion} canAutoUpdate={canAutoUpdate} />
 

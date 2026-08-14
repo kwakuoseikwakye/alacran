@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge"
 import type { Agent, Activity } from "@/lib/adapters/types"
 import { VerifyButton } from "@/components/verify-button"
+import { AdvancedOnly } from "@/components/advanced-only"
 import { DailyTeamLogButton } from "@/components/daily-team-log-button"
 import { RemoveCompanyButton } from "@/components/remove-company-button"
 import { AgentAvatar } from "@/components/agent-avatar"
@@ -173,9 +174,22 @@ export function AgentCard({
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
           )}
           {showGetStartedButton && <GetStartedButton agentId={agent.id} />}
-          {showOpenTerminalButton && <OpenTerminalButton agentId={agent.id} />}
+          {/* An `external` folder has exactly one action (v66), so hiding it
+              in simple mode would leave that card with no buttons at all.
+              For a real company, "opens a terminal" is the definition of the
+              advanced surface. */}
+          {showOpenTerminalButton &&
+            (agent.kind === "external" ? (
+              <OpenTerminalButton agentId={agent.id} />
+            ) : (
+              <AdvancedOnly>
+                <OpenTerminalButton agentId={agent.id} />
+              </AdvancedOnly>
+            ))}
           {showMcpButton && (
-            <McpServersSheet agentId={agent.id} companyName={agent.name} currentServers={mcpServers ?? []} />
+            <AdvancedOnly>
+              <McpServersSheet agentId={agent.id} companyName={agent.name} currentServers={mcpServers ?? []} />
+            </AdvancedOnly>
           )}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}

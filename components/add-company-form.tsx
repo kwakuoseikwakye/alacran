@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useAdvancedMode } from "@/components/advanced-only"
 import { useRouter } from "next/navigation"
 import { Plus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -135,6 +136,8 @@ export function AddCompanyForm({
     {}
   )
 
+  const advanced = useAdvancedMode()
+
   // Shared between both presentations below: the onboarding wizard's inline
   // card (prominent) and the agents-page header's Sheet modal (default).
   const formFields = (
@@ -143,22 +146,33 @@ export function AddCompanyForm({
         <label className="text-xs text-muted-foreground">Name</label>
         <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Second Co" />
       </div>
-      <div className="space-y-1">
-        <label className="text-xs text-muted-foreground">Local directory path</label>
-        <Input
-          value={rootPath}
-          onChange={(e) => {
-            setRootPath(e.target.value)
-            setPathTouched(true)
-          }}
-          placeholder={homeDir ? `${homeDir}/${COMPANIES_DIR_NAME}/second-co` : `~/${COMPANIES_DIR_NAME}/second-co`}
-        />
+      {/* A filesystem path is the last technical value left in the happy
+          path, and a non-technical user has no mental model for one. The
+          field only appears in advanced mode; the value it holds is derived
+          from the name either way, so nothing changes about what gets
+          created — only whether the user is asked about it. */}
+      {advanced ? (
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Local directory path</label>
+          <Input
+            value={rootPath}
+            onChange={(e) => {
+              setRootPath(e.target.value)
+              setPathTouched(true)
+            }}
+            placeholder={homeDir ? `${homeDir}/${COMPANIES_DIR_NAME}/second-co` : `~/${COMPANIES_DIR_NAME}/second-co`}
+          />
+          <p className="text-xs text-muted-foreground">
+            {pathTouched
+              ? "Using your custom path. Please make sure it's a real location on this machine."
+              : `Created in an ${COMPANIES_DIR_NAME} folder in your home directory, next to your other companies. The folder is made for you if it isn't there yet. Know exactly where you want it? Just type over the path above.`}
+          </p>
+        </div>
+      ) : (
         <p className="text-xs text-muted-foreground">
-          {pathTouched
-            ? "Using your custom path. Please make sure it's a real location on this machine."
-            : `Created in an ${COMPANIES_DIR_NAME} folder in your home directory, next to your other companies. The folder is made for you if it isn't there yet. Know exactly where you want it? Just type over the path above.`}
+          Saved in your {COMPANIES_DIR_NAME} folder, in your home folder. Everything stays on this computer.
         </p>
-      </div>
+      )}
       {!showRestore && (
         <label className="flex cursor-pointer gap-2.5 rounded-md border border-border p-2.5 text-xs">
           <input

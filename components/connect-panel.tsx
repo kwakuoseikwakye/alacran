@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
+import { useAdvancedMode } from "@/components/advanced-only"
 import { GOOGLE_CONSOLE_STEPS } from "@/lib/google-console-steps"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
@@ -644,6 +645,7 @@ function NotionCard({ notion, delay }: { notion: NotionStatus; delay: number }) 
 }
 
 export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }) {
+  const advanced = useAdvancedMode()
   const [status, setStatus] = useState<ConnectStatus>(initialStatus)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
@@ -683,7 +685,12 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
       )}
 
       <div className="grid gap-4 sm:grid-cols-2">
-        {status.aiExecutors.map((tool, i) => (
+        {/* Simple mode shows only the AI that actually runs things by
+            default. Four executor cards is a choice a non-technical user has
+            no basis to make, and three of them can't be installed or probed
+            anyway. Google and GitHub stay: 0.6 made Google one-click and gh's
+            sign-in is a browser flow. */}
+        {(advanced ? status.aiExecutors : status.aiExecutors.filter((t) => t.id === "claude-code")).map((tool, i) => (
           <ToolCard key={tool.id} tool={tool} delay={i * 90} onChanged={recheck} />
         ))}
         <ToolCard
@@ -693,7 +700,9 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
           claudeReady={status.aiExecutors.some((t) => t.id === "claude-code" && t.connected)}
         />
         <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} onChanged={recheck} />
-        <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
+        {/* Notion is connected by running the api-connect skill in a
+            terminal — no button here can do it, so it stays advanced. */}
+        {advanced && <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />}
       </div>
     </div>
   )
