@@ -52,6 +52,45 @@ if [ ! -f ".next/standalone/server.js" ]; then
   exit 1
 fi
 
+# The bundled Node runtime. Before this, the launcher alerted "Node.js is
+# required" and quit if `command -v node` found nothing — gate zero for a
+# non-technical user, who has no reason to have Node and no idea what it is.
+# The standalone server needs nothing from Node but the binary itself.
+#
+# Pinned rather than copied from this build machine: `cp $(command -v node)`
+# would ship whatever happens to be installed here, including a version-
+# specific nvm build, and would silently change what users run whenever this
+# machine's node changes.
+NODE_VERSION="v24.19.0"
+case "$(uname -m)" in
+  arm64) NODE_ARCH="darwin-arm64" ;;
+  x86_64) NODE_ARCH="darwin-x64" ;;
+  *) echo "ERROR: unsupported arch $(uname -m) for the bundled Node" >&2; exit 1 ;;
+esac
+NODE_TARBALL="node-$NODE_VERSION-$NODE_ARCH.tar.gz"
+NODE_CACHE="$DIST/.node-cache"
+mkdir -p "$NODE_CACHE"
+
+if [ ! -f "$NODE_CACHE/$NODE_TARBALL" ]; then
+  echo "==> Downloading Node $NODE_VERSION ($NODE_ARCH)"
+  # Download to a temp name and move only on success. A curl that times out
+  # mid-transfer otherwise leaves a truncated file that the `-f` check above
+  # happily accepts on the next run — which is exactly what happened while
+  # writing this, and only the checksum below caught it.
+  curl -fsSL -o "$NODE_CACHE/$NODE_TARBALL.part" \
+    "https://nodejs.org/dist/$NODE_VERSION/$NODE_TARBALL"
+  mv "$NODE_CACHE/$NODE_TARBALL.part" "$NODE_CACHE/$NODE_TARBALL"
+fi
+
+# Verify against nodejs.org's own published checksums. This binary is
+# executed by every user of the shipped app, so a corrupted or swapped
+# download is not something to find out about later.
+echo "==> Verifying the Node download"
+curl -fsSL -o "$NODE_CACHE/SHASUMS256.txt" \
+  "https://nodejs.org/dist/$NODE_VERSION/SHASUMS256.txt"
+( cd "$NODE_CACHE" && grep " $NODE_TARBALL\$" SHASUMS256.txt | shasum -a 256 -c - ) \
+  || { echo "ERROR: Node download failed checksum verification" >&2; exit 1; }
+
 echo "==> Assembling the app payload"
 rm -rf "$APP"
 mkdir -p "$PAYLOAD" "$APP/Contents/MacOS"
@@ -62,6 +101,14 @@ cp -R .next/standalone/. "$PAYLOAD/"
 mkdir -p "$PAYLOAD/.next"
 cp -R .next/static "$PAYLOAD/.next/static"
 cp -R templates "$PAYLOAD/templates"
+
+# Just the binary — not the headers, npm, or docs in the tarball. ~110MB of
+# the ~50MB-compressed download is things a standalone Next server never uses.
+echo "==> Bundling the Node runtime"
+tar -xzf "$NODE_CACHE/$NODE_TARBALL" -C "$NODE_CACHE" \
+  "node-$NODE_VERSION-$NODE_ARCH/bin/node"
+cp "$NODE_CACHE/node-$NODE_VERSION-$NODE_ARCH/bin/node" "$APP/Contents/Resources/node"
+chmod +x "$APP/Contents/Resources/node"
 
 # `next build` never cleans .next/standalone before writing to it — it only
 # adds/overwrites what it generates — so a stray .data left over from running
@@ -131,9 +178,19 @@ else
   export PATH="\$COMMON_BINS:\$PATH"
 fi
 
-NODE_BIN="\$(command -v node || true)"
+# The bundled runtime first, always. Falling back to the user's own node
+# only covers a bundle whose Resources/node went missing; it is not a
+# preference. A user's node can be any version, including one too old for
+# the standalone server, and "works on the machine that built it" is exactly
+# the failure this bundling exists to remove.
+BUNDLED_NODE="\$(cd "\$(dirname "\$0")/../Resources" && pwd)/node"
+if [ -x "\$BUNDLED_NODE" ]; then
+  NODE_BIN="\$BUNDLED_NODE"
+else
+  NODE_BIN="\$(command -v node || true)"
+fi
 if [ -z "\$NODE_BIN" ]; then
-  osascript -e 'display alert "Node.js is required" message "Please install Node.js (nodejs.org) and then reopen this app."'
+  osascript -e 'display alert "Alacrán could not start" message "This copy is missing its bundled runtime. Please download Alacrán again."'
   exit 1
 fi
 
