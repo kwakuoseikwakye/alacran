@@ -2,6 +2,30 @@ import type { CompanyCommand } from "./types"
 
 export const COMPANY_COMMANDS: CompanyCommand[] = [
   {
+    id: "orientation",
+    // Unused at runtime (nothing reads commandFileName), and deliberately not
+    // backed by a real .claude/commands file: this command's prompt is
+    // self-contained rather than delegating to one the company may not have.
+    commandFileName: "orientation.md",
+    label: "Show me what I can do here",
+    fields: [],
+    outputKind: "new-file-in-dir",
+    outputPath: "notes/company/orientation",
+    // No bashPatterns and no untrustedInput: the prompt is ours and reads
+    // only this company's own repo.
+    buildPrompt: (_fields, today) => `Write a plain-language orientation note for someone who set this company up and now wants to know what they can actually do with it.
+
+Read this repository's own .claude/skills/ and .claude/commands/ directories and definitions/ontology/company.yaml. Base everything on what is really there — do not invent capabilities, and if something is missing or empty, say so plainly instead of describing what it would do.
+
+Write the result to notes/company/orientation/${today}-orientation.md with frontmatter (type: orientation, created: ${today}, updated: ${today}). Structure it as:
+
+1. "What this company is" — two or three sentences from the ontology, in ordinary language, no jargon.
+2. "What you can ask for right now" — one bullet per skill or command that really exists, each saying in plain words what it does for the user. Skip anything you cannot find.
+3. "Three things to try first" — concrete, specific to this company, in the order you'd suggest doing them.
+
+Write for someone who has never used a terminal. No code, no file paths, no command syntax in the body. Create the directory first if it doesn't exist. Write exactly one file and stop — do not run any other commands.`,
+  },
+  {
     id: "digest",
     commandFileName: "digest.md",
     label: "Weekly digest",

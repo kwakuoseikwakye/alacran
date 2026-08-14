@@ -4,6 +4,10 @@ import { useState } from "react"
 import { Sparkles, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { openInteractiveTerminalWithHelp } from "@/lib/open-interactive-terminal-with-help"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { CompanyCommandRunner } from "@/components/company-command-runner"
+import { getCompanyCommand } from "@/lib/company-commands/registry"
+import { useAdvancedMode } from "@/components/advanced-only"
 
 export const GET_STARTED_BLURB =
   "Not sure what to do with this company? Your AI assistant reads everything you've set up here — the skills you built, how you defined the company — and tells you in plain language what it can actually help you do, then waits for you to answer."
@@ -18,6 +22,40 @@ export const GET_STARTED_BLURB =
  * message says so.
  */
 export function GetStartedButton({ agentId }: { agentId: string }) {
+  const advanced = useAdvancedMode()
+  // Simple mode never opens a terminal. It runs the `orientation` command
+  // through the machinery every other command already uses — agent writes a
+  // note, user reads the diff, user approves. Same answer, delivered as
+  // something a non-technical user can actually read and keep, instead of a
+  // reply that scrolls away in a window they didn't ask for.
+  if (!advanced) return <GetStartedRun agentId={agentId} />
+  return <GetStartedTerminal agentId={agentId} />
+}
+
+function GetStartedRun({ agentId }: { agentId: string }) {
+  const command = getCompanyCommand("orientation")
+  if (!command) return null
+  return (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button size="sm" variant="outline" className="w-full">
+          <Sparkles className="h-4 w-4" />
+          Get Started
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-full sm:max-w-xl">
+        <SheetHeader>
+          <SheetTitle>What can I do here?</SheetTitle>
+        </SheetHeader>
+        <div className="px-4 pb-4">
+          <CompanyCommandRunner command={command} agentId={agentId} />
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
+function GetStartedTerminal({ agentId }: { agentId: string }) {
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 

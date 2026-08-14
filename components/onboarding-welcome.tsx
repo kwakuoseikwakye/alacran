@@ -20,7 +20,7 @@ const STEPS: { id: StepId; label: string; title: string; blurb: string }[] = [
     label: "Install",
     title: "Install the core tools",
     blurb:
-      "Alacrán never installs anything behind your back. It simply detects what is on your machine and tells you exactly what is missing.",
+      "Alacrán checks what's already on your machine and installs what's missing for you. One thing it can't provide: Claude Code needs a paid Claude account (about $20/month, from Anthropic) — that subscription is what actually does the work.",
   },
   {
     id: "connect",

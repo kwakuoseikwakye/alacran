@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { COMPANY_COMMANDS, getCompanyCommand } from "./registry"
 
 describe("COMPANY_COMMANDS registry", () => {
-  it("has exactly the 9 in-scope commands", () => {
+  it("has exactly the 10 in-scope commands", () => {
     expect(COMPANY_COMMANDS.map((c) => c.id).sort()).toEqual(
       [
         "check-inbox",
@@ -11,6 +11,9 @@ describe("COMPANY_COMMANDS registry", () => {
         "define-company",
         "digest",
         "handoff",
+        // v71: the non-technical Get Started path. Self-contained prompt,
+        // reads only this company's own repo, writes one note.
+        "orientation",
         "retro",
         "triage-email",
         "triage-issue",
@@ -140,6 +143,6 @@ describe("COMPANY_COMMANDS registry", () => {
 
   it("does not mark commands whose prompt is only user input and the company's own repo", () => {
     const localOnly = COMPANY_COMMANDS.filter((c) => c.untrustedInput !== true).map((c) => c.id).sort()
-    expect(localOnly).toEqual(["decision", "define-company", "digest", "handoff", "retro"])
+    expect(localOnly).toEqual(["decision", "define-company", "digest", "handoff", "orientation", "retro"])
   })
 })
