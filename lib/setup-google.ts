@@ -4,8 +4,8 @@ import { openChromeAccountCheckImpl, setupGoogleImpl, type SetupGoogleResult } f
 
 /** Public boundary takes only the address to connect; the spawn/exec/platform
  *  seams stay on the impl, per the zero-extra-parameter Server Action rule. */
-export async function setupGoogle(email: string): Promise<SetupGoogleResult> {
-  return setupGoogleImpl(email)
+export async function setupGoogle(email: string, serviceIds: string[]): Promise<SetupGoogleResult> {
+  return setupGoogleImpl(email, serviceIds)
 }
 
 /** Opens Chrome at Google's account page so the user can confirm which

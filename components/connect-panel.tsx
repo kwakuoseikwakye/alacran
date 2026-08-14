@@ -10,6 +10,7 @@ import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
 import { useAdvancedMode } from "@/components/advanced-only"
+import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg } from "@/lib/google-services"
 import { GOOGLE_CONSOLE_STEPS } from "@/lib/google-console-steps"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
@@ -34,29 +35,61 @@ export const TOOL_BRAND: Partial<Record<ToolStatus["id"], BrandId>> = {
   github: "github",
 }
 
-// The Google services a connected `gog` unlocks. These are real marks, so the payoff of
-// connecting is legible at a glance. Kept in step with GOOGLE_SERVICES below —
-// showing a Drive or Chat mark for a scope we never ask Google for is a promise
-// the connection doesn't keep.
-const GOOGLE_SURFACE: BrandId[] = ["gmail", "googlecalendar"]
-
 /**
- * The scopes every `gog` command in this app actually uses: `check-inbox` and
- * `triage-email` call Gmail, and Calendar is what this card has always been
- * named for. gog's own default is six services (adding drive, docs, sheets,
- * contacts), each of which is another API the user must click Enable on in the
- * Cloud console — so asking for only what's used is three fewer manual steps,
- * not just a tighter grant. More can be added later by re-running `auth add`
- * with a longer list.
+ * Which Google services a user wants authorized, as a checkbox list.
+ *
+ * Replaces two hardcoded `"gmail,calendar"` constants and a hardcoded array of
+ * marks. The catalog in lib/google-services.ts is now the only place a service
+ * is declared; this picker, the command it builds, and the console pages the
+ * browser agent enables all read from it.
+ *
+ * Defaults stay Gmail + Calendar for the reason v64 narrowed them: each extra
+ * service is one more API the user has to click Enable on before consent will
+ * succeed. Extra reach is opt-in, not the price of connecting at all.
  */
-const GOOGLE_SERVICES = "gmail,calendar"
+function ServicePicker({
+  selected,
+  onChange,
+  granted,
+}: {
+  selected: string[]
+  onChange: (ids: string[]) => void
+  granted?: string[]
+}) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {GOOGLE_SERVICES.map((service) => {
+        const on = selected.includes(service.id)
+        const already = granted?.includes(service.id)
+        return (
+          <label
+            key={service.id}
+            className={`flex cursor-pointer items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] transition-colors ${
+              on ? "border-primary/40 bg-primary/10 text-foreground" : "border-border text-muted-foreground"
+            }`}
+          >
+            <input
+              type="checkbox"
+              checked={on}
+              onChange={(e) => onChange(e.target.checked ? [...selected, service.id] : selected.filter((id) => id !== service.id))}
+              className="size-3"
+            />
+            {service.label}
+            {already && <span className="text-success" title="Already authorized">✓</span>}
+          </label>
+        )
+      })}
+    </div>
+  )
+}
 
 /** Lets you connect a 2nd, 3rd, ... Google account. Same pattern as every
  *  other guidance flow here: show the exact command, the user runs it in
  *  their own terminal, then presses Re-check — the app never spawns an
  *  interactive OAuth flow itself. */
-function AddGoogleAccount() {
+function AddGoogleAccount({ granted }: { granted?: string[] }) {
   const [email, setEmail] = useState("")
+  const [services, setServices] = useState<string[]>(DEFAULT_GOOGLE_SERVICE_IDS)
   return (
     <div className="space-y-1.5 border-t border-border pt-3">
       <p className="text-xs text-muted-foreground">Connect another email</p>
@@ -69,8 +102,9 @@ function AddGoogleAccount() {
           className="h-8 text-xs"
         />
       </div>
+      <ServicePicker selected={services} onChange={setServices} granted={granted} />
       {email.trim() && (
-        <CommandLine command={`gog auth add ${email.trim()} --services ${GOOGLE_SERVICES}`} />
+        <CommandLine command={`gog auth add ${email.trim()} --services ${serviceListArg(services)}`} />
       )}
     </div>
   )
@@ -110,8 +144,9 @@ function ConsoleLink({ href, children }: { href: string; children: React.ReactNo
  * because setting this up against the wrong account silently connects the
  * wrong mailbox.
  */
-function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
+function GoogleAutoSetup({ claudeReady, granted }: { claudeReady: boolean; granted?: string[] }) {
   const [email, setEmail] = useState("")
+  const [services, setServices] = useState<string[]>(DEFAULT_GOOGLE_SERVICE_IDS)
   const [busy, setBusy] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -127,7 +162,7 @@ function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
   async function run() {
     setBusy(true)
     try {
-      const result = await setupGoogle(email)
+      const result = await setupGoogle(email, services)
       setMessage(result.message)
     } catch {
       setMessage("Couldn't start the setup session.")
@@ -156,6 +191,11 @@ function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
         onChange={(e) => setEmail(e.target.value)}
         className="h-8 text-xs"
       />
+
+      <p className="text-[11px] text-muted-foreground">
+        Which Google apps should it connect? Each one adds a page for your AI to click through.
+      </p>
+      <ServicePicker selected={services} onChange={setServices} granted={granted} />
 
       {/* The one prerequisite this app cannot detect. Chrome's presence is
           checked for real before any spawn; WHICH Google account it is signed
@@ -191,8 +231,9 @@ function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
   )
 }
 
-function GoogleSetup({ stage, claudeReady }: { stage: "client" | "account"; claudeReady: boolean }) {
+function GoogleSetup({ stage, claudeReady, granted }: { stage: "client" | "account"; claudeReady: boolean; granted?: string[] }) {
   const [email, setEmail] = useState("")
+  const [services, setServices] = useState<string[]>(DEFAULT_GOOGLE_SERVICE_IDS)
   const address = email.trim()
 
   const emailField = (
@@ -213,7 +254,8 @@ function GoogleSetup({ stage, claudeReady }: { stage: "client" | "account"; clau
           connect, then run this. A browser window opens — approve it, come back, press Re-check.
         </p>
         {emailField}
-        {address && <CommandLine command={`gog auth add ${address} --services ${GOOGLE_SERVICES}`} />}
+        <ServicePicker selected={services} onChange={setServices} />
+        {address && <CommandLine command={`gog auth add ${address} --services ${serviceListArg(services)}`} />}
       </div>
     )
   }
@@ -229,7 +271,7 @@ function GoogleSetup({ stage, claudeReady }: { stage: "client" | "account"; clau
       {/* The whole point of 0.6: nobody should have to do the six steps below
           by hand. They stay on the page as the fallback, and as the thing the
           agent is literally working through — same array, one source. */}
-      <GoogleAutoSetup claudeReady={claudeReady} />
+      <GoogleAutoSetup claudeReady={claudeReady} granted={granted} />
 
       {claudeReady && <p className="text-xs font-medium text-muted-foreground">Or do it yourself:</p>}
       <ol className="list-decimal space-y-2 pl-5 text-xs text-muted-foreground">
@@ -248,7 +290,7 @@ function GoogleSetup({ stage, claudeReady }: { stage: "client" | "account"; clau
         {emailField}
         {address && (
           <CommandLine
-            command={`gog auth setup ${address} --credentials ~/Downloads/client_secret_*.json --login --services ${GOOGLE_SERVICES}`}
+            command={`gog auth setup ${address} --credentials ~/Downloads/client_secret_*.json --login --services ${serviceListArg(services)}`}
           />
         )}
       </div>
@@ -496,15 +538,31 @@ function ToolCard({
 
         {tool.id === "google" && live && (
           <>
-            <div className="flex items-center gap-2 pt-0.5">
-              {GOOGLE_SURFACE.map((id) => (
-                <span
-                  key={id}
-                  className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
-                >
-                  <BrandIcon id={id} tone="brand" className="size-3.5" />
-                </span>
-              ))}
+            <div className="flex flex-wrap items-center gap-2 pt-0.5">
+              {/* Derived from the scopes gog really reports, so the card can
+                  never show a service the token was never granted — v64's
+                  "keep the marks in sync" rule replaced by not keeping two
+                  lists at all. Only some services have a real product mark;
+                  the rest are named in text rather than given an invented
+                  logo, per the standing no-hand-drawn-vendor-marks rule. */}
+              {GOOGLE_SERVICES.filter((svc) => tool.grantedServices?.includes(svc.id)).map((svc) =>
+                svc.brand ? (
+                  <span
+                    key={svc.id}
+                    title={svc.label}
+                    className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
+                  >
+                    <BrandIcon id={svc.brand} tone="brand" className="size-3.5" />
+                  </span>
+                ) : (
+                  <span
+                    key={svc.id}
+                    className="rounded-md border border-border bg-background/60 px-2 py-1 text-[11px] text-muted-foreground"
+                  >
+                    {svc.label}
+                  </span>
+                )
+              )}
               <span className="text-xs text-muted-foreground">available to your companies</span>
             </div>
             {tool.accounts && tool.accounts.length > 0 && (
@@ -519,7 +577,7 @@ function ToolCard({
             <p className="text-xs text-muted-foreground">
               Assign specific accounts to a company from that company&apos;s card.
             </p>
-            <AddGoogleAccount />
+            <AddGoogleAccount granted={tool.grantedServices} />
             <KeychainNote />
           </>
         )}
@@ -536,7 +594,7 @@ function ToolCard({
                 which for these two stages carries no command of its own. */}
             {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
               <>
-                <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} />
+                <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} granted={tool.grantedServices} />
                 <KeychainNote />
               </>
             )}

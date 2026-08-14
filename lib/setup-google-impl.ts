@@ -6,6 +6,7 @@ import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
 import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
 import { GOOGLE_CONSOLE_STEPS } from "./google-console-steps"
+import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg } from "./google-services"
 import { isPlausibleEmail } from "./sign-in-claude-impl"
 import { DATA_DIR } from "./data-dir"
 
@@ -25,7 +26,10 @@ export type SetupGoogleResult = { started: boolean; message: string }
  * exactly these. Widening this list means widening that one too, or the card
  * promises a connection it doesn't have.
  */
-export const GOOGLE_SETUP_SERVICES = "gmail,calendar"
+/** Kept as the fallback when a caller passes nothing, so behaviour is
+ *  unchanged for every existing path. The picker on the Connect card supplies
+ *  a real selection. */
+export const GOOGLE_SETUP_SERVICES = serviceListArg(DEFAULT_GOOGLE_SERVICE_IDS)
 
 /**
  * The checklist the browser agent works through — built from the SAME array
@@ -37,8 +41,18 @@ export const GOOGLE_SETUP_SERVICES = "gmail,calendar"
  * which is why the final step names it exactly rather than leaving the agent
  * to improvise the finish.
  */
-export function buildGoogleSetupPrompt(email: string): string {
-  const steps = GOOGLE_CONSOLE_STEPS.map((s, i) => `${i + 1}. ${s.title} — ${s.href}\n   ${s.then}`).join("\n")
+export function buildGoogleSetupPrompt(email: string, serviceIds: string[] = DEFAULT_GOOGLE_SERVICE_IDS): string {
+  const services = serviceListArg(serviceIds)
+  const chosen = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id))
+  // The console checklist is built from the chosen services, not a fixed pair:
+  // consent FAILS for a service whose API was never enabled, so the two lists
+  // have to be the same list. GOOGLE_CONSOLE_STEPS still supplies every step
+  // that isn't per-API (create project, consent screen, client, publish).
+  const enableSteps = chosen.map((svc) => `Turn on ${svc.label} — ${svc.apiPage}\n   Click the blue Enable button. That is the whole step.`)
+  const otherSteps = GOOGLE_CONSOLE_STEPS.filter((s) => !s.title.startsWith("Turn on")).map((s) => `${s.title} — ${s.href}\n   ${s.then}`)
+  const steps = [otherSteps[0], ...enableSteps, ...otherSteps.slice(1)]
+    .map((line, i) => `${i + 1}. ${line}`)
+    .join("\n")
   return [
     `Set up Google API access for ${email} on this machine, using the browser.`,
     "",
@@ -51,11 +65,11 @@ export function buildGoogleSetupPrompt(email: string): string {
     `- On the "Say who can use it" step, enter ${email}.`,
     `- Choose "Desktop app" as the client type. Any other type produces credentials gog cannot use.`,
     "- Do not skip the Publish step. Without it Google expires the connection after 7 days.",
-    "- Do not enable any API beyond Gmail and Calendar, and do not create billing or service accounts.",
+    `- Enable exactly the APIs listed above (${chosen.map((c) => c.label).join(", ")}) and nothing else, and do not create billing or service accounts.`,
     "",
     "When the JSON has downloaded (it lands in ~/Downloads and is named something like client_secret_….apps.googleusercontent.com.json), finish by running exactly:",
     "",
-    `  gog auth setup ${email} --credentials <the downloaded file> --services ${GOOGLE_SETUP_SERVICES} --login`,
+    `  gog auth setup ${email} --credentials <the downloaded file> --services ${services} --login`,
     "",
     "That stores the key and opens the browser sign-in. Approve it. Then run `gog auth list` and show me the output so we can both see it worked.",
   ].join("\n")
@@ -140,6 +154,7 @@ export async function openChromeAccountCheckImpl(
  */
 export async function setupGoogleImpl(
   email: string,
+  serviceIds: string[] = DEFAULT_GOOGLE_SERVICE_IDS,
   spawnFn: SpawnFn = defaultSpawn,
   execFn: ExecFileFn = defaultExecFile,
   platform: NodeJS.Platform = process.platform,
@@ -172,7 +187,7 @@ export async function setupGoogleImpl(
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: ["--chrome", buildGoogleSetupPrompt(address)],
+    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds)],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh

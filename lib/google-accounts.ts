@@ -9,7 +9,12 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
   return memoizedExecFile(command, args)
 }
 
-type GogAuthList = { accounts?: Array<{ email?: unknown }> }
+type GogAuthList = { accounts?: Array<{ email?: unknown; scopes?: unknown }> }
+
+/** An account plus the OAuth scopes it really carries. The scopes are what
+ *  lets the Connect card show which Google services are actually authorized
+ *  instead of assuming the default pair — see lib/google-services.ts. */
+export type GoogleAccount = { email: string; scopes: string[] }
 
 /**
  * Every Google account stored in `gog`'s own auth store — not just the one
@@ -19,6 +24,11 @@ type GogAuthList = { accounts?: Array<{ email?: unknown }> }
  * malformed JSON) — callers treat that the same as "nothing connected yet".
  */
 export async function listGoogleAccountEmails(execFn: ExecFileFn = defaultExecFile): Promise<string[]> {
+  return (await listGoogleAccounts(execFn)).map((a) => a.email)
+}
+
+/** Same call, same memo, but keeps the scopes the email-only reader drops. */
+export async function listGoogleAccounts(execFn: ExecFileFn = defaultExecFile): Promise<GoogleAccount[]> {
   let raw: string
   try {
     const res = await execFn("gog", ["auth", "list", "-j"])
@@ -36,6 +46,9 @@ export async function listGoogleAccountEmails(execFn: ExecFileFn = defaultExecFi
 
   if (!Array.isArray(parsed.accounts)) return []
   return parsed.accounts
-    .map((a) => a.email)
-    .filter((e): e is string => typeof e === "string" && e.trim() !== "")
+    .map((a) => ({
+      email: typeof a.email === "string" ? a.email.trim() : "",
+      scopes: Array.isArray(a.scopes) ? a.scopes.filter((s): s is string => typeof s === "string") : [],
+    }))
+    .filter((a) => a.email !== "")
 }

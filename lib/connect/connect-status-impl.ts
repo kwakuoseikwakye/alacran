@@ -1,11 +1,12 @@
 import { memoizedExecFile } from "../exec-memo"
-import { listGoogleAccountEmails } from "../google-accounts"
+import { listGoogleAccountEmails, listGoogleAccounts } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { readNotionToken } from "../notion/read-notion-token"
 import { isClaudeCodeCli } from "../is-claude-code-cli"
 import { readClaudeAuthStatus } from "../claude-auth-status"
 import type { InstallableId } from "../install-tool-impl"
+import { servicesFromScopes } from "../google-services"
 import type { Agent } from "../adapters/types"
 
 export type ExecFileFn = (command: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
@@ -38,6 +39,12 @@ export type ToolStatus = {
   /** google only: every account gog auth list knows about, not just the one
    *  -a auto resolves to. Undefined for every AI executor/github. */
   accounts?: string[]
+  /** google only: the service ids (lib/google-services.ts) the stored accounts
+   *  REALLY carry scopes for, unioned. Derived from what gog reports, never
+   *  from an assumed default — this is what stops the card claiming a service
+   *  the token was never granted, and what makes adding a service to the
+   *  catalog need no second edit anywhere. */
+  grantedServices?: string[]
   /** google only: which setup gate is next. The commands for the `client` and
    *  `account` stages need the user's own email spliced in, so those are built
    *  in the client component from a typed address rather than shipped here
@@ -208,8 +215,9 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
   // as connected (gog will fail to refresh, and that surfaces on first use).
   // Detecting it costs the second Keychain prompt on every render for every
   // correctly-configured user, which is the bug this ordering exists to fix.
-  const stored = await listGoogleAccountEmails(execFn)
-  if (stored.length > 0) {
+  const accounts = await listGoogleAccounts(execFn)
+  if (accounts.length > 0) {
+    const stored = accounts.map((a) => a.email)
     return {
       id: "google",
       label,
@@ -217,6 +225,7 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
       detail: stored.length > 1 ? `Connected: ${stored.join(", ")}.` : `Connected as ${stored[0]}.`,
       guidance: { steps: [] },
       accounts: stored,
+      grantedServices: [...new Set(accounts.flatMap((a) => servicesFromScopes(a.scopes)))],
     }
   }
 
