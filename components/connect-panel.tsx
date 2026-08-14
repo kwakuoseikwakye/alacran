@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, ExternalLink, Bot, Download, Loader2 } from "lucide-react"
+import { RefreshCw, ExternalLink, Bot, Download, Loader2, Wand2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -11,6 +11,7 @@ import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
+import { installRepair } from "@/lib/install-repair"
 import { signInClaude } from "@/lib/sign-in-claude"
 // Type-only, and it must stay that way: install-tool-impl imports
 // node:child_process, so a value import would drag it into the client bundle
@@ -238,13 +239,16 @@ function KeychainNote() {
  */
 function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }) {
   const [busy, setBusy] = useState(false)
+  const [repairing, setRepairing] = useState(false)
   const [log, setLog] = useState<string | null>(null)
   const [needsAgent, setNeedsAgent] = useState(false)
+  const [repairFailed, setRepairFailed] = useState(false)
 
   async function run() {
     setBusy(true)
     setLog(null)
     setNeedsAgent(false)
+    setRepairFailed(false)
     try {
       const result = await installTool(id)
       if (result.ok) {
@@ -261,6 +265,27 @@ function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }
     }
   }
 
+  /** The 0.5 fallback. Only reachable after a real failure the user just saw,
+   *  never automatic — an agent with Bash is not something to start on a
+   *  page render. */
+  async function repair() {
+    setRepairing(true)
+    setRepairFailed(false)
+    try {
+      const result = await installRepair(id, log ?? "")
+      if (result.ok) {
+        onDone()
+        return
+      }
+      setRepairFailed(true)
+      setLog(result.transcript.trim() || log)
+    } catch {
+      setRepairFailed(true)
+    } finally {
+      setRepairing(false)
+    }
+  }
+
   return (
     <div className="space-y-2">
       <Button size="sm" onClick={run} disabled={busy}>
@@ -268,9 +293,23 @@ function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }
         {busy ? "Installing… this can take a minute" : "Install it for me"}
       </Button>
       {needsAgent && (
-        <p className="text-xs text-muted-foreground">
-          That didn&apos;t work automatically. The steps below still do it by hand.
-        </p>
+        <div className="space-y-2">
+          <p className="text-xs text-muted-foreground">
+            {repairFailed
+              ? "Your AI couldn't finish it either. The steps below still do it by hand."
+              : "The standard way didn't work on this machine. Your AI can try to sort it out."}
+          </p>
+          {!repairFailed && (
+            <Button size="sm" variant="outline" onClick={repair} disabled={repairing}>
+              {repairing ? (
+                <Loader2 className="mr-1.5 size-3.5 animate-spin" />
+              ) : (
+                <Wand2 className="mr-1.5 size-3.5" />
+              )}
+              {repairing ? "Working on it…" : "Let my AI install it"}
+            </Button>
+          )}
+        </div>
       )}
       {log && (
         <pre className="max-h-40 overflow-auto rounded-md border border-border bg-background/60 p-2 text-[11px] text-muted-foreground">
