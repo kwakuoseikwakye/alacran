@@ -62,6 +62,48 @@ export function buildGoogleSetupPrompt(email: string): string {
 }
 
 /**
+ * Is Google Chrome actually on this machine?
+ *
+ * This one IS checkable, and it's a hard prerequisite: `claude --chrome`
+ * drives Chrome specifically, so without it the button would open a terminal
+ * that fails after the user has already typed their address and pressed go.
+ * `open -Ra` resolves a bundle without launching it — exit 0 present, exit 1
+ * absent, measured directly rather than assumed.
+ *
+ * Whether the user is SIGNED IN to Google, and as whom, is deliberately not
+ * checked here: there is no API for it, and reading Chrome's own profile or
+ * cookie store to find out would be both fragile and a bigger intrusion than
+ * this feature is worth. That half is a confirmation the user gives, backed
+ * by the agent re-checking it in-browser before it clicks anything.
+ */
+export async function isChromeInstalled(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<boolean> {
+  try {
+    if (platform === "darwin") await execFn("open", ["-Ra", "Google Chrome"])
+    else await execFn("which", ["google-chrome"])
+    return true
+  } catch {
+    return false
+  }
+}
+
+/** Opens CHROME — not the default browser — at Google's account page, so the
+ *  user can see which account they're signed in as and switch if needed. The
+ *  distinction matters: a user whose default browser is Safari would
+ *  otherwise verify the wrong browser entirely, and the agent drives Chrome. */
+export async function openChromeAccountCheckImpl(
+  execFn: ExecFileFn = defaultExecFile,
+  platform: NodeJS.Platform = process.platform
+): Promise<{ opened: boolean }> {
+  try {
+    if (platform === "darwin") await execFn("open", ["-a", "Google Chrome", "https://myaccount.google.com"])
+    else await execFn("google-chrome", ["https://myaccount.google.com"])
+    return { opened: true }
+  } catch {
+    return { opened: false }
+  }
+}
+
+/**
  * Opens a real Terminal running Claude Code with its Chrome integration, told
  * to do the Google Cloud Console setup in the user's own already-signed-in
  * browser.
@@ -91,6 +133,16 @@ export async function setupGoogleImpl(
   // the NUL/control-character half matters as much as the shape half.
   if (!isPlausibleEmail(address)) {
     return { started: false, message: "Enter the Google address you want to connect first." }
+  }
+
+  // Hard prerequisite, checked before anything is spawned: the agent drives
+  // Chrome, so no Chrome means no run — and finding that out from a terminal
+  // that flashes an error is exactly the dead end this slice removes.
+  if (!(await isChromeInstalled(execFn, platform))) {
+    return {
+      started: false,
+      message: "Google Chrome isn't installed. Your AI needs it to click through Google's pages — install Chrome, then try again.",
+    }
   }
 
   const launch = await resolveTerminalLaunchCommand(platform, execFn)

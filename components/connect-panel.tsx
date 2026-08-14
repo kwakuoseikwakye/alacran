@@ -13,7 +13,7 @@ import { GOOGLE_CONSOLE_STEPS } from "@/lib/google-console-steps"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
 import { installRepair } from "@/lib/install-repair"
-import { setupGoogle } from "@/lib/setup-google"
+import { openChromeAccountCheck, setupGoogle } from "@/lib/setup-google"
 import { signInClaude } from "@/lib/sign-in-claude"
 // Type-only, and it must stay that way: install-tool-impl imports
 // node:child_process, so a value import would drag it into the client bundle
@@ -112,7 +112,16 @@ function ConsoleLink({ href, children }: { href: string; children: React.ReactNo
 function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
   const [email, setEmail] = useState("")
   const [busy, setBusy] = useState(false)
+  const [confirmed, setConfirmed] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
+  /** Opens CHROME specifically, not the default browser. A user on Safari
+   *  would otherwise check the wrong browser and confirm something untrue —
+   *  the agent drives Chrome, so Chrome is what has to be signed in. */
+  async function checkAccount() {
+    const result = await openChromeAccountCheck()
+    if (!result.opened) setMessage("Couldn't open Chrome. Is it installed?")
+  }
 
   async function run() {
     setBusy(true)
@@ -146,7 +155,33 @@ function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
         onChange={(e) => setEmail(e.target.value)}
         className="h-8 text-xs"
       />
-      <Button size="sm" onClick={run} disabled={busy || !email.trim()}>
+
+      {/* The one prerequisite this app cannot detect. Chrome's presence is
+          checked for real before any spawn; WHICH Google account it is signed
+          in as has no API, so it's confirmed here and re-checked by the agent
+          in-browser before it clicks anything. Two soft checks around a hard
+          one, rather than pretending to know. */}
+      <div className="space-y-1.5 rounded-md border border-border bg-background/50 p-2.5">
+        <p className="text-[11px] font-medium">First: is Chrome signed in to that account?</p>
+        <p className="text-[11px] text-muted-foreground">
+          Your AI uses your own Chrome window, so it can only reach the account Chrome is already signed in to.
+        </p>
+        <Button type="button" size="sm" variant="outline" onClick={checkAccount}>
+          <ExternalLink className="mr-1.5 size-3.5" />
+          Open Chrome and check
+        </Button>
+        <label className="flex cursor-pointer items-start gap-2 pt-1 text-[11px] text-muted-foreground">
+          <input
+            type="checkbox"
+            checked={confirmed}
+            onChange={(e) => setConfirmed(e.target.checked)}
+            className="mt-0.5"
+          />
+          <span>Chrome is signed in to this account.</span>
+        </label>
+      </div>
+
+      <Button size="sm" onClick={run} disabled={busy || !email.trim() || !confirmed}>
         {busy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Wand2 className="mr-1.5 size-3.5" />}
         Set up Google for me
       </Button>
