@@ -9,9 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
+import { GOOGLE_CONSOLE_STEPS } from "@/lib/google-console-steps"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
 import { installRepair } from "@/lib/install-repair"
+import { setupGoogle } from "@/lib/setup-google"
 import { signInClaude } from "@/lib/sign-in-claude"
 // Type-only, and it must stay that way: install-tool-impl imports
 // node:child_process, so a value import would drag it into the client bundle
@@ -73,42 +75,6 @@ function AddGoogleAccount() {
   )
 }
 
-/** Each link opens the exact console page for that step, pre-filled where
- *  Google allows it, so "go to the Cloud console and find X" is never an
- *  instruction. Enabling an API has a direct per-API URL; creating the OAuth
- *  client does not, hence the click path spelled out in `then`. */
-const GOOGLE_CONSOLE_STEPS: { title: string; href: string; then: string }[] = [
-  {
-    title: "Create a project",
-    href: "https://console.cloud.google.com/projectcreate",
-    then: "Give it any name — “My AI” is fine — and click Create. Wait for it to finish before the next step.",
-  },
-  {
-    title: "Turn on Gmail",
-    href: "https://console.cloud.google.com/apis/library/gmail.googleapis.com",
-    then: "Click the blue Enable button. That is the whole step.",
-  },
-  {
-    title: "Turn on Calendar",
-    href: "https://console.cloud.google.com/apis/library/calendar-json.googleapis.com",
-    then: "Click Enable here too.",
-  },
-  {
-    title: "Say who can use it",
-    href: "https://console.cloud.google.com/auth/overview",
-    then: "Pick External, put your own email in the boxes it asks for, and save. This is just Google asking who owns the app — it stays private to you.",
-  },
-  {
-    title: "Create the key and download it",
-    href: "https://console.cloud.google.com/auth/clients",
-    then: "Click Create client, choose Desktop app as the type, click Create, then Download JSON. It lands in your Downloads folder.",
-  },
-  {
-    title: "Publish it (don't skip)",
-    href: "https://console.cloud.google.com/auth/audience",
-    then: "Click Publish app, then Confirm. Skip this and Google cuts the connection after 7 days. It does not submit anything for review.",
-  },
-]
 
 function ConsoleLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
@@ -134,7 +100,62 @@ function ConsoleLink({ href, children }: { href: string; children: React.ReactNo
  * directly, say what to click on each, and then hand over a single command
  * that stores the download AND runs the browser sign-in in one go.
  */
-function GoogleSetup({ stage }: { stage: "client" | "account" }) {
+/**
+ * Hands the six-console-page slog to Claude Code's browser integration.
+ *
+ * Requires the user's own Chrome to be signed in to the same Google account
+ * they type here — the agent operates that browser, it does not log in for
+ * them. The prompt makes it verify the account before clicking anything,
+ * because setting this up against the wrong account silently connects the
+ * wrong mailbox.
+ */
+function GoogleAutoSetup({ claudeReady }: { claudeReady: boolean }) {
+  const [email, setEmail] = useState("")
+  const [busy, setBusy] = useState(false)
+  const [message, setMessage] = useState<string | null>(null)
+
+  async function run() {
+    setBusy(true)
+    try {
+      const result = await setupGoogle(email)
+      setMessage(result.message)
+    } catch {
+      setMessage("Couldn't start the setup session.")
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Gated on Claude Code being installed AND signed in. `--chrome` is its
+  // own flag with no equivalent in Codex, Aider or Antigravity, and offering
+  // a button that opens a terminal saying "command not found" is the exact
+  // dead end this whole slice exists to remove.
+  if (!claudeReady) return null
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-card/60 p-3">
+      <p className="text-sm font-medium">Let your AI do it</p>
+      <p className="text-xs text-muted-foreground">
+        Opens a window where your AI clicks through Google&apos;s setup pages in your browser. Sign in to Google in
+        Chrome first, with the same address you type here.
+      </p>
+      <Input
+        type="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="h-8 text-xs"
+      />
+      <Button size="sm" onClick={run} disabled={busy || !email.trim()}>
+        {busy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Wand2 className="mr-1.5 size-3.5" />}
+        Set up Google for me
+      </Button>
+      {message && <p className="text-xs text-muted-foreground">{message}</p>}
+    </div>
+  )
+}
+
+function GoogleSetup({ stage, claudeReady }: { stage: "client" | "account"; claudeReady: boolean }) {
   const [email, setEmail] = useState("")
   const address = email.trim()
 
@@ -168,6 +189,13 @@ function GoogleSetup({ stage }: { stage: "client" | "account" }) {
         setup, about five minutes, all in your browser. Nothing here costs money and you never need to understand
         Google Cloud — just click what each step says.
       </p>
+
+      {/* The whole point of 0.6: nobody should have to do the six steps below
+          by hand. They stay on the page as the fallback, and as the thing the
+          agent is literally working through — same array, one source. */}
+      <GoogleAutoSetup claudeReady={claudeReady} />
+
+      {claudeReady && <p className="text-xs font-medium text-muted-foreground">Or do it yourself:</p>}
       <ol className="list-decimal space-y-2 pl-5 text-xs text-muted-foreground">
         {GOOGLE_CONSOLE_STEPS.map((step) => (
           <li key={step.title}>
@@ -359,7 +387,17 @@ function SignInButton({ onDone }: { onDone: () => void }) {
   )
 }
 
-function ToolCard({ tool, delay, onChanged }: { tool: ToolStatus; delay: number; onChanged: () => void }) {
+function ToolCard({
+  tool,
+  delay,
+  onChanged,
+  claudeReady = false,
+}: {
+  tool: ToolStatus
+  delay: number
+  onChanged: () => void
+  claudeReady?: boolean
+}) {
   const live = tool.connected
   const brand = TOOL_BRAND[tool.id]
   return (
@@ -455,7 +493,7 @@ function ToolCard({ tool, delay, onChanged }: { tool: ToolStatus; delay: number;
                 which for these two stages carries no command of its own. */}
             {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
               <>
-                <GoogleSetup stage={tool.googleStage} />
+                <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} />
                 <KeychainNote />
               </>
             )}
@@ -613,7 +651,12 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
         {status.aiExecutors.map((tool, i) => (
           <ToolCard key={tool.id} tool={tool} delay={i * 90} onChanged={recheck} />
         ))}
-        <ToolCard tool={status.google} delay={status.aiExecutors.length * 90} onChanged={recheck} />
+        <ToolCard
+          tool={status.google}
+          delay={status.aiExecutors.length * 90}
+          onChanged={recheck}
+          claudeReady={status.aiExecutors.some((t) => t.id === "claude-code" && t.connected)}
+        />
         <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} onChanged={recheck} />
         <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
       </div>
