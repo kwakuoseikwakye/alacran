@@ -3039,6 +3039,57 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v72 (2026-08-14): pick which Google apps to connect, and stop hiding what's in use
+
+Two things, both from real use of v0.14.0 within hours of it shipping.
+
+**Multiple Google services, chosen by the user.** `gogcli` can authorize
+gmail, calendar, drive, docs, sheets, slides, tasks, contacts and more, but
+this app hardcoded `"gmail,calendar"` in two string constants and the marks
+shown on the card in a third array — adding a service meant editing three
+places, and nothing noticed when they drifted.
+
+`lib/google-services.ts` is now the only place a service is declared, with
+three readers: the checkbox picker on the Connect card, the `gog auth add
+--services …` command it builds, and the Cloud Console pages the browser
+agent clicks Enable on. That last one is not cosmetic — **consent fails for a
+service whose API was never enabled**, so the agent's checklist has to be the
+same list the user picked. `buildGoogleSetupPrompt` now generates one Enable
+step per chosen service instead of the fixed Gmail/Calendar pair, keeping the
+non-API steps (project, consent screen, client, publish) unchanged.
+
+**The marks are derived, not declared.** v64's rule was "keep the marks in
+sync with the scopes or the card lies." Two lists kept in sync eventually
+drift, so the card now renders whatever `gog auth list -j` really reports the
+stored accounts carry. Adding a service to the catalog needs no second edit,
+and the card cannot claim a service the token was never granted. Scope names
+are not service ids — measured on a real store rather than assumed: Docs is
+granted as `.../auth/documents` and Sheets as `.../auth/spreadsheets`, so
+matching on the id would have silently under-reported both. Live-verified
+against two real accounts (one carrying seven services the app had never
+surfaced, one carrying the narrow pair).
+
+Defaults stay Gmail + Calendar, for v64's original reason: each extra service
+is one more Enable page before consent succeeds. Extra reach is opt-in, not
+the price of connecting. Services with no real product mark in Simple Icons
+(Drive, Docs, Sheets…) are named in text rather than given an invented logo.
+
+**Simple mode must never hide something already in use.** Reported directly
+after updating: MCP connectors, Antigravity, Aider and Notion "disappeared."
+They were hidden, not removed — v71's advanced mode is off by default — but
+the default was wrong in one specific way. Hiding a thing you have not started
+using is help. Hiding a thing you already depend on is concealment, and worse,
+it removes the only control that could change it back: a company assigned to
+Aider had no visible Aider card, and no way to see or fix that without finding
+a Settings toggle nobody had mentioned.
+
+The rule is now **hidden until real, then always shown**: an AI executor card
+appears once a company is actually assigned to it (new `ToolStatus.inUse`),
+the Notion card appears once any company really has Notion configured, and a
+company's MCP button appears once that company has servers configured. Open in
+Terminal and the Network tab stay purely advanced — neither is state a user can
+be mid-way through relying on.
+
 ## v71 (2026-08-14): the non-technical path — the app covers the technical part
 
 The audience changed, and with it the shape of the product. This app is for

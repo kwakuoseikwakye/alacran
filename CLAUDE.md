@@ -1125,6 +1125,24 @@ and must never arrive in a user's company by scaffolding — pinned by a test in
 *installs*, not a company folder handed to someone by hand: on the maintainer's
 machine the button installs it INTO a target repo and commits there.
 
+
+**v72 (2026-08-14) followed v71 within hours, from real use.** Google services
+are now a user-chosen set (`lib/google-services.ts` — one catalog read by the
+picker, the `gog auth add --services` command, and the console pages the
+browser agent enables; consent FAILS for a service whose API was never
+enabled, so those two lists must be the same list). **The card's marks are
+derived from the scopes `gog auth list -j` really reports**, retiring v64's
+"keep the marks in sync" rule by not keeping two lists — and note gog's scope
+names are not its service ids (Docs is `.../auth/documents`, Sheets is
+`.../auth/spreadsheets`), measured on a real store. **Standing rule added:
+simple mode must never hide something already in use.** v71 hid MCP, Notion,
+Aider and Antigravity by default and a real user reported them as "removed";
+worse, hiding the card also removed the only control that could change it
+back. Now: hidden until real, then always shown (executor card when a company
+is assigned to it, Notion card when a company has it configured, MCP button
+when a company has servers). Open in Terminal and Network stay purely
+advanced — neither is state you can be mid-way through depending on.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
