@@ -186,11 +186,17 @@ export function AgentCard({
                 <OpenTerminalButton agentId={agent.id} />
               </AdvancedOnly>
             ))}
-          {showMcpButton && (
-            <AdvancedOnly>
+          {showMcpButton &&
+            // Already has connectors configured? Then this is live state, not
+            // an advanced extra — same rule as the Connect page's executor and
+            // Notion cards.
+            ((mcpServers?.length ?? 0) > 0 ? (
               <McpServersSheet agentId={agent.id} companyName={agent.name} currentServers={mcpServers ?? []} />
-            </AdvancedOnly>
-          )}
+            ) : (
+              <AdvancedOnly>
+                <McpServersSheet agentId={agent.id} companyName={agent.name} currentServers={mcpServers ?? []} />
+              </AdvancedOnly>
+            ))}
           {showBackupButton && <BackupCompanyButton agentId={agent.id} companyName={agent.name} />}
           {showOwnershipButton && <CompanyOwnershipSheet agentId={agent.id} companyName={agent.name} />}
           {showAiExecutorPicker && (

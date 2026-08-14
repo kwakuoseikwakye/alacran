@@ -730,7 +730,12 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
   // Only what's actually on screen: simple mode renders one executor card, so
   // counting all four leaves the help marker permanently lit with nothing to
   // point at.
-  const visibleExecutors = advanced ? status.aiExecutors : status.aiExecutors.filter((t) => t.id === "claude-code")
+  // Simple mode shows the default executor plus anything a company is really
+  // running on. It never hides an executor in use — a company assigned to
+  // Aider whose card you cannot see is worse than one extra card.
+  const visibleExecutors = advanced
+    ? status.aiExecutors
+    : status.aiExecutors.filter((t) => t.id === "claude-code" || t.inUse)
   const anyNotConnected =
     visibleExecutors.some((t) => !t.connected) || !status.google.connected || !status.github.connected
 
@@ -771,7 +776,11 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
         <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} onChanged={recheck} />
         {/* Notion is connected by running the api-connect skill in a
             terminal — no button here can do it, so it stays advanced. */}
-        {advanced && <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />}
+        {/* Same rule: hidden until a company actually has Notion configured,
+            then always shown, because at that point it is live state. */}
+        {(advanced || status.notion.companies.some((c) => c.connected)) && (
+          <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
+        )}
       </div>
     </div>
   )

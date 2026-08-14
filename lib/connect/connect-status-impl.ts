@@ -2,6 +2,7 @@ import { memoizedExecFile } from "../exec-memo"
 import { listGoogleAccountEmails, listGoogleAccounts } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 import { getEffectiveAgents } from "../get-effective-agents"
+import { getAiExecutorIdForAgent } from "../ai-executor-registry"
 import { readNotionToken } from "../notion/read-notion-token"
 import { isClaudeCodeCli } from "../is-claude-code-cli"
 import { readClaudeAuthStatus } from "../claude-auth-status"
@@ -50,6 +51,11 @@ export type ToolStatus = {
    *  in the client component from a typed address rather than shipped here
    *  with a you@example.com placeholder baked in. */
   googleStage?: GoogleStage
+  /** True when a real company is assigned to this executor. Simple mode hides
+   *  the non-default executors, but it must never hide one a company is
+   *  actually running on — hiding a thing you haven't started using is help;
+   *  hiding a thing you already depend on is concealment. */
+  inUse?: boolean
   /** AI executors only: the binary is installed but nobody is signed in yet.
    *  Distinct from `!connected`, which also covers "not installed" — the UI
    *  offers Install for one and Sign in for the other, and they are different
@@ -358,8 +364,16 @@ export async function getConnectStatusImpl(
   platform: NodeJS.Platform = process.platform,
   getAgentsFn: () => Promise<Agent[]> = getEffectiveAgents
 ): Promise<ConnectStatus> {
+  const assigned = new Set(
+    await getAgentsFn()
+      .then((all) => all.filter((a) => a.kind === "command-set"))
+      .then((cs) => Promise.all(cs.map((a) => getAiExecutorIdForAgent(a.id).catch(() => undefined))))
+      .catch(() => [])
+  )
   const [aiExecutors, google, github, notion] = await Promise.all([
-    Promise.all(listAiExecutors().map((e) => aiExecutorStatus(execFn, e))),
+    Promise.all(
+      listAiExecutors().map((e) => aiExecutorStatus(execFn, e).then((s) => (assigned.has(e.id) ? { ...s, inUse: true } : s)))
+    ),
     googleStatus(execFn, platform),
     githubStatus(execFn, platform),
     notionStatus(getAgentsFn),

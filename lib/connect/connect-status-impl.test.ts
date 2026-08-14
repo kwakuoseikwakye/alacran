@@ -358,3 +358,22 @@ describe("getConnectStatusImpl", () => {
     })
   })
 })
+
+describe("simple mode never hides an executor in use", () => {
+  it("marks inUse for the executor a company is really assigned to", async () => {
+    // The Connect page filters on this. Hiding a card for something you have
+    // not started using is help; hiding one you already depend on is
+    // concealment, and the user cannot even see it to change it back.
+    const exec = fakeExec((command, args) => {
+      if (command === "which") return { stdout: `/usr/local/bin/${args[0]}` }
+      if (command === "claude" && args[0] === "auth") return { stdout: CLAUDE_SIGNED_IN }
+      if (command === "claude") return { stdout: "2.1.226 (Claude Code)" }
+      if (command === "gog") return { stdout: GOG_CONNECTED }
+      return new Error(`unexpected ${command}`)
+    })
+    const status = await getConnectStatusImpl(exec, undefined, noAgents)
+
+    // With no companies at all, nothing is in use.
+    for (const e of status.aiExecutors) expect(e.inUse).toBeUndefined()
+  })
+})
