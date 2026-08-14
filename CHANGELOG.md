@@ -3039,6 +3039,47 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v73 (2026-08-14): the Skills page as a file explorer, and a dead palette repaired
+
+Reported as "messy". Two causes, and the second one was not a layout problem
+at all.
+
+**Layout.** The page was a grid of description cards, one per skill. A company
+with 17 of them was several screens of prose with no hierarchy and nothing to
+scan by, and opening a file used a Sheet that covered the very list you were
+browsing. It is now a two-pane explorer: companies and their files on the
+left, the selected file on the right. Kinds (Skills / Commands) are
+sub-groups, companies collapse, and a search box filters across names and
+descriptions — a company with no match disappears entirely rather than leaving
+an empty folder behind. Descriptions moved off the tree to sit beside the
+content, where they are actually read. The detail pane is inline rather than a
+Sheet, so reading one file no longer hides the rest.
+
+Everything functional is reused unchanged — `SkillEditor`, `SkillHistory`,
+`CompanyCommandRunner`, and the Content/Edit/History/Run tabs (v49). Only the
+shell around them changed.
+
+**The palette.** The page was painted with five design tokens that stopped
+existing when the palette changed: `bg-shell`, `bg-shell-2`, `border-line`,
+`text-bone`, `text-dune`. None of them resolve, so those classes produced
+nothing — transparent panels, and a bare `border` falling back to
+`currentColor`, which is why the company header rendered with a text-coloured
+outline. That is why the page read as broken rather than merely dense.
+
+**The finding to reuse:** grepping for the dead *tokens* rather than fixing the
+page that was reported surfaced the same palette in `activity-board.tsx` and
+`activity-day-group.tsx`. Fixing only Skills would have left Activity live with
+the identical defect — the same shape as v68, where a symbol grep found a
+second call site the report never mentioned. `glass-edge` is a real token (13
+definitions in `globals.css`) and was left alone.
+
+Below `md` the panes stack, and selecting a file scrolls the detail pane into
+view: otherwise the file just tapped opens off-screen under a tree that can be
+17 rows long. Desktop is unaffected — `scrollIntoView` on an already-visible
+element is a no-op.
+
+Verified by screenshot at 1440px and 420px and by opening a real skill.
+
 ## v72 (2026-08-14): pick which Google apps to connect, and stop hiding what's in use
 
 Two things, both from real use of v0.14.0 within hours of it shipping.

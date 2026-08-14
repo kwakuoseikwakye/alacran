@@ -1143,6 +1143,20 @@ is assigned to it, Notion card when a company has it configured, MCP button
 when a company has servers). Open in Terminal and Network stay purely
 advanced — neither is state you can be mid-way through depending on.
 
+
+**v73 (2026-08-14) rebuilt the Skills page as a two-pane file explorer**
+(companies and their files left, selected file right, kinds as sub-groups,
+search, collapsible companies) and repaired a **dead palette**: that page used
+five tokens that stopped existing when the palette changed — `bg-shell`,
+`bg-shell-2`, `border-line`, `text-bone`, `text-dune` — so the classes resolved
+to nothing (transparent panels; a bare `border` falling back to `currentColor`).
+**The finding to reuse:** grepping for the dead tokens rather than fixing the
+reported page found the same palette live in `activity-board.tsx` and
+`activity-day-group.tsx` — same shape as v68. `glass-edge` IS real; don't
+"fix" it. When touching a page that looks broken rather than merely ugly,
+check its classes against the tokens actually defined in `app/globals.css`
+before redesigning anything.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
