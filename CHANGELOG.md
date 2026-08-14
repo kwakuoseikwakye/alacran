@@ -3039,6 +3039,169 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v71 (2026-08-14): the non-technical path — the app covers the technical part
+
+The audience changed, and with it the shape of the product. This app is for
+the maintainer's AI-native bootcamp members, who are **not technically
+comfortable** — so "read/manage dashboard for tools you already set up via the
+terminal" (the framing this file's own header carried since v1) is the wrong
+shape. v71 starts leaving it: the app now installs and drives the tools
+itself.
+
+Walking a clean machine through the old flow found five gates before the first
+win, each of which silently drops people: install Node by hand or the launcher
+quits; install Claude Code by hand and then "fully quit and reopen the app";
+sign in via a terminal; six Google Cloud Console pages plus a downloaded JSON
+for anything email-shaped; and type an absolute filesystem path to create a
+company. Then the two buttons that answer "what now?" — Open in Terminal (v38)
+and Get Started (v46) — put the user in a terminal, which is the one place
+this audience cannot operate.
+
+**Node is bundled** (`scripts/package-macos.sh`). Pinned v24.19.0, downloaded
+per-arch at package time and verified against nodejs.org's published
+SHASUMS256 before it enters the bundle — this binary is executed by every user
+of the shipped app. The launcher prefers `Contents/Resources/node`
+unconditionally; the user's own node is a fallback for a damaged bundle, not a
+preference. Verified rather than assumed: with `PATH=/usr/bin:/bin` and no
+system node reachable, the bundled runtime serves `/` with HTTP 200. The
+checksum earned itself immediately — a curl that timed out mid-transfer left a
+truncated tarball the cache check happily accepted, and only the checksum
+caught it. Downloads now land on a `.part` name and move on success.
+
+**Tools install from a button** (`lib/install-tool-impl.ts`). At most ONE
+verified command per tool, then the tool is read back from the OS — a package
+manager that exits non-zero after a successful install, or zero without
+putting a binary on PATH, are both real shapes (v31 established the rule for
+`launchctl`). Claude Code via `https://claude.ai/install.sh` (verified: 302 →
+`downloads.claude.ai/claude-code-releases/bootstrap.sh`, and it installs the
+NATIVE build, so it needs no Node of its own); `gh` and `gogcli` via
+Homebrew. **No command is invented for Antigravity** — its canonical installer
+was never verified against the real thing, and v64's rule is that an
+unverified third-party command must not go on screen as the step that
+completes something.
+
+**Claude Code is the repair fallback, not the installer.** Reached only from a
+button, only after a failure the user just saw. `brew install gh` is one
+deterministic line; an agent that runs a command we already know is slower,
+costs tokens, and is non-deterministic — which for this audience means an
+unreproducible support ticket. The agent earns its place on the failure
+branch, which is un-scriptable by definition (no Homebrew, unexpected arch,
+distro variance, a proxy) and is exactly where a non-technical user is stuck
+today. It reuses Claude Code's own `buildArgs`, so it gets `--allowedTools`
+with a fixed Bash allowlist and `--permission-mode manual`, never
+`--dangerously-skip-permissions`. `sudo` is absent from the allowlist AND
+forbidden in the prompt: an install needing root is the one place human aid is
+correct, since a password prompt in a headless spawn is answered by nobody.
+Claude Code is the only executor it can run on, because per v56 it is the only
+one that honours a tool scope — with a tripwire that refuses if
+`enforcesToolScope` ever flips. Success is re-probed from the machine, never
+read from the transcript; a test has the agent report "All done!" having
+installed nothing, and the result is still `ok: false`.
+
+**Real signed-in state** (`lib/claude-auth-status.ts`). `aiExecutorStatus`
+claimed login state "can't be detected without spawning the CLI" and told
+users to run a company command to find out. Simply wrong: `claude auth status`
+prints JSON with `loggedIn`/`email`/`subscriptionType`. Installed-but-signed-out
+is now its own state, because Install and Sign in are different buttons.
+
+**Google's six console pages are driven by a browser agent** (`0.6`). v64
+concluded that wall was permanent; that conclusion was about the API, not
+about automation, and this slice corrects the over-read. There is still no API
+for creating a Google OAuth client. But `claude --chrome` drives the user's
+own already-signed-in Chrome, and `gog auth setup` accepts `--credentials
+<downloaded JSON> --services gmail,calendar --login` (v0.34.1, flags verified
+against the real binary) — so the agent's deliverable is ONE artifact and
+everything after it is deterministic. Bounding it to a single verifiable file
+is what makes this robust rather than a hope. It is also the substitute for
+the gcloud path v64 rejected on cost (~500MB SDK, second sign-in); that
+rejection stands. `GOOGLE_CONSOLE_STEPS` moved out of the client component
+into a plain module (v51: a server module importing a plain value from
+`"use client"` silently gets `undefined`), so the user's checklist and the
+agent's checklist are the same array and cannot drift. Visible Terminal, not
+headless: the agent operates the user's real Google account, the console can
+interrupt with a terms or billing interstitial nobody can enumerate in
+advance, and the final `--login` opens a consent screen a human must approve.
+The prompt makes the agent verify the browser's signed-in account BEFORE
+clicking anything — setting this up on the wrong account silently connects the
+wrong mailbox and nothing downstream would notice.
+
+**Chrome's prerequisites, split by what is actually knowable.** Presence is
+checkable and is checked before any spawn (`open -Ra "Google Chrome"` resolves
+the bundle without launching it — exit 0 present, 1 absent, measured). WHICH
+account Chrome is signed in as is not: there is no API, and reading Chrome's
+profile would be fragile and a bigger intrusion than the feature is worth. So
+it gets an explicit confirmation plus a button that opens the account page in
+CHROME specifically — a user whose default browser is Safari would otherwise
+verify the wrong browser and confirm something untrue.
+
+**Advanced mode, off by default.** One `localStorage` boolean hides every
+surface that assumes terminal literacy: the Network map, MCP connectors, Open
+in Terminal, the three non-default AI executors, Notion, and the company path
+field. The default direction is the point — v66's discipline applied to
+audience instead of agent kind: a new feature is hidden from simple mode
+unless it opts in, rather than needing to be excluded one at a time. Two
+departures from the original spec, both because 0.6 now exists: Google stays
+in simple mode (the spec hid it on the grounds the console step couldn't be
+automated), and GitHub stays because `gh auth login` is a browser flow. Open
+in Terminal stays visible for `external` folders regardless — it is their only
+action (v66), and gating it would leave those cards with no buttons at all.
+
+**Get Started produces a diff instead of a terminal.** Its entire job is
+answering "I set this up, now what?", and it answered by opening a terminal.
+Simple mode now runs a new `orientation` registry command through the
+machinery every other command already uses: agent writes a note, user reads
+the diff, user approves. One registry entry and a Sheet around the existing
+`CompanyCommandRunner` — no new run/diff/commit code. The prompt is
+self-contained rather than delegating to a `.claude/commands/orientation.md`
+the company may not have (`commandFileName` is declared but read nowhere), and
+it is told to describe only what really exists and say so plainly when
+something is missing — an orientation that invents capabilities is worse than
+none. Advanced mode keeps v46's terminal session unchanged.
+
+Onboarding now states that Claude Code needs a paid Claude account
+(~$20/month). The app never said so, and a user who installs everything and
+then hits a paywall blames the app.
+
+**Investigated and rejected: Antigravity as a second browser driver.**
+Antigravity is Google's own CLI, so it looked like it could drive Chrome for
+0.6 when chosen as the executor. Verified against the real installed binary
+(`agy` 1.1.13): no browser/chrome flag, no `mcp` subcommand to attach one
+(v61's finding, still true), no plugins, and — asked directly — a tool list
+containing no navigate, click, screenshot or DevTools tool. The changelog's
+"built-in Chrome DevTools MCP server" is the Antigravity **IDE**, not the CLI;
+that distinction is what makes this look possible from outside.
+`read_url_content` is not a substitute, since the Cloud Console is an
+authenticated SPA that must be clicked through. Two general points kept: a
+vendor's own product gets no special access to that vendor's browser (browser
+control is a tool the harness implements, not an entitlement), and `agy` is
+`enforcesToolScope: false`, so even with the capability it would mean a fully
+unscoped agent operating the user's Google account — the hole v56 exists to
+close.
+
+**Findings from the branch review, fixed before merge.** A fresh install had
+no `DATA_DIR`, and both new terminal writers wrote a script into it without
+`mkdir` — so Sign in and Set up Google failed with ENOENT on precisely the
+path this slice exists to make work. v38's `open-interactive-terminal-impl`
+had the same latent bug and was fixed with them: one root cause, three
+writers. External folders could not be registered in simple mode, because the
+"existing project" checkbox stayed visible while the path field went
+advanced-only — that field now appears whenever the box is ticked, since an
+existing folder's location is the one value that cannot be defaulted. And
+installer output — written by a package manager or download server, not by us,
+arriving through a public Server Action with no size limit — was spliced
+verbatim into a prompt whose Bash allowlist includes `curl *` and `npm install
+-g *`; it is now capped and wrapped in the same nonced fence from
+`prefetch/untrusted-fence.ts` the triage commands use. Both install actions
+also indexed a typed `Record` with a client-supplied id and now fail closed.
+
+**Not verified, and deliberately left to the user:** the browser agent's real
+run (it creates a Google Cloud project and spends real tokens), the repair
+agent's real run (needs a machine without Homebrew), and the `orientation`
+command's first spawn. All three are the category CLAUDE.md's standing rule
+keeps out of unattended passes. The load-bearing unverified assumption is that
+`claude --chrome "<prompt>"` engages the Chrome integration in an interactive
+session — the flag exists on the real CLI; that combination has not been run.
+
 ## v70 (2026-08-13): stop re-asking macOS for the Keychain on every page render
 
 Fixes a user-reported bug: after connecting Google, a macOS popup saying *"gog

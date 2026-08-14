@@ -49,6 +49,23 @@ AI-Native instance through the UI" product. Concretely:
 - Still missing (named as roadmap, not built): a general plugin/workflow
   packaging format — see "Roadmap" below.
 
+**Who this is actually for, decided 2026-08-14.** The audience is the
+maintainer's AI-native bootcamp members, who are **not technically
+comfortable**. That makes "read/manage dashboard for tools you already set up
+via the terminal" the wrong shape, and it is now a stated goal to leave it:
+**the app should cover the technical part itself.** Concretely — bundle Node,
+install and sign in to Claude Code from a button, hide every terminal-literate
+surface behind an Advanced toggle, and make the first win a diff the user
+approves rather than a terminal that opens. The ordered plan is
+`docs/superpowers/specs/2026-08-14-non-technical-path-design.md`; the summary
+is in "Roadmap" below. Until that ships, this section still describes the app
+truthfully.
+
+**Binding consequence for every slice from here:** a new user-facing feature
+defaults to **hidden for the simple mode** and opts in to Advanced, never the
+reverse — the same "keyed to `isCommandSet`, OR in one flag" discipline v66
+established, applied to audience instead of agent kind.
+
 ## Established conventions (binding for every slice)
 
 - **Every feature gets documented — no exceptions, and not only once it
@@ -1070,6 +1087,44 @@ is why the fix is caching rather than avoidance. **Standing rule this reinforces
 CLI calls it on *every render* — before adding one to a page, ask what it costs
 when it runs 50 times an hour, because here the cost was a GUI dialog, not CPU.
 
+
+**v71 (2026-08-14) shipped the first slice of the non-technical path** — the
+app now covers the technical part instead of detecting it and instructing.
+Node is bundled into the macOS build (pinned, checksum-verified against
+nodejs.org, launcher prefers it unconditionally; proven with `PATH=/usr/bin:/bin`
+and no system node). Claude Code, `gh` and `gogcli` install from a button —
+at most ONE verified command each, then the tool is read back from the OS
+rather than the exit code trusted (v31's rule). **No command was invented for
+Antigravity**, per v64. Claude Code is the **repair fallback, not the
+installer**: reached only from a button after a failure the user saw, scoped
+with `--allowedTools` + `--permission-mode manual`, never
+`--dangerously-skip-permissions`, `sudo` absent from the allowlist AND
+forbidden in the prompt, and success re-probed from the machine rather than
+read from the transcript. `claude auth status` now gives real signed-in state,
+deleting the false claim that it "can't be detected without spawning the CLI."
+**Google's six console pages are driven by `claude --chrome`**, correcting
+v64's over-read: no API exists for creating an OAuth client (still true), but a
+browser agent routes around it, and `gog auth setup --credentials <file>
+--services gmail,calendar --login` makes the agent's deliverable ONE verifiable
+artifact. Chrome's presence is checked for real before any spawn; which account
+it is signed in as is not checkable, so it gets a confirmation plus a button
+that opens the account page in Chrome specifically. **Advanced mode is off by
+default**, hiding the Network map, MCP, Open in Terminal, the three non-default
+executors, Notion and the path field; Get Started now runs an `orientation`
+command through the existing run→diff→approve machinery instead of opening a
+terminal. **Three paths are built but never really run** — the browser agent,
+the repair agent, and `orientation` — all deliberately left for the maintainer,
+per the standing rule about unattended real spawns. The one load-bearing
+unverified assumption is that `claude --chrome "<prompt>"` engages the Chrome
+integration in an interactive session.
+
+**Standing constraint added here:** `daily-team-log` is the maintainer's own
+workflow. It reaches the UI only through the existence-gated `plh-ops` built-in
+and must never arrive in a user's company by scaffolding — pinned by a test in
+`lib/company-template-manifest.test.ts`. Note the gate protects public
+*installs*, not a company folder handed to someone by hand: on the maintainer's
+machine the button installs it INTO a target repo and commits there.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
@@ -1095,6 +1150,54 @@ that slice to one command), or richer operations on top of what's now
 connectable. But given how far v19–v22 each diverged from their one-line
 descriptions, investigate what's actually real and buildable before
 proposing anything, the same discipline every recent slice followed.
+
+### The non-technical path (specced 2026-08-14, next up)
+
+Supersedes the "unpicked directions" paragraph above as the next work. Full
+spec: `docs/superpowers/specs/2026-08-14-non-technical-path-design.md`. Build
+in this order — each item is the laziest shape that works, and later items are
+worthless if earlier ones don't ship:
+
+| # | Slice | Item | Why first |
+| --- | --- | --- | --- |
+| 0.1 | v71 | Bundle `node` into the macOS app | The launcher currently shows an `osascript` alert and quits without it (`scripts/package-macos.sh:134-136`). Gate zero. |
+| 0.2 | v71 | Install Claude Code from a button | `https://claude.ai/install.sh` (verified: 302 → `downloads.claude.ai/claude-code-releases/bootstrap.sh`) installs the **native** build, no Node needed. |
+| 0.3 | v71 | Sign-in button + real signed-in state | `claude auth login --email <addr>` in a visible Terminal (reuse v35/v38's `open -a Terminal`); `claude auth status` prints JSON with `loggedIn`/`email`/`subscriptionType`. |
+| 0.4 | v71 | Install `gh`, `gog` and `agy` as tarballs into `~/.local/bin` | No brew, no sudo (brew's installer prompts for a password, which fails "without human aid"). Pass `--git-protocol https` to `gh auth login` — v54 exists because gh chose `ssh`. |
+| 0.5 | v71 | Claude Code as the install **repair fallback**, not the installer | Deterministic one-liner first; on non-zero exit, a "Let the AI fix this" button hands it the stderr with `bashPatterns` scoped to install commands. Never `--dangerously-skip-permissions`, never unattended, never `sudo`. Agent-as-primary was rejected: non-determinism is an unreproducible support ticket for this audience. |
+| 0.6 | v75 | **Google set up by a browser-driving agent** (own slice) | Removes the six-console-page wall. `claude --chrome` drives the user's already-signed-in Chrome through `GOOGLE_CONSOLE_STEPS` (which becomes the agent's checklist rather than the user's instructions) to produce **one artifact** — a Desktop OAuth client JSON — then the app runs `gog auth setup <email> --credentials <path> --services gmail,calendar,drive --login` deterministically. Success is `gog auth list -j` returning the account, never the agent's self-report (v31 discipline). |
+| 1 | v72 | `advancedMode` localStorage boolean, default off | Hides Network tab, Google/GitHub/Notion cards, MCP button, Open in Terminal, the path field. Google leaves the default path for free. |
+| 2.1 | v73 | Default the company path to `~/AI-Native/<slug>` | Last typed technical value in the happy path. |
+| 2.2 | v73 | Get Started → a headless job with a diff | **One** new `registry.ts` entry (`orientation`) reusing v46's prompt; flows through the existing run → diff → approve UI with zero new UI. |
+| 3 | v74 | Say "Claude Code needs a paid account (~$20/mo)" in onboarding | Cheapest churn fix available. Ten minutes. |
+| 4 | later | Windows | ~half a non-technical cohort, and the only expensive item. **Gate it on 0–3 shipping and a real cohort being watched using them.** |
+
+**Three findings from the spec's live probing, so they aren't re-derived:**
+(a) `claude auth status` answers "is the user signed in" in one call — the
+existing `aiExecutorStatus` comment claiming login state "can't be detected
+without spawning the CLI" is wrong and should be deleted, not worked around;
+route the call through `lib/exec-memo.ts` per v70. (b) `COMMON_BINS`
+(`scripts/package-macos.sh:127`) **already contains `$HOME/.local/bin`**, where
+the native installer lands, and PATH lookup happens at exec time — so the
+"Fully quit and reopen the Alacrán app itself" guidance is probably already
+obsolete; verify against a real install and delete it rather than keeping a
+sentence that scares this audience. (c) **v64's "console-only" finding is
+about the API, not about automation, and an early draft of this plan
+over-read it.** No API exists for creating a Google OAuth client — that
+stands. But `claude --chrome` drives the console in the user's own
+already-signed-in Chrome, and `gog auth setup` accepts `--credentials
+<downloaded JSON> --services gmail,calendar,drive --login` (v0.34.1, flags
+verified), so the agent only has to produce **one file** and everything after
+is deterministic. This is the substitute for the gcloud path v64 rejected on
+cost (~500MB SDK + a second sign-in) — the rejection stands, the conclusion
+that the wall was permanent does not. **Scope consequence:** v64 narrowed to
+`gmail,calendar` and dropped Drive's mark from `GOOGLE_SURFACE`; if
+`--services` includes `drive`, that mark must come back or the card lies in
+exactly the way v64 fixed.
+
+**Explicitly out of scope:** removing the Anthropic subscription requirement
+(impossible — state it plainly instead), and any hosted/phone-home component,
+which the README and SECURITY.md still forbid.
 
 v64 fixed two user-reported Google connection bugs with the same shape — the
 app advertising a next step that connected nothing — both root-caused by
