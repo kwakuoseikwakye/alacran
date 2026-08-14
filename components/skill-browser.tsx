@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
+import { ChevronDown, ChevronRight, FileCode2, FileText, Folder, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Input } from "@/components/ui/input"
 import type { SkillEntry } from "@/lib/skills/types"
 import type { SkillAgentResult } from "@/lib/get-all-skills"
 import { getActivityDetail } from "@/lib/get-activity-detail"
@@ -12,22 +12,36 @@ import { SkillHistory } from "@/components/skill-history"
 import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
 import { CompanyCommandRunner } from "@/components/company-command-runner"
 
-const KIND_BADGE_CLASS: Record<SkillEntry["kind"], string> = {
-  skill: "border-teal-500/30 bg-teal-500/10 text-teal-400 font-mono text-[10px] tracking-wider uppercase",
-  command: "border-blue-500/30 bg-blue-500/10 text-blue-400 font-mono text-[10px] tracking-wider uppercase",
-}
+const KIND_LABEL: Record<SkillEntry["kind"], string> = { skill: "Skills", command: "Commands" }
 
-export function SkillBrowser({
-  results,
-  entries,
-}: {
-  results: SkillAgentResult[]
-  entries: SkillEntry[]
-}) {
+/**
+ * Two-pane file explorer: companies and their files on the left, the selected
+ * file's content on the right.
+ *
+ * Replaces a grid of description cards — one per skill — which for a company
+ * with 17 of them was several screens of prose with no hierarchy and nothing
+ * to scan by. The tree makes the shape of a company visible (this is what a
+ * company HAS) and moves the descriptions to where they're read, next to the
+ * content.
+ *
+ * The detail pane is inline rather than a Sheet: a Sheet covers the tree, so
+ * comparing two files meant closing and reopening. Below `md` the panes stack,
+ * which is the same information in the one order that fits a phone.
+ *
+ * Every colour here is a real token. The previous version used `bg-shell`,
+ * `bg-shell-2`, `border-line`, `text-bone` and `text-dune` — five tokens that
+ * stopped existing when the palette changed, so those classes resolved to
+ * nothing: transparent panels, and a bare `border` falling back to
+ * currentColor, which is why the page read as broken rather than merely dense.
+ */
+export function SkillBrowser({ results, entries }: { results: SkillAgentResult[]; entries: SkillEntry[] }) {
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
   const [view, setView] = useState<"content" | "edit" | "history" | "run">("content")
+  const [query, setQuery] = useState("")
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  const detailRef = useRef<HTMLElement | null>(null)
 
   const selectedAgent = selected ? results.find((r) => r.agent.id === selected.agentId)?.agent : undefined
   const matchedCompanyCommand =
@@ -35,121 +49,164 @@ export function SkillBrowser({
       ? COMPANY_COMMANDS.find((c) => selected.path.endsWith(`/commands/${c.commandFileName}`))
       : undefined
 
+  const q = query.trim().toLowerCase()
+  const visible = q
+    ? entries.filter((e) => e.name.toLowerCase().includes(q) || (e.description ?? "").toLowerCase().includes(q))
+    : entries
+
   async function openEntry(entry: SkillEntry) {
     setSelected(entry)
+    // Below `md` the panes stack, so the file you just tapped opens off-screen
+    // under a tree that can be 17 rows long. Desktop is unaffected: the pane is
+    // already in view, and scrollIntoView on an in-view element is a no-op.
+    detailRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
     setDetail(null)
     setDetailError(null)
     setView("content")
     try {
-      const content = await getActivityDetail(entry.path)
-      setDetail(content)
+      setDetail(await getActivityDetail(entry.path))
     } catch (err) {
       setDetailError(err instanceof Error ? err.message : String(err))
     }
   }
 
+  const tab = (id: typeof view, label: string) => (
+    <button
+      key={id}
+      onClick={() => setView(id)}
+      className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+        view === id
+          ? "bg-primary text-primary-foreground"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+      }`}
+    >
+      {label}
+    </button>
+  )
+
   return (
-    <>
-      <div className="space-y-12 pb-12">
-        {results.map((result) => {
-          const owned = entries.filter((entry) => entry.agentId === result.agent.id)
-          return (
-          <div key={result.agent.id} className="space-y-4">
-            <div className="flex flex-col gap-2 rounded-xl bg-shell-2 p-4 border border-line">
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h2 className="font-display text-xl font-bold text-bone">{result.agent.name}</h2>
-                <Badge variant="outline" className="border-line bg-shell text-dune">
-                  {owned.length} available
-                </Badge>
-              </div>
-              <span className="text-xs font-mono text-dune">
-                Installed in this workspace. Click to read or run.
-              </span>
-            </div>
-            {result.error && <p className="text-sm text-red-500 font-mono">Source unavailable: {result.error}</p>}
-            {!result.error && owned.length === 0 && (
-              <p className="text-sm font-mono text-dune p-4 border border-line rounded-xl bg-shell/50">
-                No skills or commands found in this company&apos;s <code>.claude/</code> folder.
-              </p>
-            )}
-            {!result.error && (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {entries
-                  .filter((entry) => entry.agentId === result.agent.id)
-                  .map((entry) => (
-                    <div
-                      key={entry.id}
-                      className="group flex cursor-pointer flex-col justify-between rounded-xl border border-line bg-shell p-5 transition-all hover:border-red-500/50 hover:bg-void hover:shadow-lg"
-                      onClick={() => openEntry(entry)}
-                    >
-                      <div>
-                        <div className="flex items-start justify-between gap-2 mb-3">
-                          <h3 className="font-display text-sm font-semibold text-bone transition-colors group-hover:text-red-400">
-                            {entry.name}
-                          </h3>
-                          <Badge variant="outline" className={KIND_BADGE_CLASS[entry.kind]}>
-                            {entry.kind}
-                          </Badge>
+    <div className="grid gap-4 pb-12 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]">
+      {/* ---------------------------------------------------------- tree */}
+      <aside className="rounded-xl border border-border bg-card/60">
+        <div className="border-b border-border p-2">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search"
+              className="h-8 pl-7 text-xs"
+              aria-label="Search skills and commands"
+            />
+          </div>
+        </div>
+
+        <div className="max-h-[70vh] overflow-y-auto p-1.5">
+          {results.map((result) => {
+            const owned = visible.filter((e) => e.agentId === result.agent.id)
+            // A search that matches nothing in this company hides it entirely —
+            // an empty folder is noise when you're looking for one file.
+            if (q && owned.length === 0) return null
+            const isCollapsed = collapsed[result.agent.id]
+            return (
+              <div key={result.agent.id} className="mb-1">
+                <button
+                  onClick={() => setCollapsed((c) => ({ ...c, [result.agent.id]: !c[result.agent.id] }))}
+                  className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs font-semibold hover:bg-muted"
+                >
+                  {isCollapsed ? <ChevronRight className="size-3.5 shrink-0" /> : <ChevronDown className="size-3.5 shrink-0" />}
+                  <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+                  <span className="min-w-0 flex-1 truncate">{result.agent.name}</span>
+                  <span className="shrink-0 text-[10px] font-normal text-muted-foreground">{owned.length}</span>
+                </button>
+
+                {!isCollapsed && (
+                  <div className="ml-2 border-l border-border pl-1.5">
+                    {result.error && (
+                      <p className="px-2 py-1.5 text-[11px] text-destructive">Source unavailable: {result.error}</p>
+                    )}
+                    {!result.error && owned.length === 0 && (
+                      <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Nothing installed yet.</p>
+                    )}
+                    {(["skill", "command"] as const).map((kind) => {
+                      const ofKind = owned.filter((e) => e.kind === kind)
+                      if (ofKind.length === 0) return null
+                      return (
+                        <div key={kind} className="mt-1">
+                          <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            {KIND_LABEL[kind]}
+                          </p>
+                          {ofKind.map((entry) => {
+                            const active = selected?.id === entry.id
+                            return (
+                              <button
+                                key={entry.id}
+                                onClick={() => openEntry(entry)}
+                                title={entry.name}
+                                className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs transition-colors ${
+                                  active
+                                    ? "bg-primary/15 text-foreground"
+                                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                                }`}
+                              >
+                                {kind === "command" ? (
+                                  <FileCode2 className="size-3.5 shrink-0" />
+                                ) : (
+                                  <FileText className="size-3.5 shrink-0" />
+                                )}
+                                <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                              </button>
+                            )
+                          })}
                         </div>
-                        <p className="text-xs text-dune line-clamp-3 leading-relaxed">
-                          {entry.description || "No description."}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                      )
+                    })}
+                  </div>
+                )}
               </div>
-            )}
+            )
+          })}
+        </div>
+      </aside>
+
+      {/* -------------------------------------------------------- detail */}
+      <section ref={detailRef} className="min-w-0 scroll-mt-4 rounded-xl border border-border bg-card/60">
+        {!selected ? (
+          <div className="flex h-full min-h-[24rem] flex-col items-center justify-center gap-2 p-8 text-center">
+            <FileText className="size-6 text-muted-foreground" />
+            <p className="text-sm font-medium">Pick a file to read it</p>
+            <p className="max-w-xs text-xs text-muted-foreground">
+              Everything your companies can do lives here. Choose one on the left to read it, edit it, see its history,
+              or run it.
+            </p>
           </div>
-          )
-        })}
-      </div>
-      <Sheet open={selected !== null} onOpenChange={(open) => !open && setSelected(null)}>
-        <SheetContent className="w-full sm:max-w-xl border-l border-glass-edge bg-void/80 backdrop-blur-2xl">
-          <SheetHeader className="border-b border-line pb-4 mb-4">
-            <SheetTitle className="font-display text-xl text-bone">{selected?.name}</SheetTitle>
-          </SheetHeader>
-          <div className="flex gap-2 px-1 mb-4">
-            <button
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                view === "content" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
-              }`}
-              onClick={() => setView("content")}
-            >
-              Content
-            </button>
-            <button
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                view === "edit" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
-              }`}
-              onClick={() => setView("edit")}
-            >
-              Edit
-            </button>
-            <button
-              className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                view === "history" ? "bg-bone text-void" : "bg-shell border border-line text-bone hover:bg-shell-2"
-              }`}
-              onClick={() => setView("history")}
-            >
-              History
-            </button>
-            {matchedCompanyCommand && (
-              <button
-                className={`rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                  view === "run" ? "bg-red-500 text-white" : "bg-shell border border-line text-red-400 hover:bg-red-500/10"
-                }`}
-                onClick={() => setView("run")}
-              >
-                Run
-              </button>
-            )}
-          </div>
-          <ScrollArea className="h-[calc(100vh-140px)]">
-            {(view === "content" || view === "edit") && (
-              <>
-                {detailError && <p className="text-red-500 text-sm font-mono px-1">{detailError}</p>}
-                {!detailError && detail !== null && selected && (
-                  <div className="px-1">
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4">
+              <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-2">
+                  <h2 className="min-w-0 truncate font-display text-lg font-bold">{selected.name}</h2>
+                  <Badge variant="outline" className="shrink-0 text-[10px] uppercase">
+                    {selected.kind}
+                  </Badge>
+                </div>
+                {selected.description && (
+                  <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{selected.description}</p>
+                )}
+              </div>
+              <div className="flex shrink-0 gap-1 rounded-lg border border-border p-1">
+                {tab("content", "Content")}
+                {tab("edit", "Edit")}
+                {tab("history", "History")}
+                {matchedCompanyCommand && tab("run", "Run")}
+              </div>
+            </div>
+
+            <div className="max-h-[70vh] overflow-y-auto p-4">
+              {(view === "content" || view === "edit") && (
+                <>
+                  {detailError && <p className="text-sm text-destructive">{detailError}</p>}
+                  {!detailError && detail !== null && (
                     <SkillEditor
                       path={selected.path}
                       initialContent={detail}
@@ -157,13 +214,11 @@ export function SkillBrowser({
                       onEditingChange={(editing) => setView(editing ? "edit" : "content")}
                       onSaved={(newContent) => setDetail(newContent)}
                     />
-                  </div>
-                )}
-                {!detailError && detail === null && <p className="px-1 text-dune font-mono text-sm">Loading…</p>}
-              </>
-            )}
-            {view === "history" && selected && (
-              <div className="px-1">
+                  )}
+                  {!detailError && detail === null && <p className="text-sm text-muted-foreground">Loading…</p>}
+                </>
+              )}
+              {view === "history" && (
                 <SkillHistory
                   path={selected.path}
                   currentContent={detail}
@@ -172,16 +227,14 @@ export function SkillBrowser({
                     setView("content")
                   }}
                 />
-              </div>
-            )}
-            {view === "run" && matchedCompanyCommand && selected && (
-              <div className="px-1">
+              )}
+              {view === "run" && matchedCompanyCommand && (
                 <CompanyCommandRunner command={matchedCompanyCommand} agentId={selected.agentId} />
-              </div>
-            )}
-          </ScrollArea>
-        </SheetContent>
-      </Sheet>
-    </>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+    </div>
   )
 }
