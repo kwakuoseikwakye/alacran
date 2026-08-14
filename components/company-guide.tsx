@@ -5,6 +5,7 @@ import { HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { buildGuideSteps, type CompanyGuideFlags } from "@/lib/company-guide-steps"
+import { useAdvancedMode } from "@/components/advanced-only"
 
 /** Bumped only if the guide's content changes enough that a returning user should see it again. */
 export const GUIDE_SEEN_KEY = "alacran-guide-seen"
@@ -31,7 +32,16 @@ export function CompanyGuide({ companyName, hasOntology, ...flags }: CompanyGuid
     setOpen(true)
   }, [hasOntology])
 
-  const steps = buildGuideSteps(flags)
+  // v39's invariant: the guide can never explain a button that isn't on the
+  // card. AdvancedOnly hides Open in Terminal and Connect tools in simple
+  // mode, so the flags the guide is built from have to agree with what's
+  // actually rendered — otherwise the guide describes two buttons the reader
+  // cannot see.
+  const advanced = useAdvancedMode()
+  const steps = buildGuideSteps(
+    advanced ? flags : { ...flags, showOpenTerminalButton: false, showMcpButton: false },
+    advanced
+  )
 
   return (
     <>

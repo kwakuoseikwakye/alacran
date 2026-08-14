@@ -4,6 +4,8 @@ import { homedir } from "node:os"
 import { clearExecMemo } from "./exec-memo"
 import { AI_EXECUTORS } from "./ai-executors"
 import { isClaudeCodeCli } from "./is-claude-code-cli"
+import { fenceNotice, fenceUntrusted, newFenceNonce } from "./company-commands/prefetch/untrusted-fence"
+import { isInstallableId } from "./install-tool-impl"
 import type { ExecFileFn, InstallableId, InstallResult } from "./install-tool-impl"
 
 const execFileAsync = promisify(nodeExecFile)
@@ -46,13 +48,29 @@ const TOOLS: Record<InstallableId, { label: string; binary: string }> = {
   "google-antigravity": { label: "Google Antigravity CLI", binary: "agy" },
 }
 
+/**
+ * Installer output is NOT ours. It is whatever `brew`, `curl` or a download
+ * server printed, and it lands in a prompt whose Bash allowlist includes
+ * `curl *`, `brew *` and `npm install -g *` — so a crafted error string is a
+ * real instruction-injection surface, not a hypothetical one. It also arrives
+ * through a public Server Action, so its size is whatever a caller sends.
+ *
+ * Two guards, the same two every other externally-sourced prompt input in this
+ * app gets: a hard cap, and the nonce fence from prefetch/untrusted-fence.ts
+ * (a fixed marker can be closed early by content that contains it; a per-run
+ * nonce the author never saw cannot be forged).
+ */
+const MAX_FAILURE_LOG = 4000
+
 export function buildRepairPrompt(id: InstallableId, failureLog: string): string {
   const tool = TOOLS[id]
+  const trimmed = failureLog.trim().slice(0, MAX_FAILURE_LOG)
+  const nonce = newFenceNonce()
   return [
     `Install the ${tool.label} on this machine, so that \`which ${tool.binary}\` succeeds.`,
     "",
-    failureLog.trim()
-      ? `The app already tried a standard install and it failed. Here is exactly what it ran and what came back:\n\n${failureLog.trim()}`
+    trimmed
+      ? `The app already tried a standard install and it failed. ${fenceNotice(nonce, "output printed by a package manager or download server.")}\n\n${fenceUntrusted(trimmed, nonce)}`
       : "The app has no verified install command for this tool, so nothing has been tried yet.",
     "",
     "Rules:",
@@ -91,6 +109,8 @@ export async function installRepairImpl(
   execFn: ExecFileFn = defaultExecFile,
   home: string = homedir()
 ): Promise<RepairResult> {
+  if (!isInstallableId(id)) return { ok: false, log: "", transcript: "Refused: unknown tool." }
+
   const claude = AI_EXECUTORS["claude-code"]
   if (!claude.enforcesToolScope) {
     // Unreachable today, and a tripwire rather than a guess: if this ever

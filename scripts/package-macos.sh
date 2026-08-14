@@ -3,9 +3,9 @@
 #
 # Produces dist/<APP_NAME>.app — a self-contained Next.js standalone server
 # that, on launch, starts the production server locally and opens the user's
-# default browser to it. Requires the end user to have Node.js on their PATH
-# (the v1 audience is CLI-comfortable early adopters who already have it, since
-# Claude Code CLI needs Node too). If Node is missing, the launcher shows a
+# default browser to it. Ships its own Node runtime in Contents/Resources/node,
+# so the end user needs nothing installed. If that bundled runtime is missing
+# (a damaged copy), the launcher falls back to the user's own node and shows a
 # guided alert instead of failing silently.
 #
 # Also produces dist/<APP_NAME>.dmg — a standard drag-to-Applications disk

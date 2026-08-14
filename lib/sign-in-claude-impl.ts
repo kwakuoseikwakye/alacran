@@ -1,6 +1,6 @@
 import { spawn as defaultSpawn, execFile as nodeExecFile, type ChildProcess } from "node:child_process"
 import { promisify } from "node:util"
-import { writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
@@ -66,6 +66,11 @@ export async function signInClaudeImpl(
   const args = trimmed ? ["auth", "login", "--email", trimmed] : ["auth", "login"]
   const script = buildInteractiveTerminalScript({ binaryName: "claude", cwd: home, introArgs: args })
   const scriptPath = path.join(dataDir, "claude-sign-in.sh")
+  // DATA_DIR is created lazily by whichever feature writes first. On a fresh
+  // install nothing has, so this must not assume it exists — the failure is an
+  // ENOENT reported to the user as "couldn't open a terminal", on the exact
+  // path this whole slice exists to make work.
+  await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
   const child = spawnFn(launch.command, launch.args(scriptPath), {

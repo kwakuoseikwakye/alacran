@@ -1,6 +1,6 @@
 import { spawn as defaultSpawn, execFile as nodeExecFile, type ChildProcess } from "node:child_process"
 import { promisify } from "node:util"
-import { writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
@@ -77,13 +77,25 @@ export function buildGoogleSetupPrompt(email: string): string {
  * by the agent re-checking it in-browser before it clicks anything.
  */
 export async function isChromeInstalled(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<boolean> {
-  try {
-    if (platform === "darwin") await execFn("open", ["-Ra", "Google Chrome"])
-    else await execFn("which", ["google-chrome"])
-    return true
-  } catch {
-    return false
+  if (platform === "darwin") {
+    try {
+      await execFn("open", ["-Ra", "Google Chrome"])
+      return true
+    } catch {
+      return false
+    }
   }
+  // Distros disagree on the binary name; `google-chrome` is a symlink on some
+  // and absent on others where only `google-chrome-stable` exists.
+  for (const binary of ["google-chrome", "google-chrome-stable"]) {
+    try {
+      await execFn("which", [binary])
+      return true
+    } catch {
+      /* try the next name */
+    }
+  }
+  return false
 }
 
 /** Opens CHROME — not the default browser — at Google's account page, so the
@@ -95,8 +107,15 @@ export async function openChromeAccountCheckImpl(
   platform: NodeJS.Platform = process.platform
 ): Promise<{ opened: boolean }> {
   try {
-    if (platform === "darwin") await execFn("open", ["-a", "Google Chrome", "https://myaccount.google.com"])
-    else await execFn("google-chrome", ["https://myaccount.google.com"])
+    if (platform === "darwin") {
+      // `open` returns as soon as it hands off to LaunchServices.
+      await execFn("open", ["-a", "Google Chrome", "https://myaccount.google.com"])
+      return { opened: true }
+    }
+    // On Linux the browser binary does NOT return until the browser exits, so
+    // awaiting it would hang this action for as long as the window is open.
+    // Fire it and report success on hand-off, the same contract as macOS.
+    void execFn("google-chrome", ["https://myaccount.google.com"]).catch(() => {})
     return { opened: true }
   } catch {
     return { opened: false }
@@ -156,6 +175,11 @@ export async function setupGoogleImpl(
     introArgs: ["--chrome", buildGoogleSetupPrompt(address)],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
+  // DATA_DIR is created lazily by whichever feature writes first. On a fresh
+  // install nothing has, so this must not assume it exists — the failure is an
+  // ENOENT reported to the user as "couldn't open a terminal", on the exact
+  // path this whole slice exists to make work.
+  await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
   const child = spawnFn(launch.command, launch.args(scriptPath), {

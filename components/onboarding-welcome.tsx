@@ -5,6 +5,7 @@ import { ArrowLeft, ArrowRight, Check, Loader2, RefreshCw, X } from "lucide-reac
 import { AlacranMark } from "@/components/alacran-mark"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { AddCompanyForm } from "@/components/add-company-form"
+import { InstallButton } from "@/components/connect-panel"
 import { CommandLine } from "@/components/copy-button"
 import { Button } from "@/components/ui/button"
 import { checkDependencies } from "@/lib/check-dependencies"
@@ -302,6 +303,11 @@ export function OnboardingWelcome({ homeDir }: { homeDir: string }) {
               link={loading || claudeInstalled ? undefined : claudeConnect?.guidance.link}
               delay={0}
             />
+            {!loading && !claudeInstalled && (
+              <div className="sm:pl-12">
+                <InstallButton id="claude-code" onDone={refresh} />
+              </div>
+            )}
             <ToolRow
               brand="google"
               name="gog: Google CLI"

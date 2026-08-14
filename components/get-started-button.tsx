@@ -12,6 +12,13 @@ import { useAdvancedMode } from "@/components/advanced-only"
 export const GET_STARTED_BLURB =
   "Not sure what to do with this company? Your AI assistant reads everything you've set up here — the skills you built, how you defined the company — and tells you in plain language what it can actually help you do, then waits for you to answer."
 
+/** Simple mode's Get Started writes a note and shows you the change to
+ *  approve — no session, nothing to type into. v39's invariant is that the
+ *  guide never describes a button that isn't there; it also must not describe
+ *  a button doing something it doesn't do in the mode the reader is in. */
+export const GET_STARTED_RUN_BLURB =
+  "Not sure what to do with this company? Your AI reads everything you've set up here — the skills you built, how you defined the company — and writes you a short plain-language note: what it can help with, and three things to try first. You see the note before it's saved, and nothing is kept unless you approve it."
+
 /**
  * The direct answer to "I built the skills and defined the company, now
  * how do I actually use it?" — same real interactive session as "Open in

@@ -1,6 +1,6 @@
 import { spawn as defaultSpawn, execFile as nodeExecFile, type ChildProcess } from "node:child_process"
 import { promisify } from "node:util"
-import { writeFile } from "node:fs/promises"
+import { mkdir, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
 import { resolveAiExecutorForAgent } from "./ai-executor-registry"
@@ -75,6 +75,9 @@ export async function openInteractiveTerminalImpl(
   // Terminal" button's script file if both are clicked close together.
   const scriptPath = path.join(dataDir, `${agent.id}.${introPrompt ? "get-started" : "open-terminal"}.sh`)
   const script = buildInteractiveTerminalScript({ binaryName: executor.binaryName, cwd: agent.rootPath, introArgs })
+  // See sign-in-claude-impl.ts: DATA_DIR is created lazily, so a fresh
+  // install that has never written one can ENOENT here.
+  await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
   const child = spawnFn(launch.command, launch.args(scriptPath), {

@@ -100,3 +100,14 @@ describe("installToolImpl", () => {
     expect(result.needsAgent).toBe(true)
   })
 })
+
+describe("input validation at the Server Action boundary", () => {
+  it("fails closed on an unknown id rather than throwing a TypeError", async () => {
+    const { exec, calls } = fakeExec({})
+    const result = await installToolImpl("../../etc" as never, exec, "darwin")
+
+    expect(result.ok).toBe(false)
+    expect(result.needsAgent).toBe(false)
+    expect(calls).toEqual([])
+  })
+})

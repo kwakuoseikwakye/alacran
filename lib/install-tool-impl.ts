@@ -74,11 +74,20 @@ async function isInstalled(execFn: ExecFileFn, id: InstallableId): Promise<boole
   }
 }
 
+/** Public boundary: `id` arrives from a client, so it is checked against the
+ *  real key set rather than trusted to be in the union. Indexing COMMANDS with
+ *  an unknown id throws a TypeError, which fails open-ish (a 500) instead of
+ *  failing closed. */
+export function isInstallableId(value: unknown): value is InstallableId {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(COMMANDS, value)
+}
+
 export async function installToolImpl(
   id: InstallableId,
   execFn: ExecFileFn = defaultExecFile,
   platform: NodeJS.Platform = process.platform
 ): Promise<InstallResult> {
+  if (!isInstallableId(id)) return { ok: false, log: "", needsAgent: false }
   const command = COMMANDS[id](platform)
   if (!command) return { ok: false, needsAgent: true, log: "" }
 

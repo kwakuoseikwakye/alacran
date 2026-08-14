@@ -301,7 +301,11 @@ function KeychainNote() {
  * actually generates confusion; a spinner plus "this can take a minute" is
  * the cheaper thing to try first.
  */
-function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }) {
+export function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }) {
+  // The repair agent runs `claude`. Offering it when the missing binary IS
+  // claude can only ever report failure, so that card gets the manual steps
+  // instead — this is the one tool the fallback cannot bootstrap.
+  const canRepair = id !== "claude-code"
   const [busy, setBusy] = useState(false)
   const [repairing, setRepairing] = useState(false)
   const [log, setLog] = useState<string | null>(null)
@@ -359,11 +363,11 @@ function InstallButton({ id, onDone }: { id: InstallableId; onDone: () => void }
       {needsAgent && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground">
-            {repairFailed
-              ? "Your AI couldn't finish it either. The steps below still do it by hand."
+            {repairFailed || !canRepair
+              ? "That didn't work automatically. The steps below still do it by hand."
               : "The standard way didn't work on this machine. Your AI can try to sort it out."}
           </p>
-          {!repairFailed && (
+          {!repairFailed && canRepair && (
             <Button size="sm" variant="outline" onClick={repair} disabled={repairing}>
               {repairing ? (
                 <Loader2 className="mr-1.5 size-3.5 animate-spin" />
@@ -397,8 +401,11 @@ function SignInButton({ onDone }: { onDone: () => void }) {
     setBusy(true)
     try {
       const result = await signInClaude(email)
+      // Deliberately no onDone(): the browser sign-in completes in the
+      // terminal we just opened, seconds to minutes from now. Re-checking
+      // immediately would show "not signed in" and contradict the message
+      // below it. Re-check is the user's move, once they're done.
       setMessage(result.message)
-      if (result.started) onDone()
     } catch {
       setMessage("Couldn't open a terminal to sign in.")
     } finally {
@@ -662,8 +669,12 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
     }
   }
 
+  // Only what's actually on screen: simple mode renders one executor card, so
+  // counting all four leaves the help marker permanently lit with nothing to
+  // point at.
+  const visibleExecutors = advanced ? status.aiExecutors : status.aiExecutors.filter((t) => t.id === "claude-code")
   const anyNotConnected =
-    status.aiExecutors.some((t) => !t.connected) || !status.google.connected || !status.github.connected
+    visibleExecutors.some((t) => !t.connected) || !status.google.connected || !status.github.connected
 
   return (
     <div className="space-y-4">
@@ -690,7 +701,7 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
             no basis to make, and three of them can't be installed or probed
             anyway. Google and GitHub stay: 0.6 made Google one-click and gh's
             sign-in is a browser flow. */}
-        {(advanced ? status.aiExecutors : status.aiExecutors.filter((t) => t.id === "claude-code")).map((tool, i) => (
+        {visibleExecutors.map((tool, i) => (
           <ToolCard key={tool.id} tool={tool} delay={i * 90} onChanged={recheck} />
         ))}
         <ToolCard

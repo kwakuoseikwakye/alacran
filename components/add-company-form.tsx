@@ -151,7 +151,7 @@ export function AddCompanyForm({
           field only appears in advanced mode; the value it holds is derived
           from the name either way, so nothing changes about what gets
           created — only whether the user is asked about it. */}
-      {advanced ? (
+      {advanced || external ? (
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Local directory path</label>
           <Input

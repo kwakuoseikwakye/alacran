@@ -1,5 +1,5 @@
 import { OPEN_TERMINAL_BLURB } from "@/components/open-terminal-button"
-import { GET_STARTED_BLURB } from "@/components/get-started-button"
+import { GET_STARTED_BLURB, GET_STARTED_RUN_BLURB } from "@/components/get-started-button"
 import { MCP_BLURB } from "@/components/mcp-servers-sheet"
 import { COMPANY_SETUP_BLURB } from "@/components/company-setup-wizard"
 import { BACKUP_BLURB } from "@/components/backup-company-button"
@@ -34,14 +34,19 @@ export type CompanyGuideFlags = {
  * every command-set company can run something via Skills (v22), and every
  * agent gets an avatar form regardless of kind.
  */
-export function buildGuideSteps(flags: CompanyGuideFlags): GuideStep[] {
+export function buildGuideSteps(flags: CompanyGuideFlags, advanced = true): GuideStep[] {
   return [
     {
       show: flags.showSetupCompanyButton || flags.showEditCompanyButton,
       label: "Set up / edit company info",
       blurb: COMPANY_SETUP_BLURB,
     },
-    { show: flags.showGetStartedButton, label: "Get Started", blurb: GET_STARTED_BLURB },
+    {
+      show: flags.showGetStartedButton,
+      label: "Get Started",
+      // Same button, genuinely different behaviour per mode.
+      blurb: advanced ? GET_STARTED_BLURB : GET_STARTED_RUN_BLURB,
+    },
     { show: flags.showOpenTerminalButton, label: "Open in Terminal", blurb: OPEN_TERMINAL_BLURB },
     { show: flags.showMcpButton, label: "Connect tools", blurb: MCP_BLURB },
     { show: true, label: "Skills", blurb: SKILLS_POINTER_BLURB },
