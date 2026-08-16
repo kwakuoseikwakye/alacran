@@ -6,7 +6,8 @@ import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
 import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
 import { GOOGLE_CONSOLE_STEPS } from "./google-console-steps"
-import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg } from "./google-services"
+import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg, servicesFromScopes } from "./google-services"
+import { listGoogleAccounts } from "./google-accounts"
 import { isPlausibleEmail } from "./sign-in-claude-impl"
 import { DATA_DIR } from "./data-dir"
 
@@ -41,7 +42,14 @@ export const GOOGLE_SETUP_SERVICES = serviceListArg(DEFAULT_GOOGLE_SERVICE_IDS)
  * which is why the final step names it exactly rather than leaving the agent
  * to improvise the finish.
  */
-export function buildGoogleSetupPrompt(email: string, serviceIds: string[] = DEFAULT_GOOGLE_SERVICE_IDS): string {
+export function buildGoogleSetupPrompt(
+  email: string,
+  serviceIds: string[] = DEFAULT_GOOGLE_SERVICE_IDS,
+  /** Services this account ALREADY carries. Non-empty means the one-time
+   *  console setup is done, so the agent gets the much shorter job below. */
+  grantedIds: string[] = []
+): string {
+  if (grantedIds.length > 0) return buildGoogleExpandPrompt(email, serviceIds, grantedIds)
   const services = serviceListArg(serviceIds)
   const chosen = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id))
   // The console checklist is built from the chosen services, not a fixed pair:
@@ -72,6 +80,49 @@ export function buildGoogleSetupPrompt(email: string, serviceIds: string[] = DEF
     `  gog auth setup ${email} --credentials <the downloaded file> --services ${services} --login`,
     "",
     "That stores the key and opens the browser sign-in. Approve it. Then run `gog auth list` and show me the output so we can both see it worked.",
+  ].join("\n")
+}
+
+/**
+ * The much shorter job for an account that is ALREADY connected — the case
+ * every user who installed before the service picker existed is in: gmail and
+ * calendar authorized, no way to reach Drive/Docs/Sheets without redoing a
+ * setup they already did.
+ *
+ * The OAuth client, consent screen and Publish step are one-time and already
+ * done, so all that's left is the per-API Enable click for each NEW service
+ * plus one re-consent. `gog auth add` is the same command that connects a
+ * fresh address — re-running it on a stored account re-authorizes it with
+ * whatever `--services` asks for, which is why the list is the UNION and
+ * never just the new ones: requesting a narrower set is how you'd silently
+ * drop Gmail from an account that had it.
+ */
+function buildGoogleExpandPrompt(email: string, serviceIds: string[], grantedIds: string[]): string {
+  const services = serviceListArg([...grantedIds, ...serviceIds])
+  const already = GOOGLE_SERVICES.filter((svc) => grantedIds.includes(svc.id))
+  const added = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id) && !grantedIds.includes(svc.id))
+  const steps = added
+    .map((svc, i) => `${i + 1}. Turn on ${svc.label} — ${svc.apiPage}\n   Click the blue Enable button. That is the whole step.`)
+    .join("\n")
+  return [
+    `Add more Google apps to ${email} on this machine, using the browser.`,
+    "",
+    `This account is already connected for ${already.map((s) => s.label).join(", ") || "some services"}. The one-time Google Cloud setup (project, consent screen, OAuth client, publishing) is already done — do NOT create a new project, a new client, or new credentials. Only turn on the extra APIs, then re-authorize.`,
+    "",
+    added.length > 0 ? `Enable these APIs in the existing project:\n\n${steps}` : "No new APIs need enabling.",
+    "",
+    "Important:",
+    `- FIRST check which Google account the browser is signed in as. If it is not ${email}, stop and tell me — do not click anything.`,
+    "- If the console shows more than one project, use the one that already has the other APIs turned on. Ask me if it isn't obvious which.",
+    "- Do not create billing accounts, service accounts, or a second OAuth client.",
+    "",
+    "Then finish by running exactly:",
+    "",
+    `  gog auth add ${email} --services ${services}`,
+    "",
+    // The union is spelled out because an agent "helpfully" trimming this to
+    // the new services would revoke the ones the user already had.
+    `That list is deliberately everything this account should end up with, not just the new ones — run it exactly as written. It opens the browser sign-in; approve it. Then run \`gog auth list\` and show me the output so we can both see the new apps are there.`,
   ].join("\n")
 }
 
@@ -184,10 +235,20 @@ export async function setupGoogleImpl(
     return { started: false, message: "No supported terminal found on this machine." }
   }
 
+  // Which job this is — first-time setup or "add more apps to an account that
+  // already works" — is read off the machine, not passed in from the client.
+  // Same call the card already made (and the same 5-minute memo, so this is
+  // usually free), and it answers both halves at once: does this address
+  // already have a token, and what scopes does it carry.
+  const stored = (await listGoogleAccounts(execFn)).find(
+    (a) => a.email.toLowerCase() === address.toLowerCase()
+  )
+  const granted = stored ? servicesFromScopes(stored.scopes) : []
+
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds)],
+    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted)],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh

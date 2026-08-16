@@ -68,9 +68,13 @@ function ServicePicker({
               on ? "border-primary/40 bg-primary/10 text-foreground" : "border-border text-muted-foreground"
             }`}
           >
+            {/* An already-granted service can't be unticked: nothing here can
+                revoke a scope, and re-authorizing with a narrower list is how
+                you'd silently drop Gmail from an account that had it. */}
             <input
               type="checkbox"
               checked={on}
+              disabled={already}
               onChange={(e) => onChange(e.target.checked ? [...selected, service.id] : selected.filter((id) => id !== service.id))}
               className="size-3"
             />
@@ -83,28 +87,101 @@ function ServicePicker({
   )
 }
 
-/** Lets you connect a 2nd, 3rd, ... Google account. Same pattern as every
- *  other guidance flow here: show the exact command, the user runs it in
- *  their own terminal, then presses Re-check — the app never spawns an
- *  interactive OAuth flow itself. */
-function AddGoogleAccount({ granted }: { granted?: string[] }) {
-  const [email, setEmail] = useState("")
-  const [services, setServices] = useState<string[]>(DEFAULT_GOOGLE_SERVICE_IDS)
+/**
+ * Turn on more Google apps — on an account that's already connected, or on a
+ * new address. It's one control because `gog auth add <email> --services …`
+ * is literally the same command for both: on a stored account it re-authorizes
+ * with the wider list, on a new one it's the first authorization.
+ *
+ * This is the door that was missing. Anyone who connected before the service
+ * picker existed has gmail+calendar and, until now, no way to reach Drive,
+ * Docs or Sheets short of redoing a setup they'd already done — the card
+ * showed the two marks and offered nothing but "connect another email."
+ */
+function ConnectGoogleApps({
+  accounts,
+  accountServices,
+  claudeReady,
+}: {
+  accounts: string[]
+  /** Per account, NOT the union: what one address already carries is the only
+   *  honest answer for a picker that authorizes one address. */
+  accountServices?: Record<string, string[]>
+  claudeReady: boolean
+}) {
+  const [email, setEmail] = useState(accounts[0] ?? "")
+  const [services, setServices] = useState<string[]>(
+    accountServices?.[accounts[0] ?? ""] ?? DEFAULT_GOOGLE_SERVICE_IDS
+  )
+  const address = email.trim()
+  // Only an address that's actually stored gets the "already granted" marks
+  // and the shorter agent job — typing a brand-new address here is a
+  // first-time connection for that account, even though the machine's OAuth
+  // client is set up.
+  const accountGranted = accountServices?.[address]
+  const known = accountGranted !== undefined
+  // Never narrower than what's already there: gog stores what --services
+  // asks for, so dropping one from the list drops the scope.
+  const requested = serviceListArg([...(accountGranted ?? []), ...services])
+  const nothingNew = known && requested === serviceListArg(accountGranted ?? [])
+
   return (
-    <div className="space-y-1.5 border-t border-border pt-3">
-      <p className="text-xs text-muted-foreground">Connect another email</p>
-      <div className="flex gap-2">
-        <Input
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="h-8 text-xs"
-        />
-      </div>
-      <ServicePicker selected={services} onChange={setServices} granted={granted} />
-      {email.trim() && (
-        <CommandLine command={`gog auth add ${email.trim()} --services ${serviceListArg(services)}`} />
+    <div className="space-y-2 border-t border-border pt-3">
+      <p className="text-xs font-medium">Turn on more Google apps</p>
+      {accounts.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {accounts.map((a) => (
+            <button
+              key={a}
+              type="button"
+              onClick={() => {
+                setEmail(a)
+                // Otherwise a selection made for the previous account carries
+                // over and reads as "already on" for one that never had it.
+                setServices(accountServices?.[a] ?? DEFAULT_GOOGLE_SERVICE_IDS)
+              }}
+              className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+                a === address ? "border-primary/40 bg-primary/10" : "border-border text-muted-foreground"
+              }`}
+            >
+              {a}
+            </button>
+          ))}
+        </div>
+      )}
+      <Input
+        type="email"
+        placeholder="you@example.com"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="h-8 text-xs"
+      />
+      <p className="text-[11px] text-muted-foreground">
+        {known
+          ? "Ticked apps are already on. Add any others you want — the ones you have stay."
+          : "A new address. Pick what it should be able to reach."}
+      </p>
+      <ServicePicker selected={services} onChange={setServices} granted={accountGranted} />
+      {address && nothingNew && (
+        <p className="text-[11px] text-muted-foreground">
+          Everything selected is already on for this address.
+        </p>
+      )}
+      {address && !nothingNew && (
+        <>
+          <GoogleAutoSetup
+            email={address}
+            services={services}
+            granted={accountGranted}
+            claudeReady={claudeReady}
+          />
+          {claudeReady && <p className="text-[11px] font-medium text-muted-foreground">Or do it yourself:</p>}
+          <CommandLine command={`gog auth add ${address} --services ${requested}`} />
+          <p className="text-[11px] text-muted-foreground">
+            Each new app also needs its API turned on in your Google Cloud project first, or the sign-in will
+            refuse it. That&apos;s the part your AI does for you above.
+          </p>
+        </>
       )}
     </div>
   )
@@ -144,9 +221,22 @@ function ConsoleLink({ href, children }: { href: string; children: React.ReactNo
  * because setting this up against the wrong account silently connects the
  * wrong mailbox.
  */
-function GoogleAutoSetup({ claudeReady, granted }: { claudeReady: boolean; granted?: string[] }) {
-  const [email, setEmail] = useState("")
-  const [services, setServices] = useState<string[]>(DEFAULT_GOOGLE_SERVICE_IDS)
+function GoogleAutoSetup({
+  email,
+  services,
+  granted,
+  claudeReady,
+}: {
+  /** Owned by the parent: both callers already render an address field and a
+   *  service picker of their own, and two of each on one card was a real wart. */
+  email: string
+  services: string[]
+  /** Non-empty means this address already works and the agent gets the short
+   *  job — enable the extra APIs, re-authorize. The server re-derives this from
+   *  gog rather than trusting it; this copy only decides what the card says. */
+  granted?: string[]
+  claudeReady: boolean
+}) {
   const [busy, setBusy] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -177,25 +267,16 @@ function GoogleAutoSetup({ claudeReady, granted }: { claudeReady: boolean; grant
   // dead end this whole slice exists to remove.
   if (!claudeReady) return null
 
+  const expanding = Boolean(granted?.length)
+
   return (
     <div className="space-y-2 rounded-lg border border-border bg-card/60 p-3">
-      <p className="text-sm font-medium">Let your AI do it</p>
+      <p className="text-sm font-medium">{expanding ? "Let your AI turn them on" : "Let your AI do it"}</p>
       <p className="text-xs text-muted-foreground">
-        Opens a window where your AI clicks through Google&apos;s setup pages in your browser. Sign in to Google in
-        Chrome first, with the same address you type here.
+        {expanding
+          ? "Opens a window where your AI turns on the extra apps in your existing Google setup, then re-runs the sign-in. Nothing you already have is touched."
+          : "Opens a window where your AI clicks through Google's setup pages in your browser. Sign in to Google in Chrome first, with the same address you chose above."}
       </p>
-      <Input
-        type="email"
-        placeholder="you@example.com"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        className="h-8 text-xs"
-      />
-
-      <p className="text-[11px] text-muted-foreground">
-        Which Google apps should it connect? Each one adds a page for your AI to click through.
-      </p>
-      <ServicePicker selected={services} onChange={setServices} granted={granted} />
 
       {/* The one prerequisite this app cannot detect. Chrome's presence is
           checked for real before any spawn; WHICH Google account it is signed
@@ -224,7 +305,7 @@ function GoogleAutoSetup({ claudeReady, granted }: { claudeReady: boolean; grant
 
       <Button size="sm" onClick={run} disabled={busy || !email.trim() || !confirmed}>
         {busy ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Wand2 className="mr-1.5 size-3.5" />}
-        Set up Google for me
+        {expanding ? "Turn on the extra apps for me" : "Set up Google for me"}
       </Button>
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
     </div>
@@ -268,10 +349,19 @@ function GoogleSetup({ stage, claudeReady, granted }: { stage: "client" | "accou
         Google Cloud — just click what each step says.
       </p>
 
+      {/* Address and services live here now, above both routes: this card used
+          to render an email field inside GoogleAutoSetup AND another at the
+          bottom for the manual command, so the same value was typed twice. */}
+      {emailField}
+      <p className="text-[11px] text-muted-foreground">
+        Which Google apps should it connect? Each one adds a page to click through.
+      </p>
+      <ServicePicker selected={services} onChange={setServices} granted={granted} />
+
       {/* The whole point of 0.6: nobody should have to do the six steps below
           by hand. They stay on the page as the fallback, and as the thing the
           agent is literally working through — same array, one source. */}
-      <GoogleAutoSetup claudeReady={claudeReady} granted={granted} />
+      <GoogleAutoSetup email={address} services={services} granted={granted} claudeReady={claudeReady} />
 
       {claudeReady && <p className="text-xs font-medium text-muted-foreground">Or do it yourself:</p>}
       <ol className="list-decimal space-y-2 pl-5 text-xs text-muted-foreground">
@@ -284,10 +374,9 @@ function GoogleSetup({ stage, claudeReady, granted }: { stage: "client" | "accou
       </ol>
       <div className="space-y-1.5 border-t border-border pt-3">
         <p className="text-xs text-muted-foreground">
-          <strong>Last step.</strong> Type the Google address you just set this up for, then run the command. It
-          picks up the downloaded file and opens the sign-in for you. Approve it, come back, press Re-check.
+          <strong>Last step.</strong> With the address above filled in, run this command. It picks up the
+          downloaded file and opens the sign-in for you. Approve it, come back, press Re-check.
         </p>
-        {emailField}
         {address && (
           <CommandLine
             command={`gog auth setup ${address} --credentials ~/Downloads/client_secret_*.json --login --services ${serviceListArg(services)}`}
@@ -577,7 +666,11 @@ function ToolCard({
             <p className="text-xs text-muted-foreground">
               Assign specific accounts to a company from that company&apos;s card.
             </p>
-            <AddGoogleAccount granted={tool.grantedServices} />
+            <ConnectGoogleApps
+              accounts={tool.accounts ?? []}
+              accountServices={tool.accountServices}
+              claudeReady={claudeReady}
+            />
             <KeychainNote />
           </>
         )}

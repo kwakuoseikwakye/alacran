@@ -46,6 +46,11 @@ export type ToolStatus = {
    *  the token was never granted, and what makes adding a service to the
    *  catalog need no second edit anywhere. */
   grantedServices?: string[]
+  /** google only: the same thing PER account. The union above is right for the
+   *  "available to your companies" marks, but wrong for the picker that adds
+   *  services to one address — it would show a second account's apps as
+   *  already-on and leave them unselectable for the account that lacks them. */
+  accountServices?: Record<string, string[]>
   /** google only: which setup gate is next. The commands for the `client` and
    *  `account` stages need the user's own email spliced in, so those are built
    *  in the client component from a typed address rather than shipped here
@@ -168,7 +173,10 @@ type GogAuthStatus = {
 }
 
 async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<ToolStatus> {
-  const label = "Google (Gmail & Calendar)"
+  // Not "(Gmail & Calendar)": those are only the DEFAULTS. The card shows a
+  // mark per service the token really carries (lib/google-services.ts), so
+  // naming two in the title contradicts a card showing five.
+  const label = "Google"
   const installStage = (detail: string): ToolStatus => ({
     id: "google",
     label,
@@ -232,6 +240,7 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
       guidance: { steps: [] },
       accounts: stored,
       grantedServices: [...new Set(accounts.flatMap((a) => servicesFromScopes(a.scopes)))],
+      accountServices: Object.fromEntries(accounts.map((a) => [a.email, servicesFromScopes(a.scopes)])),
     }
   }
 

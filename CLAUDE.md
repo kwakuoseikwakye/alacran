@@ -1157,6 +1157,23 @@ reported page found the same palette live in `activity-board.tsx` and
 check its classes against the tokens actually defined in `app/globals.css`
 before redesigning anything.
 
+**v74 (2026-08-16) closed the door v72 left shut.** The service picker only
+existed on the paths that run when Google is *not* connected, so anyone who
+connected before it shipped was stuck with gmail+calendar and no way to widen
+it. One control (`ConnectGoogleApps`) now serves both jobs, because
+`gog auth add <email> --services …` is the same command for a stored account
+(re-authorize wider) and a new one (first authorize). **The rule to keep:
+re-authorizing with a narrower `--services` list silently drops scopes**, so
+the command is built from the union, the agent prompt says so explicitly, and
+already-granted checkboxes are checked *and disabled*. Whether a run is
+first-time setup or "add more apps" is read off the machine
+(`listGoogleAccounts`, memoized per v70) rather than trusted from the client —
+which also yields the granted set for free. **The bug to not repeat:**
+`grantedServices` is a union across accounts and is wrong for any per-account
+control; `accountServices` carries the per-account map for that. Card title is
+now plain "Google" — naming two services in a title over a card showing seven
+marks was the same "the card lies" failure v64 and v72 each fixed once.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

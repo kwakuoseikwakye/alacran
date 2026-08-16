@@ -3039,6 +3039,63 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v74 (2026-08-16): let an already-connected Google account add the rest of the apps
+
+User-reported, and a direct consequence of v72: someone who connected Google
+*before* the service picker existed has gmail and calendar authorized and no
+way to reach Drive, Docs or Sheets. v72 built the picker into the paths that
+run **when Google is not connected yet** — the `client` and `account` stages
+and `gog auth add` for a *new* email. The connected card showed the marks it
+had and offered exactly one action: "Connect another email." Wrong door.
+Nothing on screen could widen an existing token, and redoing the whole
+console setup is not something this audience will do twice.
+
+**The connected card now has the same door the unconnected one does.**
+`ConnectGoogleApps` replaces `AddGoogleAccount` and serves both jobs, because
+`gog auth add <email> --services …` is *literally the same command* for both:
+on a stored account it re-authorizes with a wider list, on a new address it is
+the first authorization. Stored accounts appear as chips you click to fill the
+address; the picker preselects what that address really carries, and the
+agent button sits above the command as the one-click route.
+
+**The shorter agent job is derived from the machine, not passed in from the
+client.** `setupGoogleImpl` calls `listGoogleAccounts` (already memoized per
+v70, so usually free) and asks: does this exact address have a stored token,
+and what scopes does it carry. Non-empty → `buildGoogleExpandPrompt`, which
+drops the project/consent-screen/client/publish steps entirely (they are
+one-time and already done), lists an Enable page **only** for the services
+being added, and finishes on `gog auth add`. First-time setup is unchanged,
+byte for byte, and every existing test passes untouched.
+
+**The one real hazard, guarded in three places.** gog stores what
+`--services` asks for, so re-authorizing with a narrower list is how you would
+silently drop Gmail from an account that had it. So: the command is built from
+the **union** of granted and newly-ticked, the prompt spells out that the list
+is deliberately everything the account should end up with (an agent "helpfully"
+trimming it to the new services is the failure mode), and already-granted
+checkboxes render checked **and disabled** — nothing here can revoke a scope,
+so offering to untick one is offering a mistake.
+
+**A flaw in the first version of this change, caught by reading the real
+rendered card rather than the diff:** `grantedServices` is a union *across*
+accounts, which is right for the "available to your companies" marks and wrong
+for a picker that authorizes one address — a second account would show the
+first account's apps as already-on and unselectable, blocking the exact thing
+this slice exists to unblock. `ToolStatus.accountServices` now carries the
+per-account map alongside the union, and switching accounts resets the
+selection to that account's real grants. Verified against this machine's two
+stored accounts.
+
+**Also: the Google card is titled "Google", not "Google (Gmail & Calendar)".**
+Those are only the *defaults*. The card shows a mark per service the token
+really carries, so on a machine with seven of them the title contradicted the
+card directly underneath it.
+
+One wart removed in passing: the `client` stage rendered an address field
+inside `GoogleAutoSetup` *and* another at the bottom for the manual command,
+so the same address had to be typed twice. `GoogleAutoSetup` is now controlled
+by whichever card owns it.
+
 ## v73 (2026-08-14): the Skills page as a file explorer, and a dead palette repaired
 
 Reported as "messy". Two causes, and the second one was not a layout problem
