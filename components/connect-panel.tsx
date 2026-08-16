@@ -98,6 +98,20 @@ function ServicePicker({
  * Docs or Sheets short of redoing a setup they'd already done — the card
  * showed the two marks and offered nothing but "connect another email."
  */
+/** Case-insensitive lookup. The server matches the stored address with
+ *  `.toLowerCase()` (setup-google-impl), so a case-different rendering of the
+ *  same address must not read as a different, unknown account here — that
+ *  mismatch would show first-time copy while the server ran the expand job,
+ *  and would build the manual command narrower than the account's real scopes. */
+function grantsFor(
+  accountServices: Record<string, string[]> | undefined,
+  address: string
+): string[] | undefined {
+  if (!accountServices) return undefined
+  const key = Object.keys(accountServices).find((k) => k.toLowerCase() === address.toLowerCase())
+  return key === undefined ? undefined : accountServices[key]
+}
+
 function ConnectGoogleApps({
   accounts,
   accountServices,
@@ -110,20 +124,32 @@ function ConnectGoogleApps({
   claudeReady: boolean
 }) {
   const [email, setEmail] = useState(accounts[0] ?? "")
+  // `?? DEFAULT` and not `|| DEFAULT`: a stored account whose scopes map to no
+  // catalog service is a real, empty [], and starting the picker at the
+  // defaults there would silently re-tick Gmail and Calendar for someone who
+  // has neither.
   const [services, setServices] = useState<string[]>(
-    accountServices?.[accounts[0] ?? ""] ?? DEFAULT_GOOGLE_SERVICE_IDS
+    grantsFor(accountServices, accounts[0] ?? "") ?? DEFAULT_GOOGLE_SERVICE_IDS
   )
   const address = email.trim()
   // Only an address that's actually stored gets the "already granted" marks
   // and the shorter agent job — typing a brand-new address here is a
   // first-time connection for that account, even though the machine's OAuth
   // client is set up.
-  const accountGranted = accountServices?.[address]
-  const known = accountGranted !== undefined
-  // Never narrower than what's already there: gog stores what --services
-  // asks for, so dropping one from the list drops the scope.
+  const stored = accounts.some((a) => a.toLowerCase() === address.toLowerCase())
+  const accountGranted = grantsFor(accountServices, address)
+  // Stored, but we could not read its scopes — the `gog auth status` fallback
+  // in connect-status-impl reports connected without them. Anything we build
+  // here would either narrow the token or run the first-time console setup on
+  // a machine that already has an OAuth client, so build nothing.
+  const grantsUnknown = stored && accountGranted === undefined
+  // Never narrower than what's already there: gog stores what --services asks
+  // for, so dropping one from the list drops the scope.
   const requested = serviceListArg([...(accountGranted ?? []), ...services])
-  const nothingNew = known && requested === serviceListArg(accountGranted ?? [])
+  // Compared as id sets, NOT as serviceListArg strings: that helper substitutes
+  // the defaults for an empty list, so two different empty inputs both render
+  // "gmail,calendar" and an account with nothing on would read as fully set up.
+  const nothingNew = services.every((s) => (accountGranted ?? []).includes(s))
 
   return (
     <div className="space-y-2 border-t border-border pt-3">
@@ -138,10 +164,12 @@ function ConnectGoogleApps({
                 setEmail(a)
                 // Otherwise a selection made for the previous account carries
                 // over and reads as "already on" for one that never had it.
-                setServices(accountServices?.[a] ?? DEFAULT_GOOGLE_SERVICE_IDS)
+                setServices(grantsFor(accountServices, a) ?? DEFAULT_GOOGLE_SERVICE_IDS)
               }}
               className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
-                a === address ? "border-primary/40 bg-primary/10" : "border-border text-muted-foreground"
+                a.toLowerCase() === address.toLowerCase()
+                  ? "border-primary/40 bg-primary/10"
+                  : "border-border text-muted-foreground"
               }`}
             >
               {a}
@@ -156,18 +184,27 @@ function ConnectGoogleApps({
         onChange={(e) => setEmail(e.target.value)}
         className="h-8 text-xs"
       />
-      <p className="text-[11px] text-muted-foreground">
-        {known
-          ? "Ticked apps are already on. Add any others you want — the ones you have stay."
-          : "A new address. Pick what it should be able to reach."}
-      </p>
-      <ServicePicker selected={services} onChange={setServices} granted={accountGranted} />
-      {address && nothingNew && (
+      {grantsUnknown ? (
+        <p className="text-[11px] text-muted-foreground">
+          This address is connected, but we couldn&apos;t read which apps it has. Press Re-check above. If it
+          keeps saying this, run <code>gog auth list</code> in a terminal and approve any Keychain prompt.
+        </p>
+      ) : (
+        <>
+          <p className="text-[11px] text-muted-foreground">
+            {accountGranted
+              ? "Ticked apps are already on. Add any others you want — the ones you have stay."
+              : "A new address. Pick what it should be able to reach."}
+          </p>
+          <ServicePicker selected={services} onChange={setServices} granted={accountGranted} />
+        </>
+      )}
+      {address && !grantsUnknown && nothingNew && (
         <p className="text-[11px] text-muted-foreground">
           Everything selected is already on for this address.
         </p>
       )}
-      {address && !nothingNew && (
+      {address && !grantsUnknown && !nothingNew && (
         <>
           <GoogleAutoSetup
             email={address}
@@ -686,11 +723,14 @@ function ToolCard({
                 create in their console. Rendered before the generic block,
                 which for these two stages carries no command of its own. */}
             {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
-              <>
-                <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} granted={tool.grantedServices} />
-                <KeychainNote />
-              </>
+              <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} granted={tool.grantedServices} />
             )}
+            {/* Every not-connected stage, INCLUDING `install`. It used to skip
+                that one, which is exactly backwards: the popup storm starts the
+                moment gog lands on the machine, so the person who most needs
+                `gog auth keyring file` is the one who just installed it and has
+                never reached a connected card. */}
+            {tool.id === "google" && <KeychainNote />}
 
             {tool.guidance.steps.length > 0 && (
               <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">

@@ -65,6 +65,18 @@ describe("installRepairImpl", () => {
     expect(allowed).not.toContain("Bash(*)")
   })
 
+  it("bounds the run, so a looping repair can't grind for an hour", async () => {
+    // A real report: a gogcli repair ran for ~1 hour. --max-budget-usd is the
+    // only bound the real CLI offers (no --max-turns exists) and it requires
+    // --print, which this spawn uses.
+    const { exec, calls } = fakeExec({ installs: "gh" })
+    await installRepairImpl("gh", "boom", exec, "/Users/test")
+
+    const args = calls[0][1]
+    expect(args).toContain("-p")
+    expect(Number(args[args.indexOf("--max-budget-usd") + 1])).toBeGreaterThan(0)
+  })
+
   it("believes the machine, not the agent's transcript", async () => {
     // The agent confidently reports success while installing nothing — the
     // exact failure mode a self-report can't catch.

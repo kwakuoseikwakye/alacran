@@ -7,7 +7,7 @@ import { buildInteractiveTerminalScript } from "./company-commands/build-visible
 import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
 import { GOOGLE_CONSOLE_STEPS } from "./google-console-steps"
 import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg, servicesFromScopes } from "./google-services"
-import { listGoogleAccounts } from "./google-accounts"
+import { listGoogleAccounts, type GoogleAccount } from "./google-accounts"
 import { isPlausibleEmail } from "./sign-in-claude-impl"
 import { DATA_DIR } from "./data-dir"
 
@@ -210,7 +210,15 @@ export async function setupGoogleImpl(
   execFn: ExecFileFn = defaultExecFile,
   platform: NodeJS.Platform = process.platform,
   dataDir: string = DATA_DIR,
-  home: string = homedir()
+  home: string = homedir(),
+  /** Its own seam, NOT `listGoogleAccounts(execFn)`. That call read gog's
+   *  keyring through this module's raw execFile, bypassing the v70 memo that
+   *  lives on listGoogleAccounts' own default — so every click added a
+   *  Keychain prompt, which is precisely what v70 exists to stop. Passing the
+   *  shared `execFn` down is not an option either: `defaultExecFile` here is
+   *  also what openChromeAccountCheckImpl uses, and memoizing THAT would turn
+   *  a second "Open Chrome and check" click into a silent no-op. */
+  listAccountsFn: () => Promise<GoogleAccount[]> = () => listGoogleAccounts()
 ): Promise<SetupGoogleResult> {
   const address = email.trim()
   // Reuses the sign-in validator rather than a second opinion on what an
@@ -237,10 +245,10 @@ export async function setupGoogleImpl(
 
   // Which job this is — first-time setup or "add more apps to an account that
   // already works" — is read off the machine, not passed in from the client.
-  // Same call the card already made (and the same 5-minute memo, so this is
-  // usually free), and it answers both halves at once: does this address
+  // Same call the card already made, through the same 5-minute memo, so this
+  // is usually free; and it answers both halves at once: does this address
   // already have a token, and what scopes does it carry.
-  const stored = (await listGoogleAccounts(execFn)).find(
+  const stored = (await listAccountsFn()).find(
     (a) => a.email.toLowerCase() === address.toLowerCase()
   )
   const granted = stored ? servicesFromScopes(stored.scopes) : []

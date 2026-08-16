@@ -1174,6 +1174,31 @@ control; `accountServices` carries the per-account map for that. Card title is
 now plain "Google" — naming two services in a title over a card showing seven
 marks was the same "the card lies" failure v64 and v72 each fixed once.
 
+**v75 (2026-08-16) fixed four review findings in v74's own Google flow**, all
+shipped in the published v0.17.0 and all one shape: v74's safety argument
+(always send the union, never a narrower `--services`) holds only where the app
+knows what an account carries, and four paths reached the picker without
+knowing. **Rules worth keeping:** (1) *absent* `accountServices` means
+**unknown**, never none — the `gog auth status` fallback genuinely cannot read
+scopes, and any consumer that treats missing as empty will offer a
+scope-revoking command; (2) never pass a module's raw `execFn` into
+`listGoogleAccounts` — the v70 memo lives on its own default, and this module's
+exec is shared with `openChromeAccountCheckImpl`, which must NOT be memoized
+(a second click would no-op), so the account read needs its own seam; (3)
+`serviceListArg` substitutes the defaults for an empty list, so it must never
+be used to compare two service sets — compare ids; (4) the server matches
+addresses case-insensitively, so every client lookup must too. **The
+test-hygiene lesson was the sharper one:** giving that read a real default made
+an existing test read the developer's own gog store — green on CI, red here,
+plus a Keychain prompt. Every `setupGoogleImpl` test now injects an explicit
+account reader. Also: the install-repair agent is bounded with
+`--max-budget-usd` (real on the installed CLI; `--max-turns` is not), and
+`KeychainNote` renders at every not-connected Google stage including `install`.
+**Left open:** a spend cap is not a wall-clock cap, and the existing 15-minute
+`execFile` timeout should already have made the reported one-hour run
+impossible — most likely `promisify(execFile)` never settling while a
+grandchild holds the stdio pipes. Own slice.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

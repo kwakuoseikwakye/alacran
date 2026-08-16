@@ -3039,6 +3039,75 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v75 (2026-08-16): four review findings in v0.17.0's own Google flow
+
+A review pass over v74 found four real defects, all shipped in the published
+v0.17.0. They share one shape — the safety argument v74 was built on
+("re-authorizing with a narrower `--services` list revokes scopes, so always
+send the union") holds only when the app actually knows what an account
+carries, and four separate paths could reach the picker without knowing.
+
+**The `gog auth status` fallback claimed connected without saying what was
+granted.** That branch runs when `gog auth list -j` fails but `auth status`
+still names an account — so scopes are genuinely unknowable there. It returned
+`accounts: [email]` and no `accountServices`, and `ConnectGoogleApps` read the
+missing entry as "new address": it offered `gog auth add` with only the
+defaults, which is precisely the narrowing this feature exists to prevent, and
+pointed the agent at the full first-time console walkthrough on a machine that
+already has an OAuth client. Fixed by making the absence *mean* unknown rather
+than none — the field is deliberately left out, not set to `{}` or `{[email]:
+[]}`, and the card now refuses to build any command for a stored address whose
+grants it can't read, saying so and pointing at Re-check.
+
+**The account read bypassed the v70 memo — in the fix whose own subject was
+Keychain popups.** `listGoogleAccounts(execFn)` passed this module's raw
+execFile, while the memo lives on `listGoogleAccounts`' own default parameter,
+so every "Set up Google for me" click added an unmemoized keyring read: a macOS
+Keychain prompt, the exact thing v70 exists to suppress, and the exact
+complaint that prompted the session. It could not be fixed by memoizing the
+shared `defaultExecFile` either — `openChromeAccountCheckImpl` uses the same
+one, and memoizing *that* turns a second "Open Chrome and check" click into a
+silent no-op. So the account read got its own DI seam defaulting to the
+memoized reader. **A test now pins it**: execFn must never see a `gog` call.
+
+**`serviceListArg` substitutes the defaults for an empty list**, so an account
+whose scopes map to no catalog service compared equal to `"gmail,calendar"` on
+both sides of the "nothing new" check — the card told someone with nothing
+connected that everything was already on, and hid both the command and the
+button. `nothingNew` is now a set comparison on ids, never on the formatted
+string. The picker's initial state had the same shape of bug: `?? DEFAULT`
+doesn't fire for `[]`, so it started empty.
+
+**The client matched addresses case-sensitively while the server used
+`.toLowerCase()`.** A case-different rendering of a stored address lost its
+grants client-side — first-time copy on screen, expand job on the server, and a
+manual command narrower than the account's real scopes. One `grantsFor` helper
+now does the lookup case-insensitively, and the account chips highlight the
+same way.
+
+**Two test-hygiene faults surfaced while fixing this, both worse than the bugs.**
+Giving the account read a real default made an existing test read the *developer's
+own* gog store: it passed on CI and failed on this machine, and raised a Keychain
+prompt to do it. Every `setupGoogleImpl` test now injects an explicit reader, with
+a named `noAccounts` helper and a comment saying why the production default must
+never be exercised in a test.
+
+Also here, from the same session: the install-repair agent is bounded with
+`--max-budget-usd` (verified real on the installed CLI; `--max-turns` does not
+exist), after a report of a gogcli repair grinding for about an hour. Safe to
+cut mid-run because success is re-probed from the OS and never read out of the
+transcript. And `KeychainNote` — the `gog auth keyring file` escape hatch — now
+renders at *every* not-connected Google stage including `install`, instead of
+only on cards a user reaches after connecting. The popup storm starts the moment
+gog lands on the machine, so it was hidden from the only person who needs it.
+
+**Still open, not fixed here:** a spend cap is not a wall-clock cap, and
+`defaultExecFile` already sets a 15-minute `timeout`, so a one-hour run should
+not have been possible at all. The likely cause is `promisify(execFile)` never
+settling because a grandchild holds the stdio pipes open past SIGTERM — which
+no cost ceiling touches, since a stalled run burns no tokens. Needs its own
+slice.
+
 ## v74 (2026-08-16): let an already-connected Google account add the rest of the apps
 
 User-reported, and a direct consequence of v72: someone who connected Google

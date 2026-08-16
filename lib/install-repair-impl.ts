@@ -62,6 +62,11 @@ const TOOLS: Record<InstallableId, { label: string; binary: string }> = {
  */
 const MAX_FAILURE_LOG = 4000
 
+/** Installing one CLI is a handful of tool calls. Anything past this is a
+ *  loop, not progress. Raise it only with evidence of a real install that
+ *  legitimately needed more. */
+const REPAIR_BUDGET_USD = 0.5
+
 export function buildRepairPrompt(id: InstallableId, failureLog: string): string {
   const tool = TOOLS[id]
   const trimmed = failureLog.trim().slice(0, MAX_FAILURE_LOG)
@@ -119,13 +124,27 @@ export async function installRepairImpl(
     return { ok: false, log: "", transcript: "Refused: the executor no longer enforces a tool scope." }
   }
 
-  const args = claude.buildArgs({
-    prompt: buildRepairPrompt(id, failureLog),
-    // No file edits are part of installing a CLI. Edit() takes a pattern, so
-    // this points at a path nothing writes to rather than inventing a scope.
-    editScopePattern: `${home}/.alacran-never-written/**`,
-    bashPatterns: REPAIR_BASH_PATTERNS,
-  })
+  const args = [
+    ...claude.buildArgs({
+      prompt: buildRepairPrompt(id, failureLog),
+      // No file edits are part of installing a CLI. Edit() takes a pattern, so
+      // this points at a path nothing writes to rather than inventing a scope.
+      editScopePattern: `${home}/.alacran-never-written/**`,
+      bashPatterns: REPAIR_BASH_PATTERNS,
+    }),
+    // A hard ceiling, added after a real report: a gogcli repair ground on for
+    // an HOUR. There is no --max-turns on the real CLI (checked against
+    // `claude --help`, not docs), but --max-budget-usd is real and works with
+    // --print, which this spawn already uses. An install that has burned this
+    // much has not "nearly got there" — it is looping, and for this audience a
+    // fast honest failure plus the manual steps beats an hour of nothing.
+    //
+    // Safe to cut a run off mid-flight precisely because success is re-probed
+    // from the OS below and never read out of the transcript: a truncated run
+    // that DID install still reports installed.
+    "--max-budget-usd",
+    String(REPAIR_BUDGET_USD),
+  ]
 
   let transcript = ""
   try {

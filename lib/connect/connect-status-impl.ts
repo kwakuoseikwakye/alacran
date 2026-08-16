@@ -267,6 +267,15 @@ async function googleStatus(execFn: ExecFileFn, platform: NodeJS.Platform): Prom
     // JSON was malformed) yet `auth status` still names an account — so there
     // is no second account to enumerate here, and re-running `auth list` for
     // one would just be a second Keychain prompt for an answer we already have.
+    //
+    // `accountServices` is deliberately ABSENT rather than `{}` or `{[email]:
+    // []}`, and that distinction is load-bearing: scopes live in `auth list`,
+    // which is exactly the call that just failed, so the honest answer is
+    // "unknown", not "none". Claiming none would make the card offer
+    // `gog auth add` with only the defaults — narrowing a token that may
+    // carry Drive and Docs, which is the one destructive thing this feature
+    // can do. Consumers must treat a stored address with no entry here as
+    // unknown and refuse to build a command. See ConnectGoogleApps.
     return {
       id: "google",
       label,
