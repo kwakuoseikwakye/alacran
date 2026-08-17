@@ -1290,6 +1290,18 @@ Bash 3.2 traps met here: `"${@:-$LIST}"` collapses to one word (use
 `[ $# -eq 0 ] && set -- $LIST`), and prefer one `EXIT` trap over per-function
 `RETURN` traps.
 
+**v80 (2026-08-18) added 10 stack-agnostic engineering skills** to the Software
+engineering pack (Jeffallan/claude-skills, MIT, pinned v0.4.16). **Cost of a
+third pack: one case block in the sync script and one entry in
+`VENDORED_SKILL_PACKS` — zero new tests, because v79's `describe.each` covers
+whatever is listed.** Two judgments to keep: (1) upstream's ~57 language,
+framework and vendor specialists (`rust-engineer`, `shopify-expert`) are
+deliberately NOT in the default set — each serves one company, so the vendored
+set stays stack-agnostic and maps onto the pack's own commands; a company adds an
+id to the script for its stack. (2) A marker command must be checked against the
+BASE template as well as the other packs — a name `templates/company-starter`
+ships would match every company on the machine, not one pack's.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

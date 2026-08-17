@@ -2,8 +2,8 @@
 // templates/company-starter/ — never a second full company tree. Concretely,
 // each pack ships only: a filled-in example definitions/ontology/company.yaml
 // shaped for that kind of business, one or two .claude/commands/*.md files for
-// the tasks that shape of company actually repeats, and (marketing and
-// hr-people so far) .claude/skills/ vendored from a pinned upstream tag by
+// the tasks that shape of company actually repeats, and (for the packs listed
+// in lib/vendored-skills.ts) .claude/skills/ vendored from a pinned upstream tag by
 // scripts/sync-vendored-skills.sh.
 //
 // Deliberately not a full duplicate per shape: everything else (hooks,
@@ -37,7 +37,7 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
     id: "software-engineering",
     label: "Software engineering",
     description:
-      "Ships an ontology for repos, features, and releases, plus /plan-feature, /write-tests, /debug-issue, /code-review, and /prep-release commands — one for each stage from planning a feature to shipping it.",
+      "Ships an ontology for repos, features, and releases, /plan-feature, /write-tests, /debug-issue, /code-review, and /prep-release commands, plus 10 stack-agnostic engineering skills — specs, architecture, API design, implementation, tests, debugging, code review, security review, docs and shipping.",
     dirName: "software-engineering",
     category: "Engineering",
   },

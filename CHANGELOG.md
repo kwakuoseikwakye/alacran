@@ -3039,6 +3039,41 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v80 (2026-08-18): engineering skills, and the pack mechanism at three
+
+The Software engineering pack now ships 10 vendored skills from
+[Jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills) (MIT) at
+tag `v0.4.16`, one per stage of that pack's own commands: `spec-miner`,
+`architecture-designer`, `api-designer`, `feature-forge`, `test-master`,
+`debugging-wizard`, `code-reviewer`, `security-reviewer`, `code-documenter`,
+`devops-engineer`.
+
+**The curation is the whole decision here.** Upstream's other ~57 skills are
+language, framework and vendor specialists — `rust-engineer`,
+`laravel-specialist`, `shopify-expert`, `wordpress-pro`. Each is useful to
+exactly one company, so shipping them by default would put 50 irrelevant skills
+in every engineering company; the vendored set is deliberately stack-agnostic
+and maps onto `/plan-feature`, `/write-tests`, `/debug-issue`, `/code-review`
+and `/prep-release`. A company that wants its own stack adds an id to the
+script's list.
+
+**What adding a third pack actually cost:** one case block in
+`scripts/sync-vendored-skills.sh` and one entry in `VENDORED_SKILL_PACKS`. No
+new code paths, no new tests written — v79's `describe.each` over the pack list
+picked the new pack up on its own (24 → 28 assertions), including the
+marker-uniqueness pin. `plan-feature.md` was checked against both the other
+packs and the base template before being used as the marker: a name the base
+skeleton ships would match every company on the machine.
+
+**Marketing and HR tags did not move** (`v2.10.0`, `v1.4.0`), so no existing
+company of either pack is told it is stale — the same discipline v79 established.
+
+Verified end to end against a real scaffold into a disposable directory: 10
+skills and 15 commands visible to the app's own scanner, and
+`getVendoredSkillsUpdate` returns null for the fresh company, which is the check
+that a newly created company is never offered an update it already has. 731
+tests, `tsc`, `next build` and `eslint` clean.
+
 ## v79 (2026-08-17): HR skills, and one sync script for every pack
 
 The HR & People pack now ships 12 vendored skills from

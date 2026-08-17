@@ -21,6 +21,7 @@ import { pathExists } from "./path-exists"
 export const VENDORED_SKILL_PACKS = [
   { packDirName: "marketing", markerCommand: "draft-campaign.md" },
   { packDirName: "hr-people", markerCommand: "screen-candidate.md" },
+  { packDirName: "software-engineering", markerCommand: "plan-feature.md" },
 ] as const
 
 export const VENDORED_SKILLS_RELATIVE_DIR = path.join(".claude", "skills")

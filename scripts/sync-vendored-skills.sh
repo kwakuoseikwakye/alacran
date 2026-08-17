@@ -3,7 +3,7 @@
 # pinned to one upstream tag per pack.
 #
 #   bash scripts/sync-vendored-skills.sh              # every pack below
-#   bash scripts/sync-vendored-skills.sh hr-people    # just one
+#   bash scripts/sync-vendored-skills.sh hr-people    # just one, by pack dir name
 #
 # This is the whole update mechanism: bump that pack's TAG, rerun, review the
 # diff like any other commit. No submodule, and nothing fetches at runtime or at
@@ -12,16 +12,17 @@
 # Rerunning wipes and rewrites the vendored tree, so a skill renamed or dropped
 # upstream disappears here too. Never hand-edit the result; edit this script.
 #
-# Adding a THIRD pack is one case block here plus one entry in
-# lib/vendored-skills.ts. Nothing else in the app changes: the "Update skills"
-# button, its staleness check and its safety rules are already pack-agnostic.
+# Adding a pack is one case block here plus one entry in lib/vendored-skills.ts —
+# that is all three packs below cost. Nothing else in the app changes: the
+# "Update skills" button, its staleness check and its safety rules are
+# pack-agnostic, and the tests iterate the list rather than naming packs.
 #
 # Curated, never the whole upstream repo: a starter pack is a small overlay on
-# the base company skeleton (lib/company-starter-packs.ts). Marketing ships 10
-# of upstream's 49; HR ships 12 of 147.
+# the base company skeleton (lib/company-starter-packs.ts). Marketing ships 10 of
+# upstream's 49, HR 12 of 147, software-engineering 10 of 67.
 set -euo pipefail
 
-PACKS="marketing hr-people"
+PACKS="marketing hr-people software-engineering"
 
 pack_config() {
   case "$1" in
@@ -40,6 +41,17 @@ pack_config() {
       # Upstream also ships its own repo tooling under .agents/skills (biome,
       # bun, turbo); only skills/ is vendored, so that never comes along.
       SKILLS="hr-recruiting hr-job-description hr-interviewing hr-offer-management hr-onboarding hr-offboarding hr-performance-management hr-compensation-benefits hr-employee-relations hr-policy-management hr-compliance hr-employee-engagement"
+      ;;
+    software-engineering)
+      REPO="Jeffallan/claude-skills"
+      TAG="v0.4.16"
+      # Deliberately STACK-AGNOSTIC, one per stage of this pack's own commands
+      # (/plan-feature /write-tests /debug-issue /code-review /prep-release).
+      # Upstream's other ~50 skills are language, framework and vendor
+      # specialists (rust-engineer, laravel-specialist, shopify-expert): useful
+      # to exactly one company each, so they are not in the default set. Add an
+      # id here if a company wants its own stack covered.
+      SKILLS="spec-miner architecture-designer api-designer feature-forge test-master debugging-wizard code-reviewer security-reviewer code-documenter devops-engineer"
       ;;
     *)
       echo "unknown pack: $1 (known: $PACKS)" >&2
