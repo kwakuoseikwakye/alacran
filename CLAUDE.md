@@ -1199,6 +1199,26 @@ account reader. Also: the install-repair agent is bounded with
 impossible — most likely `promisify(execFile)` never settling while a
 grandchild holds the stdio pipes. Own slice.
 
+**v76 (2026-08-17) put real marketing expertise in the marketing starter pack** —
+ten skills vendored from `coreyhaines31/marketingskills` (MIT) at a pinned tag,
+into `templates/packs/marketing/.claude/skills/`. **No application code
+changed:** a pack overlay is copied with a recursive `cp` rather than through
+`TEMPLATE_MANIFEST`, and `genericCommandSetSkillAdapter` has scanned
+`<company>/.claude/skills/*/SKILL.md` since v11, so third-party skills reach a
+new company as files alone. `scripts/sync-marketing-skills.sh` is the entire
+update mechanism — bump `TAG`, rerun, review the diff; it wipes and rewrites,
+so an upstream rename or deletion propagates, and it exits non-zero when a
+curated id has no `SKILL.md` at the pin. **Rules this sets for any future
+vendoring:** ship the upstream license and tag beside the files
+(`UPSTREAM.md`) — v37/v67 exist because provenance wasn't papered; strip the
+upstream repo's own test fixtures (`evals/`); and keep the pack an overlay,
+which is why it's ten skills and not all 49. **Not wired to
+`definitions/ontology/company.yaml`** despite the overlap: the
+`product-marketing` skill's own job is to write the context file the others
+read, so a translation layer would sit between two things that already work.
+The template runs at scaffold time only — companies created before this get
+nothing, and re-syncing an existing one isn't built.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

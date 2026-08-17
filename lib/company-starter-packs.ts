@@ -1,8 +1,10 @@
 // A starter pack is a small overlay on the one base skeleton in
 // templates/company-starter/ — never a second full company tree. Concretely,
 // each pack ships only: a filled-in example definitions/ontology/company.yaml
-// shaped for that kind of business, and one or two .claude/commands/*.md
-// files for the tasks that shape of company actually repeats.
+// shaped for that kind of business, one or two .claude/commands/*.md files for
+// the tasks that shape of company actually repeats, and — marketing only so
+// far — .claude/skills/ vendored from a pinned upstream tag by
+// scripts/sync-marketing-skills.sh.
 //
 // Deliberately not a full duplicate per shape: everything else (hooks,
 // rules, verify.py, docs) is identical for every company
@@ -51,7 +53,7 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
     id: "marketing",
     label: "Marketing",
     description:
-      "Ships an ontology for campaigns and offerings, plus /draft-campaign, /campaign-recap, and /campaign-status commands — brief, results, and the calendar view.",
+      "Ships an ontology for campaigns and offerings, /draft-campaign, /campaign-recap, and /campaign-status commands, plus 10 marketing skills (positioning, plan, copy, SEO, analytics, email, social, launch, CRO). Start with the product-marketing skill — the rest read the context it writes.",
     dirName: "marketing",
     category: "Marketing",
   },

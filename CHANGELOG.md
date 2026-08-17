@@ -3039,6 +3039,53 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v76 (2026-08-17): real marketing skills in the marketing starter pack
+
+The marketing pack shipped three commands and an ontology; a new marketing
+company had no actual marketing expertise in it. It now also ships ten skills
+vendored from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills)
+(MIT) at tag `v2.10.0`: `product-marketing`, `marketing-plan`, `copywriting`,
+`content-strategy`, `seo-audit`, `analytics`, `emails`, `social`, `launch`,
+`cro`.
+
+**No application code changed.** A pack overlay is copied with a recursive
+`cp` (not through `TEMPLATE_MANIFEST`'s allowlist), and
+`genericCommandSetSkillAdapter` has scanned `<company>/.claude/skills/*/SKILL.md`
+since v11 — so the whole feature is files in `templates/packs/marketing/`. The
+edits outside that tree are a test, the pack's own description (which would
+otherwise undercount what a user gets), and the "what a pack ships" comment at
+the top of `lib/company-starter-packs.ts`.
+
+**Updating is one pinned script, not a submodule:**
+`scripts/sync-marketing-skills.sh` holds `TAG` and the curated id list, fetches
+that tag's tarball, and wipes-and-rewrites the vendored tree — so a skill
+renamed or dropped upstream disappears here too, and the diff is reviewed like
+any other commit. Nothing fetches at runtime or at install time; a scaffolded
+company gets exactly what was committed. The script fails loudly if a curated
+id has no `SKILL.md` at the pinned tag, which is what an upstream rename looks
+like (upstream renamed 17 skills in its own v1→v2).
+
+**Curated at ten of upstream's 49**, because a pack is an overlay on the base
+skeleton, not a second tree — the pack went 16K → 580K as it is. Upstream's
+`evals/` fixtures are stripped: they test upstream's skills, and shipping them
+into a user's repo is dead weight. `product-marketing` is load-bearing rather
+than merely first — it writes `.agents/product-marketing.md`, the context file
+every other skill reads, which is why the pack description now says to start
+with it. **Deliberately not wired to `definitions/ontology/company.yaml`**,
+which holds overlapping information: the skill's own job is to create that
+file, by interviewing the user or drafting from the repo, so a translation
+layer would be code standing between two things that already work.
+
+**Known limitation, disclosed not fixed:** the template runs at scaffold time
+only, so companies created before this slice get nothing. Re-syncing an
+existing company is a separate feature and isn't built.
+
+Verified against a real scaffold into a disposable `/tmp` directory (the
+sanctioned target), not just the vendored tree on disk: the app's own skill
+scanner reported all ten skills plus the pack's 13 commands, confirming
+`UPSTREAM.md` (provenance + upstream's MIT license, alongside the skills) is
+correctly not mistaken for a skill. Full suite 702 tests, `tsc` clean.
+
 ## v75 (2026-08-16): four review findings in v0.17.0's own Google flow
 
 A review pass over v74 found four real defects, all shipped in the published
