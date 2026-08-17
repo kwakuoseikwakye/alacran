@@ -1,8 +1,8 @@
-# Vendored marketing skills
+# Vendored skills
 
 Source: https://github.com/coreyhaines31/marketingskills
 Tag: v2.10.0
-Vendored by: scripts/sync-marketing-skills.sh (do not hand-edit these files)
+Vendored by: scripts/sync-vendored-skills.sh (do not hand-edit these files)
 
 Upstream MIT license follows.
 

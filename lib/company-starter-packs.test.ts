@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest"
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import path from "node:path"
 import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "./company-starter-packs"
+import { VENDORED_SKILL_PACKS } from "./vendored-skills"
 
 describe("COMPANY_STARTER_PACKS", () => {
   it("has a unique id for every pack", () => {
@@ -35,11 +36,13 @@ describe("COMPANY_STARTER_PACKS", () => {
   })
 })
 
-// The marketing pack's skills are vendored by scripts/sync-marketing-skills.sh,
-// never by hand. This fails if a sync half-ran, if upstream renamed a skill out
-// from under the pin, or if someone edited the tree directly.
-describe("vendored marketing skills", () => {
-  const skillsDir = path.join(process.cwd(), "templates", "packs", "marketing", ".claude", "skills")
+// Vendored skills are written by scripts/sync-vendored-skills.sh, never by
+// hand. These run over EVERY pack in VENDORED_SKILL_PACKS, so adding a pack is
+// covered the moment it is listed — this fails if a sync half-ran, if upstream
+// renamed a skill out from under the pin, or if someone edited the tree.
+describe.each(VENDORED_SKILL_PACKS.map((p) => p.packDirName))("vendored skills: %s", (packDirName) => {
+  const packDir = path.join(process.cwd(), "templates", "packs", packDirName)
+  const skillsDir = path.join(packDir, ".claude", "skills")
 
   it("gives every vendored skill a SKILL.md and ships none of upstream's evals", () => {
     const dirs = readdirSync(skillsDir, { withFileTypes: true }).filter((e) => e.isDirectory())
@@ -55,6 +58,25 @@ describe("vendored marketing skills", () => {
     const upstream = readFileSync(path.join(skillsDir, "UPSTREAM.md"), "utf-8")
     expect(upstream).toMatch(/^Tag: v\d+\.\d+\.\d+$/m)
     expect(upstream).toContain("MIT License")
+  })
+
+  it("really ships the marker command the update check identifies it by", () => {
+    const marker = VENDORED_SKILL_PACKS.find((p) => p.packDirName === packDirName)!.markerCommand
+    expect(existsSync(path.join(packDir, ".claude", "commands", marker))).toBe(true)
+  })
+})
+
+// A marker shared by two packs would hand one pack's skills to the other's
+// companies, so uniqueness is the load-bearing property, not a tidiness rule.
+describe("vendored pack markers", () => {
+  it("uses a command that no other starter pack ships", () => {
+    for (const { packDirName, markerCommand } of VENDORED_SKILL_PACKS) {
+      const others = COMPANY_STARTER_PACKS.filter((p) => p.dirName && p.dirName !== packDirName)
+      for (const other of others) {
+        const collision = path.join(process.cwd(), "templates", "packs", other.dirName!, ".claude", "commands", markerCommand)
+        expect(existsSync(collision), `${markerCommand} also ships in the ${other.dirName} pack`).toBe(false)
+      }
+    }
   })
 })
 

@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises"
 import path from "node:path"
 import { pathExists } from "./path-exists"
 
-// Skills vendored from a third party (scripts/sync-marketing-skills.sh) are the
+// Skills vendored from a third party (scripts/sync-vendored-skills.sh) are the
 // one part of a scaffolded company the app OWNS: they are stamped with their
 // upstream tag, marked do-not-hand-edit, and replaced wholesale on update. That
 // is what makes updating an existing company a copy instead of a merge — the
@@ -13,13 +13,19 @@ import { pathExists } from "./path-exists"
 // a command file only that pack ships. That deliberately also matches companies
 // scaffolded BEFORE the skills existed, which is the whole point: those users
 // have no UPSTREAM.md at all and would otherwise never receive anything.
+//
+// Adding a pack is this list plus a case block in the sync script — the button,
+// the staleness check and every safety rule below are already pack-agnostic.
+// Marker commands must stay unique across templates/packs/*/.claude/commands,
+// which a test pins.
 export const VENDORED_SKILL_PACKS = [
   { packDirName: "marketing", markerCommand: "draft-campaign.md" },
+  { packDirName: "hr-people", markerCommand: "screen-candidate.md" },
 ] as const
 
 export const VENDORED_SKILLS_RELATIVE_DIR = path.join(".claude", "skills")
 
-/** Provenance file scripts/sync-marketing-skills.sh writes beside the skills. */
+/** Provenance file scripts/sync-vendored-skills.sh writes beside the skills. */
 export const VENDORED_STAMP = "UPSTREAM.md"
 
 export type VendoredSkillsUpdate = {
@@ -29,7 +35,7 @@ export type VendoredSkillsUpdate = {
   bundledTag: string
 }
 
-/** The `Tag:` line scripts/sync-marketing-skills.sh writes into UPSTREAM.md. */
+/** The `Tag:` line scripts/sync-vendored-skills.sh writes into UPSTREAM.md. */
 export function parseVendoredTag(upstreamMd: string): string | null {
   return upstreamMd.match(/^Tag:[ \t]+(\S+)[ \t]*$/m)?.[1] ?? null
 }

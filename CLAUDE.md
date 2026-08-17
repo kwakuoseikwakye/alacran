@@ -1273,6 +1273,23 @@ keep, since 32 of 32 impls have their own test file.
 behind during v77's review and it inflated that slice's reported test count —
 check `git status` for agent leftovers before trusting a number.
 
+**v79 (2026-08-17) added 12 HR skills to the HR & People pack** (tuanductran/hr-skills,
+MIT, pinned v1.4.0) and turned `sync-marketing-skills.sh` into
+`scripts/sync-vendored-skills.sh` — a table of packs, run with no args for all
+or a pack name for one. **This is the proof v77's mechanism generalizes: adding
+a pack is one entry in `VENDORED_SKILL_PACKS` plus one case block, and nothing
+else in the app changes.** Two rules this run establishes: (1) **never let a
+sync-script rewrite move an existing pack's `Tag:` line** — regenerating
+marketing changed only its stamp's title and script name, because the tag is
+what the staleness check compares and touching it would offer every existing
+company an update that changes nothing; (2) **marker commands must be unique
+across packs**, or one pack's skills land in another's companies — a test pins
+it, alongside a test that each pack really ships its own marker. Pack tests now
+iterate `VENDORED_SKILL_PACKS`, so listing a pack is what earns it coverage.
+Bash 3.2 traps met here: `"${@:-$LIST}"` collapses to one word (use
+`[ $# -eq 0 ] && set -- $LIST`), and prefer one `EXIT` trap over per-function
+`RETURN` traps.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

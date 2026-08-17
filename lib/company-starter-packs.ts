@@ -2,9 +2,9 @@
 // templates/company-starter/ — never a second full company tree. Concretely,
 // each pack ships only: a filled-in example definitions/ontology/company.yaml
 // shaped for that kind of business, one or two .claude/commands/*.md files for
-// the tasks that shape of company actually repeats, and — marketing only so
-// far — .claude/skills/ vendored from a pinned upstream tag by
-// scripts/sync-marketing-skills.sh.
+// the tasks that shape of company actually repeats, and (marketing and
+// hr-people so far) .claude/skills/ vendored from a pinned upstream tag by
+// scripts/sync-vendored-skills.sh.
 //
 // Deliberately not a full duplicate per shape: everything else (hooks,
 // rules, verify.py, docs) is identical for every company
@@ -69,7 +69,7 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
     id: "hr-people",
     label: "HR & People",
     description:
-      "Ships an ontology for open roles and candidates, plus /screen-candidate, /draft-offer, /draft-rejection, and /hiring-pipeline-review commands — both outcomes covered, plus the pipeline view.",
+      "Ships an ontology for open roles and candidates, /screen-candidate, /draft-offer, /draft-rejection, and /hiring-pipeline-review commands, plus 12 HR skills covering the whole employee lifecycle — recruiting, job descriptions, interviewing, offers, onboarding, reviews, pay, employee relations, policy, compliance, engagement and offboarding.",
     dirName: "hr-people",
     category: "HR & People",
   },

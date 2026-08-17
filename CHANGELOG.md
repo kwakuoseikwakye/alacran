@@ -3039,6 +3039,53 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v79 (2026-08-17): HR skills, and one sync script for every pack
+
+The HR & People pack now ships 12 vendored skills from
+[tuanductran/hr-skills](https://github.com/tuanductran/hr-skills) (MIT) at tag
+`v1.4.0`, covering the employee lifecycle a small company actually repeats:
+`hr-recruiting`, `hr-job-description`, `hr-interviewing`, `hr-offer-management`,
+`hr-onboarding`, `hr-offboarding`, `hr-performance-management`,
+`hr-compensation-benefits`, `hr-employee-relations`, `hr-policy-management`,
+`hr-compliance`, `hr-employee-engagement`.
+
+**No new mechanism was needed, which was the point of v77.** Existing HR
+companies — including any created before today — get the "Add ready-made
+skills" button, the same stamp-based staleness check, the same refusal to
+overwrite a skill the user wrote, and the same stamp-last write. Wiring HR up
+was one entry in `VENDORED_SKILL_PACKS` and one case block in the sync script.
+
+**`scripts/sync-marketing-skills.sh` became `scripts/sync-vendored-skills.sh`**,
+a table of packs rather than a script per pack:
+`bash scripts/sync-vendored-skills.sh` syncs everything,
+`… sync-vendored-skills.sh hr-people` syncs one. A third pack is a case block
+plus a list entry — the button, the staleness check and every safety rule are
+already pack-agnostic. Two bash-3.2 traps fixed while writing it: `"${@:-$LIST}"`
+collapses the default into a single word (use `[ $# -eq 0 ] && set -- $LIST`),
+and a per-function `trap ... RETURN` was replaced by one `EXIT` trap over a
+shared temp root.
+
+**The rewrite deliberately did not move any marketing tag.** Regenerating that
+pack changed only two lines of its `UPSTREAM.md` — the title and the script
+name — leaving `Tag: v2.10.0` byte-identical, because the tag is what the update
+check compares: touching it would have told every existing marketing company it
+was stale and offered an update that changes nothing.
+
+**Curated 12 of upstream's 147.** Upstream also ships 16 skills for maintaining
+its own repo (biome, bun, turbo, typescript) under `.agents/skills/`; only
+`skills/` is vendored, so that tooling never comes along. Unlike the marketing
+set, these skills are self-contained — no shared context document to create
+first — and every name is `hr-`-prefixed, which makes a collision with a skill
+the user wrote far less likely than marketing's generic `social`/`emails`.
+
+**Tests now run over every pack in `VENDORED_SKILL_PACKS`** rather than
+marketing by name, so listing a pack is what earns it coverage. Two new
+invariants are pinned: each pack really ships the marker command the update
+check identifies it by, and **no two packs share a marker** — a shared one would
+hand one pack's skills to another pack's companies. Verified end to end against
+a real scaffold into a disposable directory: 12 skills and 14 commands visible
+to the app's own scanner. 728 tests, `tsc`, `next build` and `eslint` clean.
+
 ## v78 (2026-08-17): a repo-wide cut for over-engineering
 
 A whole-tree audit for complexity, applied. **Net -479 lines and one dependency**,

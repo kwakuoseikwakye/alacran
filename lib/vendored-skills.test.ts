@@ -81,6 +81,17 @@ describe("getVendoredSkillsUpdate", () => {
     expect(await getVendoredSkillsUpdate(company, packsRoot)).toBeNull()
   })
 
+  it("matches an HR company to the HR pack, not the marketing one", async () => {
+    // Same shape as the marketing case, driven by that pack's own marker: this
+    // is what stops one pack's skills landing in another pack's company.
+    await rm(path.join(company, ".claude", "commands", "draft-campaign.md"))
+    await writeFile(path.join(company, ".claude", "commands", "screen-candidate.md"), "x", "utf-8")
+    const real = path.join(process.cwd(), "templates", "packs")
+    const update = await getVendoredSkillsUpdate(company, real)
+    expect(update?.packDirName).toBe("hr-people")
+    expect(update?.bundledTag).toMatch(/^v\d+\.\d+\.\d+$/)
+  })
+
   it("recognises the real bundled marketing pack", async () => {
     const real = path.join(process.cwd(), "templates", "packs")
     const update = await getVendoredSkillsUpdate(company, real)
