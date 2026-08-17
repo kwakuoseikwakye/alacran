@@ -1,4 +1,5 @@
 import os from "node:os"
+import path from "node:path"
 import { getEffectiveAgents, getEffectiveAdapters } from "@/lib/get-effective-agents"
 import { getAllActivities, mergeAndSortActivities } from "@/lib/get-all-activities"
 import { AgentCard } from "@/components/agent-card"
@@ -8,6 +9,7 @@ import { getAvatars } from "@/lib/avatars-registry"
 import { companyOntologyExists } from "@/lib/company-ontology-exists"
 import { getIntegrationStatus } from "@/lib/get-integration-status"
 import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
+import { getVendoredSkillsUpdate } from "@/lib/vendored-skills"
 import { OnboardingWelcome } from "@/components/onboarding-welcome"
 import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
 import { listGoogleAccountEmails } from "@/lib/google-accounts"
@@ -15,6 +17,11 @@ import { readGoogleAccounts } from "@/lib/google-accounts-config"
 import { readMcpServers } from "@/lib/mcp-servers-config"
 
 export const dynamic = "force-dynamic"
+
+// Same bundled source createCompanyFromTemplate scaffolds from, read here to
+// tell a company whose vendored skills are behind the app's from one that is
+// current (lib/vendored-skills.ts).
+const PACKS_ROOT = path.join(process.cwd(), "templates", "packs")
 
 export default async function AgentTreePage() {
   const homeDir = os.homedir()
@@ -81,6 +88,10 @@ export default async function AgentTreePage() {
                 Boolean(plhOpsSource) &&
                 result.agent.kind === "command-set" &&
                 !(await dailyTeamLogInstalled(result.agent.rootPath))
+              // Three small file reads, no subprocess (see lib/vendored-skills.ts).
+              const skillsUpdate = isCommandSet
+                ? ((await getVendoredSkillsUpdate(result.agent.rootPath, PACKS_ROOT)) ?? undefined)
+                : undefined
               const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
               const googleAccounts = isCommandSet ? await readGoogleAccounts(result.agent.rootPath) : undefined
               // Claude Code is the only executor with per-project MCP config:
@@ -107,6 +118,7 @@ export default async function AgentTreePage() {
                     showVisibleRunOption={showVisibleRunOption}
                     integrationStatus={integrationStatus}
                     showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
+                    skillsUpdate={skillsUpdate}
                     showOpenTerminalButton={showVisibleRunOption || isExternal}
                     showGetStartedButton={showVisibleRunOption}
                     showAiExecutorPicker={isCommandSet}

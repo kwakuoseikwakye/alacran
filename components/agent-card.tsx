@@ -9,6 +9,7 @@ import { AgentAvatarForm } from "@/components/agent-avatar-form"
 import { StatusDot } from "@/components/status-dot"
 import { CompanySetupWizard } from "@/components/company-setup-wizard"
 import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
+import { UpdateSkillsButton } from "@/components/update-skills-button"
 import { BrandIcon } from "@/components/brand-icon"
 import { BackupCompanyButton } from "@/components/backup-company-button"
 import { CompanyOwnershipSheet } from "@/components/company-ownership-sheet"
@@ -36,6 +37,8 @@ type AgentCardProps = {
   showVisibleRunOption?: boolean
   integrationStatus: string
   showInstallDailyTeamLogButton?: boolean
+  /** Set only when this company's vendored skills are behind the app's. */
+  skillsUpdate?: { installedTag: string | null; bundledTag: string }
   showOpenTerminalButton?: boolean
   showGetStartedButton?: boolean
   showAiExecutorPicker?: boolean
@@ -77,6 +80,7 @@ export function AgentCard({
   showVisibleRunOption,
   integrationStatus,
   showInstallDailyTeamLogButton,
+  skillsUpdate,
   showOpenTerminalButton,
   showGetStartedButton,
   showAiExecutorPicker,
@@ -121,6 +125,7 @@ export function AgentCard({
                 showAiExecutorPicker={showAiExecutorPicker}
                 showGoogleAccountsPicker={showGoogleAccountsPicker}
                 showMcpButton={showMcpButton}
+                showSkillsUpdateButton={Boolean(skillsUpdate)}
                 removable={removable}
               />
             )}
@@ -172,6 +177,14 @@ export function AgentCard({
           )}
           {showInstallDailyTeamLogButton && (
             <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />
+          )}
+          {skillsUpdate && (
+            <UpdateSkillsButton
+              agentId={agent.id}
+              companyName={agent.name}
+              installedTag={skillsUpdate.installedTag}
+              bundledTag={skillsUpdate.bundledTag}
+            />
           )}
           {showGetStartedButton && <GetStartedButton agentId={agent.id} />}
           {/* An `external` folder has exactly one action (v66), so hiding it
