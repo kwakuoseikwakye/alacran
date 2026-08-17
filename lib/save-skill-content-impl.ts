@@ -1,6 +1,6 @@
 import { readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
-import { resolveKnownSkillPath } from "./resolve-known-skill"
+import { resolveWritableSkillPath } from "./resolve-known-skill"
 import { commitFile } from "./git-commit-file"
 import type { ExecFileFn } from "./git-commit-file"
 
@@ -12,14 +12,16 @@ export async function saveSkillContentImpl(
   execFn?: ExecFileFn,
   customMessage?: string
 ): Promise<{ saved: boolean; message: string }> {
-  const resolved = await resolveKnownSkillPath(filePath)
+  const resolved = await resolveWritableSkillPath(filePath)
   if (!resolved.ok) {
     return {
       saved: false,
       message:
         resolved.reason === "outside-root"
           ? "Refusing to write a path outside configured agent directories"
-          : "Refusing to write a path that is not a known skill/command file",
+          : resolved.reason === "app-managed"
+            ? "This skill is kept up to date by Alacrán, so it can't be edited here. Copy it to a new name to make it yours."
+            : "Refusing to write a path that is not a known skill/command file",
     }
   }
 

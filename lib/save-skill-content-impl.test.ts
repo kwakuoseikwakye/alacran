@@ -193,3 +193,66 @@ describe("saveSkillContentImpl", () => {
     expect(written).toBe("old")
   })
 })
+
+// Vendored skills are replaced wholesale by every app update, so the write path
+// must refuse them rather than accept work it will later destroy. Run against
+// the REAL bundled marketing pack, since that is what the predicate compares to.
+describe("saveSkillContentImpl on an app-managed skill", () => {
+  async function mockCompany() {
+    vi.doMock("./config", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("./config")>()
+      return {
+        ...actual,
+        AGENTS: [{ id: "co", name: "Co", rootPath: root, kind: "command-set" }],
+        SKILL_ADAPTERS: {
+          co: (agent: { id: string; rootPath: string }) =>
+            scanSkillsDir(agent.id, path.join(agent.rootPath, ".claude", "skills")),
+        },
+      }
+    })
+  }
+
+  async function scaffold(skillName: string) {
+    await mkdir(path.join(root, ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(root, ".claude", "commands", "draft-campaign.md"), "x")
+    await mkdir(path.join(root, ".claude", "skills", skillName), { recursive: true })
+    await writeFile(path.join(root, ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n")
+    const file = path.join(root, ".claude", "skills", skillName, "SKILL.md")
+    await writeFile(file, `---\nname: ${skillName}\ndescription: d\n---\nbody\n`)
+    return file
+  }
+
+  it("refuses to write one, and says why", async () => {
+    await mockCompany()
+    const file = await scaffold("copywriting")
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+
+    const result = await saveSkillContentImpl(file, "edited\n", async () => ({ stdout: "", stderr: "" }))
+
+    expect(result.saved).toBe(false)
+    expect(result.message).toContain("kept up to date by Alacrán")
+    expect(await readFile(file, "utf-8")).toContain("body")
+  })
+
+  it("still writes a skill the user wrote in the same directory", async () => {
+    await mockCompany()
+    const file = await scaffold("my-own-skill")
+    const { saveSkillContentImpl } = await import("./save-skill-content-impl")
+
+    const result = await saveSkillContentImpl(file, "edited\n", async () => ({ stdout: "", stderr: "" }))
+
+    expect(result.saved).toBe(true)
+    expect(await readFile(file, "utf-8")).toBe("edited\n")
+  })
+
+  it("still lets history be READ for an app-managed skill", async () => {
+    await mockCompany()
+    const file = await scaffold("copywriting")
+    const { getSkillHistoryImpl } = await import("./skill-history-impl")
+
+    const result = await getSkillHistoryImpl(file, async () => ({ stdout: "", stderr: "" }))
+
+    expect(result.ok).toBe(true)
+  })
+})
+

@@ -75,3 +75,38 @@ export async function getVendoredSkillsUpdate(
   }
   return null
 }
+
+/**
+ * True when this file belongs to a skill the APP installed and therefore owns.
+ *
+ * These are read-only by design: the app replaces the vendored tree wholesale on
+ * every update, so a local edit would be silently destroyed the next time one
+ * lands. Blocking the edit is the honest version of that — better than accepting
+ * work and overwriting it later. To customise one, copy it to a new name; a
+ * skill the app does not ship stays yours and is never touched.
+ *
+ * A company with no stamp is NOT covered: nothing in its .claude/skills came
+ * from the app (v77), so those files remain the user's to edit even when a name
+ * matches a bundled one.
+ *
+ * `rootPath` and `filePath` must be resolved the same way — both realpath'd, or
+ * neither — since this compares them as strings (see path-guard.ts).
+ */
+export async function isAppManagedSkillPath(
+  rootPath: string,
+  filePath: string,
+  packsRoot: string = path.join(process.cwd(), "templates", "packs")
+): Promise<boolean> {
+  const skillsDir = path.join(rootPath, VENDORED_SKILLS_RELATIVE_DIR)
+  const rel = path.relative(skillsDir, filePath)
+  if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return false
+
+  const skillName = rel.split(path.sep)[0]
+  if ((await readTag(skillsDir)) === null) return false
+
+  for (const pack of VENDORED_SKILL_PACKS) {
+    if (!(await pathExists(path.join(rootPath, ".claude", "commands", pack.markerCommand)))) continue
+    return await pathExists(path.join(packsRoot, pack.packDirName, ".claude", "skills", skillName))
+  }
+  return false
+}

@@ -2,6 +2,7 @@ import { realpath } from "node:fs/promises"
 import { resolveWithinAgentRoot } from "./path-guard"
 import { getEffectiveAgents, getEffectiveSkillAdapters } from "./get-effective-agents"
 import { getAllSkills } from "./get-all-skills"
+import { isAppManagedSkillPath } from "./vendored-skills"
 
 export type ResolveKnownSkillResult =
   | { ok: true; realPath: string; agentRootPath: string }
@@ -35,4 +36,26 @@ export async function resolveKnownSkillPath(filePath: string): Promise<ResolveKn
   }
 
   return { ok: true, realPath: guard.realPath, agentRootPath: guard.agentRootPath }
+}
+
+export type ResolveWritableSkillResult =
+  | { ok: true; realPath: string; agentRootPath: string }
+  | { ok: false; reason: "outside-root" | "not-a-known-skill" | "app-managed" }
+
+/**
+ * The write-side gate. Everything resolveKnownSkillPath checks, plus: a skill the
+ * app installed and keeps updated cannot be written, because the next update
+ * replaces the vendored tree wholesale and would destroy the edit.
+ *
+ * READS deliberately keep using resolveKnownSkillPath — viewing the content and
+ * the history of an app-managed skill is fine, and useful. Any new WRITER should
+ * reach for this function; that is why it has the more specific name.
+ */
+export async function resolveWritableSkillPath(filePath: string): Promise<ResolveWritableSkillResult> {
+  const resolved = await resolveKnownSkillPath(filePath)
+  if (!resolved.ok) return resolved
+  if (await isAppManagedSkillPath(resolved.agentRootPath, resolved.realPath)) {
+    return { ok: false, reason: "app-managed" }
+  }
+  return resolved
 }

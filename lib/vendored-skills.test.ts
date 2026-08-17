@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from "vitest"
 import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
-import { parseVendoredTag, getVendoredSkillsUpdate } from "./vendored-skills"
+import { parseVendoredTag, getVendoredSkillsUpdate, isAppManagedSkillPath } from "./vendored-skills"
 
 describe("parseVendoredTag", () => {
   it("reads the Tag line the sync script writes", () => {
@@ -97,5 +97,46 @@ describe("getVendoredSkillsUpdate", () => {
     const update = await getVendoredSkillsUpdate(company, real)
     expect(update?.packDirName).toBe("marketing")
     expect(update?.bundledTag).toMatch(/^v\d+\.\d+\.\d+$/)
+  })
+})
+
+describe("isAppManagedSkillPath", () => {
+  let base: string
+  let packsRoot: string
+  let company: string
+  const skill = (name: string) => path.join(company, ".claude", "skills", name, "SKILL.md")
+
+  beforeEach(async () => {
+    base = await mkdtemp(path.join(tmpdir(), "app-managed-"))
+    packsRoot = path.join(base, "packs")
+    company = path.join(base, "company")
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "skills", "copywriting"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n", "utf-8")
+    await mkdir(path.join(company, ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+    await mkdir(path.join(company, ".claude", "skills"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n", "utf-8")
+  })
+
+  afterEach(async () => {
+    await rm(base, { recursive: true, force: true })
+  })
+
+  it("claims a skill the app ships for this company's pack", async () => {
+    expect(await isAppManagedSkillPath(company, skill("copywriting"), packsRoot)).toBe(true)
+  })
+
+  it("leaves a skill the user wrote alone, even inside the same directory", async () => {
+    expect(await isAppManagedSkillPath(company, skill("my-own-skill"), packsRoot)).toBe(false)
+  })
+
+  it("claims nothing in an unstamped company, since none of it came from the app", async () => {
+    await rm(path.join(company, ".claude", "skills", "UPSTREAM.md"))
+    expect(await isAppManagedSkillPath(company, skill("copywriting"), packsRoot)).toBe(false)
+  })
+
+  it("claims nothing outside .claude/skills", async () => {
+    expect(await isAppManagedSkillPath(company, path.join(company, ".claude", "commands", "draft-campaign.md"), packsRoot)).toBe(false)
+    expect(await isAppManagedSkillPath(company, path.join(base, "elsewhere", "SKILL.md"), packsRoot)).toBe(false)
   })
 })

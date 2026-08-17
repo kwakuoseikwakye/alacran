@@ -34,7 +34,17 @@ const KIND_LABEL: Record<SkillEntry["kind"], string> = { skill: "Skills", comman
  * nothing: transparent panels, and a bare `border` falling back to
  * currentColor, which is why the page read as broken rather than merely dense.
  */
-export function SkillBrowser({ results, entries }: { results: SkillAgentResult[]; entries: SkillEntry[] }) {
+export function SkillBrowser({
+  results,
+  entries,
+  appManagedPaths = [],
+}: {
+  results: SkillAgentResult[]
+  entries: SkillEntry[]
+  /** Skills the app installed and updates — read-only (see lib/vendored-skills.ts). */
+  appManagedPaths?: string[]
+}) {
+  const appManaged = new Set(appManagedPaths)
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
@@ -196,13 +206,19 @@ export function SkillBrowser({ results, entries }: { results: SkillAgentResult[]
               </div>
               <div className="flex shrink-0 gap-1 rounded-lg border border-border p-1">
                 {tab("content", "Content")}
-                {tab("edit", "Edit")}
+                {!appManaged.has(selected.path) && tab("edit", "Edit")}
                 {tab("history", "History")}
                 {matchedCompanyCommand && tab("run", "Run")}
               </div>
             </div>
 
             <div className="max-h-[70vh] overflow-y-auto p-4">
+              {appManaged.has(selected.path) && (
+                <p className="mb-3 rounded-md border border-border bg-muted/40 p-2 text-xs text-muted-foreground">
+                  Kept up to date by Alacrán — new versions arrive with app updates, so this one
+                  isn&apos;t editable. Copy it to a new name if you want your own version.
+                </p>
+              )}
               {(view === "content" || view === "edit") && (
                 <>
                   {detailError && <p className="text-sm text-destructive">{detailError}</p>}

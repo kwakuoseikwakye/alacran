@@ -3039,6 +3039,44 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v81 (2026-08-18): vendored skills are app-managed, so updates always land clean
+
+Decision from the maintainer, reversing part of v77's shape: a skill the app
+installs is **not editable in the app**. v77 protected the user by skipping
+files it could not prove it owned; v81 removes the ambiguity at the source —
+the app owns the vendored tree, replaces it wholesale on every update, and no
+longer offers to accept an edit it would later destroy.
+
+**The gate is on the write path, not the UI.** `resolveKnownSkillPath` is the
+membership check every skill read and write already routes through, so the new
+rule lives in a `resolveWritableSkillPath` wrapper beside it. Only one caller is
+a writer (`saveSkillContentImpl`) — both `skill-history-impl` functions are
+reads — so **reading the content and the history of an app-managed skill still
+works**, which matters: users should be able to see what they have. A future
+writer reaching for the more specific name gets the rule for free; a test pins
+the read paths so they cannot be broken by tightening the write one.
+
+**`isAppManagedSkillPath` reuses v77's ownership rule rather than inventing a
+second one.** A file is app-managed when it sits under `.claude/skills/<name>/`,
+the company carries a stamp, and the pack matched by its marker command ships a
+skill of that `<name>`. The stamp requirement is what keeps this honest for
+companies scaffolded before v76: they have no stamp, so nothing in their skills
+directory is claimed, and a same-named file there stays theirs to edit — exactly
+the population v77's skip logic exists for.
+
+**The UI removes the affordance rather than failing after the fact**: the Skills
+page computes the managed set server-side and `SkillBrowser` hides the Edit tab
+for those entries, showing "Kept up to date by Alacrán… copy it to a new name if
+you want your own version." Nobody types into a box whose save is going to be
+rejected. Live-verified side by side in one company: `copywriting` (vendored)
+showed Content + History and the notice, `my-own-skill` in the same directory
+kept its Edit tab and no notice.
+
+**v77's skip-on-collision logic stays.** The app is no longer a way to edit a
+vendored skill, but Open in Terminal (v38) still gives full file access, so a
+hand-written collision remains possible and must still never be overwritten.
+738 tests, `tsc`, `next build` and `eslint` clean.
+
 ## v80 (2026-08-18): engineering skills, and the pack mechanism at three
 
 The Software engineering pack now ships 10 vendored skills from

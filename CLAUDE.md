@@ -1302,6 +1302,23 @@ id to the script for its stack. (2) A marker command must be checked against the
 BASE template as well as the other packs — a name `templates/company-starter`
 ships would match every company on the machine, not one pack's.
 
+**v81 (2026-08-18) made vendored skills app-managed and read-only in the app** —
+the maintainer ships skill updates, so the app must not accept an edit it will
+overwrite on the next update. **Where the gate goes:** `resolveKnownSkillPath` is
+the shared membership check for skill READS and WRITES both, so the rule lives in
+a `resolveWritableSkillPath` wrapper used by the one writer
+(`saveSkillContentImpl`); gating the shared function itself would have blocked
+reading the content and history of a managed skill, which must keep working. Any
+new writer should reach for the writable variant — that is why it is named that
+way, and tests pin the read paths. **Ownership is v77's rule reused, not a second
+one:** app-managed means under `.claude/skills/<name>/`, company carries a stamp,
+and the marker-matched pack ships that `<name>`. The stamp requirement is what
+keeps a pre-v76 company's same-named files theirs. The UI hides the Edit tab for
+managed skills (computed server-side on the Skills page) instead of failing after
+the user types. **v77's skip-on-collision logic stays** — Open in Terminal still
+gives full file access, so a hand-written collision is still possible and must
+never be overwritten.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
