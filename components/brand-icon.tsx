@@ -15,15 +15,13 @@ export function BrandIcon({
   id,
   className,
   tone = "inherit",
-  title,
 }: {
   id: BrandId
   className?: string
   tone?: "inherit" | "brand"
-  title?: string
 }) {
   const icon = BRAND_ICONS[id]
-  const label = title ?? icon.title
+  const label = icon.title
   return (
     <svg
       role="img"
@@ -36,9 +34,4 @@ export function BrandIcon({
       <path d={icon.path} />
     </svg>
   )
-}
-
-/** The vendor colour to use for a mark on a dark surface. */
-export function brandColor(id: BrandId) {
-  return BRAND_ICONS[id].onDark
 }

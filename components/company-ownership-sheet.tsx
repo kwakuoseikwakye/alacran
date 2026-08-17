@@ -72,7 +72,7 @@ export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: strin
                 <h3 className="font-medium">External network access</h3>
                 <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
                   {ownership.networkAccess.map((entry) => (
-                    <li key={entry.label}>{entry.label}</li>
+                    <li key={entry}>{entry}</li>
                   ))}
                 </ul>
               </section>

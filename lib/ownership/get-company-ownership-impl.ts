@@ -9,7 +9,6 @@ import { readMcpServers } from "../mcp-servers-config"
 import { summarizeNetworkAccess } from "./summarize-network-access"
 import type { ExecFileFn } from "../git-commit-file"
 import type { AiExecutorId } from "../ai-executors"
-import type { NetworkAccessEntry } from "./summarize-network-access"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -24,7 +23,7 @@ export type CompanyOwnership =
       remoteUrl: string | null
       integrationStatus: string
       aiExecutorId: AiExecutorId
-      networkAccess: NetworkAccessEntry[]
+      networkAccess: string[]
     }
   | { ok: false; message: string }
 

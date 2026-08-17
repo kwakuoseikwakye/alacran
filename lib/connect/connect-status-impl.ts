@@ -1,5 +1,5 @@
 import { memoizedExecFile } from "../exec-memo"
-import { listGoogleAccountEmails, listGoogleAccounts } from "../google-accounts"
+import { listGoogleAccounts } from "../google-accounts"
 import { listAiExecutors, type AiExecutor, type AiExecutorId } from "../ai-executors"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { getAiExecutorIdForAgent } from "../ai-executor-registry"

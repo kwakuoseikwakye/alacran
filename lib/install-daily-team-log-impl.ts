@@ -1,19 +1,11 @@
-import { writeFile, mkdir, cp, stat } from "node:fs/promises"
+import { writeFile, mkdir, cp } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
 import { AGENTS } from "./config"
 import { DAILY_TEAM_LOG_MANIFEST, DAILY_TEAM_LOG_SETUP_MD, buildDailyTeamLogSkillMd } from "./daily-team-log-files"
 import { commitFile } from "./git-commit-file"
 import type { ExecFileFn } from "./git-commit-file"
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p)
-    return true
-  } catch {
-    return false
-  }
-}
+import { pathExists } from "./path-exists"
 
 export async function installDailyTeamLogImpl(
   agentId: string,

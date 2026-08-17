@@ -129,7 +129,7 @@ describe("getConnectStatusImpl", () => {
   })
 
   it("offers an install button only where there's a verified installer", async () => {
-    const exec = fakeExec((command, args) => {
+    const exec = fakeExec((command, _args) => {
       if (command === "which") return new Error("not found")
       if (command === "claude") return new Error("not found")
       return new Error(`unexpected ${command}`)

@@ -1219,6 +1219,60 @@ read, so a translation layer would sit between two things that already work.
 The template runs at scaffold time only — companies created before this get
 nothing, and re-syncing an existing one isn't built.
 
+**v77 (2026-08-17) made template updates reach companies that already exist** —
+an "Update skills" button that applies newer vendored skills in place, closing
+the limitation v76 shipped with. **The rule this establishes, and the reason it
+was a slice and not a project: sync only what the app owns.** Vendored content
+is stamped (`UPSTREAM.md`, `Tag:`) and replaced wholesale, so updating is a copy
+and no merge policy has to exist; anything a user edits (ontology, notes, their
+own skills) is never touched. Content you want existing users to receive ships
+inside a stamped, app-owned folder — updating a file a user may have customized
+is a different feature (diff-and-approve) and must not be folded into this one.
+**Detection must work for companies that predate the content**, which have no
+stamp to compare: nothing records which pack a company came from, so
+`lib/vendored-skills.ts` matches it by a command only that pack ships and treats
+"no stamp" as behind. **Replace entries one by one, never the containing
+directory** — the user's own skills and `daily-team-log` (v20) live in
+`.claude/skills` too, which also means a skill dropped upstream lingers rather
+than being deleted (the safe direction). `commitFile` now takes
+`string | string[]` so the commit is pathspec-scoped to exactly what was
+written; a failed commit does not fail the update (v61's call).
+**The v66 trap was closed by construction, not by aim:** no repo under
+`~/AI-Native/` has the marker command, verified before the live pass, so the
+button cannot render on a real company's card at all.
+**Two defects an adversarial review caught here, both green under the first test
+suite, and the rule that covers both:** a stamp is a claim about what is
+installed, so write it ONLY when the claim is completely true — last, and never
+over a partial result. (a) Replacing every bundled entry name deleted a
+hand-written skill that happened to share one, and for unstamped companies —
+this feature's whole population — nothing in `.claude/skills` is app-owned;
+the test that passed used a deliberately non-colliding name. An existing entry
+is now replaced only when a stamp proves the app installed the set, else it is
+skipped and named back to the user. (b) `readdir` returns `UPSTREAM.md` first,
+so a mid-copy throw stamped the new tag over old skills, and since the button
+compares only the tag it then vanished and stranded the company.
+
+**v78 (2026-08-17) applied a repo-wide over-engineering audit** — net -479 lines,
+one dependency (`clsx`) gone, no feature removed, and `eslint` clean for the
+first time (it also fixed 5 pre-existing warnings). Biggest: -169 lines of dead
+`landing/styles.css` left by the cinematic rewrite, the orphan `landing/pricing`
+page, `scripts/jp-audit.py` (its migration ended in v67), the `ScrollArea`
+wrapper whose two consumers wanted only `overflow-y-auto`, six copies of one
+`pathExists` helper, and the unreachable `needs-attention` activity branch.
+**The dead-CSS rule to reuse:** a compound or descendant selector part matches
+only if EVERY class in it appears in the markup, so one dead ancestor kills the
+rule — the weaker "all classes dead" test leaves half the family behind. Verify
+by rule-count-per-class against the baseline, then probe computed styles in a
+browser; both were needed here.
+**Three findings were rejected and should stay rejected:** `checkDependencies`
+is not derivable from `ConnectStatus` (`ToolStatus` has no `installed` field, so
+cutting it means adding one); `AgentCard`'s nine `show*` props ARE v66's
+default-off safety property; and the `"use server"`/`-impl.ts` pairing earns its
+keep, since 32 of 32 impls have their own test file.
+**Process:** a verifier agent left a stray `lib/zz-collision-probe.test.ts`
+behind during v77's review and it inflated that slice's reported test count —
+check `git status` for agent leftovers before trusting a number.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

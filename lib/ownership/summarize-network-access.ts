@@ -1,8 +1,6 @@
 import type { AiExecutorId } from "../ai-executors"
 import type { McpServer } from "../mcp-servers-config"
 
-export type NetworkAccessEntry = { label: string }
-
 export type SummarizeNetworkAccessInput = {
   aiExecutorId: AiExecutorId
   hasIntegration: boolean
@@ -22,19 +20,19 @@ const AI_EXECUTOR_NETWORK_LABEL: Record<AiExecutorId, string> = {
   "google-antigravity": "Google (Antigravity CLI) — your own account",
 }
 
-export function summarizeNetworkAccess(input: SummarizeNetworkAccessInput): NetworkAccessEntry[] {
-  const entries: NetworkAccessEntry[] = [{ label: AI_EXECUTOR_NETWORK_LABEL[input.aiExecutorId] }]
+export function summarizeNetworkAccess(input: SummarizeNetworkAccessInput): string[] {
+  const entries: string[] = [AI_EXECUTOR_NETWORK_LABEL[input.aiExecutorId]]
   if (input.hasIntegration) {
-    entries.push({ label: "Google, via gog — your own account" })
+    entries.push("Google, via gog — your own account")
   }
   if (input.remoteUrl) {
-    entries.push({ label: "GitHub — your own private repository" })
+    entries.push("GitHub — your own private repository")
   }
   // A wired MCP server is external network access, so this list would be
   // lying by omission without it. Each one is a real remote endpoint the
   // company's interactive sessions can call, signed in as the user.
   for (const server of input.mcpServers ?? []) {
-    entries.push({ label: `${server.name} (MCP) — ${server.url}, signed in with your own account` })
+    entries.push(`${server.name} (MCP) — ${server.url}, signed in with your own account`)
   }
   return entries
 }

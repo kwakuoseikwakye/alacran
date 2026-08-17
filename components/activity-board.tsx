@@ -2,8 +2,6 @@
 
 import { useState } from "react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { StatusDot } from "@/components/status-dot"
 import type { Activity } from "@/lib/adapters/types"
 import { getActivityDetail } from "@/lib/get-activity-detail"
 import { groupActivitiesByDay } from "@/lib/group-activities-by-day"
@@ -29,10 +27,6 @@ export function ActivityBoard({ activities }: { activities: Activity[] }) {
     }
   }
 
-  const needsAttention = activities
-    .filter((a) => a.status === "needs-attention")
-    .sort((a, b) => b.timestamp - a.timestamp)
-  
   const totalPages = Math.ceil(activities.length / PAGE_SIZE)
   const paginatedActivities = activities.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE)
   const dayGroups = groupActivitiesByDay(paginatedActivities)
@@ -40,28 +34,6 @@ export function ActivityBoard({ activities }: { activities: Activity[] }) {
   return (
     <>
       <div className="space-y-8">
-        {needsAttention.length > 0 && (
-          <div className="space-y-3">
-            <h2 className="font-mono text-xs uppercase tracking-widest text-red-500">Needs Attention</h2>
-            <div className="space-y-2">
-              {needsAttention.map((activity) => (
-                <div
-                  key={activity.id}
-                  onClick={() => openActivity(activity)}
-                  className="group flex cursor-pointer items-center justify-between rounded-lg border border-red-500/30 bg-red-500/5 p-4 transition-all hover:border-red-500/60 hover:bg-red-500/10"
-                >
-                  <div className="flex items-center gap-3">
-                    <StatusDot status={activity.status} />
-                    <span className="font-medium text-sm text-foreground">{activity.title}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground font-mono">
-                    {new Date(activity.timestamp * 1000).toLocaleString()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
         <div className="space-y-6">
           {dayGroups.map((group, index) => (
             <ActivityDayGroup
@@ -101,10 +73,10 @@ export function ActivityBoard({ activities }: { activities: Activity[] }) {
           <SheetHeader className="border-b border-border pb-4">
             <SheetTitle className="text-foreground">{selected?.title}</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="h-[80vh] pt-4">
+          <div className="h-[80vh] overflow-y-auto pt-4">
             {detailError && <p className="text-red-500 text-sm font-mono">{detailError}</p>}
             {!detailError && <pre className="whitespace-pre-wrap text-xs font-mono text-muted-foreground p-4 bg-card/60/50 rounded-lg border border-border">{detail ?? "Loading…"}</pre>}
-          </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
     </>

@@ -4,34 +4,31 @@ import { summarizeNetworkAccess } from "./summarize-network-access"
 describe("summarizeNetworkAccess", () => {
   it("includes only the AI executor line when nothing else is configured", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "claude-code", hasIntegration: false, remoteUrl: null })
-    expect(result).toEqual([{ label: "Anthropic (Claude Code) — your own account" }])
+    expect(result).toEqual(["Anthropic (Claude Code) — your own account"])
   })
 
   it("labels the OpenAI Codex executor", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "openai-codex", hasIntegration: false, remoteUrl: null })
-    expect(result).toEqual([{ label: "OpenAI (Codex CLI) — your own account" }])
+    expect(result).toEqual(["OpenAI (Codex CLI) — your own account"])
   })
 
   it("labels the Google Antigravity executor", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "google-antigravity", hasIntegration: false, remoteUrl: null })
-    expect(result).toEqual([{ label: "Google (Antigravity CLI) — your own account" }])
+    expect(result).toEqual(["Google (Antigravity CLI) — your own account"])
   })
 
   it("gives Aider a non-committal line rather than claiming certainty about its backend", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "aider", hasIntegration: false, remoteUrl: null })
     expect(result).toEqual([
-      {
-        label:
-          "Depends on your own Aider model config (OpenAI, Anthropic, or a local model) — not visible to this app",
-      },
+      "Depends on your own Aider model config (OpenAI, Anthropic, or a local model) — not visible to this app",
     ])
   })
 
   it("adds the Google line when an integration is connected", () => {
     const result = summarizeNetworkAccess({ aiExecutorId: "claude-code", hasIntegration: true, remoteUrl: null })
     expect(result).toEqual([
-      { label: "Anthropic (Claude Code) — your own account" },
-      { label: "Google, via gog — your own account" },
+      "Anthropic (Claude Code) — your own account",
+      "Google, via gog — your own account",
     ])
   })
 
@@ -42,8 +39,8 @@ describe("summarizeNetworkAccess", () => {
       remoteUrl: "git@github.com:me/acme.git",
     })
     expect(result).toEqual([
-      { label: "Anthropic (Claude Code) — your own account" },
-      { label: "GitHub — your own private repository" },
+      "Anthropic (Claude Code) — your own account",
+      "GitHub — your own private repository",
     ])
   })
 
@@ -54,9 +51,9 @@ describe("summarizeNetworkAccess", () => {
       remoteUrl: "git@github.com:me/acme.git",
     })
     expect(result).toEqual([
-      { label: "OpenAI (Codex CLI) — your own account" },
-      { label: "Google, via gog — your own account" },
-      { label: "GitHub — your own private repository" },
+      "OpenAI (Codex CLI) — your own account",
+      "Google, via gog — your own account",
+      "GitHub — your own private repository",
     ])
   })
 
@@ -71,9 +68,9 @@ describe("summarizeNetworkAccess", () => {
       ],
     })
     expect(result).toEqual([
-      { label: "Anthropic (Claude Code) — your own account" },
-      { label: "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account" },
-      { label: "figma (MCP) — https://mcp.figma.com/mcp, signed in with your own account" },
+      "Anthropic (Claude Code) — your own account",
+      "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account",
+      "figma (MCP) — https://mcp.figma.com/mcp, signed in with your own account",
     ])
   })
 

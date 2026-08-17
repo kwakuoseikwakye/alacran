@@ -3039,6 +3039,158 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v78 (2026-08-17): a repo-wide cut for over-engineering
+
+A whole-tree audit for complexity, applied. **Net -479 lines and one dependency**,
+with no feature removed and no behaviour changed: 722 tests, `tsc`, `next build`
+and — for the first time — `eslint` all clean, the last of those because this
+slice also cleared 5 pre-existing warnings rather than walking past them.
+
+**The big cuts, in order:**
+
+- **-169 lines of dead CSS in `landing/styles.css`** (648 → 479), orphaned by
+  the cinematic homepage rewrite: the `board-*`, `appcard`/`appgrid`/`appnav`,
+  `hero-mockup*`, `halo` and `flow-line` families. Done in two passes, because
+  the first was too timid — a rule was only cut when *every* class in its
+  selector was dead, which left `.appcard .ln`-style rules behind. The sound
+  rule is stronger: a descendant or compound part can only match if **every**
+  class in it appears in the markup, so one dead ancestor kills the rule.
+  Verified by rule-count-per-class against the baseline (`.card` 4 → 4,
+  `.nav` 8 → 8, `.navlinks` 10 → 10) and then in a browser on two pages, where
+  every probed computed style came back identical.
+- **-88 `landing/pricing/index.html`** — no page linked to it, for a product
+  with no paid tier.
+- **-70 `scripts/jp-audit.py`** — the translation migration it checked finished
+  in v67; only CLAUDE.md and CHANGELOG mention it, both as history.
+- **-58 `components/ui/scroll-area.tsx`** — a Radix wrapper whose two consumers
+  both wanted nothing but `h-[80vh]` plus padding. Now `overflow-y-auto`. This
+  is the sanctioned kind of `components/ui/` edit: deleting an over-spec'd
+  primitive nothing needs, not restyling one (v16/v29/v63 still stand).
+- **-42 net from six byte-identical copies** of a 7-line `pathExists`/`exists`
+  helper → one `lib/path-exists.ts`.
+- **-26 the `needs-attention` branch** in the activity board, plus narrowing
+  `ActivityStatus` to `"done"`: all four adapters hardcode it, and
+  `getEffectiveAgents` maps every registered company to the generic git-log
+  adapter, so no other value can reach the UI. **`StatusDot` was kept** — it has
+  three consumers, and an earlier draft of this cut proposed deleting it after
+  grepping for the string `"needs-attention"` rather than for the component.
+- Smaller: `clsx` (its only consumer was `cn()`, and no caller uses its object
+  syntax, so `twMerge` alone does it — one dependency gone), four dead exports
+  in `lib/branding.ts`, `brandColor` and `BrandIcon`'s never-passed `title`,
+  `NetworkAccessEntry = { label: string }` → `string[]`, and the `loadBuiltins`
+  wrapper → a default parameter on `buildBuiltins`, which is what the house DI
+  convention asks for anyway.
+
+**Three findings were rejected, and why matters more than the cuts:**
+
+1. **`checkDependencies` is not duplicated work.** The claim was that
+   `ConnectStatus` already knows whether `claude` and `gog` are installed. It
+   does not: `ToolStatus` has no `installed` field, and `googleStatus` computes
+   gog presence internally and throws it away. Removing those ~70 lines would
+   have meant *adding* a field to a documented type, on the Google onboarding
+   gate.
+2. **The nine `AgentCard` `show*` props stay.** Collapsing them to
+   `isCommandSet`/`hasOntology` saves 24 lines and deletes v66's actual safety
+   property: a new company feature is off for an `external` folder by default
+   instead of needing to be excluded one at a time.
+3. **The `"use server"` + `-impl.ts` pairing stays.** It looks like 32 files of
+   delegation; **32 of 32 impls have their own test file**, and the injectable
+   seam is why.
+
+**Two process notes worth keeping.** A verifier agent left a stray
+`lib/zz-collision-probe.test.ts` in the repo during v77's review — it was
+counted in that slice's "723 tests" (really 722, corrected above), so **check
+`git status` for agent leftovers before trusting a test count**. And the audit's
+own line estimates ran high: 125 claimed for the CSS, 169 actually delivered
+after a second pass, but 70 claimed for `checkDependencies` and 0 delivered.
+
+## v77 (2026-08-17): template updates reach companies that already exist
+
+v76 shipped ten vendored skills and closed with the honest limitation that the
+template only runs at scaffold time, so every company created before it got
+nothing. With real users already on the marketing pack, that limitation was the
+feature. An "Update skills" button now appears on a company's card when the app
+ships newer vendored skills than that company has, and applies them in place.
+
+**The design decision that made this a slice instead of a project:** sync only
+what the app owns. Vendored skills are stamped (`UPSTREAM.md`, `Tag: vX.Y.Z`),
+marked do-not-hand-edit, and replaced wholesale — so updating is a *copy*, and
+no merge policy has to exist. Everything a user actually edits — their
+ontology, notes, `HANDOFF.md`, skills they wrote themselves — is never touched
+by any of this. **Standing rule for every future template change:** content you
+want existing users to receive ships inside a stamped, app-owned folder;
+content meant to be edited never syncs. Changing a file a user may have
+customized (`CLAUDE.md`, a command) is a different feature — diff-and-approve —
+and must not be smuggled into this one.
+
+**Detection has to work for companies that predate the skills**, which is the
+entire point, and those have no `UPSTREAM.md` to compare. Nothing in a company
+records which pack it came from, so `lib/vendored-skills.ts` matches it by a
+command file only that pack ships (`draft-campaign.md` for marketing) and then
+compares tags, treating "no stamp" as "behind". The button reads
+"Add ready-made skills" in that case and "Update skills" otherwise. Three small
+file reads per company and no subprocess, which is what makes it safe on a
+`force-dynamic` page (v70).
+
+**It replaces the vendored entries one by one and never the skills directory
+itself** — the user's own skills live in there, and so does `daily-team-log`
+(v20). The consequence, deliberate: a skill upstream has dropped stays in the
+company rather than being deleted, because this code cannot tell an abandoned
+vendored skill from one the user has come to depend on.
+
+**Two defects an adversarial review caught before this shipped**, both of which
+the first round of tests passed straight through:
+
+1. **A same-named hand-written skill was silently `rm -rf`'d.** The loop
+   replaced every bundled entry name without asking whether what was on disk had
+   come from this app — and for the exact population this feature exists for
+   (unstamped companies), *nothing* in `.claude/skills` did. The bundled names
+   are precisely what a marketing company's user calls their own work:
+   `copywriting`, `social`, `emails`, `cro`. The first test suite only used a
+   non-colliding `my-own-skill`, so it was green. Now: an entry that already
+   exists is only replaced when the company has a stamp proving this app put the
+   set there; otherwise it is skipped and named back to the user in the card
+   ("Kept your own social — nothing was overwritten"). **And a run with any skip
+   writes no stamp at all** — stamping a partial install would both hide the
+   button while the company lacks skills and mark the skipped name app-owned,
+   so the *next* update would delete the user's work.
+2. **The stamp was written first, stranding a half-updated company.**
+   `readdir` returns `UPSTREAM.md` before any skill (measured on the real pack),
+   so a throw partway through left the company claiming the new tag with old
+   skill bodies — and since the button compares nothing but the tag, it
+   vanished, with no way to retry until upstream cut another tag. The stamp now
+   goes last, which makes a failed run simply retryable.
+
+**The rule both share:** the stamp is a claim about what is installed, so it may
+only be written when that claim is completely true. Write it early, or write it
+over a partial result, and the app lies to itself on the next run.
+
+`commitFile` now accepts `string | string[]` (existing callers unaffected), so
+the commit is pathspec-scoped to exactly the entries written — a skill the user
+is midway through writing in the same directory can never be swept in. A failed
+commit does **not** fail the update: the files are already correct on disk and
+`.claude/` is gitignored in some real repos, the same call v61 made.
+
+**Live-verified against three disposable companies** on a throwaway port, not
+just unit tests: one with no stamp (got all ten skills, `my-own-skill`
+untouched, one commit of 45 files, clean tree), one stamped `v2.9.0` with a stub
+`copywriting` skill (replaced with the real one, tag bumped), and — after the
+review — one with a hand-written `social` skill (kept verbatim, nine skills
+added around it, no stamp written, `social` absent from the commit, and the card
+saying which skill it kept). The first two buttons disappeared on refresh once
+the tags matched; the third's stayed, correctly. **Checked before clicking
+anything:** no repo under `~/AI-Native/` has the marker command, so the button
+cannot appear on a real company's card — which is the v66 trap (a page-wide
+selector reaching a live control that writes to a real repo) closed by
+construction rather than by careful aim. `plh-triage` was confirmed untouched
+afterward. 722 tests, `tsc` and `next build` clean.
+
+**Known limitations, disclosed not fixed:** only the marketing pack vendors
+skills today (add an entry to `VENDORED_SKILL_PACKS` when a second one does);
+a user who hand-edited a vendored skill loses that edit, which `UPSTREAM.md`
+warns against and their own git history recovers; and a company still has to be
+`command-set` — an `external` folder is refused, per v66.
+
 ## v76 (2026-08-17): real marketing skills in the marketing starter pack
 
 The marketing pack shipped three commands and an ontology; a new marketing

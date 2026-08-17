@@ -1,8 +1,8 @@
-import { loadBuiltins } from "./builtin-agents"
+import { buildBuiltins } from "./builtin-agents"
 import type { Agent, Adapter } from "./adapters/types"
 import type { SkillAdapter } from "./skills/types"
 
-const builtins = loadBuiltins()
+const builtins = buildBuiltins()
 
 export const AGENTS: Agent[] = builtins.agents
 export const ADAPTERS: Record<string, Adapter> = builtins.adapters

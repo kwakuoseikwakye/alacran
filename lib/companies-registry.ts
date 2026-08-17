@@ -2,6 +2,7 @@ import { readFile, writeFile, mkdir, stat } from "node:fs/promises"
 import path from "node:path"
 import crypto from "node:crypto"
 import { dataPath } from "./data-dir"
+import { pathExists } from "./path-exists"
 
 /** `kind` is absent on every entry written before external folders existed,
  *  and absent means "command-set" — so no migration, and an existing registry
@@ -35,15 +36,6 @@ async function isDirectory(p: string): Promise<boolean> {
   }
 }
 
-async function exists(p: string): Promise<boolean> {
-  try {
-    await stat(p)
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function registerCompanyImpl(
   name: string,
   rootPath: string,
@@ -61,7 +53,7 @@ export async function registerCompanyImpl(
   // app's conventions, and demanding `.git` would exclude most of them. Real
   // companies still need it: backup, the activity feed and the commit-on-save
   // paths are all git operations.
-  if (kind !== "external" && !(await exists(path.join(rootPath, ".git")))) {
+  if (kind !== "external" && !(await pathExists(path.join(rootPath, ".git")))) {
     return { ok: false, message: "Path is not a git repository (no .git found)" }
   }
   // `.git` is the only structural requirement. A `.claude` directory used to be
@@ -113,7 +105,7 @@ export type CompanyPathStatus = "exists" | "creatable" | "not-creatable"
 async function nearestExistingAncestor(p: string): Promise<string | null> {
   let current = path.dirname(path.resolve(p))
   for (;;) {
-    if (await exists(current)) return current
+    if (await pathExists(current)) return current
     const parent = path.dirname(current)
     // path.dirname("/") === "/" — the fixed point is how we detect the root.
     if (parent === current) return null
@@ -122,7 +114,7 @@ async function nearestExistingAncestor(p: string): Promise<string | null> {
 }
 
 export async function getCompanyPathStatusImpl(rootPath: string): Promise<CompanyPathStatus> {
-  if (await exists(rootPath)) {
+  if (await pathExists(rootPath)) {
     return "exists"
   }
   // Requiring the IMMEDIATE parent to exist made every default-path creation

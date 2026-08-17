@@ -52,7 +52,7 @@ describe("getCompanyOwnershipImpl", () => {
       remoteUrl: null,
       integrationStatus: "none configured yet",
       aiExecutorId: "claude-code",
-      networkAccess: [{ label: "Anthropic (Claude Code) — your own account" }],
+      networkAccess: ["Anthropic (Claude Code) — your own account"],
     })
   })
 
@@ -73,8 +73,8 @@ describe("getCompanyOwnershipImpl", () => {
       integrationStatus: "none configured yet",
       aiExecutorId: "openai-codex",
       networkAccess: [
-        { label: "OpenAI (Codex CLI) — your own account" },
-        { label: "GitHub — your own private repository" },
+        "OpenAI (Codex CLI) — your own account",
+        "GitHub — your own private repository",
       ],
     })
   })
@@ -99,8 +99,8 @@ describe("getCompanyOwnershipImpl", () => {
         "Connected as me@example.com. (Google is connected on this machine — any company's commands can use it.)",
       aiExecutorId: "claude-code",
       networkAccess: [
-        { label: "Anthropic (Claude Code) — your own account" },
-        { label: "Google, via gog — your own account" },
+        "Anthropic (Claude Code) — your own account",
+        "Google, via gog — your own account",
       ],
     })
   })
@@ -121,8 +121,8 @@ describe("getCompanyOwnershipImpl", () => {
       integrationStatus: "none configured yet",
       aiExecutorId: "claude-code",
       networkAccess: [
-        { label: "Anthropic (Claude Code) — your own account" },
-        { label: "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account" },
+        "Anthropic (Claude Code) — your own account",
+        "canva (MCP) — https://mcp.canva.com/mcp, signed in with your own account",
       ],
     })
   })

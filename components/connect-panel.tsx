@@ -560,7 +560,7 @@ export function InstallButton({ id, onDone }: { id: InstallableId; onDone: () =>
  *  trip. The email only pre-populates the login page (`--email`), so a typo
  *  costs nothing — but getting it right is what makes Google line up on the
  *  same account later. */
-function SignInButton({ onDone }: { onDone: () => void }) {
+function SignInButton() {
   const [email, setEmail] = useState("")
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -569,7 +569,7 @@ function SignInButton({ onDone }: { onDone: () => void }) {
     setBusy(true)
     try {
       const result = await signInClaude(email)
-      // Deliberately no onDone(): the browser sign-in completes in the
+      // Nothing to call back into: the browser sign-in completes in the
       // terminal we just opened, seconds to minutes from now. Re-checking
       // immediately would show "not signed in" and contradict the message
       // below it. Re-check is the user's move, once they're done.
@@ -717,7 +717,7 @@ function ToolCard({
             {/* Buttons before instructions: the whole point is that a
                 non-technical user never has to reach the instructions. */}
             {tool.installId && <InstallButton id={tool.installId} onDone={onChanged} />}
-            {tool.needsSignIn && <SignInButton onDone={onChanged} />}
+            {tool.needsSignIn && <SignInButton />}
             {/* Google is the one tool whose setup isn't "run this one command":
                 Google requires a per-person OAuth client that only a human can
                 create in their console. Rendered before the generic block,

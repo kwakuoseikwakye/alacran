@@ -6,7 +6,7 @@ import { getAiExecutorIdForAgent } from "./ai-executor-registry"
 import { getConnectStatusImpl } from "./connect/connect-status-impl"
 import { readGoogleAccounts } from "./google-accounts-config"
 import type { ExecFileFn } from "./git-commit-file"
-import type { Agent, AgentKind } from "./adapters/types"
+import type { AgentKind } from "./adapters/types"
 import type { AiExecutorId } from "./ai-executors"
 
 const execFileAsync = promisify(nodeExecFile)

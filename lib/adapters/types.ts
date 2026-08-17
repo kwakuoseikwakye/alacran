@@ -15,7 +15,7 @@ export type Agent = {
   kind: AgentKind
 }
 
-export type ActivityStatus = "done" | "needs-attention" | "unknown"
+export type ActivityStatus = "done"
 
 export type Activity = {
   id: string

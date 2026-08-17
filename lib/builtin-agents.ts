@@ -50,15 +50,11 @@ export type Builtins = {
   skillAdapters: Record<string, SkillAdapter>
 }
 
-export function buildBuiltins(exists: (absPath: string) => boolean): Builtins {
+export function buildBuiltins(exists: (absPath: string) => boolean = existsSync): Builtins {
   const present = BUILTIN_DESCRIPTORS.filter((d) => exists(d.agent.rootPath))
   return {
     agents: present.map((d) => d.agent),
     adapters: Object.fromEntries(present.map((d) => [d.agent.id, d.adapter])),
     skillAdapters: Object.fromEntries(present.map((d) => [d.agent.id, d.skillAdapter])),
   }
-}
-
-export function loadBuiltins(): Builtins {
-  return buildBuiltins((absPath) => existsSync(absPath))
 }

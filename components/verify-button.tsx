@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { VerifyResultList } from "@/components/verify-result"
 import { runVerify } from "@/lib/run-verify"
 import type { VerifyResult } from "@/lib/run-verify-impl"
@@ -47,7 +46,7 @@ export function VerifyButton() {
           <SheetHeader>
             <SheetTitle>Verify results</SheetTitle>
           </SheetHeader>
-          <ScrollArea className="h-[80vh] pr-4">{result && <VerifyResultList rows={result.rows} />}</ScrollArea>
+          <div className="h-[80vh] overflow-y-auto pr-4">{result && <VerifyResultList rows={result.rows} />}</div>
         </SheetContent>
       </Sheet>
     </div>

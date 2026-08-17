@@ -1,11 +1,8 @@
 import type { ActivityStatus } from "@/lib/adapters/types"
 
-const STATUS_DOT_CLASS: Record<ActivityStatus, string> = {
-  done: "bg-success",
-  "needs-attention": "bg-destructive",
-  unknown: "bg-warning",
-}
-
 export function StatusDot({ status }: { status: ActivityStatus }) {
-  return <span className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${STATUS_DOT_CLASS[status]}`} />
+  // Every adapter hardcodes "done" (lib/adapters/*), so there is one colour.
+  // Widen ActivityStatus first if an adapter ever reports something else.
+  void status
+  return <span className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-success" />
 }

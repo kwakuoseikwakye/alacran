@@ -5,20 +5,12 @@ import { promisify } from "node:util"
 import type { ExecFileFn } from "./git-commit-file"
 import { registerCompanyImpl, type RegisteredCompany } from "./companies-registry"
 import { TEMPLATE_MANIFEST, FRESH_HANDOFF_CONTENT } from "./company-template-manifest"
+import { pathExists } from "./path-exists"
 
 const execFileAsync = promisify(nodeExecFile)
 
 async function defaultExecFile(command: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return execFileAsync(command, args)
-}
-
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await stat(p)
-    return true
-  } catch {
-    return false
-  }
 }
 
 async function isDirectory(p: string): Promise<boolean> {

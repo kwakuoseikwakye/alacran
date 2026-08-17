@@ -722,7 +722,6 @@ describe("runCompanyCommandImpl", () => {
     )
 
     const scriptStat = await stat(path.join(dataDir, "digest.run.sh"))
-    // eslint-disable-next-line no-bitwise
     expect(scriptStat.mode & 0o111).not.toBe(0) // at least one execute bit set
   })
 

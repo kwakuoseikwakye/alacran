@@ -1,9 +1,9 @@
 import { execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
-import { stat } from "node:fs/promises"
 import path from "node:path"
 import { registerCompanyImpl } from "../companies-registry"
 import type { ExecFileFn } from "../git-commit-file"
+import { pathExists } from "../path-exists"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -20,15 +20,6 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
 function isAcceptableCloneUrl(url: string): boolean {
   if (url.startsWith("-")) return false
   return /^https:\/\/[\w.-]+\/[\w.\-/]+$/.test(url) || /^git@[\w.-]+:[\w.\-/]+$/.test(url)
-}
-
-async function exists(p: string): Promise<boolean> {
-  try {
-    await stat(p)
-    return true
-  } catch {
-    return false
-  }
 }
 
 /**
@@ -58,7 +49,7 @@ export async function restoreCompanyImpl(
   if (!path.isAbsolute(target)) {
     return { ok: false, message: "Enter the full folder path, starting with /" }
   }
-  if (await exists(target)) {
+  if (await pathExists(target)) {
     return { ok: false, message: `${target} already exists — pick a different folder` }
   }
 
