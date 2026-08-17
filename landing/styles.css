@@ -87,29 +87,54 @@ p { margin: 0; }
 .btn-ghost:hover { border-color: var(--red); color: var(--red); }
 .btn:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; }
 
-/* ---------- liquid-glass floating nav (curved both ends) ---------- */
-/* Centred with auto margins rather than left:50% + translateX: a fixed element
-   positioned at left:50% only gets HALF the viewport as available width, so
-   shrink-to-fit squeezed the CTA into two lines and distorted the pill. */
-.nav { position: fixed; top: 14px; left: 0; right: 0; margin-inline: auto; width: fit-content; z-index: 70;
-  display: flex; align-items: center; gap: 22px;
-  padding: 7px 7px 7px 20px; border-radius: 999px;
-  background: color-mix(in srgb, var(--glass) 80%, transparent);
-  backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px) saturate(200%);
-  border: 1px solid var(--glass-edge);
-  box-shadow: 0 12px 40px -14px rgba(0,0,0,.65), inset 0 1px 0 var(--glass-sheen), inset 0 -1px 0 rgba(255,255,255,0.05);
-  max-width: calc(100vw - 28px);
-  transition: background 0.3s ease, box-shadow 0.3s ease;
+/* ---------- full-width nav: clear over the hero, frosted once you scroll ----
+   This replaced a centred floating pill. The pill looked good over the hero
+   and then spent the rest of the page sitting on top of headings, because a
+   shrink-to-fit bar floating mid-viewport has no relationship to the column
+   of text running underneath it. Edge-to-edge at top:0 fixes that.
+
+   The frost is driven by the document scroll timeline — no scroll listener on
+   any page. Note the direction: the BASE state below is the frosted one, and
+   the keyframe's `from` is the transparent one. Where scroll-driven
+   animations aren't supported the nav therefore stays opaque and readable
+   over content, which is the safe way for this to fail.
+
+   Content is aligned to .wrap's own column (max-width + 30px gutter) via the
+   padding, so the brand sits directly above the page's first character
+   instead of floating free of the grid. */
+.nav { position: fixed; top: 0; left: 0; right: 0; z-index: 70;
+  display: flex; align-items: center; gap: 26px;
+  min-height: 62px;
+  padding: 9px max(30px, calc((100% - var(--maxw)) / 2 + 30px));
+  background: color-mix(in srgb, var(--glass) 92%, transparent);
+  backdrop-filter: blur(26px) saturate(180%); -webkit-backdrop-filter: blur(26px) saturate(180%);
+  border-bottom: 1px solid var(--glass-edge);
+  box-shadow: 0 10px 34px -20px rgba(0,0,0,.75);
 }
-.nav:hover { background: var(--glass); box-shadow: 0 16px 50px -10px rgba(0,0,0,.8), inset 0 1px 0 var(--glass-sheen); }
+@supports (animation-timeline: scroll()) {
+  .nav { animation: nav-frost linear both; animation-timeline: scroll(root block); animation-range: 0px 140px; }
+}
+/* Only a `from` — the frosted end state is the base rule above, not repeated. */
+@keyframes nav-frost {
+  from {
+    background: transparent;
+    backdrop-filter: blur(0px) saturate(100%); -webkit-backdrop-filter: blur(0px) saturate(100%);
+    border-bottom-color: transparent;
+    box-shadow: 0 10px 34px -20px transparent;
+  }
+}
 .brand { display: flex; align-items: center; gap: 9px; font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; font-size: 18px; }
 /* The mark is a 600x626 raster (scripts/generate-logo.py) — always size by
    width and leave height auto, or it gets squashed ~4%. */
 .brand .glyph { width: 26px; height: auto; filter: drop-shadow(0 0 8px var(--red)); }
-.navlinks { display: flex; gap: 20px; }
-.navlinks a { font-size: 14px; color: var(--dune); white-space: nowrap; transition: color .15s ease; }
+.navlinks { display: flex; gap: 22px; }
+.navlinks a { font-size: 14px; color: var(--dune); white-space: nowrap; transition: color .15s ease; position: relative; }
 .navlinks a:hover, .navlinks a[aria-current="page"] { color: var(--bone); }
-.nav-right { display: flex; align-items: center; gap: 8px; }
+/* The current page gets a lit underline — on a full-width bar there's room to
+   say where you are, which the pill never had. */
+.navlinks a[aria-current="page"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -6px;
+  height: 2px; border-radius: 2px; background: var(--red); box-shadow: 0 0 10px var(--red); }
+.nav-right { display: flex; align-items: center; gap: 9px; margin-left: auto; }
 .theme-toggle { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--dune); background: transparent; border: 1px solid var(--glass-edge); cursor: pointer; font-size: 14px; }
 .theme-toggle:hover { color: var(--red); border-color: var(--red); }
 /* Hidden on desktop; the <1040px rules below swap it in for the links it
@@ -117,15 +142,22 @@ p { margin: 0; }
 .nav-toggle { display: none; place-items: center; width: 34px; height: 34px; border-radius: 999px; color: var(--dune); background: transparent; border: 1px solid var(--glass-edge); cursor: pointer; font-size: 15px; line-height: 1; }
 .nav-toggle:hover { color: var(--red); border-color: var(--red); }
 .nav-toggle[aria-expanded="true"] { color: var(--red); border-color: var(--red); }
-@media (max-width: 1040px) {
+/* Edge-to-edge buys real room, so the links survive ~120px further down than
+   the pill's old 1040px cut-off before collapsing to the burger. */
+@media (max-width: 920px) {
   .navlinks { display: none; }
   .nav-toggle { display: grid; }
   .nav { flex-wrap: wrap; }
-  /* Reopens .navlinks as a full-width column below the brand/icon row —
-     the pill's own border-radius softens to match instead of clipping it. */
-  .nav.menu-open { border-radius: 20px; }
-  .nav.menu-open .navlinks { display: flex; flex-direction: column; width: 100%; order: 5; gap: 4px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--glass-edge); }
-  .nav.menu-open .navlinks a { padding: 8px 4px; font-size: 15px; }
+  /* Reopens .navlinks as a full-width column below the brand/icon row. */
+  .nav.menu-open .navlinks { display: flex; flex-direction: column; width: 100%; order: 5; gap: 2px; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--glass-edge); }
+  .nav.menu-open .navlinks a { padding: 9px 2px; font-size: 15px; }
+  .nav.menu-open .navlinks a[aria-current="page"]::after { display: none; }
+  /* An open menu must never be transparent: at scroll 0 the frost animation
+     is still at its `from` keyframe, which would drop the panel straight onto
+     the hero with nothing behind it. Killing the animation reverts to the
+     frosted base rule above. */
+  .nav.menu-open { animation: none; padding-bottom: 14px;
+    background: color-mix(in srgb, var(--shell) 93%, transparent); }
 }
 
 /* ---------- reusable bits ---------- */
@@ -576,8 +608,10 @@ footer { padding: 40px 0; color: var(--dune); font-family: var(--font-mono); fon
 @media (max-width: 600px) {
   .halo { width: 100vw; height: 100vw; }
   
-  /* Fix nav padding and text */
-  .nav { padding: 8px 12px; gap: 12px; }
+  /* Keep the bar's gutter equal to .wrap's own 30px, so the brand still lines
+     up with the first character of the page. Only the gap and height shrink —
+     the horizontal padding is inherited from the max() formula on purpose. */
+  .nav { gap: 12px; min-height: 56px; padding-block: 7px; }
   .brand { font-size: 16px; }
   .brand .glyph { width: 22px; }
   .btn { padding: 10px 16px; font-size: 14px; }

@@ -7,10 +7,18 @@
 <meta name="description" content="An AI-native framework for organizing and running your AI company, entirely on your own Mac or Linux machine." />
 <link rel="icon" type="image/png" href="/favicon.png" />
 <link rel="stylesheet" href="/styles.css" />
+<link rel="stylesheet" href="/cinematic.css" />
 <script src="/brands.js" defer></script>
 <script>(function(){var r=document.documentElement,s=null;try{s=localStorage.getItem('alacran-theme')}catch(e){}r.setAttribute('data-theme',s==='light'?'light':'dark');})();</script>
 </head>
 <body>
+
+<!-- film chrome: opening iris, scroll reel, grain + vignette -->
+<div class="letterbox t" aria-hidden="true"></div>
+<div class="letterbox b" aria-hidden="true"></div>
+<div class="reel" aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
 <nav class="nav">
   <a class="brand" href="/"><img class="glyph" src="/logo.png" alt="" width="600" height="626" />Alacrán</a>
   <div class="navlinks" id="navlinks">
@@ -28,38 +36,46 @@
   </div>
 </nav>
 
-<header class="page-hero" id="top">
-  <div class="wrap" style="position:relative">
-    <div class="surreal-orb orb-1"></div>
-    <div class="surreal-orb orb-2"></div>
-    <div class="halo"></div>
-    
-    <div class="hero-stagger" style="position:relative; z-index:20;">
-      <p class="eyebrow">An AI-native framework that stays on your machine</p>
-      <h1>
-        <span class="reveal-word" style="animation-delay:.05s">Your</span>
-        <span class="reveal-word" style="animation-delay:.12s">AI</span>
-        <span class="reveal-word" style="animation-delay:.2s">forgets.</span><br>
-        <span class="reveal-word ex" style="animation-delay:.32s">Alacrán</span>
-        <span class="reveal-word ex" style="animation-delay:.4s">remembers.</span>
+<!-- ============================ 01 — cold open ============================ -->
+<header class="scene hero-scene scene-lit" id="top">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="fog-bank b"></div>
+    <div class="depth-grid"></div>
+    <div class="kicker">MEMORY</div>
+    <div class="bloom"></div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="hero-copy">
+      <p class="slate"><b>01</b> An AI-native framework that stays on your machine</p>
+
+      <h1 class="hero-title d3">
+        <span class="fly" style="--i:0">Your</span>
+        <span class="fly" style="--i:1">AI</span>
+        <span class="fly" style="--i:2">forgets.</span><br>
+        <span class="fly ex" style="--i:3">Alacrán</span>
+        <span class="fly ex" style="--i:4">remembers.</span>
       </h1>
-      <p class="hero-sub" style="margin-top:24px;">Give every project its own isolated sandbox, its own files, and its own context window. Run everything locally, safely orchestrate Claude, Codex, Aider, or Antigravity, and keep all your work strictly on your own machine.</p>
-      <div class="cta r" style="margin-top:32px;">
+
+      <p class="hero-sub hero-late l1" style="margin-left:0">Give every project its own isolated sandbox, its own files, and its own context window. Run everything locally, safely orchestrate Claude, Codex, Aider, or Antigravity, and keep all your work strictly on your own machine.</p>
+
+      <div class="cta-row hero-late l2" style="margin-top:34px;">
         <a class="btn btn-primary" href="#download">Download free</a>
         <a class="btn btn-ghost" href="#how-it-works">How it works</a>
       </div>
 
-      <div class="connectors-row r" style="margin-top:40px; display:flex; gap:24px; align-items:center; opacity:0.6; font-size:13px; font-family:var(--font-mono); color:var(--bone);">
-        <span style="opacity:0.6">Connects to:</span>
-        <span style="display:flex; align-items:center; gap:6px; font-weight:bold;"><svg width="18" height="18" fill="currentColor"><use href="#b-google"/></svg> Google</span>
-        <span style="display:flex; align-items:center; gap:6px; font-weight:bold;"><svg width="18" height="18" fill="currentColor"><use href="#b-github"/></svg> GitHub</span>
-        <span style="display:flex; align-items:center; gap:6px; font-weight:bold;"><svg width="18" height="18" fill="currentColor"><use href="#b-notion"/></svg> Notion</span>
+      <div class="hero-connectors hero-late l3" style="margin-top:40px;">
+        <span class="lbl">Connects to</span>
+        <b><svg aria-hidden="true"><use href="#b-google"/></svg> Google</b>
+        <b><svg aria-hidden="true"><use href="#b-github"/></svg> GitHub</b>
+        <b><svg aria-hidden="true"><use href="#b-notion"/></svg> Notion</b>
       </div>
     </div>
 
-    <!-- Cinematic Hero Mockup -->
-    <div class="hero-mockup-wrapper">
-      <div class="mac-window hero-mockup">
+    <div class="hero-rig">
+      <div class="mac-window">
         <div class="mac-header">
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Alacrán — Workspace: "Marketing Launch"</div>
@@ -67,7 +83,7 @@
         <div class="mac-body">
           <div class="mac-sidebar">
             <div class="mac-sidebar-label">Workspaces</div>
-            <div class="mac-item active"><img src="/logo.png" style="width:14px;border-radius:3px"> Marketing Launch</div>
+            <div class="mac-item active"><img src="/logo.png" alt="" style="width:14px;height:auto;border-radius:3px"> Marketing Launch</div>
             <div class="mac-item">Q3 Engineering</div>
             <div class="mac-item">Personal Setup</div>
             <div class="mac-sidebar-label" style="margin-top:16px">Connected Tools</div>
@@ -86,52 +102,198 @@
   </div>
 </header>
 
-<section class="section" id="plain" style="padding-top:160px;">
-  <div class="wrap">
-    <div class="plain r">
-      <p class="eyebrow">In plain English</p>
-      <h2>Never used an AI tool before? Start right here.</h2>
-      <p>You probably already know how to ask ChatGPT or Claude a question. The catch is that it starts every conversation as a total stranger. It doesn&rsquo;t know what you sell, who your customers are, or how you like things written. As a result, you end up typing the same background paragraph over and over before it can actually be useful.</p>
-      <p><b>Alacr&aacute;n is a small app for your computer that fixes exactly that.</b> You write down the basics of your business once in ordinary words. From then on, your AI reads that first, every single time, and gets straight to the actual work.</p>
-      <div class="plain-split">
-        <div class="plain-col no">
-          <h3>Without it</h3>
-          <ul>
-            <li>You re-explain the business in every new chat</li>
-            <li>You copy answers out of a chat window by hand</li>
-            <li>Last month&rsquo;s good draft is lost in old conversations</li>
-            <li>The tone comes out slightly wrong every time</li>
-          </ul>
+<!-- ============================ 02 — install ============================ -->
+<section class="scene cv scene-lit" id="install">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank b"></div>
+    <div class="kicker">INSTALL</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="sec-head center fade">
+      <p class="slate"><b>02</b> Install</p>
+      <h2 class="d3-sm">Up and running in two minutes.</h2>
+      <p>Pick your platform. Three steps, no account, nothing to configure.</p>
+    </div>
+
+    <div class="install cam">
+      <input type="radio" name="os" id="os-mac" checked>
+      <input type="radio" name="os" id="os-linux">
+      <input type="radio" name="os" id="os-src">
+
+      <div class="install-tabs" role="group" aria-label="Choose your platform">
+        <label for="os-mac"><svg class="bi" aria-hidden="true"><use href="#b-apple"/></svg> macOS</label>
+        <label for="os-linux"><svg class="bi" aria-hidden="true"><use href="#b-linux"/></svg> Linux</label>
+        <label for="os-src"><svg class="bi" aria-hidden="true"><use href="#b-git"/></svg> From source</label>
+      </div>
+
+      <div class="install-body">
+        <!-- macOS -->
+        <div class="install-panel p-mac">
+          <ol class="istep">
+            <li>
+              <div>
+                <h3>Download the app</h3>
+                <p>One universal build for both Apple Silicon and Intel Macs.</p>
+                <a class="btn btn-primary" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.dmg" download>Download Alacrán.dmg</a>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Drag it to Applications</h3>
+                <p>Open the <code>.dmg</code> and drag Alacr&aacute;n into your Applications folder, the same as any other Mac app.</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Run this once in Terminal</h3>
+                <div class="cmd-bar">
+                  <code>xattr -cr "/Applications/Alacrán.app"</code>
+                  <button class="cmd-copy" type="button" aria-label="Copy command"></button>
+                </div>
+                <p>The build is signed but <b style="color:var(--bone)">not notarized</b>, because notarizing needs a paid Apple Developer account. Without this, macOS quarantines the download and refuses to open it &mdash; often claiming the app is &ldquo;damaged&rdquo;. It isn&rsquo;t; this just clears the quarantine flag macOS attaches to anything downloaded from the web.</p>
+                <p class="sub">First install only &middot; updates never need it</p>
+              </div>
+            </li>
+          </ol>
         </div>
-        <div class="plain-col yes">
-          <h3>With it</h3>
-          <ul>
-            <li>It already knows the business before you ask</li>
-            <li>The work is saved where you can easily find it later</li>
-            <li>Anything it did well becomes a one-click repeat</li>
-            <li>You read the change and approve it, or you don&rsquo;t</li>
-          </ul>
+
+        <!-- Linux -->
+        <div class="install-panel p-linux">
+          <ol class="istep">
+            <li>
+              <div>
+                <h3>Download the package</h3>
+                <p>A standard Debian package, built and published by CI for Debian and Ubuntu.</p>
+                <a class="btn btn-primary" href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download>Download Alacran.deb</a>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Install it</h3>
+                <div class="cmd-bar">
+                  <code>sudo apt install ./Alacran.deb</code>
+                  <button class="cmd-copy" type="button" aria-label="Copy command"></button>
+                </div>
+                <p>If your system doesn&rsquo;t have <code>apt</code>, use <code>sudo dpkg -i Alacran.deb &amp;&amp; sudo apt -f install</code> instead.</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Launch it</h3>
+                <p>Open Alacr&aacute;n from your applications menu. Updates arrive in-app through a native password prompt &mdash; no terminal needed again.</p>
+              </div>
+            </li>
+          </ol>
         </div>
+
+        <!-- From source -->
+        <div class="install-panel p-src">
+          <ol class="istep">
+            <li>
+              <div>
+                <h3>Clone and install</h3>
+                <div class="cmd-bar">
+                  <code>git clone https://github.com/kwakuoseikwakye/alacran.git
+cd alacran
+npm install</code>
+                  <button class="cmd-copy" type="button" aria-label="Copy commands"></button>
+                </div>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Run it</h3>
+                <div class="cmd-bar">
+                  <code>npm run dev <span class="c"># http://localhost:3000</span></code>
+                  <button class="cmd-copy" type="button" aria-label="Copy command"></button>
+                </div>
+                <p>Next.js 15, React 19, TypeScript. <code>npm test</code> runs the full suite &mdash; no network, no real subprocesses.</p>
+              </div>
+            </li>
+            <li>
+              <div>
+                <h3>Or build your own package</h3>
+                <div class="cmd-bar">
+                  <code>bash scripts/package-macos.sh <span class="c"># or package-linux.sh</span></code>
+                  <button class="cmd-copy" type="button" aria-label="Copy command"></button>
+                </div>
+                <p>Produces the same <code>.dmg</code> or <code>.deb</code> the releases page ships.</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+
+        <p class="install-foot">
+          Both builds bundle their own server: they start it on your machine and open your browser at <code>127.0.0.1</code>. You&rsquo;ll also need a coding-agent CLI &mdash; Claude Code is the default, and Codex, Aider and Antigravity all work. The <a href="/how-to-use">complete guide</a> walks through every screen assuming you&rsquo;ve never touched an AI tool.
+        </p>
       </div>
     </div>
   </div>
 </section>
 
-<section id="onboarding-demo" style="padding: 140px 0; background: color-mix(in srgb, var(--void) 30%, transparent);">
-  <div class="sticky-layout r">
-    <div class="sticky-text">
-      <span class="eyebrow">Setup in seconds</span>
-      <h2>Zero configuration.<br>Ready to run.</h2>
+<!-- ========================= 03 — in plain English ========================= -->
+<section class="scene cv" id="plain">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank b"></div>
+    <div class="kicker">PLAIN</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="cam" style="max-width:760px">
+      <p class="slate"><b>03</b> In plain English</p>
+      <h2 class="d3-sm" style="font-size:clamp(2rem,5vw,3.4rem); line-height:1.05; margin-top:10px;">Never used an AI tool before? Start right here.</h2>
+      <p class="muted" style="margin-top:22px; font-size:1.08rem;">You probably already know how to ask ChatGPT or Claude a question. The catch is that it starts every conversation as a total stranger. It doesn&rsquo;t know what you sell, who your customers are, or how you like things written. As a result, you end up typing the same background paragraph over and over before it can actually be useful.</p>
+      <p class="muted" style="margin-top:16px; font-size:1.08rem;"><b style="color:var(--bone)">Alacr&aacute;n is a small app for your computer that fixes exactly that.</b> You write down the basics of your business once in ordinary words. From then on, your AI reads that first, every single time, and gets straight to the actual work.</p>
+    </div>
+
+    <div class="plain-split cam d1" style="margin-top:40px">
+      <div class="plain-col no">
+        <h3>Without it</h3>
+        <ul>
+          <li>You re-explain the business in every new chat</li>
+          <li>You copy answers out of a chat window by hand</li>
+          <li>Last month&rsquo;s good draft is lost in old conversations</li>
+          <li>The tone comes out slightly wrong every time</li>
+        </ul>
+      </div>
+      <div class="plain-col yes">
+        <h3>With it</h3>
+        <ul>
+          <li>It already knows the business before you ask</li>
+          <li>The work is saved where you can easily find it later</li>
+          <li>Anything it did well becomes a one-click repeat</li>
+          <li>You read the change and approve it, or you don&rsquo;t</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== 03 — setup scene =========================== -->
+<section class="scene scene-lit" id="onboarding-demo">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="kicker">SETUP</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="sticky-layout stage">
+    <div class="sticky-text fade">
+      <p class="slate"><b>04</b> Setup in seconds</p>
+      <h2 class="d3-sm">Zero configuration.<br>Ready to run.</h2>
       <p>Creating a new company workspace is as simple as answering four plain-English questions. No coding, no prompts, no API scaffolding.</p>
       <p style="margin-top:16px;">Once the wizard finishes, your dedicated sandbox is generated instantly. Your AI company is immediately ready to run jobs.</p>
     </div>
     <div class="sticky-visual">
-      <div class="mac-window" style="min-height:380px; box-shadow: 0 40px 100px -20px rgba(255,46,67,0.15);">
+      <div class="mac-window cam" style="min-height:380px;">
         <div class="mac-header">
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Alacrán Setup</div>
         </div>
-        
+
         <div class="mac-body" style="position: relative; overflow: hidden; min-height: 340px;">
           <!-- Scene 1: The Form -->
           <div class="onboarding-scene s1" style="justify-content: center;">
@@ -143,7 +305,7 @@
                <div class="demo-btn">Create workspace</div>
             </div>
           </div>
-          
+
           <!-- Scene 2: Terminal Generation -->
           <div class="onboarding-scene s2">
             <div class="mac-content" style="height:100%; display: flex; flex-direction: column; justify-content: center;">
@@ -153,7 +315,7 @@
                <div class="terminal-line term-line-anim"><span class="success">✔</span> Workspace ready.</div>
             </div>
           </div>
-          
+
           <!-- Scene 3: Dashboard Ready -->
           <div class="onboarding-scene s3" style="justify-content: center;">
             <div class="demo-dash" style="align-content: center; height: auto;">
@@ -180,16 +342,23 @@
   </div>
 </section>
 
-<section id="how-it-works" style="padding: 140px 0;">
-  <div class="sticky-layout">
-    <div class="sticky-text">
-      <span class="eyebrow">Orchestrate</span>
-      <h2>You are the hub. Everything else is isolated.</h2>
+<!-- ========================= 04 — isolation scene ========================= -->
+<section class="scene" id="how-it-works">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank b"></div>
+    <div class="fog-bank c"></div>
+    <div class="kicker">ISOLATED</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="sticky-layout stage">
+    <div class="sticky-text fade">
+      <p class="slate"><b>05</b> Orchestrate</p>
+      <h2 class="d3-sm">You are the hub. Everything else is isolated.</h2>
       <p>Instead of copying files into random chat boxes, give your AI a dedicated folder and access to only the tools it needs. Every AI company you connect with stays sandboxed in its own workspace. You keep the root access.</p>
     </div>
     <div class="sticky-visual">
-      <!-- Mockup 1: Workspace Selector -->
-      <div class="mac-window r">
+      <div class="mac-window cam">
         <div class="mac-header">
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Isolated Workspaces</div>
@@ -207,8 +376,7 @@
            </div>
         </div>
       </div>
-      <!-- Mockup 2: Security logs -->
-      <div class="mac-window r">
+      <div class="mac-window cam d1">
         <div class="mac-header">
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Security & Audit</div>
@@ -223,20 +391,26 @@
   </div>
 </section>
 
-<section id="execute" style="padding: 140px 0; background: color-mix(in srgb, var(--void) 60%, transparent);">
-  <div class="sticky-layout">
+<!-- ========================== 05 — execution scene ========================== -->
+<section class="scene scene-lit" id="execute">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="kicker">LIVE</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="sticky-layout stage">
     <div class="sticky-visual" style="align-items:flex-start;">
-      <div class="mac-window r" style="width:100%; box-shadow: 0 40px 100px -20px rgba(255,46,67,0.15);">
+      <div class="mac-window cam" style="width:100%;">
         <div class="mac-header">
           <div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div>
           <div class="mac-title">Live Execution Board</div>
         </div>
         <div class="mac-body execute-board-body" style="padding: 24px; background: var(--void); display:flex; gap:16px; overflow-x:auto;">
-          <!-- Board Simulation (CSS/HTML mockup replacing the complex JS one) -->
           <div style="flex:1; min-width:220px;">
             <div style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--dune); margin-bottom:12px;">Running</div>
             <div style="background:var(--shell-2); border:1px solid color-mix(in srgb, var(--red) 40%, var(--line)); border-radius:12px; padding:16px; position:relative; overflow:hidden;">
-              <div style="position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--red); animation: flow-dot 2s linear infinite;"></div>
+              <div class="board-prog" style="position:absolute; bottom:0; left:0; right:0; margin:0; height:2px; border-radius:0;"><i></i></div>
               <h4 style="font-size:13px; color:var(--bone); margin-bottom:4px;">Check inbox</h4>
               <p style="font-size:12px; color:var(--dune);">Processing 12 threads...</p>
             </div>
@@ -252,21 +426,31 @@
         </div>
       </div>
     </div>
-    <div class="sticky-text">
-      <span class="eyebrow">Execute</span>
-      <h2>Watch the work happen, live.</h2>
+    <div class="sticky-text fade">
+      <p class="slate"><b>06</b> Execute</p>
+      <h2 class="d3-sm">Watch the work happen, live.</h2>
       <p>Every job moves through the same stages right out in the open: waiting, running, then showing you exactly what it wants to change.</p>
-      <p style="margin-top:16px;"><b>Most automation tools</b> tell you what they did after the fact. Alacr&aacute;n, however, shows you the exact change first, and then waits for your approval.</p>
+      <p style="margin-top:16px;"><b style="color:var(--bone)">Most automation tools</b> tell you what they did after the fact. Alacr&aacute;n, however, shows you the exact change first, and then waits for your approval.</p>
     </div>
   </div>
 </section>
 
-<section style="padding: 140px 0;">
-  <div class="wrap">
-    <span class="eyebrow r">Features</span>
-    <h2 class="r" style="font-size: clamp(2rem, 4.4vw, 3rem); margin-bottom: 40px; max-width: 600px; line-height: 1.1;">Everything you need to scale your AI workflow.</h2>
-    <div class="bento-grid r">
-      <div class="bento-card bento-span-2">
+<!-- ========================== 06 — capabilities ========================== -->
+<section class="scene cv">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank b"></div>
+    <div class="kicker">BUILT</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="fade" style="max-width:620px; margin-bottom:44px;">
+      <p class="slate"><b>07</b> Features</p>
+      <h2 class="d3-sm" style="font-size: clamp(2rem, 4.6vw, 3.2rem); line-height: 1.06; margin-top:10px;">Everything you need to scale your AI workflow.</h2>
+    </div>
+
+    <div class="bento-grid">
+      <div class="bento-card bento-span-2 cam">
         <div class="bento-visual">
           <div class="micro-mockup">
              <div class="hdr"><span>$ aider</span> <span>100% Local</span></div>
@@ -279,24 +463,24 @@
           <p>Point any workspace at Aider and run it completely off the grid using local open-source models. Your data never touches an external API.</p>
         </div>
       </div>
-      <div class="bento-card">
+      <div class="bento-card cam d1">
         <div class="bento-visual">
-          <img src="/logo.png" style="width:48px; filter:drop-shadow(0 0 10px rgba(255,46,67,0.5))">
+          <img src="/logo.png" alt="" style="width:48px; height:auto; filter:drop-shadow(0 0 14px rgba(255,46,67,0.55))">
         </div>
         <div class="bento-content">
           <h3>Claude Code native</h3>
           <p>Built from the ground up to orchestrate Anthropic's powerful CLI agent seamlessly.</p>
         </div>
       </div>
-      <div class="bento-card">
+      <div class="bento-card cam d1">
         <div class="bento-content" style="margin-top:0;">
           <h3>Your own key</h3>
           <p>There are no subscriptions or hidden middleman fees here. Use your own API keys. The deal is exactly the same as always: your own account, completely direct.</p>
         </div>
       </div>
-      <div class="bento-card bento-span-2">
+      <div class="bento-card bento-span-2 cam d2">
         <div class="bento-visual">
-           <div class="mac-window" style="width:90%; height:140px; box-shadow:0 10px 30px -10px rgba(0,0,0,0.8)">
+           <div class="mac-window" style="width:90%; height:140px;">
              <div class="mac-header"><div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div></div>
              <div class="mac-content" style="padding:16px;">
                <div class="terminal-line"><span class="cmd">git</span> commit -m "Automated AI backup"</div>
@@ -313,23 +497,31 @@
   </div>
 </section>
 
-<section style="padding:140px 0; background: color-mix(in srgb, var(--void) 40%, transparent);">
-  <div class="sticky-layout r">
-    <div class="sticky-text">
-      <span class="eyebrow">Privacy & Security</span>
-      <h2>In plain English:<br>what leaves my computer?</h2>
-      <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own computer, reachable only from your machine. <b>We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
+<!-- ============================ 07 — privacy ============================ -->
+<section class="scene scene-lit">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="fog-bank c"></div>
+    <div class="kicker">PRIVATE</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="sticky-layout stage">
+    <div class="sticky-text fade">
+      <p class="slate"><b>08</b> Privacy &amp; Security</p>
+      <h2 class="d3-sm">In plain English:<br>what leaves my computer?</h2>
+      <p>Most apps say &ldquo;we take privacy seriously&rdquo;. Here is the actual architecture instead. Alacr&aacute;n runs as a small server on your own computer, reachable only from your machine. <b style="color:var(--bone)">We do not operate a server your business data could reach</b>, so there is no database of ours with your work in it, and no admin panel anyone here could open.</p>
       <p style="margin-top:16px">There is no analytics, no telemetry and no crash reporting anywhere in the app. Not disabled by default. Not present at all.</p>
       <p style="margin-top:16px">So we won&rsquo;t claim &ldquo;nothing ever leaves your computer&rdquo;, because you&rsquo;d be right to be sceptical. Here is the honest, complete list of what does:</p>
-      <p style="margin-top:16px">And you don&rsquo;t have to take our word for any of it. <a href="https://github.com/kwakuoseikwakye/alacran">The whole source is public</a>. Go read it.</p>
+      <p style="margin-top:16px">And you don&rsquo;t have to take our word for any of it. <a href="https://github.com/kwakuoseikwakye/alacran" style="color:var(--red)">The whole source is public</a>. Go read it.</p>
     </div>
     <div class="sticky-visual">
-      <div class="mac-window">
+      <div class="mac-window cam">
         <div class="mac-header"><div class="mac-dots"><div class="mac-dot r"></div><div class="mac-dot y"></div><div class="mac-dot g"></div></div><div class="mac-title">Privacy Check</div></div>
         <div class="mac-body" style="padding:0; background: color-mix(in srgb, var(--void) 50%, transparent);">
           <div class="mac-sidebar" style="width: 200px; padding: 16px 12px; background: color-mix(in srgb, var(--shell) 30%, transparent);">
             <div class="mac-sidebar-label">Settings</div>
-            <div class="mac-item active" style="margin-bottom:4px;"><img src="/logo.png" style="width:14px;border-radius:3px; filter:grayscale(1) contrast(1.5);"> Privacy & Security</div>
+            <div class="mac-item active" style="margin-bottom:4px;"><img src="/logo.png" alt="" style="width:14px;height:auto;border-radius:3px; filter:grayscale(1) contrast(1.5);"> Privacy &amp; Security</div>
             <div class="mac-item" style="margin-bottom:4px;">Network Access</div>
             <div class="mac-item">Advanced</div>
           </div>
@@ -343,36 +535,33 @@
                  <div style="width: 22px; height: 22px; border-radius: 50%; background: #fff; position: absolute; right: 2px; top: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.3);"></div>
               </div>
             </div>
-            
+
             <div style="display:grid; gap: 14px;">
-              <!-- Local Only Item -->
               <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
-                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Prompts, Files & History</div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Prompts, Files &amp; History</div>
                    <div style="font-size: 12.5px; color: var(--dune);">Kept strictly on your local machine.</div>
                  </div>
                  <div style="padding: 6px 12px; background: color-mix(in srgb, var(--success) 12%, transparent); border: 1px solid color-mix(in srgb, var(--success) 30%, transparent); color: var(--success); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">LOCAL ONLY</div>
               </div>
 
-              <!-- Blocked Item -->
               <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
-                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Analytics & Telemetry</div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">Analytics &amp; Telemetry</div>
                    <div style="font-size: 12.5px; color: var(--dune);">No usage data or crash reports collected.</div>
                  </div>
                  <div style="padding: 6px 12px; background: color-mix(in srgb, var(--dune) 15%, transparent); border: 1px solid color-mix(in srgb, var(--dune) 30%, transparent); color: var(--dune); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">BLOCKED</div>
               </div>
 
-              <!-- Allowed Item -->
               <div class="privacy-item" style="display: flex; justify-content: space-between; align-items: center; padding: 16px; background: color-mix(in srgb, var(--shell) 60%, transparent); border: 1px solid var(--glass-edge); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
                  <div>
-                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">AI Inference & Backups</div>
+                   <div style="font-weight: 800; font-family: var(--font-display); font-size: 14px; color: var(--bone); margin-bottom: 4px;">AI Inference &amp; Backups</div>
                    <div style="font-size: 12.5px; color: var(--dune);">Direct connections via API only when requested.</div>
                  </div>
                  <div style="padding: 6px 12px; background: color-mix(in srgb, var(--ember) 12%, transparent); border: 1px solid color-mix(in srgb, var(--ember) 30%, transparent); color: var(--ember); font-family: var(--font-mono); font-size: 10.5px; font-weight: bold; border-radius: 8px; letter-spacing:0.5px;">ALLOWED</div>
               </div>
             </div>
-            
+
             <div style="margin-top:24px; font-size: 12px; color: var(--dune); line-height: 1.5;">
               <b>Note:</b> Version checks run up to 1x/day against GitHub releases. That's the whole list.
             </div>
@@ -383,14 +572,21 @@
   </div>
 </section>
 
-<section class="section" id="faq">
-  <div class="wrap">
-    <div class="sec-head center r">
-      <p class="eyebrow">Questions</p>
-      <h2>The things people actually ask.</h2>
+<!-- ============================== 08 — FAQ ============================== -->
+<section class="scene cv" id="faq">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank b"></div>
+    <div class="kicker">ASKED</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="sec-head center fade">
+      <p class="slate"><b>09</b> Questions</p>
+      <h2 class="d3-sm">The things people actually ask.</h2>
       <p>Straight answers, including the awkward ones.</p>
     </div>
-    <div class="faq r">
+    <div class="faq cam">
       <details>
         <summary><span>I&rsquo;ve never used an AI tool. Is this going to be over my head?</span></summary>
         <div class="ans">
@@ -430,12 +626,22 @@
   </div>
 </section>
 
-<section class="section" id="download">
-  <div class="wrap">
-    <div class="sec-head center r"><p class="eyebrow">Download</p><h2>Free, and yours to keep.</h2></div>
-    <div class="price-card r">
+<!-- ============================ 09 — download ============================ -->
+<section class="scene cv scene-lit" id="download">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="kicker">FREE</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
+    <div class="sec-head center fade">
+      <p class="slate"><b>10</b> Download</p>
+      <h2 class="d3-sm">Free, and yours to keep.</h2>
+    </div>
+    <div class="price-card cam">
       <p class="tag">Alacrán</p>
-      <div class="amt">Free<span>&nbsp;&middot; MIT</span></div>
+      <div class="amt d3-sm">Free<span>&nbsp;&middot; MIT</span></div>
       <p class="muted" style="font-size:.95rem">No account, no licence key, no trial clock</p>
       <ul class="plist">
         <li>As many workspaces as you want</li>
@@ -453,12 +659,22 @@
   </div>
 </section>
 
-<section class="final">
-  <div class="wrap r">
+<!-- ========================== 10 — closing shot ========================== -->
+<section class="scene cv finale">
+  <div class="scene-bg" aria-hidden="true">
+    <div class="fog-bank a"></div>
+    <div class="fog-bank b"></div>
+    <div class="depth-grid"></div>
+    <div class="kicker">YOURS</div>
+    <div class="haze"></div>
+  </div>
+
+  <div class="wrap stage">
     <img class="mark mark-glow" src="/logo.png" alt="" width="600" height="626" />
-    <h2>An AI-native framework that never leaves your machine.</h2>
-    <p>Every file your AI company touches stays in a folder you own. They stay organized, versioned, and are never uploaded anywhere. Set it up once this afternoon, and the routine work is already done by the time you sit down next week.</p>
-    <div class="cta"><a class="btn btn-primary" href="#download">Download free</a></div>
+    <p class="slate" style="justify-content:center"><b>11</b> Closing shot</p>
+    <h2 class="d3">An AI-native framework that never leaves your machine.</h2>
+    <p class="fade">Every file your AI company touches stays in a folder you own. They stay organized, versioned, and are never uploaded anywhere. Set it up once this afternoon, and the routine work is already done by the time you sit down next week.</p>
+    <div class="cta-row fade d1" style="justify-content:center; margin-top:32px;"><a class="btn btn-primary" href="#download">Download free</a></div>
   </div>
 </section>
 
@@ -472,6 +688,7 @@
     </span>
   </div>
 </footer>
+
 <script>
   (function(){var r=document.documentElement,b=document.getElementById("tt");
     if(b)b.addEventListener("click",function(){var n=(r.getAttribute("data-theme")==="dark")?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem('alacran-theme',n)}catch(e){}});})();
@@ -482,9 +699,28 @@
     n.querySelectorAll(".navlinks a").forEach(function(a){a.addEventListener("click",close);});
     document.addEventListener("click",function(e){if(!n.contains(e.target))close();});
     document.addEventListener("keydown",function(e){if(e.key==="Escape")close();});})();
-  (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".r,.diagram");
-    if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add(e.classList.contains("diagram")?"drawn":"in");});return;}
-    var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add(e.target.classList.contains("diagram")?"drawn":"in");io.unobserve(e.target);});},{threshold:0.14});
+  /* Install guide. Panel switching is pure CSS (:checked ~ sibling) — this is
+     only the two things CSS genuinely can't do: preselect the visitor's OS,
+     and copy to the clipboard. */
+  (function(){var ua=navigator.userAgent,id=null;
+    if(/Linux|X11/.test(ua)&&!/Android/.test(ua))id="os-linux";
+    else if(/Mac|iPhone|iPad/.test(ua))id="os-mac";
+    var el=id&&document.getElementById(id); if(el)el.checked=true;})();
+  (function(){if(!navigator.clipboard)return;   /* needs a secure context */
+    document.addEventListener("click",function(e){
+      var b=e.target.closest(".cmd-copy"); if(!b)return;
+      var code=b.parentNode.querySelector("code"); if(!code)return;
+      navigator.clipboard.writeText(code.textContent).then(function(){
+        b.setAttribute("data-done","");
+        setTimeout(function(){b.removeAttribute("data-done");},1500);
+      },function(){});
+    });})();
+  /* Fallback camera. Where scroll-driven animations run (see cinematic.css)
+     they override these transitions entirely and this just adds a dead class;
+     where they don't — phones, older engines — this IS the reveal. */
+  (function(){var red=matchMedia("(prefers-reduced-motion: reduce)").matches;var els=document.querySelectorAll(".cam,.fade");
+    if(!("IntersectionObserver" in window)||red){els.forEach(function(e){e.classList.add("in");});return;}
+    var io=new IntersectionObserver(function(en){en.forEach(function(e){if(!e.isIntersecting)return;e.target.classList.add("in");io.unobserve(e.target);});},{threshold:0.12});
     els.forEach(function(e){io.observe(e);});})();
 </script>
 </body>
