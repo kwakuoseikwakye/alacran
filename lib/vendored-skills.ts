@@ -22,6 +22,7 @@ export const VENDORED_SKILL_PACKS = [
   { packDirName: "marketing", markerCommand: "draft-campaign.md" },
   { packDirName: "hr-people", markerCommand: "screen-candidate.md" },
   { packDirName: "software-engineering", markerCommand: "plan-feature.md" },
+  { packDirName: "customer-support", markerCommand: "triage-ticket.md" },
 ] as const
 
 export const VENDORED_SKILLS_RELATIVE_DIR = path.join(".claude", "skills")
@@ -36,7 +37,11 @@ export type VendoredSkillsUpdate = {
   bundledTag: string
 }
 
-/** The `Tag:` line scripts/sync-vendored-skills.sh writes into UPSTREAM.md. */
+/**
+ * The `Tag:` line scripts/sync-vendored-skills.sh writes into UPSTREAM.md.
+ * A pin is an upstream tag where one exists and a commit SHA where none does,
+ * so this deliberately does not care which — it only has to compare equal.
+ */
 export function parseVendoredTag(upstreamMd: string): string | null {
   return upstreamMd.match(/^Tag:[ \t]+(\S+)[ \t]*$/m)?.[1] ?? null
 }

@@ -1319,6 +1319,22 @@ the user types. **v77's skip-on-collision logic stays** — Open in Terminal sti
 gives full file access, so a hand-written collision is still possible and must
 never be overwritten.
 
+**v82 (2026-08-18) added a `customer-support` skill to the Customer support pack**,
+vendored from `wshobson/agents` (MIT) rather than the aggregator it was requested
+from. **The rule this hardens: check the licence before vendoring, and trace a
+copy to its origin rather than refusing outright.** The requested repo
+(`eduard22222222/claude-skill-stack`) has NO licence anywhere, so redistributing
+it in this public MIT repo and in every shipped binary would repeat the v37/v67
+mistake; a code search for the skill's first line found 599 copies and one
+MIT-licensed origin, which is what shipped. Signals that a source is a scrape and
+not an origin: frontmatter like `source: community` / `risk: unknown`, no tags or
+releases, and references to files that do not exist in the repo.
+**Two mechanism generalisations came with it:** a pin may be a commit SHA when
+upstream publishes no tags (archive URL differs: `archive/<sha>.tar.gz`, and the
+UI shortens a SHA to 7 chars), and a pack may vendor loose `.md` files via `SRC`
+/ `SRC_FILES` instead of `skills/<id>/SKILL.md`. Existing packs keep the defaults
+and must regenerate byte-identical — resync all packs and diff before committing.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

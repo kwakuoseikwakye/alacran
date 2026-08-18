@@ -61,7 +61,7 @@ export const COMPANY_STARTER_PACKS: CompanyStarterPack[] = [
     id: "customer-support",
     label: "Customer support",
     description:
-      "Ships an ontology for tickets and contacts, plus /triage-ticket, /draft-response, /escalate-ticket, and /ticket-trends commands — assess, reply, escalate, and spot recurring bugs.",
+      "Ships an ontology for tickets and contacts, /triage-ticket, /draft-response, /escalate-ticket, and /ticket-trends commands, plus a customer-support skill covering conversational AI, ticket automation, sentiment analysis and omnichannel CX.",
     dirName: "customer-support",
     category: "Support",
   },

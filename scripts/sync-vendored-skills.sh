@@ -19,12 +19,16 @@
 #
 # Curated, never the whole upstream repo: a starter pack is a small overlay on
 # the base company skeleton (lib/company-starter-packs.ts). Marketing ships 10 of
-# upstream's 49, HR 12 of 147, software-engineering 10 of 67.
+# upstream's 49, HR 12 of 147, software-engineering 10 of 67, support 1.
 set -euo pipefail
 
-PACKS="marketing hr-people software-engineering"
+PACKS="marketing hr-people software-engineering customer-support"
 
 pack_config() {
+  # Defaults: pin by tag, and upstream lays skills out as skills/<id>/SKILL.md.
+  # A pack overrides these when its upstream does something else.
+  SRC="skills"
+  SRC_FILES=0
   case "$1" in
     marketing)
       REPO="coreyhaines31/marketingskills"
@@ -53,6 +57,17 @@ pack_config() {
       # id here if a company wants its own stack covered.
       SKILLS="spec-miner architecture-designer api-designer feature-forge test-master debugging-wizard code-reviewer security-reviewer code-documenter devops-engineer"
       ;;
+    customer-support)
+      REPO="wshobson/agents"
+      # Pinned to a COMMIT, not a tag: this upstream publishes no tags. Same
+      # contract as everywhere else — to update, put a newer SHA here and rerun.
+      TAG="d6837ae274c2cd817acad3fb98f193a4390a4c3e"
+      # And it ships agent .md FILES rather than skills/<id>/SKILL.md folders,
+      # so each id below is a file under SRC that becomes <id>/SKILL.md here.
+      SRC="plugins/customer-sales-automation/agents"
+      SRC_FILES=1
+      SKILLS="customer-support"
+      ;;
     *)
       echo "unknown pack: $1 (known: $PACKS)" >&2
       exit 1
@@ -73,18 +88,31 @@ sync_pack() {
 
   local slug="${REPO#*/}-${TAG#v}"
   local members=""
-  for s in $SKILLS; do members="$members $slug/skills/$s"; done
+  for s in $SKILLS; do
+    if [ "$SRC_FILES" = 1 ]; then members="$members $slug/$SRC/$s.md"; else members="$members $slug/$SRC/$s"; fi
+  done
+
+  local archive="https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz"
+  case "$TAG" in
+    [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]*) archive="https://github.com/$REPO/archive/$TAG.tar.gz" ;;
+  esac
 
   # shellcheck disable=SC2086  # deliberate word splitting: one tar member per skill
-  curl -fsSL "https://github.com/$REPO/archive/refs/tags/$TAG.tar.gz" \
+  curl -fsSL "$archive" \
     | tar -xzf - -C "$tmp" --strip-components=1 "$slug/LICENSE" $members
-
-  # evals/ is upstream's own test fixtures — dead weight in a company's repo.
-  find "$tmp/skills" -type d -name evals -exec rm -rf {} +
 
   rm -rf "$dest"
   mkdir -p "$dest"
-  cp -R "$tmp/skills/." "$dest/"
+  if [ "$SRC_FILES" = 1 ]; then
+    for s in $SKILLS; do
+      mkdir -p "$dest/$s"
+      cp "$tmp/$SRC/$s.md" "$dest/$s/SKILL.md"
+    done
+  else
+    # evals/ is upstream's own test fixtures — dead weight in a company's repo.
+    find "$tmp/$SRC" -type d -name evals -exec rm -rf {} +
+    cp -R "$tmp/$SRC/." "$dest/"
+  fi
 
   {
     printf '# Vendored skills\n\n'

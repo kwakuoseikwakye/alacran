@@ -3039,6 +3039,50 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v82 (2026-08-18): a customer-support skill, vendored from the licensed original
+
+The Customer support pack now ships the `customer-support` skill — conversational
+AI, ticket automation, sentiment analysis, omnichannel CX.
+
+**The requested source could not be used, and the content still could.** The link
+given was `eduard22222222/claude-skill-stack`, an aggregator of ~5,700 scraped
+skills with **no license at all** — no root LICENSE, none in that skill's folder
+(only ~25 unrelated folders carry one), and nothing in the README. No licence
+means all rights reserved, and this repo is public MIT that also redistributes
+its templates inside every `.dmg`/`.zip`/`.deb`; vendoring it is the exact
+mistake v37 and v67 exist to undo. That copy also had no tag or release to pin
+to, its own frontmatter says `source: community` and `risk: unknown`, and it
+points at a `resources/implementation-playbook.md` that does not exist in the
+repo.
+
+A GitHub code search for its first line found 599 copies and one origin:
+**`wshobson/agents`** (MIT, 38.8k stars), at
+`plugins/customer-sales-automation/agents/customer-support.md`. That is what is
+vendored — same content, real licence, real attribution, and the aggregator's
+broken reference and invented frontmatter dropped along the way.
+
+**Two mechanism changes, both small, both forced by that upstream:**
+
+1. **Pins may now be a commit SHA, not just a tag.** `wshobson/agents` publishes
+   no tags, so this pack pins `d6837ae…` and the archive URL switches from
+   `archive/refs/tags/<tag>.tar.gz` to `archive/<sha>.tar.gz`. Nothing else
+   cares — the staleness check only ever compares two strings for equality. The
+   pack test's `v1.2.3` assertion was widened to accept either form, and the
+   update dialog shortens a SHA to 7 characters so a non-technical reader is not
+   shown 40 hex digits.
+2. **A pack may point at loose `.md` files instead of `skills/<id>/SKILL.md`.**
+   This upstream ships agent files, so the pack config gained `SRC` (path prefix
+   inside the tarball) and `SRC_FILES`, which copies `<id>.md` to
+   `<id>/SKILL.md`. The three existing packs keep the defaults and regenerate
+   byte-identical — verified by resyncing all four and confirming only the new
+   directory appeared, with `v2.10.0`, `v1.4.0` and `v0.4.16` untouched.
+
+No app code changed beyond one `VENDORED_SKILL_PACKS` entry: the update button,
+the read-only rule (v81) and the safety rules all applied to the new pack on
+their own, and the tests picked it up through `describe.each` (738 → 741). A
+real scaffold shows the skill, reads as already current, and comes back
+app-managed. `tsc`, `eslint` and `next build` clean.
+
 ## v81 (2026-08-18): vendored skills are app-managed, so updates always land clean
 
 Decision from the maintainer, reversing part of v77's shape: a skill the app

@@ -56,7 +56,8 @@ describe.each(VENDORED_SKILL_PACKS.map((p) => p.packDirName))("vendored skills: 
 
   it("records the upstream tag and license it was vendored from", () => {
     const upstream = readFileSync(path.join(skillsDir, "UPSTREAM.md"), "utf-8")
-    expect(upstream).toMatch(/^Tag: v\d+\.\d+\.\d+$/m)
+    // A pin is an upstream tag where one exists, else a commit SHA (see the sync script).
+    expect(upstream).toMatch(/^Tag: (v\d+\.\d+\.\d+|[0-9a-f]{40})$/m)
     expect(upstream).toContain("MIT License")
   })
 

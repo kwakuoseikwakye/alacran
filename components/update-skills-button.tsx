@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { updateCompanySkills } from "@/lib/update-company-skills"
 
+/** Tags are shown as-is; a commit-SHA pin is shortened to the usual 7 chars. */
+function showTag(tag: string) {
+  return /^[0-9a-f]{40}$/.test(tag) ? tag.slice(0, 7) : tag
+}
+
 export const UPDATE_SKILLS_BLURB =
   "Appears when this app ships newer versions of the ready-made skills your company was created with. It replaces those skills and leaves everything else — your company info, your notes and any skill you wrote yourself — exactly as it is."
 
@@ -76,12 +81,12 @@ export function UpdateSkillsButton({
               {installedTag === null ? (
                 <>
                   &quot;{companyName}&quot; was created before these skills existed. This adds them
-                  ({bundledTag}) to the company so your AI can use them.
+                  ({showTag(bundledTag)}) to the company so your AI can use them.
                 </>
               ) : (
                 <>
-                  Replaces the ready-made skills in &quot;{companyName}&quot; ({installedTag} →{" "}
-                  {bundledTag}).
+                  Replaces the ready-made skills in &quot;{companyName}&quot; ({showTag(installedTag)} →{" "}
+                  {showTag(bundledTag)}).
                 </>
               )}{" "}
               Your company info, notes and any skill you wrote yourself are left alone. The change is
