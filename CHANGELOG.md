@@ -3039,6 +3039,48 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v85 (2026-08-19): the Connect page as a list, not six competing cards
+
+**Six setup flows were all on screen at once.** The Connect page rendered a
+two-up grid of cards, each card carrying its tool's entire setup — console
+links, service pickers, install buttons, copyable commands — expanded and
+visible whether or not you had come to connect that tool. A user connecting
+one thing read past five other tools' instructions to find it.
+
+Rebuilt as grouped list rows: one bordered container per group (*Your AI*,
+*Accounts*, *Per company*), one row per tool, dividers between them. A row
+states the tool, one line of real state (which address is signed in, which
+accounts are connected), and either a `Connected` dot or a `Connect` chip. The
+setup unfolds only for the row you click.
+
+**`<details>`, not a state-managed accordion** — the toggle, keyboard
+support, and keeping closed content out of the tab order are all native, and
+nothing has to track which row is open. `ConnectRow` and `ConnectGroup` are
+both presentational; every body is the existing JSX moved verbatim, so the
+Google service picker, the install/repair buttons, the Keychain explainer and
+Notion's per-company list all behave exactly as they did.
+
+Layout is capped at `max-w-4xl` and centred. A list of names has no reason to
+stretch to the full width of a 1600px window, which the card grid did.
+
+**Two defects the live pass found, both invisible in the card layout:**
+
+1. A **connected GitHub row opened onto an empty panel** — its card body was
+   entirely `!live` content plus a hint excluded for `github`, so once
+   connected there was nothing left to render. It now says the one true thing
+   it has to say ("Back up a company to a private repo from that company's
+   card"), the same shape as the executor rows' line above it.
+2. Below `sm` the status label was hidden to fit the row, leaving **colour as
+   the only carrier of connected state**. Now `sr-only sm:not-sr-only`: the
+   dot is always visible, the words return at `sm`, and the label is in the
+   accessibility tree at every width.
+
+`tsc`, `eslint` and 759/759 tests clean. Live-verified at 1440px and 420px,
+rows both open and closed, against the real connected state of this machine —
+`/connect` only reads, so no repo was touched (no checkbox was clicked either;
+v66's note about page-wide selectors reaching live auto-saving controls applies
+to this page's neighbours).
+
 ## v84 (2026-08-18): jobs that run overnight, with the same approval gate
 
 **Alacrán could only work while you were watching it.** Every job started with

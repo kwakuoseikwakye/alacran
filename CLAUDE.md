@@ -1401,6 +1401,22 @@ early-return shape 500s every page in `next dev` while `tsc`, `vitest`,
 unreachable code before webpack can complain. Found by curling a real dev
 server, and by nothing else.
 
+**v85 (2026-08-19) rebuilt the Connect page as grouped list rows** — one
+bordered container per group (*Your AI*, *Accounts*, *Per company*), one
+`<details>` row per tool, setup unfolding only for the row you click. It had
+been a two-up card grid with all six tools' full setup expanded at once.
+`ConnectRow`/`ConnectGroup` are presentational only and every body is the
+previous JSX verbatim, so no connect logic moved. **Two defects the collapse
+exposed, both worth generalising:** a row whose body is entirely `!live`
+content opens onto an *empty panel* once connected (GitHub did — every row
+needs one true thing to say in the connected state), and a status label hidden
+to fit a narrow row leaves colour as the only carrier of state
+(`sr-only sm:not-sr-only`, not `hidden sm:inline`). Rows are `<details>` rather
+than a state-managed accordion, so the toggle, keyboard support and keeping
+closed content out of the tab order are native and nothing tracks which row is
+open.
+
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

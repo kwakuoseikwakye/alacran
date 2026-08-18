@@ -1,11 +1,10 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, ExternalLink, Bot, Download, Loader2, Wand2 } from "lucide-react"
+import { RefreshCw, ExternalLink, Bot, Download, Loader2, Wand2, ChevronDown } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
 import { ConnectHelp } from "@/components/connect-help"
@@ -598,6 +597,96 @@ function SignInButton() {
   )
 }
 
+/**
+ * One integration, as a row in a grouped list rather than a card of its own.
+ *
+ * The card grid it replaces put every tool's whole setup flow on screen at
+ * once — six panels of console links, pickers and commands competing for
+ * attention when a user has come to connect exactly one thing. A row states
+ * what the tool is and whether it's on; the setup only unfolds for the tool
+ * you actually clicked.
+ *
+ * `<details>` and not a state-managed accordion: the open/closed toggle,
+ * keyboard support and the closed content staying out of the tab order are
+ * all native here, and nothing needs to know which row is open.
+ */
+function ConnectRow({
+  icon,
+  name,
+  detail,
+  live,
+  /** Overrides the right-hand label. Notion has no single machine-wide
+   *  connected state, so it says "2 of 3 connected" instead. */
+  status,
+  delay,
+  children,
+}: {
+  icon: React.ReactNode
+  name: string
+  detail: React.ReactNode
+  live: boolean
+  status?: string
+  delay: number
+  children: React.ReactNode
+}) {
+  return (
+    <details
+      className="a-rise group border-b border-border/70 last:border-b-0"
+      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    >
+      <summary className="flex cursor-pointer list-none items-center gap-3.5 px-4 py-3.5 transition-colors hover:bg-foreground/[0.025] [&::-webkit-details-marker]:hidden">
+        <span
+          className={`grid size-9 shrink-0 place-items-center rounded-lg border transition-colors ${
+            live ? "border-success/30 bg-success/10" : "border-border bg-background/60"
+          }`}
+        >
+          {icon}
+        </span>
+        {/* min-w-0 so a long detail line truncates instead of pushing the
+            status out of the row */}
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{name}</span>
+          <span className="block truncate text-xs text-muted-foreground">{detail}</span>
+        </span>
+        {live || status ? (
+          <span
+            className={`inline-flex shrink-0 items-center gap-1.5 text-xs ${
+              live ? "text-success" : "text-muted-foreground"
+            }`}
+          >
+            <span className={`size-1.5 rounded-full ${live ? "a-live bg-success" : "bg-muted-foreground"}`} />
+            {/* The dot carries the state on a phone, where the row has no room
+                for the words — but it must not be the ONLY carrier anywhere
+                (colour alone isn't a signal), so the label returns at sm. */}
+            <span className="sr-only sm:not-sr-only">{status ?? "Connected"}</span>
+          </span>
+        ) : (
+          <span className="shrink-0 rounded-md border border-border px-2.5 py-1 text-xs text-foreground transition-colors group-hover:border-border/80 group-hover:bg-background/60">
+            Connect
+          </span>
+        )}
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground/60 transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      {/* Aligned under the name, not the icon, on anything wider than a phone. */}
+      <div className="space-y-3 border-t border-border/70 bg-background/30 px-4 py-4 sm:pl-[4.15rem]">
+        {children}
+      </div>
+    </details>
+  )
+}
+
+/** A titled list of rows — "AI assistants", "Accounts". One bordered
+ *  container per group, dividers between rows: the grouping is what tells a
+ *  user which of these is a sign-in and which is a per-company thing. */
+function ConnectGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-2.5">
+      <h2 className="text-xs font-medium text-muted-foreground">{label}</h2>
+      <div className="overflow-hidden rounded-xl border border-border bg-card/40">{children}</div>
+    </section>
+  )
+}
+
 function ToolCard({
   tool,
   delay,
@@ -612,150 +701,126 @@ function ToolCard({
   const live = tool.connected
   const brand = TOOL_BRAND[tool.id]
   return (
-    <Card
-      className="a-rise gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80"
-      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    <ConnectRow
+      delay={delay}
+      live={live}
+      name={tool.label}
+      detail={tool.detail}
+      icon={
+        brand ? (
+          <BrandIcon id={brand} tone={live ? "brand" : "inherit"} className="size-[18px]" />
+        ) : (
+          <Bot className="size-[18px]" aria-label={tool.label} />
+        )
+      }
     >
-      <CardHeader>
-        {/* min-w-0: CardTitle is a grid item, whose automatic minimum size would
-            otherwise stop the label ever truncating on narrow screens. */}
-        <CardTitle className="flex min-w-0 items-start justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span
-              className={`grid size-9 shrink-0 place-items-center rounded-lg border transition-colors ${
-                live ? "border-success/30 bg-success/10" : "border-border bg-background/60"
-              }`}
-            >
-              {brand ? (
-                <BrandIcon id={brand} tone={live ? "brand" : "inherit"} className="size-[18px]" />
+      {tool.id !== "google" && tool.id !== "github" && (
+        <p className="text-xs text-muted-foreground">
+          Assign which company runs commands with this from that company&apos;s card.
+        </p>
+      )}
+
+      {/* A connected GitHub had nothing else to say, so its row opened onto an
+          empty panel. This is the honest equivalent of the line above it. */}
+      {tool.id === "github" && live && (
+        <p className="text-xs text-muted-foreground">
+          Back up a company to a private repo from that company&apos;s card.
+        </p>
+      )}
+
+      {tool.id === "google" && live && (
+        <>
+          <div className="flex flex-wrap items-center gap-2 pt-0.5">
+            {/* Derived from the scopes gog really reports, so the card can
+                never show a service the token was never granted — v64's
+                "keep the marks in sync" rule replaced by not keeping two
+                lists at all. Only some services have a real product mark;
+                the rest are named in text rather than given an invented
+                logo, per the standing no-hand-drawn-vendor-marks rule. */}
+            {GOOGLE_SERVICES.filter((svc) => tool.grantedServices?.includes(svc.id)).map((svc) =>
+              svc.brand ? (
+                <span
+                  key={svc.id}
+                  title={svc.label}
+                  className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
+                >
+                  <BrandIcon id={svc.brand} tone="brand" className="size-3.5" />
+                </span>
               ) : (
-                <Bot className="size-[18px]" aria-label={tool.label} />
-              )}
-            </span>
-            {/* wraps rather than truncates: names get long enough (e.g. Aider's)
-                to clip even on a wide screen */}
-            <span className="min-w-0 font-display leading-snug font-bold">{tool.label}</span>
-          </span>
-          <Badge
-            variant="outline"
-            className={
-              live
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-border text-muted-foreground"
-            }
-          >
-            <span
-              className={`mr-1 inline-block size-1.5 rounded-full ${
-                live ? "a-live bg-success" : "bg-muted-foreground"
-              }`}
-            />
-            {live ? "Connected" : "Not connected"}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">{tool.detail}</p>
-
-        {tool.id !== "google" && tool.id !== "github" && (
-          <p className="text-xs text-muted-foreground">
-            Assign which company runs commands with this from that company&apos;s card.
-          </p>
-        )}
-
-        {tool.id === "google" && live && (
-          <>
-            <div className="flex flex-wrap items-center gap-2 pt-0.5">
-              {/* Derived from the scopes gog really reports, so the card can
-                  never show a service the token was never granted — v64's
-                  "keep the marks in sync" rule replaced by not keeping two
-                  lists at all. Only some services have a real product mark;
-                  the rest are named in text rather than given an invented
-                  logo, per the standing no-hand-drawn-vendor-marks rule. */}
-              {GOOGLE_SERVICES.filter((svc) => tool.grantedServices?.includes(svc.id)).map((svc) =>
-                svc.brand ? (
-                  <span
-                    key={svc.id}
-                    title={svc.label}
-                    className="grid size-7 place-items-center rounded-md border border-border bg-background/60"
-                  >
-                    <BrandIcon id={svc.brand} tone="brand" className="size-3.5" />
-                  </span>
-                ) : (
-                  <span
-                    key={svc.id}
-                    className="rounded-md border border-border bg-background/60 px-2 py-1 text-[11px] text-muted-foreground"
-                  >
-                    {svc.label}
-                  </span>
-                )
-              )}
-              <span className="text-xs text-muted-foreground">available to your companies</span>
-            </div>
-            {tool.accounts && tool.accounts.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {tool.accounts.map((email) => (
-                  <Badge key={email} variant="outline" className="border-border font-normal text-muted-foreground">
-                    {email}
-                  </Badge>
-                ))}
-              </div>
+                <span
+                  key={svc.id}
+                  className="rounded-md border border-border bg-background/60 px-2 py-1 text-[11px] text-muted-foreground"
+                >
+                  {svc.label}
+                </span>
+              )
             )}
-            <p className="text-xs text-muted-foreground">
-              Assign specific accounts to a company from that company&apos;s card.
-            </p>
-            <ConnectGoogleApps
-              accounts={tool.accounts ?? []}
-              accountServices={tool.accountServices}
-              claudeReady={claudeReady}
-            />
-            <KeychainNote />
-          </>
-        )}
-
-        {!live && (
-          <div className="space-y-3">
-            {/* Buttons before instructions: the whole point is that a
-                non-technical user never has to reach the instructions. */}
-            {tool.installId && <InstallButton id={tool.installId} onDone={onChanged} />}
-            {tool.needsSignIn && <SignInButton />}
-            {/* Google is the one tool whose setup isn't "run this one command":
-                Google requires a per-person OAuth client that only a human can
-                create in their console. Rendered before the generic block,
-                which for these two stages carries no command of its own. */}
-            {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
-              <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} granted={tool.grantedServices} />
-            )}
-            {/* Every not-connected stage, INCLUDING `install`. It used to skip
-                that one, which is exactly backwards: the popup storm starts the
-                moment gog lands on the machine, so the person who most needs
-                `gog auth keyring file` is the one who just installed it and has
-                never reached a connected card. */}
-            {tool.id === "google" && <KeychainNote />}
-
-            {tool.guidance.steps.length > 0 && (
-              <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
-                {tool.guidance.steps.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            )}
-
-            {tool.guidance.command && <CommandLine command={tool.guidance.command} />}
-
-            {tool.guidance.link && (
-              <a
-                className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
-                href={tool.guidance.link}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Instructions <ExternalLink className="h-3 w-3" />
-              </a>
-            )}
+            <span className="text-xs text-muted-foreground">available to your companies</span>
           </div>
-        )}
-      </CardContent>
-    </Card>
+          {tool.accounts && tool.accounts.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {tool.accounts.map((email) => (
+                <Badge key={email} variant="outline" className="border-border font-normal text-muted-foreground">
+                  {email}
+                </Badge>
+              ))}
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Assign specific accounts to a company from that company&apos;s card.
+          </p>
+          <ConnectGoogleApps
+            accounts={tool.accounts ?? []}
+            accountServices={tool.accountServices}
+            claudeReady={claudeReady}
+          />
+          <KeychainNote />
+        </>
+      )}
+
+      {!live && (
+        <div className="space-y-3">
+          {/* Buttons before instructions: the whole point is that a
+              non-technical user never has to reach the instructions. */}
+          {tool.installId && <InstallButton id={tool.installId} onDone={onChanged} />}
+          {tool.needsSignIn && <SignInButton />}
+          {/* Google is the one tool whose setup isn't "run this one command":
+              Google requires a per-person OAuth client that only a human can
+              create in their console. Rendered before the generic block,
+              which for these two stages carries no command of its own. */}
+          {tool.id === "google" && (tool.googleStage === "client" || tool.googleStage === "account") && (
+            <GoogleSetup stage={tool.googleStage} claudeReady={claudeReady} granted={tool.grantedServices} />
+          )}
+          {/* Every not-connected stage, INCLUDING `install`. It used to skip
+              that one, which is exactly backwards: the popup storm starts the
+              moment gog lands on the machine, so the person who most needs
+              `gog auth keyring file` is the one who just installed it and has
+              never reached a connected card. */}
+          {tool.id === "google" && <KeychainNote />}
+
+          {tool.guidance.steps.length > 0 && (
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+              {tool.guidance.steps.map((step, i) => (
+                <li key={i}>{step}</li>
+              ))}
+            </ol>
+          )}
+
+          {tool.guidance.command && <CommandLine command={tool.guidance.command} />}
+
+          {tool.guidance.link && (
+            <a
+              className="inline-flex items-center gap-1 text-xs text-primary underline-offset-4 hover:underline"
+              href={tool.guidance.link}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Instructions <ExternalLink className="h-3 w-3" />
+            </a>
+          )}
+        </div>
+      )}
+    </ConnectRow>
   )
 }
 
@@ -769,76 +834,49 @@ function NotionCard({ notion, delay }: { notion: NotionStatus; delay: number }) 
   const connectedCount = notion.companies.filter((c) => c.connected).length
   const anyConnected = connectedCount > 0
   return (
-    <Card
-      className="a-rise gap-4 transition-all duration-300 hover:-translate-y-0.5 hover:border-border/80"
-      style={{ "--d": `${delay}ms` } as React.CSSProperties}
+    <ConnectRow
+      delay={delay}
+      live={anyConnected}
+      name="Notion"
+      detail="Connected per company, from that company's own repo."
+      status={total === 0 ? "No companies yet" : `${connectedCount} of ${total} connected`}
+      icon={<BrandIcon id="notion" tone={anyConnected ? "brand" : "inherit"} className="size-[18px]" />}
     >
-      <CardHeader>
-        <CardTitle className="flex min-w-0 items-start justify-between gap-3">
-          <span className="flex min-w-0 items-center gap-2.5">
-            <span
-              className={`grid size-9 shrink-0 place-items-center rounded-lg border transition-colors ${
-                anyConnected ? "border-success/30 bg-success/10" : "border-border bg-background/60"
-              }`}
-            >
-              <BrandIcon id="notion" tone={anyConnected ? "brand" : "inherit"} className="size-[18px]" />
-            </span>
-            <span className="min-w-0 font-display leading-snug font-bold">Notion</span>
-          </span>
-          <Badge
-            variant="outline"
-            className={
-              anyConnected
-                ? "border-success/30 bg-success/10 text-success"
-                : "border-border text-muted-foreground"
-            }
-          >
-            <span
-              className={`mr-1 inline-block size-1.5 rounded-full ${
-                anyConnected ? "a-live bg-success" : "bg-muted-foreground"
-              }`}
-            />
-            {total === 0 ? "No companies yet" : `${connectedCount} of ${total} connected`}
-          </Badge>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-sm text-muted-foreground">
-          Not one machine-wide sign-in like the others — each company connects its own, via the{" "}
-          <code>api-connect</code> skill inside that company&apos;s own repo.
-        </p>
+      <p className="text-sm text-muted-foreground">
+        Not one machine-wide sign-in like the others — each company connects its own, via the{" "}
+        <code>api-connect</code> skill inside that company&apos;s own repo.
+      </p>
 
-        {total === 0 ? (
-          <p className="text-xs text-muted-foreground">
-            Register or create a company first, then connect Notion for it.
-          </p>
-        ) : (
-          <div className="space-y-1.5">
-            {notion.companies.map((c) => (
-              <div
-                key={c.agentId}
-                className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-xs"
-              >
-                <span className="min-w-0 truncate">{c.companyName}</span>
-                <span
-                  className={`inline-flex shrink-0 items-center gap-1 ${
-                    c.connected ? "text-success" : "text-muted-foreground"
-                  }`}
-                >
-                  <span className={`size-1.5 rounded-full ${c.connected ? "bg-success" : "bg-muted-foreground"}`} />
-                  {c.connected ? "Connected" : "Not connected"}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
+      {total === 0 ? (
         <p className="text-xs text-muted-foreground">
-          To connect one: open its Skills page and run the api-connect skill (&ldquo;connect Notion&rdquo;), or use
-          &ldquo;Open in Terminal&rdquo; on its card and ask your AI assistant to connect Notion.
+          Register or create a company first, then connect Notion for it.
         </p>
-      </CardContent>
-    </Card>
+      ) : (
+        <div className="space-y-1.5">
+          {notion.companies.map((c) => (
+            <div
+              key={c.agentId}
+              className="flex items-center justify-between gap-2 rounded-md border border-border bg-background/60 px-3 py-1.5 text-xs"
+            >
+              <span className="min-w-0 truncate">{c.companyName}</span>
+              <span
+                className={`inline-flex shrink-0 items-center gap-1 ${
+                  c.connected ? "text-success" : "text-muted-foreground"
+                }`}
+              >
+                <span className={`size-1.5 rounded-full ${c.connected ? "bg-success" : "bg-muted-foreground"}`} />
+                {c.connected ? "Connected" : "Not connected"}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        To connect one: open its Skills page and run the api-connect skill (&ldquo;connect Notion&rdquo;), or use
+        &ldquo;Open in Terminal&rdquo; on its card and ask your AI assistant to connect Notion.
+      </p>
+    </ConnectRow>
   )
 }
 
@@ -873,7 +911,10 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
     visibleExecutors.some((t) => !t.connected) || !status.google.connected || !status.github.connected
 
   return (
-    <div className="space-y-4">
+    /* A single readable column, not the old two-up card grid: a list of rows
+       has no reason to stretch to 1600px, and the eye should only ever be
+       scanning one column of names. */
+    <div className="mx-auto max-w-4xl space-y-7">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-1">
           <p className="text-sm text-muted-foreground">
@@ -891,30 +932,36 @@ export function ConnectPanel({ initialStatus }: { initialStatus: ConnectStatus }
         <p className="text-xs text-destructive">We couldn&apos;t check connection status. Please press Re-check to retry.</p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {/* Simple mode shows only the AI that actually runs things by
-            default. Four executor cards is a choice a non-technical user has
-            no basis to make, and three of them can't be installed or probed
-            anyway. Google and GitHub stay: 0.6 made Google one-click and gh's
-            sign-in is a browser flow. */}
+      {/* Simple mode shows only the AI that actually runs things by
+          default. Four executor cards is a choice a non-technical user has
+          no basis to make, and three of them can't be installed or probed
+          anyway. Google and GitHub stay: 0.6 made Google one-click and gh's
+          sign-in is a browser flow. */}
+      <ConnectGroup label={visibleExecutors.length === 1 ? "Your AI" : "AI assistants"}>
         {visibleExecutors.map((tool, i) => (
-          <ToolCard key={tool.id} tool={tool} delay={i * 90} onChanged={recheck} />
+          <ToolCard key={tool.id} tool={tool} delay={i * 60} onChanged={recheck} />
         ))}
+      </ConnectGroup>
+
+      <ConnectGroup label="Accounts">
         <ToolCard
           tool={status.google}
-          delay={status.aiExecutors.length * 90}
+          delay={visibleExecutors.length * 60}
           onChanged={recheck}
           claudeReady={status.aiExecutors.some((t) => t.id === "claude-code" && t.connected)}
         />
-        <ToolCard tool={status.github} delay={(status.aiExecutors.length + 1) * 90} onChanged={recheck} />
-        {/* Notion is connected by running the api-connect skill in a
-            terminal — no button here can do it, so it stays advanced. */}
-        {/* Same rule: hidden until a company actually has Notion configured,
-            then always shown, because at that point it is live state. */}
-        {(advanced || status.notion.companies.some((c) => c.connected)) && (
-          <NotionCard notion={status.notion} delay={(status.aiExecutors.length + 2) * 90} />
-        )}
-      </div>
+        <ToolCard tool={status.github} delay={(visibleExecutors.length + 1) * 60} onChanged={recheck} />
+      </ConnectGroup>
+
+      {/* Notion is connected by running the api-connect skill in a
+          terminal — no button here can do it, so it stays advanced. */}
+      {/* Same rule: hidden until a company actually has Notion configured,
+          then always shown, because at that point it is live state. */}
+      {(advanced || status.notion.companies.some((c) => c.connected)) && (
+        <ConnectGroup label="Per company">
+          <NotionCard notion={status.notion} delay={(visibleExecutors.length + 2) * 60} />
+        </ConnectGroup>
+      )}
     </div>
   )
 }
