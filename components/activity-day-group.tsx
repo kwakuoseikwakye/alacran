@@ -42,7 +42,7 @@ export function ActivityDayGroup({
               }`}
             >
               <div className="flex items-center gap-4">
-                <StatusDot status={activity.status} />
+                <StatusDot />
                 <span className="text-sm font-medium text-foreground transition-colors group-hover:text-red-400">
                   {activity.title}
                 </span>

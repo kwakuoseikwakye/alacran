@@ -54,6 +54,20 @@ export async function createCompanyFromTemplateImpl(
     return { ok: false, message: "That location isn't a folder" }
   }
 
+  // copyManifestEntry skips a missing entry on purpose (the manifest lists
+  // optional paths), which is fine per-file and catastrophic for the whole
+  // directory: a packaging slip that moved templates/company-starter made every
+  // scaffold "succeed" while producing a company with no CLAUDE.md, no
+  // .claude/commands, no verify.py and no ontology starter — silently, in four
+  // shipped releases. Fail loudly instead: if the skeleton isn't there, nothing
+  // downstream can be right.
+  if (!(await pathExists(templateSourcePath))) {
+    return {
+      ok: false,
+      message: `The bundled company template is missing from this install (${templateSourcePath}). Reinstall Alacrán, or report this if it persists.`,
+    }
+  }
+
   try {
     await mkdir(rootPath, { recursive: true })
 

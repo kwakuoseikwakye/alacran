@@ -249,3 +249,21 @@ describe("createCompanyFromTemplateImpl", () => {
     })
   })
 })
+
+it("refuses, loudly, when the bundled template is missing from the install", async () => {
+  // The v0.19.0-v0.22.0 packaging break put templates/ one level too deep, so
+  // this source path did not exist. copyManifestEntry skips missing entries, so
+  // every scaffold "succeeded" and produced a company with no skeleton at all.
+  const target = path.join(targetParentDir, "new-co")
+  const result = await createCompanyFromTemplateImpl(
+    "New Co",
+    target,
+    path.join(targetParentDir, "does-not-exist"),
+    undefined,
+    registryPath
+  )
+
+  expect(result.ok).toBe(false)
+  if (!result.ok) expect(result.message).toContain("bundled company template is missing")
+})
+

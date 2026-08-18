@@ -1335,6 +1335,26 @@ UI shortens a SHA to 7 chars), and a pack may vendor loose `.md` files via `SRC`
 / `SRC_FILES` instead of `skills/<id>/SKILL.md`. Existing packs keep the defaults
 and must regenerate byte-identical — resync all packs and diff before committing.
 
+**v83 (2026-08-18) fixed a packaging break that silently half-built every company
+created in v0.19.0-v0.22.0** — pack overlay copied, base skeleton missing, and
+`{ ok: true }` returned. **Three rules from it.** (1) `cp -R src dst` NESTS when
+dst exists: v77's literal `path.join(process.cwd(), "templates", "packs")` made
+Next's file tracing copy `templates/` into `.next/standalone`, so the packaging
+scripts' `cp -R templates "$PAYLOAD/templates"` started nesting and hid
+`company-starter` from the read path. Copy CONTENTS (`templates/.`) into an
+explicit `mkdir -p`'d directory. (2) **A skip-if-missing loop turns a packaging
+slip into silent data loss** — `copyManifestEntry` skipping absent entries is
+right per-file and wrong for the whole root, so
+`createCompanyFromTemplateImpl` now refuses when the template root is absent.
+(3) **Write payload assertions as `if ... fi`, never `[ -d x ] && { exit 1; }`** —
+under `set -euo pipefail` the `&&` form aborts the build on the happy path. Both
+package scripts now assert `templates/company-starter` exists and
+`templates/templates` does not.
+**And a standing tooling warning:** `grep` in this shell wraps
+`ugrep --ignore-files` and silently skips `*.test.ts`, so every dead-code claim
+must use `/usr/bin/grep` — v78's audit and a wrong "unused" call on
+`GOOGLE_SETUP_SERVICES` both came from this.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

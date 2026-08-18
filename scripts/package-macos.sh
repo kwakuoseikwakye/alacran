@@ -97,10 +97,27 @@ mkdir -p "$PAYLOAD" "$APP/Contents/MacOS"
 
 # Standalone server + its traced node_modules + package.json
 cp -R .next/standalone/. "$PAYLOAD/"
-# Static assets and the bundled company template (standalone doesn't include these)
-mkdir -p "$PAYLOAD/.next"
+# Static assets and the bundled company template.
+#
+# `cp -R templates "$PAYLOAD/templates"` was WRONG and shipped broken builds in
+# v0.19.0-v0.22.0: since v77 added a literal path.join(process.cwd(),
+# "templates", "packs") to app/page.tsx, Next's file tracing copies
+# templates/packs into .next/standalone, so $PAYLOAD/templates already exists by
+# the time this runs and `cp -R src dst` nests instead of replacing — putting the
+# real tree at templates/templates/ and hiding templates/company-starter from the
+# path the app actually reads. Copy the CONTENTS so it merges either way.
+mkdir -p "$PAYLOAD/.next" "$PAYLOAD/templates"
 cp -R .next/static "$PAYLOAD/.next/static"
-cp -R templates "$PAYLOAD/templates"
+cp -R templates/. "$PAYLOAD/templates/"
+
+# The check that would have caught the above. company-starter is what every
+# scaffold copies from, and its absence is silent (see
+# createCompanyFromTemplateImpl), so assert it is where the app looks.
+[ -d "$PAYLOAD/templates/company-starter" ] || { echo "FATAL: templates/company-starter missing from the payload" >&2; exit 1; }
+if [ -d "$PAYLOAD/templates/templates" ]; then
+  echo "FATAL: templates/ nested inside itself in the payload" >&2
+  exit 1
+fi
 
 # Just the binary — not the headers, npm, or docs in the tarball. ~110MB of
 # the ~50MB-compressed download is things a standalone Next server never uses.

@@ -3039,6 +3039,57 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v83 (2026-08-18): the packaging break that silently half-built every new company
+
+**Creating a company was broken in v0.19.0-v0.22.0 and reported success.** A new
+company got its pack overlay (skills, pack commands, a git repo) and none of the
+base skeleton — no `CLAUDE.md`, `README.md`, `.gitignore`, `.claude/commands`,
+`.claude/settings.json`, `scripts/verify.py`, and no
+`docs/templates/ontology-starter.yaml`, which `save-company-ontology-impl.ts`
+hard-depends on. Found by a repo-wide audit, not by a user.
+
+**Cause, in one line:** v77 added a literal
+`path.join(process.cwd(), "templates", "packs")` to `app/page.tsx`, Next's file
+tracing resolves that and copies `templates/packs` into `.next/standalone`, so
+`$PAYLOAD/templates` already existed when both packaging scripts ran
+`cp -R templates "$PAYLOAD/templates"` — and `cp -R src dst` NESTS when dst
+exists. The real tree landed at `templates/templates/`, hiding
+`templates/company-starter` from the path the app reads. v0.18.0 is the last
+good build; the comment claiming "standalone doesn't include these" had been
+false since v77.
+
+**Why it was silent, which is the more important half:** `copyManifestEntry`
+skips a manifest entry whose source is missing. That is right per-file (the
+manifest lists optional paths) and catastrophic for the whole directory — every
+entry was missing, so the loop copied nothing and reported success.
+`createCompanyFromTemplateImpl` now refuses up front when the template root
+itself is absent, with a message naming the path. A test pins it.
+
+**Three changes, in the order they matter:**
+
+1. `cp -R templates/. "$PAYLOAD/templates/"` in both scripts — copying the
+   CONTENTS merges whether or not tracing already made the directory.
+2. Both scripts now assert `$PAYLOAD/templates/company-starter` exists and
+   `$PAYLOAD/templates/templates` does not, and fail the build otherwise. Note
+   the guard is written as `if ... fi`, not `[ -d x ] && { exit 1; }`: under
+   `set -euo pipefail` the `&&` form aborts the build on the HAPPY path, since
+   the compound returns non-zero when the directory is correctly absent.
+3. The app-side refusal above, so a future packaging slip is loud rather than
+   silently shipping empty companies.
+
+Also folded in two cuts from the same audit, both on code this project added
+itself: `StatusDot` lost the prop it stopped reading when v78 narrowed
+`ActivityStatus` to `"done"` (3 call sites), and `ResolveWritableSkillResult`
+now extends `ResolveKnownSkillResult` instead of restating it.
+
+**Audit-integrity note worth keeping:** `grep` in this project's shell is a
+wrapper around `ugrep --ignore-files` and silently skips `*.test.ts`. Every
+"unused export" verdict produced with it — including v78's — was blind to
+test-only usage, which is how `GOOGLE_SETUP_SERVICES` got called dead when its
+own test asserts on it twice. Use `/usr/bin/grep` for any dead-code claim here.
+
+742 tests, `tsc`, `eslint` and `next build` clean.
+
 ## v82 (2026-08-18): a customer-support skill, vendored from the licensed original
 
 The Customer support pack now ships the `customer-support` skill — conversational

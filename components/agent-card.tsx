@@ -141,7 +141,7 @@ export function AgentCard({
         {!error && latestActivity && (
           <div className="space-y-1">
             <p className="flex items-center gap-2 font-medium">
-              <StatusDot status={latestActivity.status} />
+              <StatusDot />
               {latestActivity.title}
             </p>
             <p className="text-xs text-muted-foreground">

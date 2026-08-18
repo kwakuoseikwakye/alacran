@@ -38,9 +38,7 @@ export async function resolveKnownSkillPath(filePath: string): Promise<ResolveKn
   return { ok: true, realPath: guard.realPath, agentRootPath: guard.agentRootPath }
 }
 
-export type ResolveWritableSkillResult =
-  | { ok: true; realPath: string; agentRootPath: string }
-  | { ok: false; reason: "outside-root" | "not-a-known-skill" | "app-managed" }
+export type ResolveWritableSkillResult = ResolveKnownSkillResult | { ok: false; reason: "app-managed" }
 
 /**
  * The write-side gate. Everything resolveKnownSkillPath checks, plus: a skill the
