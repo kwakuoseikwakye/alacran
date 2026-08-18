@@ -51,6 +51,17 @@ that runs on `127.0.0.1` and opens right in your browser.
   `check-inbox`, `check-notion`, `triage-email`, `triage-issue`. Each one
   spawns a headless agent scoped to a single output directory and shows you
   the diff before anything is committed.
+- **Let it run while you're not there.** Any job that doesn't need you to
+  type something first — `digest`, `handoff`, `check-inbox`, `check-notion`,
+  `triage-email`, `orientation` — can be set to run once a day at a time you
+  pick. By default the result waits for you as a diff, with a dot on the
+  sidebar so you know something's there. Tick **"commit the result for me,
+  without asking"** on a schedule and that one runs end to end unattended,
+  landing as a real commit you read afterwards instead of before. It's off
+  unless you turn it on, one schedule at a time, and it's refused outright on
+  the three jobs that read text written by people outside your company
+  (`check-inbox`, `check-notion`, `triage-email`) — those always wait for
+  you. Turn on **Advanced mode** in Settings to see the control.
 - **Edit and version skills.** Browse every skill and slash command across
   all your companies, edit them right in the app, and get real git history
   with per-commit diffs and one-click revert. Every write is its own
@@ -224,6 +235,7 @@ to be the source for the site's How-to-use page.
 ```mermaid
 flowchart TD
     You(["You, in your browser"]) -->|"open a page, click Run"| App
+    Clock(["A daily schedule you set<br/>(while Alacrán is running)"]) -->|"starts the same job, unattended"| App
 
     subgraph Machine["Your machine, and only your machine"]
         direction TB
@@ -231,6 +243,7 @@ flowchart TD
         Repo[("Your company's own git repo<br/>definitions/ · docs/ · notes/ · .claude/")]
         Agent{{"Your AI executor<br/>Claude Code · Codex · Aider · Antigravity CLI"}}
         Gate{"You review the diff<br/>approve it, or reject and nothing changes"}
+        Auto["Or, if that schedule asked for it:<br/>Alacrán commits the diff itself"]
     end
 
     Provider(("Your own AI provider account"))
@@ -243,18 +256,23 @@ flowchart TD
     Agent <-->|"your own API call"| Provider
     Agent -->|"proposes a change"| Gate
     Gate -->|"approved"| Repo
+    Agent -.->|"only if you ticked auto-commit"| Auto
+    Auto -.-> Repo
 
     App -.->|"only if you connect it"| Google
     App -.->|"only if you connect it"| GitHubSvc
     App -.->|"only if you connect it"| Notion
 ```
 
-Solid arrows are what happens on every single run. Dotted arrows only
-happen if you've actually connected that service; nothing reaches Google,
-GitHub, or Notion unless you told it to. Walked through in words:
+Solid arrows are what happens on every single run, whether you started it or a
+schedule did. Dotted arrows only happen if you turned that particular thing on
+— a service you connected, or a schedule you told to commit for itself.
+Nothing reaches Google, GitHub, or Notion unless you told it to, and nothing is
+committed without you unless you asked for that too. Walked through in words:
 
 1. You click something in the browser. Alacrán, a plain local web server,
-   handles the click.
+   handles the click. (Or nobody clicks anything: a schedule you set earlier
+   comes due and starts the exact same job, through the exact same code.)
 2. It reads whatever's relevant out of the company's own repo (its
    ontology, its skills, its notes) and turns that, plus what you typed,
    into a single prompt.
@@ -264,7 +282,12 @@ GitHub, or Notion unless you told it to. Walked through in words:
    authenticated (your account, your billing, never Alacrán's).
 5. Whatever the agent proposes comes back to you as a diff, not a fait
    accompli. Approve it and it becomes a real git commit. Reject it and
-   nothing on disk ever changes.
+   nothing on disk ever changes. If you weren't at the machine — because it
+   ran at 07:00 and you got up at 09:00 — the diff simply waits, and the
+   sidebar carries a dot until you've dealt with it. The one exception is a
+   schedule you explicitly told to commit for itself: Alacrán still computes
+   the diff and still makes the commit, it just doesn't wait for you to read
+   it first.
 
 A few design decisions worth knowing, because they constrain everything
 else:
@@ -290,6 +313,17 @@ else:
 - **The app detects what changed; the agent never commits.** Alacrán diffs
   the result itself and shows it to you. Approval is a human step by
   construction, not a setting you could accidentally turn off.
+- **A scheduled run is the same run, minus the click.** Scheduling adds one
+  timer and changes nothing else: same prompt, same tool allowlist, same
+  per-company lock, same diff.
+- **Auto-commit is opt-in, per schedule, and never the default.** Even with
+  it on, the agent still doesn't commit: Alacrán diffs the result itself and
+  makes the same single-file-scoped commit it would make if you'd clicked
+  approve, through the same containment checks. The only thing that changes
+  is whether a person read the diff first. It cannot be turned on at all for
+  a job whose prompt carries text written by someone outside the company —
+  that's the one case where "nobody looked at it" is the entire risk, so it's
+  refused in code rather than left to a checkbox.
 
 For the reasoning behind each of these, [`CHANGELOG.md`](CHANGELOG.md) has
 a detailed, dated writeup of every feature that shipped, including the
@@ -370,6 +404,17 @@ plainly:
   installed app before the first launch. Only that first one — in-app
   updates aren't affected. See [Install](#install).
 - **Windows isn't built.** Only macOS and Debian/Ubuntu for now.
+- **Auto-commit means what it says.** A schedule with it ticked writes to
+  your repo with nobody watching. Every write is still confined to that
+  command's own output folder and still lands as its own single-file commit,
+  so `git log` and `git revert` are the undo — but if you want a human read
+  before anything is written, leave it off, which is how it ships.
+- **Scheduled runs need Alacrán to be running.** The timer lives in the
+  app's own local server, so runs happen while the app is open (a closed
+  browser tab is fine — the server is what matters) and not while it's quit
+  or the machine is asleep. A run that was missed fires when the app next
+  starts, rather than being skipped for the day. Once a day at a set time is
+  all it does; there's no cron expression and no sub-daily interval.
 - **`daily-team-log` is per-machine global.** Its config lives at a single
   fixed path, so only one company can have a bootstrapped daily-log setup
   active at a time. Google is different: each company can be assigned its

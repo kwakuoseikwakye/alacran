@@ -1,10 +1,11 @@
-import { realpath } from "node:fs/promises"
+import { realpath, unlink } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { resolveWithinAgentRoot } from "../path-guard"
 import { commitFile } from "../git-commit-file"
 import type { ExecFileFn } from "../git-commit-file"
 import { getCompanyCommand } from "./registry"
+import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
 
 export type CommitCompanyCommandResult = { committed: boolean; message: string }
 
@@ -12,7 +13,8 @@ export async function commitCompanyCommandResultImpl(
   commandId: string,
   relativeOutputPath: string,
   agentId: string,
-  execFn?: ExecFileFn
+  execFn?: ExecFileFn,
+  dataDir: string = path.join(COMPANY_COMMANDS_DATA_DIR, agentId)
 ): Promise<CommitCompanyCommandResult> {
   const command = getCompanyCommand(commandId)
   if (!command) {
@@ -74,6 +76,19 @@ export async function commitCompanyCommandResultImpl(
   try {
     const relativeToRoot = path.relative(guard.agentRootPath, guard.realPath)
     await commitFile(guard.agentRootPath, relativeToRoot, `Run /${command.id} via AI-Native control panel`, execFn)
+    // The run record is what makes an unapproved result *findable* after the
+    // page that produced it is gone (lib/company-commands/pending-reviews.ts),
+    // which is the whole reason a scheduled overnight run is reviewable at all.
+    // Approving is therefore the moment it stops being pending — without this
+    // every committed run would sit in that list forever. Best-effort: a commit
+    // that really happened must not be reported as failed because a stale
+    // bookkeeping file couldn't be removed.
+    //
+    // ponytail: for a command that wrote more than one new file this clears the
+    // review for all of them, not just the one committed. The extras are named
+    // in the UI ("Also created (not shown)") and still sit in the repo
+    // uncommitted; per-file review is a bigger feature than this one.
+    await unlink(path.join(dataDir, `${command.id}.run.json`)).catch(() => {})
     return { committed: true, message: "Committed" }
   } catch (err) {
     return { committed: false, message: err instanceof Error ? err.message : String(err) }

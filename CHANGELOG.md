@@ -3039,6 +3039,129 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v84 (2026-08-18): jobs that run overnight, with the same approval gate
+
+**Alacrán could only work while you were watching it.** Every job started with
+a click, so a weekly digest or an inbox check happened when you remembered to
+ask for one — the app was a place you went to *do* something, never a place you
+came back to and found something already done. Competing tools close that gap by
+letting agents commit on their own; this slice closes it without giving up the
+thing that makes this app what it is.
+
+**Any command whose fields are all optional can now be set to run once a day at
+a time you pick** — `orientation`, `digest`, `handoff`, `check-inbox`,
+`check-notion`, `triage-email`. A command with a required field
+(`decision`, `retro`, `define-company`, `triage-issue`) is refused by
+`isSchedulableCommand`, because a schedule with nothing to answer with would
+fail every night forever.
+
+**The scheduler calls `runCompanyCommandImpl` with no arguments and nothing
+else.** That is the whole security argument: the tool allowlist, the
+`untrustedInput` refusal on executors that can't enforce scope (v56), the
+per-company run lock, and the before-snapshot all come along byte-identically,
+because none of them know a timer is involved. `commitCompanyCommandResultImpl`
+remains the only thing in the app that ever commits.
+
+**Auto-commit exists, and is opt-in per schedule.** A checkbox next to the time
+("commit the result for me, without asking") makes that one schedule run end to
+end unattended. It is off unless ticked, ticked per schedule rather than
+globally, and **refused in code for any command carrying `untrustedInput`** —
+`check-inbox`, `check-notion`, `triage-email` always wait for a human. That
+refusal is the considered line: the tool allowlist confines *where* an
+injected prompt can write, and cannot make what it wrote true, so those are
+exactly the results where "nobody looked at it" is the entire risk. Note what
+auto-commit does *not* delegate: the agent still never commits. Alacrán diffs
+the result itself and calls the same `commitCompanyCommandResultImpl` the
+approve button calls, with the same realpath containment gate, the same
+output-location gate and the same single-file-scoped commit. The only thing
+removed is a person reading the diff first.
+
+**The completion watcher, because the spawn is detached.** `runCompanyCommandImpl`
+returns "Started" long before the agent finishes, so auto-commit needed
+something to come back later: each tick sweeps *before* firing anything new,
+and for any schedule whose last run is marked `pendingCommit`, checks that the
+run lock has dropped, reads the diff, and commits. Sweeping first is what makes
+a run that finished while the app was closed still get committed — firing
+today's run first would retake the before-snapshot and bury last night's
+result, the exact trap `run-company-command-impl.ts` already documents for
+refusals. `pendingCommit` is also what separates "the ticker started this run"
+from "the user did", so a diff you deliberately left unapproved is never swept
+up by a schedule that happens to have auto-commit on.
+
+**What actually had to be built was the *waiting*, not the running.** A run
+record already survived its run; what didn't exist was any way to find one
+again. `CompanyCommandRunner` only ever showed a result it had polled for
+itself, so an overnight diff was invisible until you clicked Run again — which
+takes a fresh `before` snapshot and destroys it, the exact failure the comment
+in `run-company-command-impl.ts` already warned about for refusals. Three
+changes make an unattended result reviewable: the runner loads an existing
+changed result on mount, `listPendingReviews` finds every unapproved result
+across every company, and the Skills tree plus the sidebar carry a dot.
+
+**The bug that had to be fixed for "pending" to mean anything:** committing a
+result left its `.run.json` behind, so a committed run still looked changed
+forever. `commitCompanyCommandResultImpl` now deletes the record after a
+successful commit — best-effort, since a commit that really happened must not
+be reported as failed over a bookkeeping file. Known and marked: for a command
+that wrote several new files, this clears the review for all of them; the
+extras are still named in the UI and still uncommitted in the repo.
+
+**Design decisions worth not re-deriving:**
+
+- **The timer lives in `instrumentation.ts`**, not in a page or a client
+  effect. Next's `register()` runs once per server process, and that process
+  is the only thing in this app that outlives a browser tab — which is what
+  makes "closed the tab, went to bed" work and "quit the app" honestly not.
+- **The trap in that file, which `next build` will not catch for you:** Next
+  compiles `instrumentation.ts` for the **edge** runtime as well, so the
+  Node-only import has to sit *inside* a positive
+  `if (process.env.NEXT_RUNTIME === "nodejs")` block, where the edge build's
+  substituted `"edge"` makes it dead code webpack drops. The early-return
+  shape (`if (... !== "nodejs") return`, import after it) leaves the import
+  outside the dead branch: `next dev` fails to build `/instrumentation` and
+  **every page 500s**, while `next build` passes clean because minification
+  removes the unreachable code before webpack ever complains. Shipped
+  wrong first, found only by curling a real dev server — `tsc`, `vitest`,
+  `eslint` and `next build` were all green over the broken version.
+- **No cron parser, no dependency.** A `"HH:MM"` string compared against
+  `localStamp(now)`, polled every 60 seconds. Zero-padded fixed-width strings
+  make clock comparison a string comparison, so no date arithmetic happens
+  anywhere in the file — and therefore no DST arithmetic either. `07:00` means
+  the user's 07:00 on both sides of a clock change.
+- **Two files, one writer each.** `schedules.json` is written only by the
+  browser, `schedules-last-run.json` only by the ticker. That removes the race
+  a shared file would have needed a lock for, which is less code, not more.
+- **`skipDate` exists because of one specific wrong behaviour:** saving "07:00"
+  at 15:00 would otherwise be due the instant you clicked Save. It records the
+  day a schedule was saved *only* when its time had already passed, so a
+  schedule saved at 15:00 for 23:00 still runs that same night.
+- **The stamp is written whether or not the run started.** Stamping only
+  successes turns a permanent refusal — wrong executor, unknown company — into
+  a retry every minute until midnight. The refusal message is kept alongside
+  the date and shown in the UI, so a schedule that can't run says so instead of
+  disappearing.
+- **The control is behind Advanced mode**, per the standing rule that a new
+  user-facing feature opts in rather than out. The *pending-review* surfaces
+  are not gated: they also fix a plain manual run, whose diff previously
+  vanished the moment you navigated away.
+- **A refusal writes nothing.** `setScheduleImpl` validates after filtering the
+  old entry out of its in-memory copy but before writing, so trying to tick
+  auto-commit on `check-inbox` leaves any schedule already saved for it exactly
+  as it was, rather than clearing it on the way to saying no.
+
+**Verified against a real server, without spawning an agent, and without
+committing anything.** The standing
+rule forbids triggering a real headless run unattended, so the live probe
+pointed `ALACRAN_DATA_DIR` at a throwaway directory and scheduled a company
+that doesn't exist: `next dev` started, the tick fired within 4 seconds, and
+`schedules-last-run.json` came back stamped `Unknown company
+"not-a-real-company"` — which is returned before the `mkdir`, before the lock
+and before any spawn, so the whole path was exercised end to end with no API
+call. The auto-commit sweep was probed the same way: a pre-seeded
+`pendingCommit` record against the same non-existent company made the sweep run
+on a real server, clear the flag and commit nothing. 759 tests (17 new), `tsc`,
+`eslint` and `next build` all clean.
+
 ## v83 (2026-08-18): the packaging break that silently half-built every new company
 
 **Creating a company was broken in v0.19.0-v0.22.0 and reported success.** A new

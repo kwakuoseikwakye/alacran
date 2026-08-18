@@ -24,8 +24,14 @@ const NETWORK_ITEM = { href: "/network", label: "Networks", icon: Network }
  * Collapsible glassmorphic sidebar. Collapses to 72px of icon-only rail on
  * desktop and expands to 228px on hover. On mobile it vanishes entirely and
  * is replaced by the bottom-nav strip rendered in layout.tsx.
+ *
+ * `pendingReviews` puts a dot on Skills when a run — usually a scheduled one
+ * that happened while nobody was watching — has produced changes waiting for
+ * approval. It sits on the icon rather than beside the label on purpose: the
+ * rail is collapsed until you hover it, and a signal you only see once you
+ * already went looking isn't a signal.
  */
-export function Sidebar() {
+export function Sidebar({ pendingReviews = 0 }: { pendingReviews?: number }) {
   const pathname = usePathname()
   const advanced = useAdvancedMode()
   const nav = advanced ? [...NAV.slice(0, -1), NETWORK_ITEM, NAV[NAV.length - 1]] : NAV
@@ -50,8 +56,14 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={`sidebar-nav-item${active ? " active" : ""}`}
             >
-              <span className="nav-icon">
+              <span className="nav-icon relative">
                 <Icon size={18} strokeWidth={active ? 2.2 : 1.8} />
+                {pendingReviews > 0 && href === "/skills" && (
+                  <span
+                    className="absolute -right-1 -top-1 size-2 rounded-full bg-primary"
+                    title={`${pendingReviews} result${pendingReviews === 1 ? "" : "s"} waiting for your approval`}
+                  />
+                )}
               </span>
               <span className="nav-label">{label}</span>
             </Link>
@@ -75,7 +87,12 @@ export function Sidebar() {
               aria-current={active ? "page" : undefined}
               className={`bottom-nav-item${active ? " active" : ""}`}
             >
-              <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
+              <span className="relative">
+                <Icon size={22} strokeWidth={active ? 2.2 : 1.8} />
+                {pendingReviews > 0 && href === "/skills" && (
+                  <span className="absolute -right-1 -top-1 size-2 rounded-full bg-primary" />
+                )}
+              </span>
               <span>{label}</span>
             </Link>
           )

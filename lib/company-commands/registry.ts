@@ -346,3 +346,12 @@ Write exactly one file and stop. Do not run any commands, and do not attempt to 
 export function getCompanyCommand(id: string): CompanyCommand | undefined {
   return COMPANY_COMMANDS.find((c) => c.id === id)
 }
+
+/**
+ * Can this command run with nobody at the keyboard? Only if every field it
+ * takes is optional — a command with a required field has nothing to run on
+ * when the answer has to be typed in, so it must never reach a schedule.
+ */
+export function isSchedulableCommand(command: CompanyCommand): boolean {
+  return command.fields.every((field) => !field.required)
+}

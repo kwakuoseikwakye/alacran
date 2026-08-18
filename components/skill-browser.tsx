@@ -38,13 +38,17 @@ export function SkillBrowser({
   results,
   entries,
   appManagedPaths = [],
+  pendingKeys = [],
 }: {
   results: SkillAgentResult[]
   entries: SkillEntry[]
   /** Skills the app installed and updates — read-only (see lib/vendored-skills.ts). */
   appManagedPaths?: string[]
+  /** "<agentId>:<commandId>" for every run whose result is still unapproved. */
+  pendingKeys?: string[]
 }) {
   const appManaged = new Set(appManagedPaths)
+  const pending = new Set(pendingKeys)
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
   const [detailError, setDetailError] = useState<string | null>(null)
@@ -58,6 +62,17 @@ export function SkillBrowser({
     selected && selectedAgent?.kind === "command-set"
       ? COMPANY_COMMANDS.find((c) => selected.path.endsWith(`/commands/${c.commandFileName}`))
       : undefined
+
+  // Same filename match the Run tab uses to find a command's registry entry —
+  // the tree only knows files, the pending list only knows command ids.
+  function commandIdFor(entry: SkillEntry): string | undefined {
+    return COMPANY_COMMANDS.find((c) => entry.path.endsWith(`/commands/${c.commandFileName}`))?.id
+  }
+
+  function hasPendingResult(entry: SkillEntry): boolean {
+    const commandId = commandIdFor(entry)
+    return commandId ? pending.has(`${entry.agentId}:${commandId}`) : false
+  }
 
   const q = query.trim().toLowerCase()
   const visible = q
@@ -165,6 +180,13 @@ export function SkillBrowser({
                                   <FileText className="size-3.5 shrink-0" />
                                 )}
                                 <span className="min-w-0 flex-1 truncate">{entry.name}</span>
+                                {hasPendingResult(entry) && (
+                                  <span
+                                    className="size-1.5 shrink-0 rounded-full bg-primary"
+                                    title="A result is waiting for you to approve"
+                                    aria-label="Result waiting for approval"
+                                  />
+                                )}
                               </button>
                             )
                           })}

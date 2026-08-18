@@ -6,6 +6,8 @@ import { Sidebar } from "@/components/sidebar"
 import { getUpdateStatus } from "@/lib/updates/update-actions"
 import { UpdateBanner } from "@/components/update-banner"
 import { THEME_STORAGE_KEY } from "@/lib/theme"
+import { getEffectiveAgents } from "@/lib/get-effective-agents"
+import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 
 // next/font downloads and self-hosts at build time, so the packaged .app still
 // renders correctly with no network. Important for a local-first product —
@@ -43,6 +45,10 @@ export const metadata: Metadata = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const update = await getUpdateStatus()
+  // Cheap (a readdir plus a few file reads per company, no subprocess), and it
+  // has to be here rather than on one page: a result left by a scheduled run
+  // is the one thing the user didn't ask for and so isn't already looking at.
+  const pendingReviews = (await listPendingReviews(await getEffectiveAgents())).length
   // suppressHydrationWarning below: the blocking script sets data-theme
   // directly on <html> before React hydrates, on purpose — without it,
   // React logs a (harmless but noisy) hydration-mismatch warning for the
@@ -72,7 +78,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         </div>
 
         {/* Glassmorphic sidebar (desktop) + bottom nav (mobile) */}
-        <Sidebar />
+        <Sidebar pendingReviews={pendingReviews} />
 
         {/* Main content pane offset from the sidebar */}
         <div className="app-shell-main">

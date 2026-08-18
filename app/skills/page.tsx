@@ -2,6 +2,7 @@ import { getEffectiveAgents, getEffectiveSkillAdapters } from "@/lib/get-effecti
 import { isAppManagedSkillPath } from "@/lib/vendored-skills"
 import { getAllSkills, mergeAndSortSkills } from "@/lib/get-all-skills"
 import { SkillBrowser } from "@/components/skill-browser"
+import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 
 export const dynamic = "force-dynamic"
 
@@ -9,6 +10,9 @@ export default async function SkillsPage() {
   const [agents, skillAdapters] = await Promise.all([getEffectiveAgents(), getEffectiveSkillAdapters()])
   const results = await getAllSkills(agents, skillAdapters)
   const entries = mergeAndSortSkills(results)
+  // Runs that produced changes nobody has approved yet — a scheduled overnight
+  // run has no other way to announce itself.
+  const pending = await listPendingReviews(agents)
   // Skills the app installed and keeps updated: read-only, because the next
   // update replaces them wholesale. The write path refuses them too
   // (resolveWritableSkillPath) — this only removes the affordance, so nobody
@@ -34,7 +38,12 @@ export default async function SkillsPage() {
         </div>
       </header>
       <div className="dash-content">
-        <SkillBrowser results={results} entries={entries} appManagedPaths={appManagedPaths} />
+        <SkillBrowser
+          results={results}
+          entries={entries}
+          appManagedPaths={appManagedPaths}
+          pendingKeys={pending.map((p) => `${p.agentId}:${p.commandId}`)}
+        />
       </div>
     </>
   )

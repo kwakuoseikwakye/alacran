@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
@@ -21,6 +21,12 @@ import { getCompanyCommandResult } from "@/lib/company-commands/company-command-
 import type { CompanyCommandResult } from "@/lib/company-commands/company-command-result-impl"
 import { commitCompanyCommandResult } from "@/lib/company-commands/commit-company-command-result"
 import type { CompanyCommand } from "@/lib/company-commands/types"
+import { isSchedulableCommand } from "@/lib/company-commands/registry"
+import { getScheduleStatus, setSchedule } from "@/lib/schedules/schedule-actions"
+// Type-only: schedules-impl imports node:fs/promises, so a value import here
+// would pull it into the client bundle and fail the build (v61's lesson).
+import type { LastRun } from "@/lib/schedules/schedules-impl"
+import { AdvancedOnly } from "@/components/advanced-only"
 import { getCompanyCommandLogTail } from "@/lib/company-commands/company-command-log-tail"
 import { LogTailView } from "@/components/log-tail-view"
 
@@ -35,6 +41,43 @@ export function CompanyCommandRunner({ command, agentId }: { command: CompanyCom
   const [committing, setCommitting] = useState(false)
   const [commitMessage, setCommitMessage] = useState<string | null>(null)
   const [tail, setTail] = useState("")
+  const [scheduleTime, setScheduleTime] = useState("")
+  const [savedTime, setSavedTime] = useState("")
+  const [autoCommit, setAutoCommit] = useState(false)
+  const [scheduleMessage, setScheduleMessage] = useState<string | null>(null)
+  const [lastRun, setLastRun] = useState<LastRun | null>(null)
+
+  // Both reads, both idempotent — this is a catch-up for a result nobody has
+  // approved yet (the 07:00 run you're looking at over coffee at 09:00), not
+  // a trigger, so the Strict-Mode double-invoke guard the spawning components
+  // need doesn't apply here. Only a result with real changes is shown, so a
+  // command that has never run looks exactly as it did before this existed.
+  useEffect(() => {
+    let cancelled = false
+    getCompanyCommandResult(command.id, agentId)
+      .then((outcome) => {
+        if (!cancelled && outcome.changed) setResult(outcome)
+      })
+      .catch(() => {})
+    getScheduleStatus(agentId, command.id)
+      .then((status) => {
+        if (cancelled) return
+        setScheduleTime(status.time ?? "")
+        setSavedTime(status.time ?? "")
+        setAutoCommit(status.autoCommit)
+        setLastRun(status.lastRun)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [command.id, agentId])
+
+  async function saveSchedule(time: string | null, commitItself = autoCommit) {
+    const response = await setSchedule(agentId, command.id, time, commitItself)
+    setScheduleMessage(response.message)
+    if (response.saved) setSavedTime(time ?? "")
+  }
 
   function setField(key: string, value: string) {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -123,6 +166,60 @@ export function CompanyCommandRunner({ command, agentId }: { command: CompanyCom
           </Button>
           {commitMessage && <p className="text-xs text-muted-foreground">{commitMessage}</p>}
         </div>
+      )}
+
+      {isSchedulableCommand(command) && (
+        <AdvancedOnly>
+          <div className="space-y-2 border-t pt-3">
+            <p className="text-sm font-medium">Run this every day, on its own</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="time"
+                value={scheduleTime}
+                onChange={(e) => setScheduleTime(e.target.value)}
+                className="h-8 w-32 text-xs"
+                aria-label="Time of day to run this command"
+              />
+              <Button size="sm" variant="outline" onClick={() => saveSchedule(scheduleTime || null)} disabled={!scheduleTime}>
+                Save
+              </Button>
+              {savedTime && (
+                <Button size="sm" variant="ghost" onClick={() => saveSchedule(null, false)}>
+                  Turn off
+                </Button>
+              )}
+            </div>
+            {!command.untrustedInput && (
+              <label className="flex items-start gap-2 text-xs text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={autoCommit}
+                  onChange={(e) => setAutoCommit(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>Commit the result for me, without asking</span>
+              </label>
+            )}
+            <p className="text-xs text-muted-foreground">
+              {autoCommit
+                ? "Alacrán runs it while you're away and commits the result itself. You'll find it as a real commit in this company's git history rather than a diff waiting here — so you can still read it after the fact, and still undo it."
+                : "Alacrán runs it while you're away and leaves the result right here, as a diff waiting for you — nothing is committed without you approving it."}{" "}
+              Alacrán has to be running for this to happen.
+            </p>
+            {command.untrustedInput && (
+              <p className="text-xs text-muted-foreground">
+                This one always waits for you: it reads text written by people outside this company, so nobody but you
+                should be the first to read what it produced.
+              </p>
+            )}
+            {lastRun && (
+              <p className="text-xs text-muted-foreground">
+                Last automatic run: {lastRun.date} — {lastRun.message}
+              </p>
+            )}
+            {scheduleMessage && <p className="text-xs text-muted-foreground">{scheduleMessage}</p>}
+          </div>
+        </AdvancedOnly>
       )}
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

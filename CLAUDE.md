@@ -1355,6 +1355,52 @@ package scripts now assert `templates/company-starter` exists and
 must use `/usr/bin/grep` — v78's audit and a wrong "unused" call on
 `GOOGLE_SETUP_SERVICES` both came from this.
 
+**v84 (2026-08-18) gave scheduled, unattended runs to the app that only ever
+ran on a click** — any command whose fields are all optional (`orientation`,
+`digest`, `handoff`, `check-inbox`, `check-notion`, `triage-email`) can run once
+a day at a chosen time. **The security argument is that the scheduler adds
+nothing:** it calls `runCompanyCommandImpl` with `{}` and nothing else, so the
+allowlist, v56's `untrustedInput` refusal, the run lock and the before-snapshot
+are all byte-identical, and `commitCompanyCommandResultImpl` remains the only
+committer. **Auto-commit is opt-in per schedule, off by default, and refused in
+code for any command with `untrustedInput`** (`check-inbox`, `check-notion`,
+`triage-email` always wait for a human) — the allowlist confines where an
+injected prompt can write and cannot make what it wrote true, so those are the
+results where "nobody looked" IS the risk. Even with it on the agent does not
+commit: the app diffs and calls the same `commitCompanyCommandResultImpl` the
+approve button calls. **Because the spawn is detached**, auto-commit needed a
+completion watcher — each tick sweeps `pendingCommit` records BEFORE firing
+anything new (firing first would retake the before-snapshot and bury last
+night's result), checks the run lock has dropped, then commits; `pendingCommit`
+is also what stops the sweep committing a diff the *user* left unapproved. **The real work was the waiting, not the running:** a
+run record already survived its run but nothing could find it again, so an
+overnight diff was invisible until you clicked Run, which retakes the `before`
+snapshot and destroys it. Fixed with a mount-load in `CompanyCommandRunner`,
+`listPendingReviews`, and a dot in the Skills tree and sidebar — plus the bug
+that made "pending" meaningless: committing left `.run.json` behind, so an
+approved run looked unapproved forever (now deleted after a successful commit,
+best-effort). **Rules from the timer itself:** it lives in `instrumentation.ts`
+because Next's `register()` runs once per server process and that process is the
+only thing outliving a browser tab (so "closed the tab" works and "quit the app"
+honestly doesn't); `"HH:MM"` string comparison against `localStamp(now)` means
+no date and therefore no DST arithmetic anywhere; `schedules.json` (browser-
+written) and `schedules-last-run.json` (ticker-written) are separate files with
+one writer each, which removes the race a lock would otherwise be needed for;
+`skipDate` stops a schedule saved at 15:00 for 07:00 from firing on Save; and
+the stamp is written **whether or not the run started**, because stamping only
+successes turns a permanent refusal into a per-minute retry until midnight.
+Live-probed with `ALACRAN_DATA_DIR` pointed at a throwaway dir and a company
+that doesn't exist — the refusal returns before the `mkdir` and before any
+spawn, so the whole path was exercised with no real agent run, per the standing
+rule. **The trap worth not repeating, and the reason step 4's live pass exists:**
+Next compiles `instrumentation.ts` for the edge runtime too, so a Node-only
+import must sit INSIDE a positive `if (process.env.NEXT_RUNTIME === "nodejs")`
+block (dead code the edge build drops), not after an early return — the
+early-return shape 500s every page in `next dev` while `tsc`, `vitest`,
+`eslint` and `next build` all stay green, because minification removes the
+unreachable code before webpack can complain. Found by curling a real dev
+server, and by nothing else.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
