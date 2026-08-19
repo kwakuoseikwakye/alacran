@@ -3243,6 +3243,40 @@ a URL nothing points at, since `DEB_ASSET_URL` and both landing-page buttons
 read `alacran-releases/releases/latest/download/`, and a second download
 location that has to be remembered and undone is a worse trade than one click.
 
+### Release note (v0.27.2): the first real adopted folder couldn't finish setup
+
+Adopt a folder, open the setup wizard, press Save — "Saving…" forever, nothing
+written to the screen, no company saved. Two defects stacked, and the adoption
+above is what made the first one likely rather than exotic.
+
+`saveCompanyOntologyImpl` awaited `commitFile` unguarded, so a non-zero `git
+add`/`git commit` rejected the whole Server Action **after** company.yaml had
+already been written. An adopted folder keeps its OWN `.gitignore` — deliberately,
+per this slice — so a repo that ignores `definitions/` or `*.yaml` makes `git
+add` refuse; and a folder this app ran `git init` on has no `user.email` until
+someone sets one, which fails every commit on a fresh machine. The rule was
+already written down twice in this codebase ("a failed commit must not fail the
+update — the files are already correct on disk"); this call site, plus
+`portable-agent-file`, `install-daily-team-log` and `save-google-accounts`, never
+got it. All four fixed. **Deliberately not moved into `commitFile` itself**,
+which would have been the smaller diff: `save-skill-content-impl` reports commit
+failures to the user on purpose, and swallowing at the chokepoint would make it
+claim "Saved and committed" when it hadn't been. A chokepoint fix is only
+correct when every caller wants the same answer.
+
+The wizard then converted that rejection into a permanent spinner:
+`setPending(false)` sat after a bare `await` with no `try/finally`, so a
+rejection skipped it and the thrown message went nowhere — which is why the
+failure was silent rather than visible. Both of its handlers now clear state in
+`finally` and put the error on screen. **Fifteen other components share that
+exact shape** (`setPending(true)` … `await` … no `finally`); only the reported
+one is fixed, and the sweep is outstanding.
+
+Known consequence, worth stating plainly: if the commit is what's failing, the
+save now succeeds and `company.yaml` is simply not in git. Everything in the app
+reads from disk, so nothing is broken on the machine — but Backup won't carry
+it, and there is no warning channel on the success path to say so yet.
+
 ## v86 (2026-08-19): one working agreement every agent reads, and packs a company can add
 
 Four things, one thread: a company's context should reach whichever agent runs
