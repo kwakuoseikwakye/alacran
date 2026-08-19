@@ -44,7 +44,19 @@ export async function installDailyTeamLogImpl(
   }
 
   const relativeSkillDir = path.join(".claude", "skills", "daily-team-log")
-  await commitFile(agent.rootPath, relativeSkillDir, "Install daily-team-log via AI-Native control panel", execFn)
+  // A failed commit is not a failed save: the file is already correct on disk,
+  // which is what every reader in this app uses. Same rule as
+  // update-company-skills-impl.ts and add-company-pack.ts, and it is not
+  // hypothetical — an adopted folder keeps its OWN .gitignore, a fresh `git
+  // init` has no user.email until someone sets one, and either makes `git
+  // add`/`git commit` exit non-zero. Unguarded, that rejection left the wizard
+  // showing "Saving…" forever with nothing written to the screen, on a save
+  // that had in fact succeeded.
+  try {
+    await commitFile(agent.rootPath, relativeSkillDir, "Install daily-team-log via AI-Native control panel", execFn)
+  } catch {
+    // Deliberately ignored, as above.
+  }
 
   return { ok: true }
 }

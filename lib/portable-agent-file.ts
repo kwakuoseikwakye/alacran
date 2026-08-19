@@ -88,11 +88,25 @@ export async function addPortableAgentFileImpl(
 
   // One commit, both paths, still pathspec-scoped — git records it as the
   // rename it is, so the user can read and revert it as a single change.
-  await commitFile(
-    agent.rootPath,
-    [AGENTS_FILE, CLAUDE_FILE],
-    "Move working agreement to AGENTS.md so any agent reads it",
-    execFn
-  )
+  // A failed commit is not a failed save: the file is already correct on disk,
+  // which is what every reader in this app uses. Same rule as
+  // update-company-skills-impl.ts and add-company-pack.ts, and it is not
+  // hypothetical — an adopted folder keeps its OWN .gitignore, a fresh `git
+  // init` has no user.email until someone sets one, and either makes `git
+  // add`/`git commit` exit non-zero. Unguarded, that rejection left the wizard
+  // showing "Saving…" forever with nothing written to the screen, on a save
+  // that had in fact succeeded.
+  try {
+    await commitFile(
+      agent.rootPath,
+      [AGENTS_FILE, CLAUDE_FILE],
+      "Move working agreement to AGENTS.md so any agent reads it",
+      execFn
+    )
+  } catch {
+    // Deliberately ignored, as above. Both files are already written, so the
+    // move is complete either way — a commit is how it becomes revertable,
+    // not how it takes effect.
+  }
   return { ok: true }
 }

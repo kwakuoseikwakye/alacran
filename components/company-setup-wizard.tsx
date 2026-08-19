@@ -63,18 +63,25 @@ export function CompanySetupWizard({
     if (mode !== "edit") return
     setLoadingExisting(true)
     setMessage(null)
-    const result = await getCompanyOntology(agentId)
-    setLoadingExisting(false)
-    if (!result.ok) {
-      setMessage(result.message)
-      return
+    // Same reason as handleSave below: a rejection here would leave the sheet
+    // stuck on its loading state with no explanation.
+    try {
+      const result = await getCompanyOntology(agentId)
+      if (!result.ok) {
+        setMessage(result.message)
+        return
+      }
+      const { answers } = result
+      setDomain(answers.domain)
+      setEmployeeCount(answers.employeeCount !== undefined ? String(answers.employeeCount) : "")
+      setStakeholders(answers.stakeholders.length > 0 ? answers.stakeholders : [{ role: "", position: "" }])
+      setValueFlow(answers.valueFlow)
+      setBottleneck(answers.bottleneck)
+    } catch (err) {
+      setMessage(`Couldn't load this company's details: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setLoadingExisting(false)
     }
-    const { answers } = result
-    setDomain(answers.domain)
-    setEmployeeCount(answers.employeeCount !== undefined ? String(answers.employeeCount) : "")
-    setStakeholders(answers.stakeholders.length > 0 ? answers.stakeholders : [{ role: "", position: "" }])
-    setValueFlow(answers.valueFlow)
-    setBottleneck(answers.bottleneck)
   }
 
   function handleStartAiDraft() {
@@ -114,19 +121,30 @@ export function CompanySetupWizard({
   async function handleSave() {
     setPending(true)
     setMessage(null)
-    const result = await saveCompanyOntology(agentId, {
-      domain,
-      employeeCount: employeeCount.trim() ? Number(employeeCount) : undefined,
-      stakeholders: stakeholders.filter((s) => s.role.trim() && s.position.trim()),
-      valueFlow,
-      bottleneck,
-    })
-    setPending(false)
-    if (result.ok) {
-      resetAndClose()
-      router.refresh()
-    } else {
-      setMessage(result.message)
+    // try/finally, not a bare await: a Server Action that REJECTS rather than
+    // returning `{ ok: false }` skipped `setPending(false)` entirely, so the
+    // button sat on "Saving…" forever and printed nothing — indistinguishable
+    // from a hang, on a save that had usually already written the file. The
+    // catch also puts the thrown message on screen, because an error nobody
+    // can read is the same as no error at all.
+    try {
+      const result = await saveCompanyOntology(agentId, {
+        domain,
+        employeeCount: employeeCount.trim() ? Number(employeeCount) : undefined,
+        stakeholders: stakeholders.filter((s) => s.role.trim() && s.position.trim()),
+        valueFlow,
+        bottleneck,
+      })
+      if (result.ok) {
+        resetAndClose()
+        router.refresh()
+      } else {
+        setMessage(result.message)
+      }
+    } catch (err) {
+      setMessage(`Couldn't save: ${err instanceof Error ? err.message : String(err)}`)
+    } finally {
+      setPending(false)
     }
   }
 

@@ -77,6 +77,26 @@ describe("saveCompanyOntologyImpl", () => {
     ])
   })
 
+  it("still saves when the commit fails — the file on disk is what readers use", async () => {
+    await mockAgents()
+    const { saveCompanyOntologyImpl } = await import("./save-company-ontology-impl")
+
+    // What a real adopted folder produces: its own .gitignore covering the
+    // path, or a fresh `git init` with no user.email yet. Either exits non-zero.
+    const failingExec: ExecFileFn = async (command, args) => {
+      execCalls.push({ command, args })
+      throw new Error("Author identity unknown\n\n*** Please tell me who you are.")
+    }
+
+    const result = await saveCompanyOntologyImpl("second-co", ANSWERS, failingExec)
+
+    // Not a rejection, and not ok:false. An unguarded throw here is what left
+    // the wizard on "Saving…" forever with nothing on screen.
+    expect(result).toEqual({ ok: true })
+    const written = await readFile(path.join(root, "definitions", "ontology", "company.yaml"), "utf-8")
+    expect(parse(written)).toBeTruthy()
+  })
+
   it("fails cleanly for an unknown agent id", async () => {
     await mockAgents()
     const { saveCompanyOntologyImpl } = await import("./save-company-ontology-impl")
