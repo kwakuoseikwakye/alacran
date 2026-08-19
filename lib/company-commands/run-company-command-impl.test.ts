@@ -3,6 +3,20 @@ import { mkdtemp, mkdir, readFile, rm, writeFile, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
 import { AI_EXECUTORS } from "../ai-executors"
+import type { SpawnedProcess } from "./run-company-command-impl"
+
+/** A spawned terminal launcher that hands its window off and exits 0 at once,
+ *  which is what `open -a Terminal` and gnome-terminal really do — the run
+ *  inside carries on long after. */
+function handOffChild(onCalls?: string[]): SpawnedProcess {
+  return {
+    unref: () => {},
+    on: ((event: string, listener: (code: number | null) => void) => {
+      onCalls?.push(event)
+      if (event === "exit") listener(0)
+    }) as SpawnedProcess["on"],
+  }
+}
 
 let root: string
 let dataDir: string
@@ -497,7 +511,7 @@ describe("runCompanyCommandImpl", () => {
     expect(resolvedFor).toEqual(["second-co"])
   })
 
-  it("runs visibly (open -a Terminal, generated script, no exit handler) when the company has visible runs enabled on darwin", async () => {
+  it("runs visibly (open -a Terminal, generated script, lock left to the script) when the company has visible runs enabled on darwin", async () => {
     vi.doMock("../config", () => ({
       AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: root, kind: "command-set" }],
     }))
@@ -507,7 +521,7 @@ describe("runCompanyCommandImpl", () => {
     const onCalls: string[] = []
     const spawnFn = (command: string, args: string[], options: unknown) => {
       calls.push({ command, args, options })
-      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+      return handOffChild(onCalls)
     }
 
     const result = await runCompanyCommandImpl(
@@ -529,9 +543,15 @@ describe("runCompanyCommandImpl", () => {
     expect(calls[0].args[1]).toBe("Terminal")
     const scriptPath = calls[0].args[2]
     expect(scriptPath).toBe(path.join(dataDir, "digest.run.sh"))
-    // The crux of the whole design: no exit handler in visible mode. The
-    // script's own `trap ... EXIT` owns the lock's lifetime instead.
-    expect(onCalls).not.toContain("exit")
+    // The crux of the whole design, asserted as the property rather than the
+    // mechanism: the fake above HAS exited 0 by now, and the lock is still
+    // held. The launcher returns the instant the window opens, long before the
+    // run inside finishes, so a clean exit must never be read as completion —
+    // the script's own `trap ... EXIT` owns the lock's lifetime. (An exit
+    // listener does now get registered, because a launcher that dies on
+    // arrival is the one case where the script never runs at all.)
+    const { runLockPath } = await import("./run-lock")
+    expect((await stat(runLockPath(dataDir))).isFile()).toBe(true)
     // Always registered, on every path: an unhandled "error" event is an
     // uncaught exception, and here it is also the only thing that can
     // release a lock the script will never get far enough to trap.
@@ -582,7 +602,7 @@ describe("runCompanyCommandImpl", () => {
     const onCalls: string[] = []
     const spawnFn = (command: string, args: string[], options: unknown) => {
       calls.push({ command, args, options })
-      return { unref: () => {}, on: (event: string) => { onCalls.push(event) } }
+      return handOffChild(onCalls)
     }
     // x-terminal-emulator (tried first) is missing; gnome-terminal is installed.
     const execFn = async (command: string, args: string[]) => {
@@ -608,7 +628,15 @@ describe("runCompanyCommandImpl", () => {
     // gnome-terminal takes `--` before the command, unlike the `-e` the rest use.
     expect(calls[0].args[0]).toBe("--")
     expect(calls[0].args[1]).toBe(path.join(dataDir, "digest.run.sh"))
-    expect(onCalls).not.toContain("exit")
+    // The crux of the whole design, asserted as the property rather than the
+    // mechanism: the fake above HAS exited 0 by now, and the lock is still
+    // held. The launcher returns the instant the window opens, long before the
+    // run inside finishes, so a clean exit must never be read as completion —
+    // the script's own `trap ... EXIT` owns the lock's lifetime. (An exit
+    // listener does now get registered, because a launcher that dies on
+    // arrival is the one case where the script never runs at all.)
+    const { runLockPath } = await import("./run-lock")
+    expect((await stat(runLockPath(dataDir))).isFile()).toBe(true)
     // Always registered, on every path: an unhandled "error" event is an
     // uncaught exception, and here it is also the only thing that can
     // release a lock the script will never get far enough to trap.
@@ -653,7 +681,7 @@ describe("runCompanyCommandImpl", () => {
     const { runLockPath } = await import("./run-lock")
     const { shQuote } = await import("./build-visible-run-script")
 
-    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+    const spawnFn = () => handOffChild()
 
     await runCompanyCommandImpl(
       "digest",
@@ -677,7 +705,7 @@ describe("runCompanyCommandImpl", () => {
     }))
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
-    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+    const spawnFn = () => handOffChild()
 
     await runCompanyCommandImpl(
       "digest",
@@ -707,7 +735,7 @@ describe("runCompanyCommandImpl", () => {
     }))
     const { runCompanyCommandImpl } = await import("./run-company-command-impl")
 
-    const spawnFn = () => ({ unref: () => {}, on: () => {} })
+    const spawnFn = () => handOffChild()
 
     await runCompanyCommandImpl(
       "digest",

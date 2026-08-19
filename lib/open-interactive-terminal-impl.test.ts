@@ -13,12 +13,85 @@ function fakeSpawn() {
   const calls: Array<{ command: string; args: string[]; opts: Record<string, unknown> }> = []
   const spawnFn: SpawnFn = vi.fn((command: string, args: string[], opts: Record<string, unknown>) => {
     calls.push({ command, args, opts })
-    return { unref: vi.fn(), on: vi.fn() } as unknown as ChildProcess
+    return {
+      unref: vi.fn(),
+      // Exits 0 on hand-off, as `open -a Terminal` and gnome-terminal do.
+      on: (event: string, listener: (code: number | null) => void) => {
+        if (event === "exit") listener(0)
+      },
+    } as unknown as ChildProcess
   })
   return { spawnFn, calls }
 }
 
+/** A terminal that spawns, fails, and exits — the Linux shape that used to be
+ *  reported as "Opened Terminal" with no window anywhere. */
+function fakeFailingSpawn(exitCode: number, stderr: string) {
+  const spawnFn: SpawnFn = vi.fn(() => {
+    const listeners: Record<string, (arg: unknown) => void> = {}
+    const child = {
+      unref: vi.fn(),
+      stderr: {
+        on: (_event: string, listener: (chunk: string) => void) => {
+          if (stderr) listener(stderr)
+        },
+        removeAllListeners: () => {},
+        resume: () => {},
+      },
+      on: (event: string, listener: (arg: unknown) => void) => {
+        listeners[event] = listener
+        if (event === "exit") listener(exitCode)
+      },
+    }
+    return child as unknown as ChildProcess
+  })
+  return spawnFn
+}
+
 describe("openInteractiveTerminalImpl", () => {
+  it("reports the failure, with the emulator's own words, when the terminal quits on arrival", async () => {
+    const result = await openInteractiveTerminalImpl(
+      "acme",
+      fakeFailingSpawn(1, "Failed to parse arguments: Cannot open display: \n"),
+      async () => [AGENT],
+      async () => AI_EXECUTORS["claude-code"],
+      "linux",
+      await mkdtemp(path.join(tmpdir(), "open-term-")),
+      async (command: string, args: string[]) => {
+        // x-terminal-emulator is tried first and is absent here.
+        if (command === "which" && args[0] === "gnome-terminal") return { stdout: "/usr/bin/gnome-terminal", stderr: "" }
+        throw new Error("not found")
+      }
+    )
+
+    // The whole point: `started` is false. This used to be `true` with
+    // "Opened Terminal", because the spawn itself succeeded and nothing ever
+    // looked at what happened next.
+    expect(result.started).toBe(false)
+    expect(result.message).toContain("Cannot open display")
+    expect(result.message).toContain("gnome-terminal")
+    // Still tells the user what to run by hand, as the no-terminal-found path does.
+    expect(result.message).toContain("/companies/acme")
+  })
+
+  it("says so even when a dying terminal prints nothing at all", async () => {
+    const result = await openInteractiveTerminalImpl(
+      "acme",
+      fakeFailingSpawn(127, ""),
+      async () => [AGENT],
+      async () => AI_EXECUTORS["claude-code"],
+      "linux",
+      await mkdtemp(path.join(tmpdir(), "open-term-")),
+      async (command: string, args: string[]) => {
+        if (command === "which" && args[0] === "xterm") return { stdout: "/usr/bin/xterm", stderr: "" }
+        throw new Error("not found")
+      }
+    )
+
+    expect(result.started).toBe(false)
+    expect(result.message).toContain("exit 127")
+  })
+
   it("refuses an unknown agent id", async () => {
     const { spawnFn } = fakeSpawn()
     const result = await openInteractiveTerminalImpl(

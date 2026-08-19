@@ -3041,6 +3041,63 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v88 (2026-08-19): the Linux buttons that reported success and did nothing
+
+Reported from a real Debian install: Open in Terminal doesn't open a terminal,
+and Set up Google for me does nothing. Both are the same defect, and it is not
+in either feature — it is in how all four launch sites read the result of
+spawning a terminal.
+
+Each one spawned the emulator, attached `child.on("error", () => {})` so an
+unhandled event couldn't take the server down, and then returned
+`started: true` with "Opened Terminal". That `error` event covers exactly one
+failure: the binary not being startable at all. It covers none of the failures
+Linux actually produces — no reachable display, no D-Bus session to hand a
+window to, an `-e` the resolved emulator rejects, a snap-confined
+gnome-terminal that can't see a script under the app's data dir. Every one of
+those **spawns fine and then exits non-zero**, having written the reason to
+stderr, which `stdio: ["ignore", "ignore", "ignore"]` threw on the floor. So
+the app said it had opened a terminal, no window existed, and nothing anywhere
+recorded why. macOS could never show it: `open -a Terminal` hands off to
+LaunchServices and exits 0 whatever happens afterwards.
+
+`launchTerminalScript` in `lib/terminal-launch-command.ts` now watches the
+launch instead of assuming it, and all four callers
+(`open-interactive-terminal-impl`, `setup-google-impl`, `sign-in-claude-impl`,
+`run-company-command-impl`) go through it — the chokepoint, not the two buttons
+that got reported. What makes the check cheap is that a terminal which opened
+does not exit, since it lives as long as its window; the one exception is
+gnome-terminal, which forks to its D-Bus server and exits 0 immediately. So a
+non-zero exit inside a short settle window is a launch failure and anything
+else is a launch, with no display probing involved, and the emulator's own
+stderr becomes the message the user reads. The settle window is a knob (800ms)
+rather than an inlined constant: a parse failure returns in well under 100ms,
+while a terminal that stays open costs the whole window before the caller hears
+"opened".
+
+**The visible-run path needed care, not the same treatment.** Its lock is
+released by the generated script's own `trap ... EXIT`, and its test asserted
+"no exit handler is registered in visible mode" to protect that. An exit
+listener now does get registered, so the test was re-pointed at the property
+the mechanism existed to defend — the launcher exits 0 immediately and the lock
+is still held — rather than at the absence of a listener. A launch that dies on
+arrival is the one case where the script never runs at all, so there the lock
+IS released and the failure is written to the run log, which is what the old
+`error`-only handler was already for.
+
+**A second silent no-op in the same slice.** `isChromeInstalled` accepts either
+`google-chrome` or `google-chrome-stable`, because distros disagree about which
+exists — but `openChromeAccountCheckImpl` hardcoded the first name and swallowed
+the ENOENT in a `.catch(() => {})`, still returning `opened: true`. A machine
+carrying only `google-chrome-stable` therefore passed the installed check and
+then did nothing when asked to open Chrome. Both now read one list.
+
+Nothing here was reproduced locally — this is a macOS dev machine, and the
+failure is only visible where it was reported. That is the reason the fix is
+"stop reporting success you didn't verify, and surface the emulator's own
+words" rather than a guess at which of the four Linux causes it is: a confident
+patch aimed at the wrong one would have looked exactly as finished.
+
 ## v87 (2026-08-19): adopt a folder you already work in, and a tree that starts closed
 
 **A folder that already exists can become a company, in place.** Registering

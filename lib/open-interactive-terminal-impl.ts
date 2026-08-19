@@ -5,7 +5,7 @@ import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
 import { resolveAiExecutorForAgent } from "./ai-executor-registry"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
-import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
+import { resolveTerminalLaunchCommand, launchTerminalScript, type ExecFileFn } from "./terminal-launch-command"
 import { DATA_DIR } from "./data-dir"
 
 const execFileAsync = promisify(nodeExecFile)
@@ -80,16 +80,13 @@ export async function openInteractiveTerminalImpl(
   await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
-  const child = spawnFn(launch.command, launch.args(scriptPath), {
-    cwd: agent.rootPath,
-    detached: true,
-    stdio: ["ignore", "ignore", "ignore"],
-  })
-  // Nothing to clean up (this path holds no lock), but an "error" event with
-  // no listener is an uncaught exception that would take the server down if
-  // the terminal launcher itself can't start.
-  child.on("error", () => {})
-  child.unref()
+  const outcome = await launchTerminalScript(launch, scriptPath, agent.rootPath, spawnFn)
+  if (!outcome.opened) {
+    return {
+      started: false,
+      message: `Couldn't open a terminal — ${outcome.reason}. Run "${executor.binaryName}" yourself in ${agent.rootPath}.`,
+    }
+  }
   const skippedIntro = Boolean(introPrompt) && !introArgs
   return {
     started: true,

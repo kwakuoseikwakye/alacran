@@ -14,7 +14,7 @@ import { resolveAiExecutorForAgent } from "../ai-executor-registry"
 import type { AiExecutor } from "../ai-executors"
 import { getVisibleRunForAgent } from "../visible-run-registry"
 import { buildVisibleRunScript } from "./build-visible-run-script"
-import { resolveTerminalLaunchCommand } from "../terminal-launch-command"
+import { resolveTerminalLaunchCommand, launchTerminalScript } from "../terminal-launch-command"
 
 export type ResolveExecutorFn = (agentId: string) => Promise<AiExecutor>
 export type ResolveVisibleRunFn = (agentId: string) => Promise<boolean>
@@ -25,10 +25,18 @@ const MAX_FIELD_LENGTH = 4000
 export type SpawnOptions = {
   cwd: string
   detached: boolean
-  stdio: ["ignore", number | "ignore", number | "ignore"]
+  // "pipe" is here for the visible-run branch only: launchTerminalScript reads
+  // the emulator's stderr, because on Linux that text is the only evidence of
+  // why a window didn't appear.
+  stdio: ["ignore", number | "ignore", number | "ignore" | "pipe"]
 }
 export type SpawnedProcess = {
   unref: () => void
+  stderr?: {
+    on: (event: "data", listener: (chunk: Buffer | string) => void) => void
+    removeAllListeners: (event: "data") => void
+    resume: () => void
+  } | null
   on: {
     (event: "exit", listener: (code: number | null) => void): void
     // "error" is not optional decoration. When a binary isn't on PATH, Node
@@ -216,26 +224,21 @@ export async function runCompanyCommandImpl(
         cwd: agent.rootPath,
       })
       await writeFile(scriptPath, script, { mode: 0o755 })
-      const child = spawnFn(terminalLaunch.command, terminalLaunch.args(scriptPath), {
-        cwd: agent.rootPath,
-        detached: true,
-        stdio: ["ignore", "ignore", "ignore"],
-      })
-      // Deliberately NOT attaching an "exit" handler here: the terminal
-      // launcher returns the instant the window is told to open, long
-      // before the script — let alone the run inside it — finishes. The wrapper
-      // script's own `trap ... EXIT` releases the lock instead; attaching
-      // this handler too would release it immediately and the app would
-      // report "finished" while the gate is still waiting for Enter.
-      //
-      // "error" is different, and must be handled: if the terminal launcher
-      // itself never starts, the script never runs, so its trap never fires
-      // and nothing else would ever release the lock.
-      child.on("error", (err) => {
-        void appendSpawnFailure(logPath, terminalLaunch.command, err)
-        releaseRunLock(dataDir).catch(() => {})
-      })
-      child.unref()
+      // An exit is NOT completion on this path and must never be read as one:
+      // the launcher returns the instant the window is told to open, long
+      // before the script — let alone the run inside it — finishes, and the
+      // wrapper script's own `trap ... EXIT` is what releases the lock. What
+      // launchTerminalScript watches for is narrower and does not collide with
+      // that: a non-zero exit inside its settle window, which the run script
+      // cannot produce because it is still holding the gate open. Either that
+      // or an outright failure to start means the script never ran, its trap
+      // never fires, and nothing else would ever release the lock.
+      const outcome = await launchTerminalScript(terminalLaunch, scriptPath, agent.rootPath, spawnFn)
+      if (!outcome.opened) {
+        await appendSpawnFailure(logPath, terminalLaunch.command, new Error(outcome.reason))
+        await releaseRunLock(dataDir).catch(() => {})
+        return { started: false, message: `Couldn't open a terminal — ${outcome.reason}` }
+      }
       return { started: true, message: "Started" }
     }
 

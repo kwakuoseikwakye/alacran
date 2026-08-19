@@ -14,7 +14,13 @@ function fakeSpawn() {
   const calls: Array<{ command: string; args: string[]; opts: Record<string, unknown> }> = []
   const spawnFn: SpawnFn = vi.fn((command: string, args: string[], opts: Record<string, unknown>) => {
     calls.push({ command, args, opts })
-    return { unref: vi.fn(), on: vi.fn() } as unknown as ChildProcess
+    return {
+      unref: vi.fn(),
+      // Exits 0 on hand-off, as `open -a Terminal` and gnome-terminal do.
+      on: (event: string, listener: (code: number | null) => void) => {
+        if (event === "exit") listener(0)
+      },
+    } as unknown as ChildProcess
   })
   return { spawnFn, calls }
 }

@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
-import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
+import { resolveTerminalLaunchCommand, launchTerminalScript, type ExecFileFn } from "./terminal-launch-command"
 import { GOOGLE_CONSOLE_STEPS } from "./google-console-steps"
 import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg, servicesFromScopes } from "./google-services"
 import { listGoogleAccounts, type GoogleAccount } from "./google-accounts"
@@ -19,6 +19,12 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
 
 export type SpawnFn = (command: string, args: string[], opts: Record<string, unknown>) => ChildProcess
 export type SetupGoogleResult = { started: boolean; message: string }
+
+// Distros disagree on the binary name; `google-chrome` is a symlink on some and
+// absent on others where only `google-chrome-stable` exists. One list, because
+// the two functions below asking this two different ways is exactly how a
+// machine passed the installed-check and then silently did nothing.
+const LINUX_CHROME_BINARIES = ["google-chrome", "google-chrome-stable"]
 
 /**
  * The scopes this app actually uses. Kept deliberately narrow (v64): every
@@ -150,9 +156,7 @@ export async function isChromeInstalled(execFn: ExecFileFn, platform: NodeJS.Pla
       return false
     }
   }
-  // Distros disagree on the binary name; `google-chrome` is a symlink on some
-  // and absent on others where only `google-chrome-stable` exists.
-  for (const binary of ["google-chrome", "google-chrome-stable"]) {
+  for (const binary of LINUX_CHROME_BINARIES) {
     try {
       await execFn("which", [binary])
       return true
@@ -177,11 +181,24 @@ export async function openChromeAccountCheckImpl(
       await execFn("open", ["-a", "Google Chrome", "https://myaccount.google.com"])
       return { opened: true }
     }
-    // On Linux the browser binary does NOT return until the browser exits, so
-    // awaiting it would hang this action for as long as the window is open.
-    // Fire it and report success on hand-off, the same contract as macOS.
-    void execFn("google-chrome", ["https://myaccount.google.com"]).catch(() => {})
-    return { opened: true }
+    // `isChromeInstalled` accepts either name, so hardcoding one here meant a
+    // machine carrying only google-chrome-stable passed that check and then
+    // did nothing at all: the ENOENT went into the `.catch(() => {})` below
+    // and this still reported `opened: true`. Resolve first, then fire.
+    for (const binary of LINUX_CHROME_BINARIES) {
+      try {
+        await execFn("which", [binary])
+      } catch {
+        continue
+      }
+      // On Linux the browser binary does NOT return until the browser exits,
+      // so awaiting it would hang this action for as long as the window is
+      // open. Fire it and report success on hand-off, the same contract as
+      // macOS.
+      void execFn(binary, ["https://myaccount.google.com"]).catch(() => {})
+      return { opened: true }
+    }
+    return { opened: false }
   } catch {
     return { opened: false }
   }
@@ -266,14 +283,10 @@ export async function setupGoogleImpl(
   await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
-  const child = spawnFn(launch.command, launch.args(scriptPath), {
-    cwd: home,
-    detached: true,
-    stdio: ["ignore", "ignore", "ignore"],
-  })
-  // v56: an 'error' with no listener takes the server down.
-  child.on("error", () => {})
-  child.unref()
+  const outcome = await launchTerminalScript(launch, scriptPath, home, spawnFn)
+  if (!outcome.opened) {
+    return { started: false, message: `Couldn't open a terminal — ${outcome.reason}` }
+  }
 
   return {
     started: true,

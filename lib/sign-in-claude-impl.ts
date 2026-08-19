@@ -4,7 +4,7 @@ import { mkdir, writeFile } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
-import { resolveTerminalLaunchCommand, type ExecFileFn } from "./terminal-launch-command"
+import { resolveTerminalLaunchCommand, launchTerminalScript, type ExecFileFn } from "./terminal-launch-command"
 import { DATA_DIR } from "./data-dir"
 
 const execFileAsync = promisify(nodeExecFile)
@@ -73,15 +73,13 @@ export async function signInClaudeImpl(
   await mkdir(dataDir, { recursive: true })
   await writeFile(scriptPath, script, { mode: 0o755 })
 
-  const child = spawnFn(launch.command, launch.args(scriptPath), {
-    cwd: home,
-    detached: true,
-    stdio: ["ignore", "ignore", "ignore"],
-  })
-  // v56: a launcher that can't start fires 'error' with no 'exit', and an
-  // unhandled 'error' event takes the server down.
-  child.on("error", () => {})
-  child.unref()
+  const outcome = await launchTerminalScript(launch, scriptPath, home, spawnFn)
+  if (!outcome.opened) {
+    return {
+      started: false,
+      message: `Couldn't open a terminal — ${outcome.reason}. Run "claude auth login" yourself.`,
+    }
+  }
 
   return { started: true, message: "Opened Terminal — finish signing in there, then press Re-check." }
 }
