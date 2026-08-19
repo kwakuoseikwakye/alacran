@@ -74,6 +74,33 @@ describe("openInteractiveTerminalImpl", () => {
     expect(result.message).toContain("/companies/acme")
   })
 
+  it("translates X's display errors into what the user can actually do about them", async () => {
+    const result = await openInteractiveTerminalImpl(
+      "acme",
+      fakeFailingSpawn(
+        1,
+        "Invalid MIT-MAGIC-COOKIE-1 keyFailed to parse arguments: Cannot open display: \n"
+      ),
+      async () => [AGENT],
+      async () => AI_EXECUTORS["claude-code"],
+      "linux",
+      await mkdtemp(path.join(tmpdir(), "open-term-")),
+      async (command: string, args: string[]) => {
+        if (command === "which" && args[0] === "x-terminal-emulator") {
+          return { stdout: "/usr/bin/x-terminal-emulator", stderr: "" }
+        }
+        throw new Error("not found")
+      }
+    )
+
+    expect(result.started).toBe(false)
+    expect(result.message).toContain("isn't running inside your desktop session")
+    expect(result.message).toContain("not with sudo")
+    // The emulator's own words are kept, not replaced: they are what makes a
+    // bug report diagnosable when the plain-language guess is wrong.
+    expect(result.message).toContain("Cannot open display")
+  })
+
   it("says so even when a dying terminal prints nothing at all", async () => {
     const result = await openInteractiveTerminalImpl(
       "acme",

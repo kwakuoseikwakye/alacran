@@ -26,6 +26,32 @@ export type SpawnFn = (command: string, args: string[], opts: TerminalSpawnOptio
 
 export type TerminalLaunchOutcome = { opened: true } | { opened: false; reason: string }
 
+// What X says when a client has no usable display credentials. Deliberately
+// matched on the emulator's OWN output rather than pre-checked from `DISPLAY`
+// and `WAYLAND_DISPLAY`: libwayland falls back to `wayland-0` when
+// WAYLAND_DISPLAY is unset, so a pre-check would refuse launches that in fact
+// work, and a false negative here is worse than an unreadable error. Reading
+// the failure after the fact cannot produce one.
+const NO_DISPLAY_MARKERS = [
+  "cannot open display",
+  "mit-magic-cookie",
+  "no protocol specified",
+  "authorization required",
+  "failed to open display",
+]
+
+/** The same failure in words this app's audience can act on. Both halves of the
+ *  usual pair — a rejected auth cookie and an empty `Cannot open display:` —
+ *  mean one thing: the server isn't running inside the desktop session, so
+ *  there is no display to put a window on. Starting it over SSH, from a bare
+ *  TTY, as a service, or under sudo (which strips DISPLAY and XAUTHORITY) all
+ *  land here, and no amount of retrying reaches a screen from there. */
+function plainCause(said: string): string | null {
+  const lower = said.toLowerCase()
+  if (!NO_DISPLAY_MARKERS.some((marker) => lower.includes(marker))) return null
+  return "the app isn't running inside your desktop session, so it has no screen to open a window on. Start Alacrán from your applications menu, or from a terminal in that session — not over SSH and not with sudo"
+}
+
 export type TerminalLaunchCommand = { command: string; args: (scriptPath: string) => string[] }
 
 // Ubuntu (this app's only .deb target — scripts/package-linux.sh) always has
@@ -131,9 +157,12 @@ export async function launchTerminalScript(
       // Only the last few lines: emulators print warnings first (a deprecated
       // `-e`, GTK accessibility noise) ahead of the line that matters.
       const said = stderr.trim().split("\n").slice(-3).join(" ").trim()
+      const plain = plainCause(said)
       finish({
         opened: false,
-        reason: `${launch.command} quit immediately${code !== null ? ` (exit ${code})` : ""}${said ? `: ${said}` : ", with nothing on stderr"}`,
+        reason: plain
+          ? `${plain} (${launch.command} said: ${said})`
+          : `${launch.command} quit immediately${code !== null ? ` (exit ${code})` : ""}${said ? `: ${said}` : ", with nothing on stderr"}`,
       })
     })
   })
