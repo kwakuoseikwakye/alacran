@@ -123,16 +123,18 @@ jobs:
         run: |
           set -euo pipefail
           cp "$(ls dist/*.deb)" "Alacran.deb"
-          # Checked up front because the two failures below are
-          # indistinguishable once they start: `gh release view` exits
-          # non-zero on a 401 exactly as it does on a missing release, so a
-          # bad token fell through to `gh release create`, 401'd again, and
-          # reported itself as "error checking for existing release" plus
-          # gh's stock "Try authenticating with: gh auth login" — advice for
-          # a laptop, meaningless inside a runner, and pointing at the wrong
-          # thing entirely.
-          if ! gh auth status --hostname github.com >/dev/null 2>&1; then
-            echo "::error::RELEASES_REPO_TOKEN is missing, expired or revoked. The .deb built fine and is attached to this run as an artifact, so nothing needs rebuilding: rotate the secret (classic PAT with 'repo' scope, or a fine-grained token with Contents: write on kwakuoseikwakye/alacran-releases), then re-run this workflow."
+          # Checked up front, and against the releases endpoint specifically,
+          # because the two failures below are indistinguishable once they
+          # start: `gh release view` exits non-zero on 401 AND on 403 exactly
+          # as it does on a missing release, so an unusable token falls
+          # through to `gh release create` and fails there instead — which is
+          # how v0.26.0 reported itself as "error checking for existing
+          # release" plus gh's stock "Try authenticating with: gh auth login",
+          # advice for a laptop and pointing at the wrong thing entirely.
+          # `gh auth status` is NOT sufficient: a fine-grained token with repo
+          # read but no Contents: write passes it and then 403s here (v0.27.0).
+          if ! gh api "/repos/kwakuoseikwakye/alacran-releases/releases?per_page=1" >/dev/null 2>&1; then
+            echo "::error::RELEASES_REPO_TOKEN cannot reach releases on kwakuoseikwakye/alacran-releases. The .deb built fine and is attached to this run as an artifact, so nothing needs rebuilding — fix the token, then re-run. A fine-grained token needs 'Contents: Read and write' on that repo specifically; repo READ access is not enough and fails here with 'HTTP 403: Resource not accessible by personal access token'. Note that /repos/<repo>'s own \`permissions\` block reports the ACCOUNT's access, not the token's, so it says push:true for a token that cannot do this."
             exit 1
           fi
           if gh release view "$TARGET_TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then

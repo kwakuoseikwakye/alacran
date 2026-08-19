@@ -3098,6 +3098,40 @@ failure is only visible where it was reported. That is the reason the fix is
 words" rather than a guess at which of the four Linux causes it is: a confident
 patch aimed at the wrong one would have looked exactly as finished.
 
+### Release note (v0.27.0): the token was replaced and still couldn't publish
+
+The secret was rotated to a fine-grained PAT and the publish step failed
+again — this time with `HTTP 403: Resource not accessible by personal access
+token` on `/releases`. Worth recording because the obvious pre-check lies:
+`gh api /repos/kwakuoseikwakye/alacran-releases` returns
+`permissions: {admin: true, push: true, ...}` **for that token**, which reads
+as "this token can write here" and does not mean that at all — the block
+reports the authenticated ACCOUNT's access to the repo, not the grants on the
+token being used. A fine-grained token needs `Contents: Read and write` on the
+target repo before releases are reachable; repo read is not enough. So v88's
+`gh auth status` guard was not sufficient either: the token authenticates
+perfectly and fails one call later. The guard now hits
+`/repos/.../releases?per_page=1`, the capability actually required, and says
+which permission is missing.
+
+Everything else went the way v88 intended. The `upload-artifact` step held the
+built `.deb` through the failure, so the release was assembled from that
+artifact rather than from a second Docker build — `Version: 0.27.0` read out of
+its control member first, since `dist/` still held the previous version's
+`Alacran.deb` under the same name.
+
+**Published as a draft, deliberately.** v0.13.1 recorded why a release must
+never become `latest` carrying only one platform's assets: `DEB_ASSET_URL`,
+`MAC_ASSET_URL` and both landing-page buttons all read
+`releases/latest/download/<name>`, so a partial release 404s the other
+platform's in-app updater and surfaces as "Couldn't download the update. Check
+your connection" — a lie. A draft is not `latest`, and `gh release view <tag>`
+resolves a draft by its `tag_name`, so the workflow uploads into it rather than
+creating a rival release. The mac `.dmg`/`.zip` went into the draft first, the
+`.deb` joined them, and only then was it published. Verified afterwards by
+fetching all three `latest/download` URLs and matching `content-length`
+against the local files, rather than trusting the upload's own output.
+
 ## v87 (2026-08-19): adopt a folder you already work in, and a tree that starts closed
 
 **A folder that already exists can become a company, in place.** Registering
