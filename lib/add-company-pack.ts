@@ -1,4 +1,4 @@
-import { readdir, cp, mkdir } from "node:fs/promises"
+import { readdir, cp } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
 import { COMPANY_STARTER_PACKS } from "./company-starter-packs"
@@ -6,6 +6,7 @@ import { isPackInstalled, packStampName, VENDORED_SKILLS_RELATIVE_DIR, VENDORED_
 import { commitFile } from "./git-commit-file"
 import type { ExecFileFn } from "./git-commit-file"
 import { pathExists } from "./path-exists"
+import { copyNew } from "./copy-new"
 
 /**
  * Add a second starter pack's commands and skills to a company that already
@@ -43,24 +44,6 @@ export async function listPackState(
     })
   }
   return state
-}
-
-/** Copy entries that aren't already there; never overwrite the user's own. */
-async function copyNew(source: string, target: string, skip: (name: string) => boolean): Promise<string[]> {
-  const names = await readdir(source).catch(() => [])
-  if (names.length === 0) return []
-  await mkdir(target, { recursive: true })
-  const copied: string[] = []
-  for (const name of names) {
-    if (skip(name)) continue
-    // A command or skill of this name already in the company is the user's —
-    // possibly their own edit of this very file. Adding a pack is additive or
-    // it is nothing.
-    if (await pathExists(path.join(target, name))) continue
-    await cp(path.join(source, name), path.join(target, name), { recursive: true })
-    copied.push(name)
-  }
-  return copied
 }
 
 export async function addCompanyPackImpl(

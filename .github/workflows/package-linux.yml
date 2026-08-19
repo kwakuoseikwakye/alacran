@@ -100,13 +100,41 @@ jobs:
       - name: Build the .deb
         run: bash scripts/package-linux.sh
 
+      # ponytail: temporary, until RELEASES_REPO_TOKEN is rotated. A failed
+      # publish used to take the built .deb down with it, so every tag since
+      # v0.25.0 built a perfectly good package on the one platform that can
+      # build it and then threw it away — which is why both releases were
+      # assembled by hand. Saving it first makes a dead token cost one click
+      # (download, attach to the release) instead of a Debian machine.
+      # Ceiling: still manual. Writing to another repo needs a credential for
+      # that repo, and no rearrangement here can conjure one, so the actual
+      # fix is rotating the secret — this only stops the failure from being
+      # expensive while it's broken.
+      - name: Keep the .deb as a downloadable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Alacran-deb-${{ env.TARGET_TAG }}
+          path: dist/*.deb
+          if-no-files-found: error
+
       - name: Publish to alacran-releases
         env:
           GH_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
         run: |
           set -euo pipefail
-          DEB_PATH="$(ls dist/*.deb)"
-          cp "$DEB_PATH" "Alacran.deb"
+          cp "$(ls dist/*.deb)" "Alacran.deb"
+          # Checked up front because the two failures below are
+          # indistinguishable once they start: `gh release view` exits
+          # non-zero on a 401 exactly as it does on a missing release, so a
+          # bad token fell through to `gh release create`, 401'd again, and
+          # reported itself as "error checking for existing release" plus
+          # gh's stock "Try authenticating with: gh auth login" — advice for
+          # a laptop, meaningless inside a runner, and pointing at the wrong
+          # thing entirely.
+          if ! gh auth status --hostname github.com >/dev/null 2>&1; then
+            echo "::error::RELEASES_REPO_TOKEN is missing, expired or revoked. The .deb built fine and is attached to this run as an artifact, so nothing needs rebuilding: rotate the secret (classic PAT with 'repo' scope, or a fine-grained token with Contents: write on kwakuoseikwakye/alacran-releases), then re-run this workflow."
+            exit 1
+          fi
           if gh release view "$TARGET_TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then
             gh release upload "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --clobber
           else

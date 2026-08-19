@@ -18,11 +18,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { registerCompany } from "@/lib/register-company"
+import { adoptFolder } from "@/lib/adopt-folder"
+import { listHomeFolders, type FolderListing } from "@/lib/list-home-folders"
+import { TEMPLATE_MANIFEST } from "@/lib/company-template-manifest"
 import { getCompanyPathStatus } from "@/lib/get-company-path-status"
 import { createCompanyFromTemplate } from "@/lib/create-company-from-template"
 import { restoreCompany } from "@/lib/github/github-actions"
 import { COMPANY_STARTER_PACKS, DEFAULT_COMPANY_STARTER_PACK_ID, getCompanyStarterPack } from "@/lib/company-starter-packs"
 import { COMPANIES_DIR_NAME } from "@/lib/branding"
+
+/** The top-level names adoption can add, straight from the manifest so the
+ *  confirmation can't claim something the copy doesn't do. */
+const STARTER_ENTRIES = [...new Set(TEMPLATE_MANIFEST.map((p) => p.split("/")[0]))].join(", ")
 
 /** Turns a company name into a directory-safe leaf, e.g. "Second Co!" -> "second-co". */
 function slugify(name: string): string {
@@ -54,11 +61,14 @@ export function AddCompanyForm({
   const [restoreUrl, setRestoreUrl] = useState("")
   const [showRestore, setShowRestore] = useState(false)
   const [external, setExternal] = useState(false)
+  const [showAdopt, setShowAdopt] = useState(false)
+  const [browse, setBrowse] = useState<FolderListing | null>(null)
+  const [confirmAdoptOpen, setConfirmAdoptOpen] = useState(false)
 
   const suggestedPath = homeDir
     ? `${homeDir}/${COMPANIES_DIR_NAME}${name.trim() ? `/${slugify(name)}` : ""}`
     : ""
-  if (!pathTouched && suggestedPath && suggestedPath !== rootPath) {
+  if (!pathTouched && !showAdopt && suggestedPath && suggestedPath !== rootPath) {
     setRootPath(suggestedPath)
   }
 
@@ -84,6 +94,50 @@ export function AddCompanyForm({
       setRootPath("")
       setPathTouched(false)
       setMessage(`Registered "${result.company.name}"`)
+      setOpen(false)
+      router.refresh()
+    } else {
+      setMessage(result.message)
+    }
+  }
+
+  async function loadFolders(dir?: string) {
+    setBrowse(await listHomeFolders(dir))
+  }
+
+  function toggleAdopt() {
+    const next = !showAdopt
+    setShowAdopt(next)
+    setMessage(null)
+    // Either direction leaves a stale path behind: entering, the name-derived
+    // ~/Alacran suggestion; leaving, the folder just picked. Clear it both ways
+    // so the suggestion re-derives and the button stays disabled until there's
+    // a real choice.
+    setRootPath("")
+    setPathTouched(next)
+    if (next) void loadFolders()
+  }
+
+  function pickFolder(fullPath: string, folderName: string) {
+    setRootPath(fullPath)
+    setMessage(null)
+    if (!name.trim()) setName(folderName)
+  }
+
+  async function handleConfirmAdopt() {
+    setConfirmAdoptOpen(false)
+    setPending(true)
+    setMessage(null)
+    const result = await adoptFolder(name, rootPath)
+    setPending(false)
+    if (result.ok) {
+      setName("")
+      setRootPath("")
+      setShowAdopt(false)
+      setPathTouched(false)
+      setMessage(
+        `Added "${result.company.name}"${result.added.length > 0 ? ` — ${result.added.length} starter file(s) copied in` : ""}`
+      )
       setOpen(false)
       router.refresh()
     } else {
@@ -151,7 +205,62 @@ export function AddCompanyForm({
           field only appears in advanced mode; the value it holds is derived
           from the name either way, so nothing changes about what gets
           created — only whether the user is asked about it. */}
-      {advanced || external ? (
+      {showAdopt ? (
+        <div className="space-y-2">
+          <label className="text-xs text-muted-foreground">Which folder is your work in?</label>
+          <div className="rounded-md border border-border">
+            <div className="flex items-center gap-2 border-b border-border px-2.5 py-1.5 text-xs text-muted-foreground">
+              {browse?.parent && (
+                <button
+                  type="button"
+                  className="shrink-0 hover:text-foreground"
+                  onClick={() => loadFolders(browse.parent ?? undefined)}
+                >
+                  ← Back
+                </button>
+              )}
+              <span className="truncate">{browse ? browse.dir : "Loading…"}</span>
+            </div>
+            <div className="max-h-56 overflow-y-auto">
+              {browse?.folders.length === 0 && (
+                <p className="px-2.5 py-2 text-xs text-muted-foreground">No folders in here.</p>
+              )}
+              {browse?.folders.map((folder) => {
+                const fullPath = `${browse.dir}/${folder}`
+                return (
+                  <div
+                    key={folder}
+                    className={`flex items-center gap-1 border-b border-border/50 px-2.5 text-xs last:border-b-0 ${
+                      rootPath === fullPath ? "bg-primary/5 text-primary" : ""
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      className="flex-1 truncate py-2 text-left hover:text-primary"
+                      onClick={() => pickFolder(fullPath, folder)}
+                    >
+                      {folder}
+                    </button>
+                    <button
+                      type="button"
+                      className="shrink-0 px-2 py-2 text-muted-foreground hover:text-foreground"
+                      title={`Look inside ${folder}`}
+                      onClick={() => loadFolders(fullPath)}
+                    >
+                      ›
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {rootPath
+              ? `Using ${rootPath}. It stays exactly where it is.`
+              : "Click a folder to use it, or › to look inside it."}
+          </p>
+        </div>
+      ) : advanced || external ? (
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Local directory path</label>
           <Input
@@ -173,7 +282,7 @@ export function AddCompanyForm({
           Saved in your {COMPANIES_DIR_NAME} folder, in your home folder. Everything stays on this computer.
         </p>
       )}
-      {!showRestore && (
+      {!showRestore && !showAdopt && (
         <label className="flex cursor-pointer gap-2.5 rounded-md border border-border p-2.5 text-xs">
           <input
             type="checkbox"
@@ -193,7 +302,7 @@ export function AddCompanyForm({
           </span>
         </label>
       )}
-      {!showRestore && !external && (
+      {!showRestore && !showAdopt && !external && (
         <div className="space-y-2.5">
           <label className="text-xs text-muted-foreground">
             Starter template{" "}
@@ -252,6 +361,10 @@ export function AddCompanyForm({
           <Button size="sm" onClick={handleRestore} disabled={pending || !name || !rootPath || !restoreUrl}>
             {pending ? "Restoring…" : "Restore company"}
           </Button>
+        ) : showAdopt ? (
+          <Button size="sm" onClick={() => setConfirmAdoptOpen(true)} disabled={pending || !name || !rootPath}>
+            {pending ? "Setting up…" : "Use this folder"}
+          </Button>
         ) : (
           <Button size="sm" onClick={handleSubmit} disabled={pending || !name || !rootPath}>
             {pending ? "Adding…" : "Add company"}
@@ -262,23 +375,56 @@ export function AddCompanyForm({
         </Button>
       </div>
 
-      <button
-        type="button"
-        className="text-xs text-primary underline-offset-4 hover:underline"
-        onClick={() => {
-          setShowRestore((v) => !v)
-          setMessage(null)
-        }}
-        disabled={pending}
-      >
-        {showRestore ? "← Create a new company instead" : "Restoring from a backup on another computer? →"}
-      </button>
+      <div className="flex flex-col items-start gap-1.5">
+        {!showAdopt && (
+          <button
+            type="button"
+            className="text-xs text-primary underline-offset-4 hover:underline"
+            onClick={() => {
+              setShowRestore((v) => !v)
+              setMessage(null)
+            }}
+            disabled={pending}
+          >
+            {showRestore ? "← Create a new company instead" : "Restoring from a backup on another computer? →"}
+          </button>
+        )}
+        {!showRestore && (
+          <button
+            type="button"
+            className="text-xs text-primary underline-offset-4 hover:underline"
+            onClick={toggleAdopt}
+            disabled={pending}
+          >
+            {showAdopt
+              ? "← Create a new company instead"
+              : "Already have a folder of work on this computer? →"}
+          </button>
+        )}
+      </div>
 
       {message && <p className="text-xs text-muted-foreground">{message}</p>}
     </>
   )
 
   const confirmDialog = (
+    <>
+    <AlertDialog open={confirmAdoptOpen} onOpenChange={setConfirmAdoptOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Use this folder as &quot;{name}&quot;?</AlertDialogTitle>
+          <AlertDialogDescription>
+            <code>{rootPath}</code> stays where it is and keeps everything in it. Alacrán adds the company
+            files it needs alongside your own — {STARTER_ENTRIES} — and starts tracking the folder with git if
+            it isn&apos;t already. Nothing you already have is replaced.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleConfirmAdopt}>Add these files &amp; register</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AlertDialog open={confirmCreateOpen} onOpenChange={setConfirmCreateOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -294,6 +440,7 @@ export function AddCompanyForm({
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+    </>
   )
 
   // Onboarding's "create" step is already a dedicated step of its own

@@ -54,7 +54,12 @@ export function SkillBrowser({
   const [detailError, setDetailError] = useState<string | null>(null)
   const [view, setView] = useState<"content" | "edit" | "history" | "run">("content")
   const [query, setQuery] = useState("")
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
+  // Closed until asked. Every company was expanded by default, which for a
+  // machine with a few of them was a wall of file rows to scroll past before
+  // reaching the one you wanted — the shape of a company is what the folder row
+  // and its count already say. Keyed by what's OPEN, so the empty default is
+  // "all closed" rather than a lookup that has to remember to invert.
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
   const detailRef = useRef<HTMLElement | null>(null)
 
   const selectedAgent = selected ? results.find((r) => r.agent.id === selected.agentId)?.agent : undefined
@@ -132,20 +137,23 @@ export function SkillBrowser({
             // A search that matches nothing in this company hides it entirely —
             // an empty folder is noise when you're looking for one file.
             if (q && owned.length === 0) return null
-            const isCollapsed = collapsed[result.agent.id]
+            // A search whose matches are hidden behind a closed folder is a
+            // search that found nothing, so searching opens them.
+            const isExpanded = !!expanded[result.agent.id] || q !== ""
             return (
               <div key={result.agent.id} className="mb-1">
                 <button
-                  onClick={() => setCollapsed((c) => ({ ...c, [result.agent.id]: !c[result.agent.id] }))}
+                  onClick={() => setExpanded((e) => ({ ...e, [result.agent.id]: !e[result.agent.id] }))}
+                  aria-expanded={isExpanded}
                   className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-xs font-semibold hover:bg-muted"
                 >
-                  {isCollapsed ? <ChevronRight className="size-3.5 shrink-0" /> : <ChevronDown className="size-3.5 shrink-0" />}
+                  {isExpanded ? <ChevronDown className="size-3.5 shrink-0" /> : <ChevronRight className="size-3.5 shrink-0" />}
                   <Folder className="size-3.5 shrink-0 text-muted-foreground" />
                   <span className="min-w-0 flex-1 truncate">{result.agent.name}</span>
                   <span className="shrink-0 text-[10px] font-normal text-muted-foreground">{owned.length}</span>
                 </button>
 
-                {!isCollapsed && (
+                {isExpanded && (
                   <div className="ml-2 border-l border-border pl-1.5">
                     {result.error && (
                       <p className="px-2 py-1.5 text-[11px] text-destructive">Source unavailable: {result.error}</p>

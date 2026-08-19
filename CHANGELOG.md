@@ -3037,7 +3037,92 @@ than trusting the upload's own output.
 `alacran-releases` and add it as the `RELEASES_REPO_TOKEN` secret on the
 `alacran` repo, or Linux packaging stays a manual Docker step. Adding an
 `upload-artifact` step would also stop a failed publish from throwing away a
-good build.
+good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
+which added the artifact step and made the workflow say so; the PAT half is
+still open.)*
+
+## v87 (2026-08-19): adopt a folder you already work in, and a tree that starts closed
+
+**A folder that already exists can become a company, in place.** Registering
+one used to mean either scaffolding a new directory or ticking `external` and
+getting a single Open in Terminal button — so a real folder full of working
+automation had no route in. The default path suggestion made it worse: it
+tracks the name until the path field is edited, and that field is hidden
+outside advanced mode (v72), so typing a name and pressing the button
+scaffolded an empty `~/Alacran/<slug>` and never touched the folder the user
+meant. `lib/adopt-folder-impl.ts` adds the manifest's files to the folder
+where it already sits, ensures a repo, and calls the same `registerCompanyImpl`
+the create flow ends with — no `kind`, so v65's finding applies unchanged and
+it lands as a full company, not a downgraded one.
+
+**A symlinked wrapper under `~/Alacran/` was designed first and rejected**,
+which is worth recording because it is the obvious shape. It fails twice.
+`resolveWithinAgentRoot` (`lib/path-guard.ts`) realpaths both sides and
+requires containment, so every guarded read or write through the link resolves
+outside the company root and is denied — the containment check would have had
+to be loosened, in the one file whose whole job is not being loose. And `git
+add -A` stores a symlink as a symlink, so Backup, the activity feed and
+commit-on-save would each cover an empty wrapper while reporting success: v64's
+exact failure shape, an advertised step that does nothing. Location was never
+the thing granting features in the first place.
+
+Additive throughout, and the never-overwrite loop was **not** written a second
+time — `copyNew` moved out of `add-company-pack.ts` into `lib/copy-new.ts` and
+is now shared by both flows that add app files to a directory someone already
+works in. Two copies of that rule drifting is how a user's own edited command
+gets clobbered by the flow that didn't get the fix. Copying is per-child rather
+than per-manifest-entry for the same reason a whole-directory skip is wrong: a
+folder with its own `.claude/commands` would otherwise be registered as a
+company holding not one command the app can run. Git is conditional — an
+existing repo gets a pathspec-scoped commit of exactly what was added, so
+uncommitted work of theirs can't be swept in; a folder with no repo gets `git
+init` and a first commit, because Backup and the activity feed have nothing to
+read otherwise.
+
+**The path field is replaced by a folder picker, not supplemented by one.**
+`lib/list-home-folders.ts` lists directories under `$HOME` with one level of
+drill-down, and the user clicks the folder instead of typing its path — the
+last technical value in this flow, and the reason it was unreachable for the
+audience v71–v75 exist for. Confined to the home subtree deliberately: it is a
+browser-reachable Server Action, and an unchecked `dir` would list any
+directory on the machine. There is no native dialog to reuse — this ships as a
+local web app, and `<input webkitdirectory>` yields relative names a Server
+Action can do nothing with. Entering or leaving the mode clears the path both
+ways, since either direction otherwise leaves a stale one behind (the
+name-derived suggestion going in, the picked folder coming out).
+
+**The Skills tree starts closed.** v73's file explorer expanded every company
+by default, which on a machine with several of them is a wall of file rows to
+scroll past before reaching the one you want; the folder row and its count
+already say what a company has. The state now keys on what is *open*, so the
+empty default is "all closed" rather than a lookup that has to remember to
+invert, and searching force-opens — a filter whose matches sit behind a closed
+chevron is a search that finds something and shows nothing. `aria-expanded`
+came with it: closed-by-default makes the state something a screen reader has
+to be told rather than infer from a glyph.
+
+**`package-linux.yml` stops throwing away a good build.** Every tag since
+v0.25.0 built the `.deb` on the one platform that can build it and then lost
+it, because the publish step's 401 failed the job with the artifact still
+sitting in `dist/` — which is why v0.25.0 and v0.26.0 were both assembled by
+hand. An `upload-artifact` step now runs before publishing, exactly as v0.13.1's
+open note proposed, so a dead token costs one click instead of a Docker
+session. The 401 is also now diagnosed rather than guessed at: `gh release
+view` exits non-zero on an auth failure exactly as it does on a missing
+release, so a bad token fell straight through to `gh release create`, 401'd
+again, and reported itself as "error checking for existing release" followed by
+gh's stock "Try authenticating with: gh auth login" — advice for a laptop,
+meaningless in a runner, and pointing at the wrong thing. A `gh auth status`
+precheck now names the secret and says what to do about it.
+
+**What this does not fix, and cannot from here:** writing to another repo needs
+a credential for that repo. No rearrangement of this workflow conjures one, so
+Linux publishing stays manual until `RELEASES_REPO_TOKEN` is replaced with a
+working PAT. Publishing the `.deb` to *this* repo's own releases with the
+built-in `GITHUB_TOKEN` was considered and dropped: it would land the asset at
+a URL nothing points at, since `DEB_ASSET_URL` and both landing-page buttons
+read `alacran-releases/releases/latest/download/`, and a second download
+location that has to be remembered and undone is a worse trade than one click.
 
 ## v86 (2026-08-19): one working agreement every agent reads, and packs a company can add
 
