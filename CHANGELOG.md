@@ -3120,6 +3120,20 @@ artifact rather than from a second Docker build — `Version: 0.27.0` read out o
 its control member first, since `dist/` still held the previous version's
 `Alacran.deb` under the same name.
 
+**Follow-up shipped in v0.27.1.** The real Debian install returned exactly the
+error v88 was built to surface — `Invalid MIT-MAGIC-COOKIE-1 key` followed by
+`Failed to parse arguments: Cannot open display:` with nothing after the colon.
+Both halves say one thing: the server had no usable display credentials, which
+is what running it outside the desktop session does (SSH, a bare TTY, a service,
+or sudo, which strips DISPLAY and XAUTHORITY). Nothing in the app can reach a
+screen from there, so the fix is only the wording — X's phrasing is unactionable
+for this audience, and the message now names the cause and what to do, keeping
+the emulator's raw text in parentheses so the next report stays diagnosable.
+Matched on that stderr rather than pre-checked from `DISPLAY`/`WAYLAND_DISPLAY`:
+libwayland falls back to `wayland-0` when WAYLAND_DISPLAY is unset, so a
+pre-check would refuse launches that do work, and reading the failure after the
+fact cannot produce that false negative.
+
 **Published as a draft, deliberately.** v0.13.1 recorded why a release must
 never become `latest` carrying only one platform's assets: `DEB_ASSET_URL`,
 `MAC_ASSET_URL` and both landing-page buttons all read
