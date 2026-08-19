@@ -123,22 +123,27 @@ jobs:
         run: |
           set -euo pipefail
           cp "$(ls dist/*.deb)" "Alacran.deb"
-          # Checked up front, and against the releases endpoint specifically,
-          # because the two failures below are indistinguishable once they
-          # start: `gh release view` exits non-zero on 401 AND on 403 exactly
-          # as it does on a missing release, so an unusable token falls
-          # through to `gh release create` and fails there instead — which is
-          # how v0.26.0 reported itself as "error checking for existing
-          # release" plus gh's stock "Try authenticating with: gh auth login",
-          # advice for a laptop and pointing at the wrong thing entirely.
-          # `gh auth status` is NOT sufficient: a fine-grained token with repo
-          # read but no Contents: write passes it and then 403s here (v0.27.0).
-          if ! gh api "/repos/kwakuoseikwakye/alacran-releases/releases?per_page=1" >/dev/null 2>&1; then
-            echo "::error::RELEASES_REPO_TOKEN cannot reach releases on kwakuoseikwakye/alacran-releases. The .deb built fine and is attached to this run as an artifact, so nothing needs rebuilding — fix the token, then re-run. A fine-grained token needs 'Contents: Read and write' on that repo specifically; repo READ access is not enough and fails here with 'HTTP 403: Resource not accessible by personal access token'. Note that /repos/<repo>'s own \`permissions\` block reports the ACCOUNT's access, not the token's, so it says push:true for a token that cannot do this."
-            exit 1
-          fi
+          # No pre-check. Two have now been tried and both passed while the
+          # publish failed one call later: `gh auth status` (v0.27.0 — a
+          # fine-grained token authenticates fine with no Contents access) and
+          # a GET on /releases (v0.27.1 — Contents: READ answers that happily,
+          # and only the POST is refused). There is no harmless write to probe
+          # with, and /repos/<repo>'s own `permissions` block describes the
+          # ACCOUNT's access rather than the token's, so it reports push:true
+          # throughout. Attempt the real thing and explain the failure instead:
+          # the same reason the Linux display check is read off stderr rather
+          # than guessed at up front.
+          #
+          # `gh release view` exits non-zero on 403 exactly as it does on a
+          # missing release, so a token that cannot read falls through to
+          # `create` — which is why the error below names both possibilities
+          # rather than claiming to know which.
           if gh release view "$TARGET_TAG" --repo kwakuoseikwakye/alacran-releases >/dev/null 2>&1; then
-            gh release upload "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --clobber
+            publish() { gh release upload "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --clobber; }
           else
-            gh release create "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --title "Alacrán $TARGET_TAG"
+            publish() { gh release create "$TARGET_TAG" "Alacran.deb" --repo kwakuoseikwakye/alacran-releases --title "Alacrán $TARGET_TAG"; }
+          fi
+          if ! publish; then
+            echo "::error::Publishing to kwakuoseikwakye/alacran-releases failed. The .deb built fine and is attached to this run as an artifact, so nothing needs rebuilding — download it from the Artifacts section and attach it to the release, or fix the token and re-run this workflow. If the error above is 'HTTP 403: Resource not accessible by personal access token', RELEASES_REPO_TOKEN needs Contents: READ AND WRITE on that repo specifically; Contents: read passes every check that doesn't actually publish."
+            exit 1
           fi

@@ -3120,6 +3120,20 @@ artifact rather than from a second Docker build — `Version: 0.27.0` read out o
 its control member first, since `dist/` still held the previous version's
 `Alacran.deb` under the same name.
 
+**And the pre-check itself was wrong twice, which is the real lesson.** v88
+guarded with `gh auth status`; a fine-grained token authenticates perfectly with
+no Contents access, so it passed and the publish 403'd one call later. v0.27.0's
+fix guarded with a GET on `/releases`; `Contents: read` answers that happily, so
+it passed too and only the POST was refused — the token was declared working on
+the strength of a read. There is no harmless write to probe a release with, so
+the guard is gone entirely: the workflow attempts the real publish and explains
+the failure, naming `Contents: Read and write` specifically. Same shape as the
+Linux display error being read off stderr instead of guessed from `DISPLAY` —
+a pre-check that can be satisfied by something weaker than the operation is not
+a check, it is a second thing to be wrong about. Both v0.27.0 and v0.27.1 were
+assembled from the `upload-artifact` build for this reason, which is the whole
+point of that step.
+
 **Follow-up shipped in v0.27.1.** The real Debian install returned exactly the
 error v88 was built to surface — `Invalid MIT-MAGIC-COOKIE-1 key` followed by
 `Failed to parse arguments: Cannot open display:` with nothing after the colon.
