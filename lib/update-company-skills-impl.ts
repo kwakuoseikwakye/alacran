@@ -1,7 +1,7 @@
 import { readdir, cp, rm, mkdir } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "./get-effective-agents"
-import { getVendoredSkillsUpdate, VENDORED_SKILLS_RELATIVE_DIR, VENDORED_STAMP } from "./vendored-skills"
+import { getVendoredSkillsUpdate, packStampName, VENDORED_SKILLS_RELATIVE_DIR, VENDORED_STAMP } from "./vendored-skills"
 import { commitFile } from "./git-commit-file"
 import type { ExecFileFn } from "./git-commit-file"
 import { pathExists } from "./path-exists"
@@ -72,10 +72,15 @@ export async function updateCompanySkillsImpl(
     // worse, the skipped names become app-owned, so the NEXT update would
     // delete the user's work. Stamp-last also makes a mid-copy throw simply
     // retryable, since the old tag is still what's on disk.
+    // Written under this pack's own name (see packStampName). The legacy shared
+    // UPSTREAM.md is deliberately left where it is: it is still the stamp of the
+    // pack this company was scaffolded from, and deleting it here would make that
+    // pack look unstamped and hand its skills back to the user as editable.
     if (skipped.length === 0 && all.includes(VENDORED_STAMP)) {
-      await rm(path.join(target, VENDORED_STAMP), { recursive: true, force: true })
-      await cp(path.join(source, VENDORED_STAMP), path.join(target, VENDORED_STAMP))
-      copied.push(VENDORED_STAMP)
+      const stamp = packStampName(update.packDirName)
+      await rm(path.join(target, stamp), { recursive: true, force: true })
+      await cp(path.join(source, VENDORED_STAMP), path.join(target, stamp))
+      copied.push(stamp)
     }
   } catch (err) {
     return {

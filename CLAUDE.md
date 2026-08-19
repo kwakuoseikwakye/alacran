@@ -1417,6 +1417,39 @@ closed content out of the tab order are native and nothing tracks which row is
 open.
 
 
+**v86 (2026-08-19) made a company's standing context readable by every executor,
+and let a company hold more than one starter pack.** `AGENTS.md` is now the
+working agreement and `CLAUDE.md` a two-line `@AGENTS.md` pointer — the
+template's own §1 rule ("`.claude/` is one adapter for one tool") applied to the
+context file itself, which had been under a vendor's filename since v17 and so
+auto-loaded for exactly one of the four executors. Existing companies get a
+button that moves their own file, edits intact, in one commit.
+**The rule this sets: a second copy of the same prose is drift you cannot see** —
+scaffolding and backfill both produce the pointer, so a test asserts the constant
+is byte-identical to the bundled template.
+**Two first-match-wins loops and one shared stamp were what made multi-pack
+impossible**, and both would have shipped silently: a company had ONE
+`.claude/skills/UPSTREAM.md`, so with two packs each looked stale against the
+other's tag and the update button flip-flopped forever; `isAppManagedSkillPath`
+returned on the first matching pack, handing a second pack's skills back as
+"yours to edit" right before the next update overwrote them. Stamps are per-pack
+now (`UPSTREAM-<pack>.md`), the legacy name is read but never written or deleted
+so it stays the scaffolding pack's stamp (no migration, and hand-copied files
+self-heal), and both loops consider every match. **`markerCommand` is gone:**
+`isPackInstalled` derives pack membership from the pack's own command files, so
+there is one detector instead of two, and the pinned invariant got stronger —
+no command filename may be shared between two packs or with the base template.
+**A silent permanent wedge was fixed at the shared function:** `file-lock.ts`
+wrote a pid nothing read, so one crash mid-run made a company report "Already
+running" forever, schedules included. It now collects a lock whose writer is
+gone, records the SERVER's pid (the right proxy — while it lives only its own
+handlers touch the lock), and errs toward held on anything ambiguous, because a
+wrongly-held lock costs a restart and a wrongly-released one starts a second
+agent on a live run.
+**v83's grep trap recurred and is worth re-reading:** a repo-wide unused-export
+sweep reported ~35 dead exports under this shell's `grep`; several were live in
+tests only. `/usr/bin/grep`, always, for any dead-code claim.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

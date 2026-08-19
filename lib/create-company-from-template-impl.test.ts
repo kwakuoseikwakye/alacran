@@ -241,7 +241,7 @@ describe("createCompanyFromTemplateImpl", () => {
 
       // The docs are copied too, so a stale reference is a doc that lies to
       // every new company — the exact defect this pairs with.
-      const docs = ["README.md", "CLAUDE.md"]
+      const docs = ["README.md", "AGENTS.md", "CLAUDE.md"]
       for (const doc of docs) {
         const body = await readFile(path.join(target, doc), "utf-8")
         expect(body, `${doc} describes a .github/ path this company doesn't have`).not.toContain(".github/")

@@ -3039,6 +3039,89 @@ than trusting the upload's own output.
 `upload-artifact` step would also stop a failed publish from throwing away a
 good build.
 
+## v86 (2026-08-19): one working agreement every agent reads, and packs a company can add
+
+Four things, one thread: a company's context should reach whichever agent runs
+it, and a company should be able to grow past the one shape it was scaffolded
+from.
+
+**`AGENTS.md` replaces `CLAUDE.md` as the working agreement.** The template's
+own §1 already said `.claude/` is one adapter for one tool and the core must
+never depend on the adapter — but the standing context itself lived under a
+vendor's filename, so of the four selectable executors only Claude Code ever
+auto-loaded it. Codex, Aider and Antigravity spawned fine and started with no
+idea what the business was, which made "bring your own agent" half-true from
+v42 onward. The file is now `AGENTS.md`, read by all four, and `CLAUDE.md` is a
+two-line pointer using Claude Code's own `@AGENTS.md` import with a plain-English
+fallback. `TEMPLATE_MANIFEST` ships both — an allowlist, so the new name had to
+be named there or it would never be copied.
+
+**Existing companies get a button, not a migration.** `addPortableAgentFileImpl`
+moves the company's own `CLAUDE.md` — user edits and all — to `AGENTS.md` and
+writes the pointer, in one pathspec-scoped commit. A rename, never a copy: two
+files both claiming to be the working agreement is precisely the drift §1
+forbids. It refuses on an existing `AGENTS.md`, on a company with no working
+agreement, and on an `external` folder. Write order is deliberate — `AGENTS.md`
+first, so a crash between the two writes leaves the agreement under both names
+rather than under neither. **The test that matters** asserts `CLAUDE_POINTER` is
+byte-identical to the real bundled template: two paths now produce that prose
+and the drift would be invisible, since both files read fine alone.
+
+**A company can hold more than one pack.** "We're a marketing company and now we
+build websites too" had no answer but hand-copying files. `addCompanyPackImpl`
+copies a second pack's commands and skills, skips anything already present
+(adding a pack is additive or it is nothing), and never touches
+`definitions/ontology/company.yaml` — a pack ships an example one only because a
+brand-new company has nothing there yet. Stamp-last on a complete install only,
+the same rule v77 established.
+
+**The bug that made multi-pack impossible, and would have shipped silently:** a
+company had ONE `.claude/skills/UPSTREAM.md`, so a second pack's tag had nothing
+of its own to be compared against — each pack in turn looked stale against the
+other's tag and the update button flip-flopped between them forever, restamping
+on every press. Stamps are now per-pack (`UPSTREAM-<pack>.md`). The legacy
+shared name is still read and never written or deleted, so it remains the stamp
+of the pack the company was scaffolded from — no migration runs, and a company
+whose files were copied in by hand heals itself on its first update.
+`isAppManagedSkillPath` had the same first-match-wins shape and was the worse
+half: it `return`ed on the first matching pack, so a second pack's skills came
+back "yours to edit" and would be overwritten by the next update anyway. Both
+loops now consider every matching pack.
+
+**Two detectors for "which packs does this company hold" became one.**
+`VENDORED_SKILL_PACKS[].markerCommand` (hand-maintained) and `listPackState`'s
+derived check were two answers to one question, and when they disagree the
+symptom is a skill judged app-owned by one caller and user-owned by the other.
+`isPackInstalled` derives it from the pack's own command files, memoized since
+both callers sit on the `force-dynamic` Agents render. **The invariant moved
+with it, and got stronger:** the old test pinned marker uniqueness across
+vendored packs; the new one pins that no command filename is shared between any
+two packs, or with the base template every company already has — which is what
+the derived check actually needs, and covers the two packs that vendor no skills.
+
+**A silent, permanent wedge, fixed at the one function both callers route
+through.** `lib/file-lock.ts` wrote `process.pid` into every lock and nothing
+ever read it, so one hard quit or crash mid-run left the file behind forever:
+every later run for that company reported "Already running" — including every
+schedule it had, unattended, with no way out but finding and deleting a file
+inside the app's data directory. `acquireLock` now collects a lock whose writer
+is gone, and `checkLockStatus` reports it as free. **The recorded pid is the
+SERVER's, not the spawned agent's, which is exactly the right proxy:** while the
+server lives only its own exit handlers touch the lock, and once it dies the lock
+is garbage by definition. It errs toward "still held" on anything ambiguous — an
+unreadable file, or EPERM from another user's pid — because a wrongly-held lock
+wedges one company until restart while a wrongly-released one starts a second
+agent CLI on top of a live run. Known ceilings, commented rather than built: pid
+reuse still reads as held (same outcome as the bug, far rarer), and a visible run
+whose bash wrapper owns the lock records the server's pid too, so restarting the
+server mid-run makes that lock collectable.
+
+**The tooling trap from v83 bit again, and is worth restating:** this shell's
+`grep` wraps `ugrep --ignore-files` and silently skips `*.test.ts`, so a
+repo-wide "unused export" sweep run during this slice reported ~35 dead exports.
+Re-run under `/usr/bin/grep`, several were live in tests only. Every dead-code
+claim needs the absolute path — including the ones that look obviously right.
+
 ## v85 (2026-08-19): the Connect page as a list, not six competing cards
 
 **Six setup flows were all on screen at once.** The Connect page rendered a

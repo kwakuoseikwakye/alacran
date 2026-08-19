@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises"
+import { readFile, readdir } from "node:fs/promises"
 import path from "node:path"
 import { pathExists } from "./path-exists"
 
@@ -10,25 +10,86 @@ import { pathExists } from "./path-exists"
 // never touched by any of this.
 //
 // A company records nothing about which pack it came from, so it is matched by
-// a command file only that pack ships. That deliberately also matches companies
-// scaffolded BEFORE the skills existed, which is the whole point: those users
-// have no UPSTREAM.md at all and would otherwise never receive anything.
+// the commands that pack ships (see isPackInstalled). That deliberately also
+// matches companies scaffolded BEFORE the skills existed, which is the whole
+// point: those users have no UPSTREAM.md at all and would otherwise never
+// receive anything.
 //
 // Adding a pack is this list plus a case block in the sync script — the button,
 // the staleness check and every safety rule below are already pack-agnostic.
-// Marker commands must stay unique across templates/packs/*/.claude/commands,
-// which a test pins.
-export const VENDORED_SKILL_PACKS = [
-  { packDirName: "marketing", markerCommand: "draft-campaign.md" },
-  { packDirName: "hr-people", markerCommand: "screen-candidate.md" },
-  { packDirName: "software-engineering", markerCommand: "plan-feature.md" },
-  { packDirName: "customer-support", markerCommand: "triage-ticket.md" },
-] as const
+export const VENDORED_SKILL_PACKS: { packDirName: string }[] = [
+  { packDirName: "marketing" },
+  { packDirName: "hr-people" },
+  { packDirName: "software-engineering" },
+  { packDirName: "customer-support" },
+]
 
 export const VENDORED_SKILLS_RELATIVE_DIR = path.join(".claude", "skills")
 
+const COMMANDS_RELATIVE_DIR = path.join(".claude", "commands")
+
+/**
+ * Bundled command filenames per pack. Memoized because both callers below sit
+ * on the `force-dynamic` Agents render, once per company, and templates/ cannot
+ * change while the app is running.
+ */
+const packCommandsCache = new Map<string, string[]>()
+
+async function packCommands(packsRoot: string, packDirName: string): Promise<string[]> {
+  const key = path.join(packsRoot, packDirName)
+  const hit = packCommandsCache.get(key)
+  if (hit) return hit
+  const names: string[] = await readdir(path.join(key, COMMANDS_RELATIVE_DIR)).catch(() => [])
+  packCommandsCache.set(key, names)
+  return names
+}
+
+/**
+ * Whether a company holds this pack, judged by whether any of the pack's own
+ * commands is in it.
+ *
+ * Derived from the pack directory rather than a hand-maintained marker
+ * filename per pack: two answers to "which packs does this company have" WILL
+ * drift, and when they disagree the symptom is a skill being judged app-owned
+ * by one caller and user-owned by the other — either an edit silently
+ * overwritten by the next update, or an update that refuses to land. One
+ * source, derived from the files themselves, cannot fall out of step.
+ *
+ * The invariant this needs is that no command filename is shared between two
+ * packs or with the base template, which a test pins.
+ */
+export async function isPackInstalled(
+  rootPath: string,
+  packDirName: string,
+  packsRoot: string
+): Promise<boolean> {
+  const own: string[] = await readdir(path.join(rootPath, COMMANDS_RELATIVE_DIR)).catch(() => [])
+  if (own.length === 0) return false
+  const bundled = await packCommands(packsRoot, packDirName)
+  return bundled.some((name) => own.includes(name))
+}
+
 /** Provenance file scripts/sync-vendored-skills.sh writes beside the skills. */
 export const VENDORED_STAMP = "UPSTREAM.md"
+
+/**
+ * What that stamp is called once it lands in a company: one per pack, because
+ * a company can hold more than one.
+ *
+ * With a single shared UPSTREAM.md, a company that gained a second pack had one
+ * tag standing in for two — so each pack in turn looked stale against the other
+ * pack's tag, and the update button flip-flopped between them forever, restamping
+ * on every press.
+ *
+ * The legacy name is still read (never written, never deleted) as the stamp of
+ * whichever pack the company was scaffolded from. That pack keeps reading it and
+ * stays correct; a pack added later writes its own file on install, so no
+ * migration runs and a company that had files copied in by hand heals itself the
+ * first time its update lands.
+ */
+export function packStampName(packDirName: string): string {
+  return `UPSTREAM-${packDirName}.md`
+}
 
 export type VendoredSkillsUpdate = {
   packDirName: string
@@ -46,12 +107,17 @@ export function parseVendoredTag(upstreamMd: string): string | null {
   return upstreamMd.match(/^Tag:[ \t]+(\S+)[ \t]*$/m)?.[1] ?? null
 }
 
-async function readTag(skillsDir: string): Promise<string | null> {
+async function readTag(skillsDir: string, stampName: string = VENDORED_STAMP): Promise<string | null> {
   try {
-    return parseVendoredTag(await readFile(path.join(skillsDir, VENDORED_STAMP), "utf-8"))
+    return parseVendoredTag(await readFile(path.join(skillsDir, stampName), "utf-8"))
   } catch {
     return null
   }
+}
+
+/** This pack's own stamp, falling back to the legacy shared one. */
+async function readInstalledTag(skillsDir: string, packDirName: string): Promise<string | null> {
+  return (await readTag(skillsDir, packStampName(packDirName))) ?? (await readTag(skillsDir))
 }
 
 /**
@@ -66,14 +132,14 @@ export async function getVendoredSkillsUpdate(
   packsRoot: string
 ): Promise<VendoredSkillsUpdate | null> {
   for (const pack of VENDORED_SKILL_PACKS) {
-    if (!(await pathExists(path.join(rootPath, ".claude", "commands", pack.markerCommand)))) continue
+    if (!(await isPackInstalled(rootPath, pack.packDirName, packsRoot))) continue
 
     const bundledTag = await readTag(path.join(packsRoot, pack.packDirName, ".claude", "skills"))
     // No stamp on the app's own copy means the sync script hasn't run for this
     // pack — nothing to hand out, and no way to tell staleness if there were.
     if (bundledTag === null) continue
 
-    const installedTag = await readTag(path.join(rootPath, VENDORED_SKILLS_RELATIVE_DIR))
+    const installedTag = await readInstalledTag(path.join(rootPath, VENDORED_SKILLS_RELATIVE_DIR), pack.packDirName)
     if (installedTag === bundledTag) continue
 
     return { packDirName: pack.packDirName, installedTag, bundledTag }
@@ -107,11 +173,17 @@ export async function isAppManagedSkillPath(
   if (!rel || rel.startsWith("..") || path.isAbsolute(rel)) return false
 
   const skillName = rel.split(path.sep)[0]
-  if ((await readTag(skillsDir)) === null) return false
 
   for (const pack of VENDORED_SKILL_PACKS) {
-    if (!(await pathExists(path.join(rootPath, ".claude", "commands", pack.markerCommand)))) continue
-    return await pathExists(path.join(packsRoot, pack.packDirName, ".claude", "skills", skillName))
+    if (!(await isPackInstalled(rootPath, pack.packDirName, packsRoot))) continue
+    // Stamped for THIS pack (or by the legacy shared stamp) — an unstamped pack's
+    // skills are the user's own, per the v77 rule above.
+    if ((await readInstalledTag(skillsDir, pack.packDirName)) === null) continue
+    // Keep looking rather than returning the first pack's answer: a company
+    // holding two packs would otherwise have the second pack's skills judged
+    // against the first pack's file list, come back "yours to edit", and be
+    // overwritten by the next update anyway.
+    if (await pathExists(path.join(packsRoot, pack.packDirName, ".claude", "skills", skillName))) return true
   }
   return false
 }

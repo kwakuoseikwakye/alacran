@@ -3,6 +3,7 @@ import { mkdtemp, mkdir, writeFile, readFile, rm, stat, chmod } from "node:fs/pr
 import { tmpdir } from "node:os"
 import path from "node:path"
 import type { ExecFileFn } from "./git-commit-file"
+import { packStampName } from "./vendored-skills"
 
 let base: string
 let packsRoot: string
@@ -36,6 +37,10 @@ beforeEach(async () => {
 
   // What the app ships: two vendored skills at v2.10.0, plus the stamp.
   const packSkills = path.join(packsRoot, "marketing", ".claude", "skills")
+  // The pack must ship the command the company is matched by: a pack is
+  // identified by its own command files, not a hardcoded marker name.
+  await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+  await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
   await write(path.join(packSkills, "UPSTREAM.md"), "Tag: v2.10.0\n")
   await write(path.join(packSkills, "copywriting", "SKILL.md"), "new copywriting\n")
   await write(path.join(packSkills, "cro", "SKILL.md"), "new cro\n")
@@ -74,7 +79,11 @@ describe("updateCompanySkillsImpl", () => {
     const coSkills = path.join(companyRoot, ".claude", "skills")
     expect(await readFile(path.join(coSkills, "copywriting", "SKILL.md"), "utf-8")).toBe("new copywriting\n")
     expect(await readFile(path.join(coSkills, "cro", "SKILL.md"), "utf-8")).toBe("new cro\n")
-    expect(await readFile(path.join(coSkills, "UPSTREAM.md"), "utf-8")).toContain("Tag: v2.10.0")
+    // Under the pack's own name now, so a company holding two packs keeps two
+    // independent tags instead of one standing in for both.
+    expect(await readFile(path.join(coSkills, packStampName("marketing")), "utf-8")).toContain("Tag: v2.10.0")
+    // The legacy shared stamp is left alone, not migrated or deleted.
+    expect(await readFile(path.join(coSkills, "UPSTREAM.md"), "utf-8")).toContain("Tag: v2.9.0")
   })
 
   it("leaves the user's own skill, daily-team-log and their ontology untouched", async () => {
@@ -113,7 +122,7 @@ describe("updateCompanySkillsImpl", () => {
     for (const call of [add, commit]) {
       expect(call?.args).toContain(path.join(skills, "copywriting"))
       expect(call?.args).toContain(path.join(skills, "cro"))
-      expect(call?.args).toContain(path.join(skills, "UPSTREAM.md"))
+      expect(call?.args).toContain(path.join(skills, packStampName("marketing")))
       expect(call?.args).not.toContain(path.join(skills, "my-own-skill"))
       expect(call?.args).not.toContain(skills)
     }
@@ -163,7 +172,7 @@ describe("updateCompanySkillsImpl", () => {
 
       await updateCompanySkillsImpl("co", packsRoot, fakeExecFn)
 
-      expect(await exists(path.join(companyRoot, ".claude", "skills", "UPSTREAM.md"))).toBe(false)
+      expect(await exists(path.join(companyRoot, ".claude", "skills", packStampName("marketing")))).toBe(false)
       const { getVendoredSkillsUpdate } = await import("./vendored-skills")
       // Still offered: the company genuinely does not have this version yet.
       expect((await getVendoredSkillsUpdate(companyRoot, packsRoot))?.installedTag).toBeNull()

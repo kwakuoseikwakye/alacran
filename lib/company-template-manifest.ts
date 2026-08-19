@@ -39,6 +39,7 @@ export const TEMPLATE_MANIFEST: string[] = [
   ".gitignore",
   "LICENSE.md",
   "README.md",
+  "AGENTS.md",
   "CLAUDE.md",
   "definitions/README.md",
   "definitions/ontology/README.md",
@@ -66,7 +67,7 @@ This file carries "where things stand and what's next" across sessions. The
 
 ## New here? (how to run the first session)
 
-1. Read \`CLAUDE.md\` §4 ("Session flow"). That file plus this one are the
+1. Read \`AGENTS.md\` §4 ("Session flow"). That file plus this one are the
    whole picture of where things stand.
 2. Run \`/define-company\` to write \`definitions/ontology/company.yaml\`.
    This is the real first step — everything else assumes it exists.

@@ -34,6 +34,10 @@ describe("getVendoredSkillsUpdate", () => {
     packsRoot = path.join(base, "packs")
     company = path.join(base, "company")
     await mkdir(path.join(packsRoot, "marketing", ".claude", "skills"), { recursive: true })
+    // The pack must ship the command the company is matched by: a pack is
+    // identified by its own command files, not a hardcoded marker name.
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
     await writeFile(
       path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"),
       "Tag: v2.10.0\n",
@@ -112,6 +116,9 @@ describe("isAppManagedSkillPath", () => {
     company = path.join(base, "company")
     await mkdir(path.join(packsRoot, "marketing", ".claude", "skills", "copywriting"), { recursive: true })
     await writeFile(path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n", "utf-8")
+    // A pack is identified by the command files it ships, so the fixture needs them.
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
     await mkdir(path.join(company, ".claude", "commands"), { recursive: true })
     await writeFile(path.join(company, ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
     await mkdir(path.join(company, ".claude", "skills"), { recursive: true })

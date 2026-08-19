@@ -2,6 +2,8 @@ import { OPEN_TERMINAL_BLURB } from "@/components/open-terminal-button"
 import { GET_STARTED_BLURB, GET_STARTED_RUN_BLURB } from "@/components/get-started-button"
 import { MCP_BLURB } from "@/components/mcp-servers-sheet"
 import { UPDATE_SKILLS_BLURB } from "@/components/update-skills-button"
+import { PORTABLE_AGENT_FILE_BLURB } from "@/components/portable-agent-file-button"
+import { ADD_PACK_BLURB } from "@/components/add-pack-button"
 import { COMPANY_SETUP_BLURB } from "@/components/company-setup-wizard"
 import { BACKUP_BLURB } from "@/components/backup-company-button"
 import { OWNERSHIP_BLURB } from "@/components/company-ownership-sheet"
@@ -26,6 +28,8 @@ export type CompanyGuideFlags = {
   showGoogleAccountsPicker?: boolean
   showMcpButton?: boolean
   showSkillsUpdateButton?: boolean
+  showPortableAgentFileButton?: boolean
+  showAddPackButton?: boolean
   removable?: boolean
 }
 
@@ -52,6 +56,12 @@ export function buildGuideSteps(flags: CompanyGuideFlags, advanced = true): Guid
     { show: flags.showOpenTerminalButton, label: "Open in Terminal", blurb: OPEN_TERMINAL_BLURB },
     { show: flags.showMcpButton, label: "Connect tools", blurb: MCP_BLURB },
     { show: flags.showSkillsUpdateButton, label: "Update skills", blurb: UPDATE_SKILLS_BLURB },
+    { show: flags.showAddPackButton, label: "Add more skills", blurb: ADD_PACK_BLURB },
+    {
+      show: flags.showPortableAgentFileButton,
+      label: "Let any AI read this company",
+      blurb: PORTABLE_AGENT_FILE_BLURB,
+    },
     { show: true, label: "Skills", blurb: SKILLS_POINTER_BLURB },
     { show: flags.showBackupButton, label: "Back up to GitHub", blurb: BACKUP_BLURB },
     { show: flags.showOwnershipButton, label: "View ownership", blurb: OWNERSHIP_BLURB },

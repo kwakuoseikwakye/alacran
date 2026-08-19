@@ -10,6 +10,8 @@ import { companyOntologyExists } from "@/lib/company-ontology-exists"
 import { getIntegrationStatus } from "@/lib/get-integration-status"
 import { dailyTeamLogInstalled } from "@/lib/daily-team-log-installed"
 import { getVendoredSkillsUpdate } from "@/lib/vendored-skills"
+import { needsPortableAgentFile } from "@/lib/portable-agent-file"
+import { listPackState } from "@/lib/add-company-pack"
 import { OnboardingWelcome } from "@/components/onboarding-welcome"
 import { getAiExecutorIdForAgent } from "@/lib/ai-executor-registry"
 import { listGoogleAccountEmails } from "@/lib/google-accounts"
@@ -92,6 +94,12 @@ export default async function AgentTreePage() {
               const skillsUpdate = isCommandSet
                 ? ((await getVendoredSkillsUpdate(result.agent.rootPath, PACKS_ROOT)) ?? undefined)
                 : undefined
+              // Two stats, no subprocess (see lib/portable-agent-file.ts).
+              const showPortableAgentFileButton =
+                isCommandSet && (await needsPortableAgentFile(result.agent.rootPath))
+              const availablePacks = isCommandSet
+                ? (await listPackState(result.agent.rootPath, PACKS_ROOT)).filter((p) => !p.installed)
+                : undefined
               const aiExecutorId = isCommandSet ? await getAiExecutorIdForAgent(result.agent.id) : undefined
               const googleAccounts = isCommandSet ? await readGoogleAccounts(result.agent.rootPath) : undefined
               // Claude Code is the only executor with per-project MCP config:
@@ -119,6 +127,8 @@ export default async function AgentTreePage() {
                     integrationStatus={integrationStatus}
                     showInstallDailyTeamLogButton={showInstallDailyTeamLogButton}
                     skillsUpdate={skillsUpdate}
+                    showPortableAgentFileButton={showPortableAgentFileButton}
+                    availablePacks={availablePacks}
                     showOpenTerminalButton={showVisibleRunOption || isExternal}
                     showGetStartedButton={showVisibleRunOption}
                     showAiExecutorPicker={isCommandSet}

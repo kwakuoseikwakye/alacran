@@ -61,21 +61,37 @@ describe.each(VENDORED_SKILL_PACKS.map((p) => p.packDirName))("vendored skills: 
     expect(upstream).toContain("MIT License")
   })
 
-  it("really ships the marker command the update check identifies it by", () => {
-    const marker = VENDORED_SKILL_PACKS.find((p) => p.packDirName === packDirName)!.markerCommand
-    expect(existsSync(path.join(packDir, ".claude", "commands", marker))).toBe(true)
+  it("really ships commands, which is what the update check identifies it by", () => {
+    expect(readdirSync(path.join(packDir, ".claude", "commands")).length).toBeGreaterThan(0)
   })
 })
 
-// A marker shared by two packs would hand one pack's skills to the other's
-// companies, so uniqueness is the load-bearing property, not a tidiness rule.
-describe("vendored pack markers", () => {
-  it("uses a command that no other starter pack ships", () => {
-    for (const { packDirName, markerCommand } of VENDORED_SKILL_PACKS) {
-      const others = COMPANY_STARTER_PACKS.filter((p) => p.dirName && p.dirName !== packDirName)
-      for (const other of others) {
-        const collision = path.join(process.cwd(), "templates", "packs", other.dirName!, ".claude", "commands", markerCommand)
-        expect(existsSync(collision), `${markerCommand} also ships in the ${other.dirName} pack`).toBe(false)
+// "Which packs does this company hold" is answered by whether any of a pack's
+// own commands is present (isPackInstalled). A filename shared with another
+// pack, or with the base template every company already has, therefore reports
+// a pack that was never added — handing one pack's skills to the other's
+// companies, or marking every company on the machine as holding it.
+describe("starter pack command filenames", () => {
+  const commandsOf = (dir: string) =>
+    readdirSync(path.join(process.cwd(), "templates", dir, ".claude", "commands"))
+
+  it("are unique across every pack", () => {
+    const seen = new Map<string, string>()
+    for (const pack of COMPANY_STARTER_PACKS) {
+      if (!pack.dirName) continue
+      for (const name of commandsOf(path.join("packs", pack.dirName))) {
+        expect(seen.get(name), `${name} ships in both ${seen.get(name)} and ${pack.dirName}`).toBeUndefined()
+        seen.set(name, pack.dirName)
+      }
+    }
+  })
+
+  it("never collide with a command the base template gives every company", () => {
+    const base = new Set(commandsOf("company-starter"))
+    for (const pack of COMPANY_STARTER_PACKS) {
+      if (!pack.dirName) continue
+      for (const name of commandsOf(path.join("packs", pack.dirName))) {
+        expect(base.has(name), `${name} also ships in the base template`).toBe(false)
       }
     }
   })
