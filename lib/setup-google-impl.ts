@@ -61,9 +61,15 @@ export function buildGoogleSetupPrompt(
   /** The Chrome profile directory signed in as this address, when the caller
    *  could determine one. Named in the prompt because a machine with several
    *  profiles has several signed-in accounts, and "the browser" is ambiguous. */
-  profileDirectory: string | null = null
+  profileDirectory: string | null = null,
+  /** Services the Cloud project already has enabled, across every connected
+   *  account. Non-empty means a client exists, so the short job applies even
+   *  for an address that has nothing of its own yet. */
+  projectEnabledIds: string[] = []
 ): string {
-  if (grantedIds.length > 0) return buildGoogleExpandPrompt(email, serviceIds, grantedIds, profileDirectory)
+  if (grantedIds.length > 0 || projectEnabledIds.length > 0) {
+    return buildGoogleExpandPrompt(email, serviceIds, grantedIds, profileDirectory, projectEnabledIds.length > 0 ? projectEnabledIds : grantedIds)
+  }
   const services = serviceListArg(serviceIds)
   const chosen = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id))
   // The console checklist is built from the chosen services, not a fixed pair:
@@ -119,11 +125,19 @@ function buildGoogleExpandPrompt(
   email: string,
   serviceIds: string[],
   grantedIds: string[],
-  profileDirectory: string | null = null
+  profileDirectory: string | null = null,
+  /** What the Cloud PROJECT already has enabled — the union across every
+   *  connected account, not what this one address carries. They diverge for a
+   *  new address on a machine that is already set up: nothing to enable, but
+   *  this address has nothing granted yet. Defaults to grantedIds so the
+   *  existing single-account callers are unchanged. */
+  projectEnabledIds: string[] = grantedIds
 ): string {
   const services = serviceListArg([...grantedIds, ...serviceIds])
-  const already = GOOGLE_SERVICES.filter((svc) => grantedIds.includes(svc.id))
-  const added = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id) && !grantedIds.includes(svc.id))
+  const already = GOOGLE_SERVICES.filter((svc) => projectEnabledIds.includes(svc.id))
+  const added = GOOGLE_SERVICES.filter(
+    (svc) => services.split(",").includes(svc.id) && !projectEnabledIds.includes(svc.id)
+  )
   const steps = added
     .map((svc, i) => `${i + 1}. Turn on ${svc.label} — ${svc.apiPage}\n   Click the blue Enable button. That is the whole step.`)
     .join("\n")
@@ -345,15 +359,53 @@ export async function setupGoogleImpl(
   // Same call the card already made, through the same 5-minute memo, so this
   // is usually free; and it answers both halves at once: does this address
   // already have a token, and what scopes does it carry.
-  const stored = (await listAccountsFn()).find(
-    (a) => a.email.toLowerCase() === address.toLowerCase()
-  )
+  const accounts = await listAccountsFn()
+  const stored = accounts.find((a) => a.email.toLowerCase() === address.toLowerCase())
   const granted = stored ? servicesFromScopes(stored.scopes) : []
+
+  // Machine-level state, which is what actually decides whether the Cloud
+  // Console needs visiting at all. The OAuth client and the enabled APIs belong
+  // to the PROJECT, not to an address: once any account is connected a client
+  // exists, and once any account carries a scope that API is enabled. Reading
+  // this off the target address alone sent a machine with two connected
+  // accounts through the whole six-step first-time setup just to add a third —
+  // reported from real use, and the reason the run got stuck on a browser it
+  // never needed.
+  const projectEnabled = [...new Set(accounts.flatMap((a) => servicesFromScopes(a.scopes)))]
+  const wanted = [...new Set([...granted, ...serviceIds])]
+  const needsEnabling = wanted.filter((id) => !projectEnabled.includes(id))
+
+  // Nothing to click: a client exists and every API this address wants is
+  // already on. That makes this not an AI job at all — one gog command, whose
+  // own browser sign-in the user approves. No Chrome profile gate either: the
+  // consent opens in whatever the default browser is, and gog targets the
+  // address it was given. Works on every executor, because no executor is
+  // involved.
+  if (accounts.length > 0 && needsEnabling.length === 0) {
+    const launchNow = await resolveTerminalLaunchCommand(platform, execFn)
+    if (!launchNow) return { started: false, message: "No supported terminal found on this machine." }
+    const addScript = buildInteractiveTerminalScript({
+      binaryName: "gog",
+      cwd: home,
+      introArgs: ["auth", "add", address, "--services", serviceListArg(wanted)],
+    })
+    const addScriptPath = path.join(dataDir, "google-add-account.sh")
+    await mkdir(dataDir, { recursive: true })
+    await writeFile(addScriptPath, addScript, { mode: 0o755 })
+    const addOutcome = await launchTerminalScript(launchNow, addScriptPath, home, spawnFn)
+    if (!addOutcome.opened) {
+      return { started: false, message: `Couldn't open a terminal — ${addOutcome.reason}` }
+    }
+    return {
+      started: true,
+      message: `This machine is already set up with Google, and everything you ticked is already switched on — so there is nothing to click through. Opened the sign-in for ${address}; approve it in the browser, then press Re-check.`,
+    }
+  }
 
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null)],
+    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null, projectEnabled)],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh

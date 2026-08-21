@@ -3041,6 +3041,50 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v95 (2026-08-21): adding a third address is not a first-time setup
+
+Reported from real use, and correct: a machine with two Google accounts already
+connected, a third address typed with Drive ticked — and the agent was handed
+the entire six-step first-time console job, then stalled on a browser it never
+needed. There was nothing for it to do in the console.
+
+**The mistake was reading machine state off one address.** `setupGoogleImpl`
+decided "first-time setup" vs "add more apps" from whether *the target address*
+had scopes. A new address always has none, so it always got the full job. But
+the OAuth client and the enabled APIs belong to the **Cloud project**, not to an
+address: once any account is connected a client exists, and once any account
+carries a scope that API is enabled. Now derived from every connected account:
+
+```
+connected:            nana@plh.life, sanuki@plh.life
+project has enabled:  gmail, calendar, drive, docs, sheets, tasks, contacts
+
+new address + [gmail, drive]            -> NO CONSOLE — just gog auth add
+new address + [gmail, calendar, drive]  -> NO CONSOLE — just gog auth add
+new address + [gmail, slides]           -> console needed for: slides
+```
+
+**Three real cases now, instead of two guessed ones.** Nothing connected yet →
+the full first-time job, unchanged. A client exists and every ticked service is
+already enabled → **no console and no AI at all**: one `gog auth add <address>
+--services …` in a visible terminal, whose own browser sign-in the user
+approves. A client exists but some API is genuinely missing → the short job for
+exactly those pages, explicitly told not to create a project or a second client.
+
+**The middle case is also the answer to "make this work with any agent."** When
+there is nothing to click, this was never an AI task — it is one command, so it
+runs identically whether the user is on Claude, Codex, Gemini or a local model,
+and it skips the Chrome profile gate too (the consent opens in the default
+browser; gog targets the address it was given).
+
+**One conflation fixed while separating these.** `buildGoogleExpandPrompt` used
+one list for two questions — which APIs still need enabling, and what
+`--services` to request. They diverge for a new address on a set-up machine:
+nothing to enable, but the address itself has nothing granted. Splitting them
+matters in the dangerous direction, and a test pins it: a third address that
+ticked only Gmail must not be authorized for Drive just because another account
+has it.
+
 ## v94 (2026-08-21): the browser the agent attaches to isn't this machine's
 
 Follow-up to v93, from a real agent run that failed. v93 fixed which Chrome

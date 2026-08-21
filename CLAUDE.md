@@ -1563,6 +1563,24 @@ agent-agnostic route already exists and is rendered for every executor: the six
 console links plus one `gog auth setup` command. Only the shortcut is Claude-only,
 and no new mechanism was built to pretend otherwise.
 
+**v95 (2026-08-21) stopped treating a new address as a first-time setup.** A
+machine with two connected Google accounts, adding a third with Drive ticked, was
+handed the whole six-step console job — because `setupGoogleImpl` read
+"is this set up" off the TARGET ADDRESS, which for a new address is always empty.
+**The rule: the OAuth client and the enabled APIs belong to the PROJECT, not to an
+address.** Once any account is connected a client exists; once any account carries
+a scope that API is enabled. Derived now from the union across all accounts
+(`listGoogleAccounts` + `servicesFromScopes`), giving three cases: nothing
+connected → full first-time job; client exists and every ticked service already
+enabled → **no console and no AI**, just `gog auth add` in a visible terminal
+(which is also the any-executor answer, and skips the Chrome profile gate since
+consent opens in the default browser); client exists but an API is missing → the
+short job for exactly those pages. **The conflation to not reintroduce:**
+`buildGoogleExpandPrompt` used one list for both "which APIs still need enabling"
+and "what `--services` to request" — they diverge for a new address on a set-up
+machine, and getting it wrong authorizes the new address for scopes another
+account happens to hold. A test pins that direction specifically.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
