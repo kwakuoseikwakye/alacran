@@ -11,13 +11,32 @@ import { SkillEditor } from "@/components/skill-editor"
 import { SkillHistory } from "@/components/skill-history"
 import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
 import { DEPARTMENT_ORDER, GENERAL_DEPARTMENT } from "@/lib/company-starter-packs"
-import {
-  loadDepartmentOverrides,
-  nextOverrides,
-  saveDepartmentOverrides,
-  type DepartmentOverrides,
-} from "@/lib/skills/department-overrides"
+import { DEPARTMENTS_KEY, nextOverrides, type DepartmentOverrides } from "@/lib/skills/department-overrides"
 import { CompanyCommandRunner } from "@/components/company-command-runner"
+
+/**
+ * Filing is per browser and touches no file — the same shape
+ * components/reorderable-grid.tsx uses for card order. Inline here because
+ * this is the only component that reads or writes it; the rule that decides
+ * WHAT to store lives in department-overrides.ts, where its test can reach it.
+ */
+function loadOverrides(): DepartmentOverrides {
+  try {
+    // A hand-edited or half-written value must not take the page down with it.
+    const parsed: unknown = JSON.parse(window.localStorage.getItem(DEPARTMENTS_KEY) ?? "{}")
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as DepartmentOverrides) : {}
+  } catch {
+    return {}
+  }
+}
+
+function saveOverrides(overrides: DepartmentOverrides): void {
+  try {
+    window.localStorage.setItem(DEPARTMENTS_KEY, JSON.stringify(overrides))
+  } catch {
+    // Private mode, or a full quota. The move still applies for this session.
+  }
+}
 
 /**
  * Two-pane file explorer: companies and their files on the left, the selected
@@ -60,7 +79,7 @@ export function SkillBrowser({
   // Read client-side only: localStorage doesn't exist during SSR, and the
   // derived department is a correct first paint on its own.
   const [overrides, setOverrides] = useState<DepartmentOverrides>({})
-  useEffect(() => setOverrides(loadDepartmentOverrides()), [])
+  useEffect(() => setOverrides(loadOverrides()), [])
 
   const derivedDepartmentOf = (entry: SkillEntry) => departmentByPath[entry.path] ?? GENERAL_DEPARTMENT
   const departmentOf = (entry: SkillEntry) => overrides[entry.path] ?? derivedDepartmentOf(entry)
@@ -68,7 +87,7 @@ export function SkillBrowser({
   function fileUnder(entry: SkillEntry, department: string) {
     setOverrides((current) => {
       const next = nextOverrides(current, entry.path, department, derivedDepartmentOf(entry))
-      saveDepartmentOverrides(next)
+      saveOverrides(next)
       return next
     })
   }

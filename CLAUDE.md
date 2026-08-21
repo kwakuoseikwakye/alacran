@@ -1506,6 +1506,24 @@ reverting the fix turns three tests red. Reproduction method worth reusing: run
 `ALACRAN_DATA_DIR=<tmp> PORT=<not 3000> npm start` against a disposable /tmp company —
 production masks the error in the browser but logs it in full server-side.
 
+**v92 (2026-08-21) applied a repo-wide over-engineering audit: net -56 lines, no
+dependency removable.** The only real find was 47 lines of the LANDING page's
+terminal-mockup CSS (`.mac-*`, `.terminal-line`) plus `.a-glass` living in
+`app/globals.css` — all used solely by `landing/index.html`, which has its own
+copies. `.a-glass`'s comment still claimed it was shared with the landing nav; its
+one consumer was `components/nav.tsx`, deleted back in v40. **The verification
+method is the reusable part:** v78 requires a browser probe for any dead-CSS
+claim, and PNG bytes differ on every run here because of the `a-rise` stagger and
+the ambient orbs — so capture with `reducedMotion: "reduce"` plus an injected
+`animation:none;transition:none`, and diff per pixel. All six routes came back 0
+of 1,152,000 pixels changed. **What was rejected should stay rejected** (full list
+in the changelog): every prod dependency earns its place, `cn()` cannot be
+unwrapped because most consumers are untouchable `components/ui/*`, `SkillAdapter`
+has two implementations, the tiny `"use server"` files are real client boundaries,
+34/34 `-impl.ts` still have tests, and there are zero exports referenced nowhere.
+Un-exporting the 49 file-local symbols saves 0 lines and is v86's false-positive
+shape.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

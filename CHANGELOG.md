@@ -3041,6 +3041,48 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v92 (2026-08-21): the marketing site's CSS, deleted from the app
+
+A repo-wide over-engineering audit turned up two cuts and nothing else. Net -56
+lines, no dependency removable, no feature touched.
+
+**47 lines of the landing page's terminal mockup were sitting in
+`app/globals.css`** — `.mac-window`, `.mac-header`, `.mac-dots`, `.mac-dot`
+(+`.r`/`.y`/`.g`), `.mac-title`, `.mac-body`, `.terminal-line` and its two
+descendants. Every user of those classes is `landing/index.html`, which loads
+its own copies from `landing/styles.css` and `landing/cinematic.css`; the app
+has no such component and never did. `.a-glass` went with them: its comment
+still called it "the floating nav pill, shared with the landing nav", but its
+only consumer was `components/nav.tsx`, which v40 deleted when the top bar
+became the sidebar. The comment outlived the markup by 52 slices.
+
+**Verified by pixel, not by eye.** v78's rule is that a dead-CSS claim needs a
+rule-count check AND a browser probe. Screenshots of all six routes before and
+after, motion frozen (`reducedMotion: "reduce"` plus an injected
+`animation:none;transition:none`) because the staggered `a-rise` entrances and
+the ambient orbs make two runs of the same page differ every time: **0 of
+1,152,000 pixels changed on every route.** Rules 162 → 149.
+
+**`department-overrides.ts` (v89, mine) kept four exports for one consumer.**
+The precedent it cited — `components/reorderable-grid.tsx` — keeps its own
+localStorage read inline. It does now too: the module keeps `nextOverrides`,
+which is the actual rule (delete an override equal to the derived default, or a
+later pack recategorisation is pinned forever) and the only part with a test to
+reach; the read and write moved into `skill-browser.tsx`.
+
+**Everything else was checked and rejected**, recorded here so it isn't
+re-litigated: all seven prod dependencies earn their place (`tw-animate-css`
+supplies the `animate-in/out` the Radix primitives use); `cn()` is a bare
+`twMerge` delegate now that v78 took `clsx`, but ~50 of its consumers are
+`components/ui/*`, which the conventions forbid editing; `SkillAdapter` has two
+implementations, not one; the four 7-line `"use server"` files are each a real
+client-to-server boundary; `tailLines` and `COMPANY_COMMANDS_DATA_DIR` have 2
+and 7 consumers; 34 of 34 `-impl.ts` files still have their own test, so v78's
+justification for that pairing holds unchanged; and there are **zero** exports
+declared and referenced nowhere. The 49 symbols used only inside their own file
+would save 0 lines to un-export — churn, and exactly the shape of v86's
+false-positive sweep.
+
 ## v91 (2026-08-21): the shipped ontology template was not valid YAML
 
 User-reported, from the packaged app: editing a company and pressing Save showed
