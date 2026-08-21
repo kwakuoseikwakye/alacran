@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { parse } from "yaml"
+import { readFileSync } from "node:fs"
+import path from "node:path"
 import { buildCompanyOntology } from "./build-company-ontology"
 import type { CompanyOntologyAnswers } from "./build-company-ontology"
 
@@ -94,5 +96,52 @@ describe("buildCompanyOntology", () => {
     const parsed = parse(yamlText)
 
     expect(parsed.company_summary.domain).toBe(`We handle "urgent" requests: same-day, when needed.`)
+  })
+})
+
+/**
+ * The bundled template is a hard dependency of saveCompanyOntologyImpl, not a
+ * doc: buildCompanyOntology PARSES it. v67 rewrote it with `<<TODO: hint>>`
+ * placeholders, and a `: ` inside an unquoted scalar is a nested mapping to
+ * YAML — so every company scaffolded from it could never finish setup, while
+ * every test here stayed green against a synthetic template string.
+ *
+ * This reads the REAL file, which is the only thing that catches that drift
+ * (the same rule v56 established for TEMPLATE_MANIFEST).
+ */
+describe("the real bundled ontology-starter.yaml", () => {
+  const bundled = path.join(process.cwd(), "templates", "company-starter", "docs", "templates", "ontology-starter.yaml")
+
+  it("is valid YAML, so the setup wizard can build from it", () => {
+    expect(() => parse(readFileSync(bundled, "utf-8"))).not.toThrow()
+  })
+
+  it("carries the three domains buildCompanyOntology copies through", () => {
+    const result = parse(readFileSync(bundled, "utf-8")) as Record<string, unknown>
+    expect(result.customer).toBeTruthy()
+    expect(result.org).toBeTruthy()
+    expect(result.product).toBeTruthy()
+  })
+
+  it("survives a whole real save, placeholders intact and re-readable", () => {
+    const yaml = buildCompanyOntology(
+      "Repro Co",
+      {
+        domain: "We triage inbound issues.",
+        stakeholders: [{ role: "Maintainer", position: "Runs the repos" }],
+        valueFlow: { input: "an issue", transform: "triage", output: "a briefing" },
+        bottleneck: "Deciding which repo an issue belongs to.",
+      },
+      readFileSync(bundled, "utf-8"),
+      "2026-08-21"
+    )
+    // The output must itself be parseable — it is what every reader in the app,
+    // and parseCompanyOntology's edit round-trip, loads next.
+    const round = parse(yaml) as Record<string, unknown>
+    expect(round.company_summary).toMatchObject({ name: "Repro Co" })
+    // A placeholder must come through as the STRING it is, never as the nested
+    // mapping YAML would make of `<<TODO: hint>>` left unquoted.
+    const segments = (round.customer as { segments: { id: unknown }[] }).segments
+    expect(typeof segments[0].id).toBe("string")
   })
 })

@@ -3041,6 +3041,60 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v91 (2026-08-21): the shipped ontology template was not valid YAML
+
+User-reported, from the packaged app: editing a company and pressing Save showed
+`Couldn't save: An error occurred in the Server Components render. The specific
+message is omitted in production builds…`. Reproduced in a real production build
+against a disposable company, where the server logs the un-redacted cause:
+
+```
+⨯ Error [YAMLParseError]: Nested mappings are not allowed in compact mappings
+  at line 19, column 12:    updated: <<TODO: YYYY-MM-DD>>
+```
+
+**The template this app scaffolds every company from has been unparseable since
+`f253aa9` (2026-08-12).** `<<TODO: hint>>` looks like a placeholder and is one to
+a human, but a `: ` inside an unquoted scalar is a nested mapping to YAML, so
+`yaml@2.9.0` refuses the file. Ten of those placeholders carried a colon; the
+bare `<<TODO>>` ones were always fine. They are quoted now.
+
+That mattered because `buildCompanyOntology` **parses** the template, to copy its
+customer/org/product domains through verbatim (v18's rule: those are copied, not
+AI-generated). So the wizard could never save for any company scaffolded in those
+nine days — the file was never written at all.
+
+**Why it read as a render error rather than a save error.** `saveCompanyOntologyImpl`
+guarded the `readFile` of that template and guarded the `commitFile` after it, but
+not the `parse` between them, and `lib/save-company-ontology.ts` is a bare
+`return saveCompanyOntologyImpl(...)` under `"use server"`. So the throw became the
+action's rejection, and Next replaced it with its generic production digest. Every
+sibling reader of a user-editable YAML file already returned a message instead
+(`parse-company-ontology.ts`, `triage-config.ts`, `google-accounts-config.ts`) —
+**this was the only unguarded YAML parse in the codebase.**
+
+**Fixing the bundled file alone would have fixed nobody who already has a company.**
+The wizard reads each company's OWN copy, and three on this machine hold a
+byte-identical broken one. So an unparseable company template now falls back to the
+app's own current copy, which both packaging scripts hard-assert into the payload
+(the v83 check) and `adopt-folder.ts` already reads at runtime. This is app-shipped
+scaffolding, not user content, so using the app's copy is the correct reading of
+what that file is for. If the fallback is unreachable too, the message names the
+company's own file and quotes the parser — never a redacted digest again.
+
+**The test that would have caught it, and the one that didn't.**
+`build-company-ontology.test.ts` was entirely green throughout, because every case
+fed it a synthetic template string. It now also reads the REAL bundled file, asserts
+it parses, and runs a whole save through it checking that a placeholder arrives as a
+`string` rather than the nested mapping YAML would make of it. Reverting the template
+turns those three red. Same rule v56 established for `TEMPLATE_MANIFEST`: drift
+between the app and the files it ships is only ever caught by reading the real ones.
+
+Also fixed here, a v89 regression this bug's reproduction exposed: a company awaiting
+setup rendered **two** solid primary buttons ("Set up your company" and "Get Started"),
+which v89's own entry claimed could not happen. `GetStartedButton` takes a `variant`
+and drops to outline while a setup wizard sits above it.
+
 ## v90 (2026-08-21): the Google row's second job, said out loud
 
 Reported as "there is no section to add more Gmail accounts." The section was

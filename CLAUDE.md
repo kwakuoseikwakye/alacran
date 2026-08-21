@@ -1486,6 +1486,26 @@ Also deleted the passive `<Badge>` address list — the row's own `detail` alrea
 names them, so three renderings of one list in one panel is what made the
 clickable chips read as decoration.
 
+**v91 (2026-08-21) fixed a user-reported "Couldn't save: An error occurred in the
+Server Components render" when editing a company.** Root cause: the scaffold template
+`templates/company-starter/docs/templates/ontology-starter.yaml` has been **invalid
+YAML since f253aa9 (2026-08-12)** — `<<TODO: hint>>` reads as a nested mapping in a
+compact mapping, so `yaml@2.9.0` throws. `buildCompanyOntology` PARSES that file (v18:
+the customer/org/product domains are copied verbatim), so setup and edit could never
+save for any company scaffolded in that window. **Two standing rules.** (1) A
+`"use server"` action that is a bare `return impl(...)` turns any impl throw into
+Next's redacted production digest — so every reader of a user-editable file must return
+`{ok:false, message}`; this was the last unguarded YAML parse, its three siblings all
+had the guard. (2) **Fixing a bundled template does not fix companies that already
+copied it** — each holds its own copy (three on this machine did). An unparseable
+company template now falls back to the app's own, which the v83 packaging assertion
+guarantees is present and `adopt-folder.ts` already reads at runtime. **The test lesson
+is v56's again:** `build-company-ontology.test.ts` was green the whole time because
+every case used a synthetic template string; it now reads the REAL bundled file, and
+reverting the fix turns three tests red. Reproduction method worth reusing: run
+`ALACRAN_DATA_DIR=<tmp> PORT=<not 3000> npm start` against a disposable /tmp company —
+production masks the error in the browser but logs it in full server-side.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

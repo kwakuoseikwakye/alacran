@@ -202,7 +202,9 @@ export function AgentCard({
             showVisibleRunOption={showVisibleRunOption}
           />
         )}
-        {showGetStartedButton && <GetStartedButton agentId={agent.id} />}
+        {showGetStartedButton && (
+          <GetStartedButton agentId={agent.id} variant={showSetupCompanyButton ? "outline" : "default"} />
+        )}
         {showVerifyButton && <VerifyButton />}
         {showDailyTeamLogButton && <DailyTeamLogButton />}
         {/* An `external` folder has exactly one action (v66), so hiding it in

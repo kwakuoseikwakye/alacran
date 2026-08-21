@@ -121,3 +121,61 @@ describe("saveCompanyOntologyImpl", () => {
     expect(execCalls).toEqual([])
   })
 })
+
+describe("a company whose own ontology-starter.yaml is not valid YAML", () => {
+  // The exact shape v67 shipped and v0.28.1 fixed: `: ` inside an unquoted
+  // scalar, which YAML reads as a nested mapping in a compact mapping. Before
+  // the guard this threw out of the Server Action and surfaced in production
+  // as "An error occurred in the Server Components render".
+  const BROKEN = "meta:\n  updated: <<TODO: YYYY-MM-DD>>\ncustomer:\n  domain: customer\n"
+
+  async function breakTheTemplate() {
+    await writeFile(path.join(root, "docs", "templates", "ontology-starter.yaml"), BROKEN)
+  }
+
+  it("falls back to the app's own template, so a company scaffolded from the broken one still saves", async () => {
+    await breakTheTemplate()
+    const bundled = path.join(root, "bundled-ontology-starter.yaml")
+    await writeFile(bundled, "customer:\n  domain: from-bundle\norg:\n  domain: org\nproduct:\n  domain: product\n")
+    await mockAgents()
+    const { saveCompanyOntologyImpl } = await import("./save-company-ontology-impl")
+
+    const result = await saveCompanyOntologyImpl("second-co", ANSWERS, fakeExecFn, bundled)
+
+    expect(result).toEqual({ ok: true })
+    const parsed = parse(await readFile(path.join(root, "definitions", "ontology", "company.yaml"), "utf-8"))
+    // The user's own answers still land, and the domains come from the fallback.
+    expect(parsed.company_summary.domain).toBe(ANSWERS.domain)
+    expect(parsed.customer).toEqual({ domain: "from-bundle" })
+  })
+
+  it("names the company's own file when the fallback is unreachable too, instead of throwing", async () => {
+    await breakTheTemplate()
+    await mockAgents()
+    const { saveCompanyOntologyImpl } = await import("./save-company-ontology-impl")
+
+    const result = await saveCompanyOntologyImpl(
+      "second-co",
+      ANSWERS,
+      fakeExecFn,
+      path.join(root, "does-not-exist.yaml")
+    )
+
+    expect(result.ok).toBe(false)
+    if (result.ok) throw new Error("unreachable")
+    expect(result.message).toContain("docs/templates/ontology-starter.yaml")
+    expect(result.message).toContain("isn't valid YAML")
+  })
+
+  it("leaves a company with a good template on its own template, not the fallback", async () => {
+    const bundled = path.join(root, "bundled-ontology-starter.yaml")
+    await writeFile(bundled, "customer:\n  domain: from-bundle\n")
+    await mockAgents()
+    const { saveCompanyOntologyImpl } = await import("./save-company-ontology-impl")
+
+    await saveCompanyOntologyImpl("second-co", ANSWERS, fakeExecFn, bundled)
+
+    const parsed = parse(await readFile(path.join(root, "definitions", "ontology", "company.yaml"), "utf-8"))
+    expect(parsed.customer).toEqual({ domain: "customer" })
+  })
+})

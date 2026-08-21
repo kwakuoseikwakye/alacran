@@ -28,24 +28,33 @@ export const GET_STARTED_RUN_BLURB =
  * this still opens the terminal, just without the intro — the returned
  * message says so.
  */
-export function GetStartedButton({ agentId }: { agentId: string }) {
+export function GetStartedButton({
+  agentId,
+  variant = "default",
+}: {
+  agentId: string
+  /** Drops to "outline" while a company still has a setup wizard above it —
+   *  two solid buttons on one card is no hierarchy at all, which is the thing
+   *  the three-tier layout exists to fix. */
+  variant?: "default" | "outline"
+}) {
   const advanced = useAdvancedMode()
   // Simple mode never opens a terminal. It runs the `orientation` command
   // through the machinery every other command already uses — agent writes a
   // note, user reads the diff, user approves. Same answer, delivered as
   // something a non-technical user can actually read and keep, instead of a
   // reply that scrolls away in a window they didn't ask for.
-  if (!advanced) return <GetStartedRun agentId={agentId} />
-  return <GetStartedTerminal agentId={agentId} />
+  if (!advanced) return <GetStartedRun agentId={agentId} variant={variant} />
+  return <GetStartedTerminal agentId={agentId} variant={variant} />
 }
 
-function GetStartedRun({ agentId }: { agentId: string }) {
+function GetStartedRun({ agentId, variant }: { agentId: string; variant: "default" | "outline" }) {
   const command = getCompanyCommand("orientation")
   if (!command) return null
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="sm" className="w-full">
+        <Button size="sm" variant={variant} className="w-full">
           <Sparkles className="h-4 w-4" />
           Get Started
         </Button>
@@ -62,7 +71,7 @@ function GetStartedRun({ agentId }: { agentId: string }) {
   )
 }
 
-function GetStartedTerminal({ agentId }: { agentId: string }) {
+function GetStartedTerminal({ agentId, variant }: { agentId: string; variant: "default" | "outline" }) {
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
 
@@ -76,7 +85,7 @@ function GetStartedTerminal({ agentId }: { agentId: string }) {
 
   return (
     <div className="space-y-1">
-      <Button size="sm" className="w-full" onClick={handleClick} disabled={pending}>
+      <Button size="sm" variant={variant} className="w-full" onClick={handleClick} disabled={pending}>
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
         {pending ? "Opening…" : "Get Started"}
       </Button>
