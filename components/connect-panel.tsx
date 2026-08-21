@@ -1,9 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import { RefreshCw, ExternalLink, Bot, Download, Loader2, Wand2, ChevronDown } from "lucide-react"
+import { RefreshCw, ExternalLink, Bot, Download, Loader2, Wand2, ChevronDown, Plus } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { BrandIcon, type BrandId } from "@/components/brand-icon"
 import { CommandLine } from "@/components/copy-button"
@@ -152,30 +151,53 @@ function ConnectGoogleApps({
 
   return (
     <div className="space-y-2 border-t border-border pt-3">
-      <p className="text-xs font-medium">Turn on more Google apps</p>
-      {accounts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {accounts.map((a) => (
-            <button
-              key={a}
-              type="button"
-              onClick={() => {
-                setEmail(a)
-                // Otherwise a selection made for the previous account carries
-                // over and reads as "already on" for one that never had it.
-                setServices(grantsFor(accountServices, a) ?? DEFAULT_GOOGLE_SERVICE_IDS)
-              }}
-              className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
-                a.toLowerCase() === address.toLowerCase()
-                  ? "border-primary/40 bg-primary/10"
-                  : "border-border text-muted-foreground"
-              }`}
-            >
-              {a}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* The heading follows the selection, because this one control does two
+          jobs and only ever looked like the first: `gog auth add <email>
+          --services …` re-authorizes a stored address and first-authorizes a
+          new one with the same command. Reported as "there is no section to
+          add more" — the field was there, pre-filled with the account you
+          already had, under a heading about apps. */}
+      <p className="text-xs font-medium">
+        {accounts.length === 0
+          ? "Connect a Google account"
+          : stored
+            ? "Turn on more Google apps"
+            : "Add another Google account"}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {accounts.map((a) => (
+          <button
+            key={a}
+            type="button"
+            onClick={() => {
+              setEmail(a)
+              // Otherwise a selection made for the previous account carries
+              // over and reads as "already on" for one that never had it.
+              setServices(grantsFor(accountServices, a) ?? DEFAULT_GOOGLE_SERVICE_IDS)
+            }}
+            className={`rounded-md border px-2 py-1 text-[11px] transition-colors ${
+              a.toLowerCase() === address.toLowerCase()
+                ? "border-primary/40 bg-primary/10"
+                : "border-border text-muted-foreground"
+            }`}
+          >
+            {a}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => {
+            setEmail("")
+            setServices(DEFAULT_GOOGLE_SERVICE_IDS)
+          }}
+          className={`flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-[11px] transition-colors ${
+            stored ? "border-border text-muted-foreground hover:text-foreground" : "border-primary/40 bg-primary/10"
+          }`}
+        >
+          <Plus className="size-3" />
+          Add another account
+        </button>
+      </div>
       <Input
         type="email"
         placeholder="you@example.com"
@@ -757,15 +779,6 @@ function ToolCard({
             )}
             <span className="text-xs text-muted-foreground">available to your companies</span>
           </div>
-          {tool.accounts && tool.accounts.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {tool.accounts.map((email) => (
-                <Badge key={email} variant="outline" className="border-border font-normal text-muted-foreground">
-                  {email}
-                </Badge>
-              ))}
-            </div>
-          )}
           <p className="text-xs text-muted-foreground">
             Assign specific accounts to a company from that company&apos;s card.
           </p>

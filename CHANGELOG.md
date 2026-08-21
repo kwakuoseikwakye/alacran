@@ -3041,6 +3041,32 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v90 (2026-08-21): the Google row's second job, said out loud
+
+Reported as "there is no section to add more Gmail accounts." The section was
+there and had been since v41 — `gog auth add <email> --services …` is the same
+command for a stored address and a new one, which is exactly why v74 made it
+one control. What was missing was any way to tell: the email field arrived
+**pre-filled with the account you already had**, under a heading that said
+"Turn on more Google apps", and the addresses above it looked like a read-out
+rather than a selector. Every part of adding a second account worked; nothing
+said it was possible.
+
+Fixed as an affordance, not a mechanism — no server action, no lib change.
+The address chips are now visibly a selector with a dashed **+ Add another
+account** on the end (clears the field, resets the picker to the v64 defaults
+rather than inheriting the previous account's ticks), and the heading follows
+the selection: "Turn on more Google apps" for a stored address, "Add another
+Google account" otherwise. Everything downstream already branched correctly on
+`stored` — first-time copy, an enabled picker, the Chrome-signed-in gate and
+the `gog auth add` fallback all appear the moment an unknown address is typed.
+
+**The passive `<Badge>` list of addresses was deleted rather than kept**: the
+row's own `detail` already reads "Connected: a@x, b@y", so the same addresses
+rendered three times in one panel, and the duplication is what made the
+interactive chips read as decoration. One list, and it is the one you can
+click.
+
 ## v89 (2026-08-21): skills grouped by department, and one primary action per card
 
 Two user reports, one shape: nothing on either surface said which of many

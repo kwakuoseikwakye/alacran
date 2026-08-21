@@ -1472,6 +1472,20 @@ two of its children exist. **Two layout facts:** `.bento-grid`'s item is
 block was tried and reverted — one card with its More open voids the middle of
 every other card, which is the same thing the original `justify-end` body did.
 
+**v90 (2026-08-21) fixed a reported "there is no section to add more Gmail
+accounts" that was a labelling bug, not a missing feature.** Adding a second
+account has worked since v41 and shares one control with "turn on more apps"
+since v74, because `gog auth add <email> --services …` is the same command for
+both — but the field arrived pre-filled with the existing account under a
+heading about apps, so nothing said the second job existed. **The rule: when
+one control does two jobs, the label has to follow the selection, or it only
+ever advertises the first.** The address chips became a visible selector with a
+dashed "+ Add another account" (which resets the picker to defaults rather than
+inheriting the previous account's ticks), and the heading switches on `stored`.
+Also deleted the passive `<Badge>` address list — the row's own `detail` already
+names them, so three renderings of one list in one panel is what made the
+clickable chips read as decoration.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a
