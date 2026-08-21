@@ -379,6 +379,11 @@ h3 {
 @media (max-width: 640px) {
   .bento-grid { grid-template-columns: 1fr; }
 }
+/* Cards fill their row. The grid item is ReorderableGrid's own draggable
+   wrapper, which stretches; without this the card inside it keeps its content
+   height and a row of two ends up visibly ragged. Scoped to the grid so the
+   onboarding screen's standalone .bento-card is untouched. */
+.bento-grid > * > .bento-card { height: 100%; }
 .bento-card {
   background: color-mix(in srgb, var(--card) 75%, transparent);
   backdrop-filter: blur(24px);
@@ -398,6 +403,31 @@ h3 {
   box-shadow: 0 24px 54px -20px rgba(255,46,67,0.25), inset 0 1px 1px rgba(255,255,255,0.05);
   z-index: 10;
 }
+
+/* The "More" disclosure at the foot of an agent card. Native <details>, so the
+   open/closed state, keyboard operation and find-in-page all come from the
+   browser; the only thing styled here is the summary row and the chevron. */
+.card-more > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 2px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  border-radius: calc(var(--radius) - 6px);
+  transition: color .2s ease;
+  list-style: none;
+}
+.card-more > summary::-webkit-details-marker { display: none; }
+.card-more > summary:hover { color: var(--foreground); }
+.card-more > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+.card-more[open] > summary svg { transform: rotate(180deg); }
 
 /* ===========================================================================
    Surreal Ambient Background Orbs

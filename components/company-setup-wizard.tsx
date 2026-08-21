@@ -161,7 +161,12 @@ export function CompanySetupWizard({
 
   return (
     <>
-      <Button size="sm" variant="outline" onClick={() => void openWizard()}>
+      <Button
+        size="sm"
+        variant={mode === "edit" ? "outline" : "default"}
+        className="w-full"
+        onClick={() => void openWizard()}
+      >
         {mode === "edit" ? "Edit company details" : "Set up your company"}
       </Button>
       <Sheet open={open} onOpenChange={(next) => !next && resetAndClose()}>

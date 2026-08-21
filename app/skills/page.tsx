@@ -3,6 +3,7 @@ import { isAppManagedSkillPath } from "@/lib/vendored-skills"
 import { getAllSkills, mergeAndSortSkills } from "@/lib/get-all-skills"
 import { SkillBrowser } from "@/components/skill-browser"
 import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
+import { departmentsByPath } from "@/lib/skills/departments"
 
 export const dynamic = "force-dynamic"
 
@@ -13,6 +14,10 @@ export default async function SkillsPage() {
   // Runs that produced changes nobody has approved yet — a scheduled overnight
   // run has no other way to announce itself.
   const pending = await listPendingReviews(agents)
+  // Which department each file belongs to, derived from the pack that ships it
+  // (lib/skills/departments.ts). Computed here because that module reads
+  // templates/ off disk and the tree is a client component.
+  const departmentByPath = await departmentsByPath(entries.map((e) => e.path))
   // Skills the app installed and keeps updated: read-only, because the next
   // update replaces them wholesale. The write path refuses them too
   // (resolveWritableSkillPath) — this only removes the affordance, so nobody
@@ -42,6 +47,7 @@ export default async function SkillsPage() {
           results={results}
           entries={entries}
           appManagedPaths={appManagedPaths}
+          departmentByPath={departmentByPath}
           pendingKeys={pending.map((p) => `${p.agentId}:${p.commandId}`)}
         />
       </div>

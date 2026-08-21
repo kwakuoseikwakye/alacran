@@ -3041,6 +3041,70 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v89 (2026-08-21): skills grouped by department, and one primary action per card
+
+Two user reports, one shape: nothing on either surface said which of many
+things mattered.
+
+**The Skills page grouped by department.** Adding the Software engineering
+pack to a company that already had others put 30-odd files into one
+alphabetical list — `analytics` next to `api-designer` — because
+`mergeAndSortSkills` sorts every entry by name and the tree grouped only by
+kind. New `lib/skills/departments.ts` derives `basename -> department` from
+`templates/packs/` and a pack's own `category` field, which already existed
+and already said "Engineering", "Marketing", "HR & People". **Derived, not
+stored, for v86's reason:** a `departments.json` a user could edit is a second
+answer to "which pack does this belong to", and two answers drift. **Keyed by
+path, never by `SkillEntry.name`** — that comes from frontmatter, which a user
+may change, and a renamed skill would silently leave its department. Kind is
+no longer a tree level; it is the row icon and the badge on the open file,
+which keeps the tree three deep instead of four in a 17rem rail.
+`GENERAL_DEPARTMENT`/`DEPARTMENT_ORDER` live in `lib/company-starter-packs.ts`,
+not beside the derivation, because that module imports `node:fs` and the tree
+is a client component — defining them twice is the drift this codebase avoids
+everywhere else.
+
+**Filing is per browser, and deletes rather than stores a no-op.** Moving a
+skill to another department writes `lib/skills/department-overrides.ts` to
+localStorage, the same call `components/reorderable-grid.tsx` already makes for
+card order and for the same reason: this is how someone likes their sidebar
+arranged, not a fact about the business. **It touches no file**, so filing a
+v81 app-managed vendored skill needs no write to something the next update
+overwrites. An override equal to the derived department is deleted rather than
+kept — a stored value that merely agreed with today's default would pin that
+skill forever, and a later pack recategorisation would read as a bug years
+later. The control is a native `<select>` in the open file's header rather
+than dragging tree rows: keyboard- and touch-reachable for free, and the only
+version that announces the feature exists at all.
+
+**The agent card given three tiers instead of one stack.** A `command-set`
+company rendered up to thirteen identical `size="sm" variant="outline"
+w-full` buttons in a single `space-y-2` column, so "Get Started" looked exactly
+like "Avatar". Now: the primary action first and solid (the setup wizard while
+a company has no ontology, Get Started once it does — never two, since the
+wizard's button disappears the moment `showSetupCompanyButton` goes false),
+conditional offers as a wrapped chip row, and the standing configuration behind
+a native `<details>`. **The disclosure is deliberately uncounted** — `AdvancedOnly`
+decides on the client whether two of its children render at all, so any number
+rendered server-side is wrong in simple mode. The card also shows its own
+`~`-shortened root path, which is what a machine with three
+similarly-named companies was missing.
+
+**Two layout rules found by looking, not by reasoning.** (a) `.bento-grid > * >
+.bento-card { height: 100% }` — the grid item is `ReorderableGrid`'s own
+draggable wrapper, which stretches, but the card inside kept its content height
+and a row of two was visibly ragged. (b) Bottom-pinned actions (`mt-auto`) were
+tried and reverted: they align only when cards hold similar amounts, and one
+card with its More open left a void through the middle of every other card —
+the same complaint the original `justify-end` body earned. Top-flow, with the
+slack falling at the bottom where it reads as empty rather than broken.
+`components/ui/*` untouched throughout; the two `variant` changes are in
+consumers.
+
+`components/company-guide.tsx` now says where the quieter actions went — per
+this repo's own rule, a change that makes a shipped doc wrong isn't finished,
+and v39's guide is a walk-through of exactly this card.
+
 ## v88 (2026-08-19): the Linux buttons that reported success and did nothing
 
 Reported from a real Debian install: Open in Terminal doesn't open a terminal,

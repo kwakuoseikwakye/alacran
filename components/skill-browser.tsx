@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { ChevronDown, ChevronRight, FileCode2, FileText, Folder, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -10,9 +10,14 @@ import { getActivityDetail } from "@/lib/get-activity-detail"
 import { SkillEditor } from "@/components/skill-editor"
 import { SkillHistory } from "@/components/skill-history"
 import { COMPANY_COMMANDS } from "@/lib/company-commands/registry"
+import { DEPARTMENT_ORDER, GENERAL_DEPARTMENT } from "@/lib/company-starter-packs"
+import {
+  loadDepartmentOverrides,
+  nextOverrides,
+  saveDepartmentOverrides,
+  type DepartmentOverrides,
+} from "@/lib/skills/department-overrides"
 import { CompanyCommandRunner } from "@/components/company-command-runner"
-
-const KIND_LABEL: Record<SkillEntry["kind"], string> = { skill: "Skills", command: "Commands" }
 
 /**
  * Two-pane file explorer: companies and their files on the left, the selected
@@ -39,6 +44,7 @@ export function SkillBrowser({
   entries,
   appManagedPaths = [],
   pendingKeys = [],
+  departmentByPath = {},
 }: {
   results: SkillAgentResult[]
   entries: SkillEntry[]
@@ -46,8 +52,26 @@ export function SkillBrowser({
   appManagedPaths?: string[]
   /** "<agentId>:<commandId>" for every run whose result is still unapproved. */
   pendingKeys?: string[]
+  /** Path -> department, from lib/skills/departments.ts. Anything absent is the user's own. */
+  departmentByPath?: Record<string, string>
 }) {
   const appManaged = new Set(appManagedPaths)
+  // Where the user has filed things, over the top of what the packs say.
+  // Read client-side only: localStorage doesn't exist during SSR, and the
+  // derived department is a correct first paint on its own.
+  const [overrides, setOverrides] = useState<DepartmentOverrides>({})
+  useEffect(() => setOverrides(loadDepartmentOverrides()), [])
+
+  const derivedDepartmentOf = (entry: SkillEntry) => departmentByPath[entry.path] ?? GENERAL_DEPARTMENT
+  const departmentOf = (entry: SkillEntry) => overrides[entry.path] ?? derivedDepartmentOf(entry)
+
+  function fileUnder(entry: SkillEntry, department: string) {
+    setOverrides((current) => {
+      const next = nextOverrides(current, entry.path, department, derivedDepartmentOf(entry))
+      saveDepartmentOverrides(next)
+      return next
+    })
+  }
   const pending = new Set(pendingKeys)
   const [selected, setSelected] = useState<SkillEntry | null>(null)
   const [detail, setDetail] = useState<string | null>(null)
@@ -161,15 +185,24 @@ export function SkillBrowser({
                     {!result.error && owned.length === 0 && (
                       <p className="px-2 py-1.5 text-[11px] text-muted-foreground">Nothing installed yet.</p>
                     )}
-                    {(["skill", "command"] as const).map((kind) => {
-                      const ofKind = owned.filter((e) => e.kind === kind)
-                      if (ofKind.length === 0) return null
+                    {/* Grouped by department rather than by kind: a company holding
+                        three packs has 30-odd files, and one alphabetical list put
+                        `analytics` next to `api-designer`. Kind is still legible —
+                        it's the row icon, and the badge on the open file. */}
+                    {DEPARTMENT_ORDER.map((department) => {
+                      const inDept = owned
+                        .filter((e) => departmentOf(e) === department)
+                        // Commands first: what this department DOES, then what it
+                        // knows. Stable, so the name sort underneath survives.
+                        .sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "command" ? -1 : 1))
+                      if (inDept.length === 0) return null
                       return (
-                        <div key={kind} className="mt-1">
-                          <p className="px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                            {KIND_LABEL[kind]}
+                        <div key={department} className="mt-1">
+                          <p className="flex items-center gap-2 px-2 py-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                            <span className="min-w-0 flex-1 truncate">{department}</span>
+                            <span className="shrink-0 font-normal">{inDept.length}</span>
                           </p>
-                          {ofKind.map((entry) => {
+                          {inDept.map((entry) => {
                             const active = selected?.id === entry.id
                             return (
                               <button
@@ -182,7 +215,7 @@ export function SkillBrowser({
                                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                                 }`}
                               >
-                                {kind === "command" ? (
+                                {entry.kind === "command" ? (
                                   <FileCode2 className="size-3.5 shrink-0" />
                                 ) : (
                                   <FileText className="size-3.5 shrink-0" />
@@ -229,6 +262,24 @@ export function SkillBrowser({
                   <Badge variant="outline" className="shrink-0 text-[10px] uppercase">
                     {selected.kind}
                   </Badge>
+                  {/* A native select rather than dragging rows in the tree: it is
+                      keyboard- and touch-reachable for free, and it is the only
+                      version of this that announces the feature exists. Filing is
+                      per browser and touches no file — see department-overrides.ts. */}
+                  <label className="flex shrink-0 items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+                    <span className="sr-only sm:not-sr-only">Department</span>
+                    <select
+                      value={departmentOf(selected)}
+                      onChange={(e) => fileUnder(selected, e.target.value)}
+                      className="rounded-md border border-border bg-card px-1.5 py-0.5 text-[11px] normal-case tracking-normal text-foreground"
+                    >
+                      {DEPARTMENT_ORDER.map((department) => (
+                        <option key={department} value={department}>
+                          {department}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                 </div>
                 {selected.description && (
                   <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{selected.description}</p>

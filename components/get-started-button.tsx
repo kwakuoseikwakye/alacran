@@ -45,7 +45,7 @@ function GetStartedRun({ agentId }: { agentId: string }) {
   return (
     <Sheet>
       <SheetTrigger asChild>
-        <Button size="sm" variant="outline" className="w-full">
+        <Button size="sm" className="w-full">
           <Sparkles className="h-4 w-4" />
           Get Started
         </Button>
@@ -76,7 +76,7 @@ function GetStartedTerminal({ agentId }: { agentId: string }) {
 
   return (
     <div className="space-y-1">
-      <Button size="sm" variant="outline" className="w-full" onClick={handleClick} disabled={pending}>
+      <Button size="sm" className="w-full" onClick={handleClick} disabled={pending}>
         {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
         {pending ? "Opening…" : "Get Started"}
       </Button>

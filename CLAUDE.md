@@ -1450,6 +1450,28 @@ agent on a live run.
 sweep reported ~35 dead exports under this shell's `grep`; several were live in
 tests only. `/usr/bin/grep`, always, for any dead-code claim.
 
+**v89 (2026-08-21) grouped the Skills tree by department and gave the agent card
+one primary action.** Both were user reports of the same defect — a flat list
+where nothing said what mattered. **The pattern to reuse: derive the grouping,
+don't store it.** A skill's department comes from `templates/packs/`'s own
+`category` field via `lib/skills/departments.ts`, keyed by **path** (frontmatter
+`name:` is user-editable, so a rename would silently drop a skill out of its
+group) — a `departments.json` would be v86's two-detectors problem again. User
+filing overrides it in **localStorage**, the same tier as `reorderable-grid`'s
+card order, which is what lets a v81 app-managed skill be refiled without
+writing to a file the next update overwrites; an override equal to the derived
+value is **deleted, not stored**, or a later pack recategorisation is pinned
+forever. Constants shared with the client live in `company-starter-packs.ts`,
+since `departments.ts` imports `node:fs`. **On the card:** primary solid first
+(setup wizard until there's an ontology, then Get Started — never both),
+offers as a chip row, configuration behind a native `<details>` that is
+deliberately **uncounted**, because `AdvancedOnly` decides on the client whether
+two of its children exist. **Two layout facts:** `.bento-grid`'s item is
+`ReorderableGrid`'s draggable wrapper, so equal-height cards need
+`.bento-grid > * > .bento-card { height: 100% }`; and `mt-auto` on the action
+block was tried and reverted — one card with its More open voids the middle of
+every other card, which is the same thing the original `justify-end` body did.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

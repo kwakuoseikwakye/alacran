@@ -58,7 +58,10 @@ export function CompanyGuide({ companyName, hasOntology, ...flags }: CompanyGuid
         <SheetContent className="w-full sm:max-w-xl">
           <SheetHeader>
             <SheetTitle>What you can do with {companyName}</SheetTitle>
-            <SheetDescription>A quick walk-through of everything on this card.</SheetDescription>
+            <SheetDescription>
+              A quick walk-through of everything on this card. The everyday actions sit at the bottom of it; the
+              rest are tucked under <strong>More</strong> just below them.
+            </SheetDescription>
           </SheetHeader>
           <div className="space-y-4 px-4 pb-4 text-sm">
             {steps.map((step) => (

@@ -88,3 +88,18 @@ export const DEFAULT_COMPANY_STARTER_PACK_ID = COMPANY_STARTER_PACKS[0].id
 export function getCompanyStarterPack(id: string | undefined): CompanyStarterPack {
   return COMPANY_STARTER_PACKS.find((p) => p.id === id) ?? COMPANY_STARTER_PACKS[0]
 }
+
+/**
+ * A pack's `category` doubles as the department a skill or command belongs to
+ * on the Skills page. These two live here rather than in lib/skills/departments.ts
+ * because that module imports node:fs and the tree is a client component — and
+ * defining them twice is exactly the drift this codebase avoids elsewhere.
+ */
+export const GENERAL_DEPARTMENT = COMPANY_STARTER_PACKS[0].category
+
+/**
+ * Tree order. Pack order, not alphabetical: General holds the core commands
+ * every company has, so it belongs at the top rather than between Engineering
+ * and HR & People.
+ */
+export const DEPARTMENT_ORDER: string[] = [...new Set(COMPANY_STARTER_PACKS.map((p) => p.category))]
