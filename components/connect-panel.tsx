@@ -303,8 +303,10 @@ function GoogleAutoSetup({
    *  would otherwise check the wrong browser and confirm something untrue —
    *  the agent drives Chrome, so Chrome is what has to be signed in. */
   async function checkAccount() {
-    const result = await openChromeAccountCheck()
+    const result = await openChromeAccountCheck(email)
     if (!result.opened) setMessage("Couldn't open Chrome. Is it installed?")
+    else if (result.profile) setMessage(`Opened the Chrome profile signed in as ${email.trim()}.`)
+    else setMessage(null)
   }
 
   async function run() {
@@ -336,15 +338,16 @@ function GoogleAutoSetup({
           : "Opens a window where your AI clicks through Google's setup pages in your browser. Sign in to Google in Chrome first, with the same address you chose above."}
       </p>
 
-      {/* The one prerequisite this app cannot detect. Chrome's presence is
-          checked for real before any spawn; WHICH Google account it is signed
-          in as has no API, so it's confirmed here and re-checked by the agent
-          in-browser before it clicks anything. Two soft checks around a hard
-          one, rather than pretending to know. */}
+      {/* Chrome's presence AND which account each profile is signed in as are
+          both checked for real now — the latter from Chrome's own Local State
+          (lib/chrome-profiles.ts), which is why setupGoogle refuses outright
+          when no profile matches. This box stays as the confirmation for the
+          case that file can't be read, where the app genuinely can't tell. */}
       <div className="space-y-1.5 rounded-md border border-border bg-background/50 p-2.5">
         <p className="text-[11px] font-medium">First: is Chrome signed in to that account?</p>
         <p className="text-[11px] text-muted-foreground">
-          Your AI uses your own Chrome window, so it can only reach the account Chrome is already signed in to.
+          Your AI uses your own Chrome window, so it can only reach the account Chrome is already signed in to. If this
+          machine has several Chrome profiles, this opens the one signed in as the address above.
         </p>
         <Button type="button" size="sm" variant="outline" onClick={checkAccount}>
           <ExternalLink className="mr-1.5 size-3.5" />

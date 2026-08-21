@@ -3041,6 +3041,64 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v93 (2026-08-21): which Chrome profile, said out loud and enforced
+
+Reported from real use: the Google setup agent kept operating a different
+Google account from the one typed into the card. Diagnosed by reading the
+machine — Chrome here has **three** profiles, each signed in as a different
+address:
+
+```
+Default     kwakuoseikwakye@gmail.com     (last used)
+Profile 2   sanuki@plh.life
+Profile 3   think.innovation.labs@gmail.com
+```
+
+`open -a "Google Chrome"` opens whichever profile Chrome used last or has
+frontmost. The app named none, so on this machine it was a coin flip, and the
+only guard was a sentence in the prompt asking the model to notice the mismatch
+and stop. That is not a gate.
+
+**The premise that made it a checkbox was wrong.** `setup-google-impl.ts` said
+which account Chrome is signed in as "has no API… reading Chrome's own profile
+would be fragile and a bigger intrusion than this feature is worth". There is
+no *web* API, but Chrome writes every profile's signed-in address to
+`Local State`, a plain JSON file beside the profiles — one `readFile` away, and
+a far smaller intrusion than letting an agent operate the wrong Google account.
+New `lib/chrome-profiles.ts` reads it (macOS and Linux paths both).
+
+**Now a hard refusal, before anything spawns.** No profile signed in as the
+typed address means the run is declined with a message naming the addresses
+that *are* available, so the user can fix it without guessing. Where a profile
+does match, its directory is named in the agent's prompt, and
+`openChromeAccountCheck` opens **that** profile rather than the last-used one —
+so "Open Chrome and check" finally shows the account the user is being asked to
+confirm. On macOS that means invoking the Chrome binary directly: `open --args`
+is silently ignored when Chrome is already running, which is exactly when
+profile selection matters.
+
+**An unreadable `Local State` means "can't tell", not "no match"** — a machine
+where Chrome lives somewhere unusual falls through to the previous
+confirm-it-yourself behaviour rather than being blocked out of a setup that
+would have worked. Matching is case-insensitive, the same rule v75 pinned for
+`accountServices` lookups. The new seam is a trailing optional parameter (v46),
+so every existing call site and test was untouched.
+
+**Also answered, because the report asked it:** the agent has never used the
+Claude Code account's email. `buildGoogleSetupPrompt` splices the typed address
+into the job in four places, including the stop-if-it-doesn't-match line. Claude
+Code's own sign-in (`nana@plh.life` here) is its API identity and nothing else —
+and it now *provably* can't leak in, since no Chrome profile is signed in as it,
+so that address is refused like any other unmatched one.
+
+**Not done, and not ours:** restricting this to "any browser with the Claude
+extension" isn't a choice this app makes. `--chrome` is Claude Code's own flag
+and drives Chrome specifically; there is no equivalent for another browser to
+select. Marked with a `ponytail:` note: the app can pick the right profile and
+refuse a wrong one, but it cannot force which window `claude --chrome` attaches
+to, so the profile is named in the prompt as well and the agent is still told to
+stop on a mismatch.
+
 ## v92 (2026-08-21): the marketing site's CSS, deleted from the app
 
 A repo-wide over-engineering audit turned up two cuts and nothing else. Net -56

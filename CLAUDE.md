@@ -1524,6 +1524,26 @@ has two implementations, the tiny `"use server"` files are real client boundarie
 Un-exporting the 49 file-local symbols saves 0 lines and is v86's false-positive
 shape.
 
+**v93 (2026-08-21) stopped the Google setup agent operating the wrong account.**
+This machine has three Chrome profiles (personal Gmail, work address, a project
+account); `open -a "Google Chrome"` opens the last-used one, the app named none,
+and the only guard was a line in the prompt asking the model to notice. **The
+finding to keep: "there is no API for which Google account Chrome is signed in
+as" was FALSE and had been load-bearing since v71.** There is no web API, but
+Chrome writes it to `Local State` as plain JSON beside the profiles —
+`lib/chrome-profiles.ts` reads it on both macOS and Linux. `setupGoogleImpl` now
+**refuses before spawning** when no profile matches the typed address, naming the
+addresses that do exist; a match is passed as `--profile-directory` and named in
+the prompt. **Two rules worth reusing:** an unreadable `Local State` is
+"can't tell", not "no match", so it falls through to the old behaviour instead of
+blocking a working setup; and on macOS `open --args` is silently ignored when the
+app is already running, so profile selection must invoke the Chrome binary
+directly. **The residual, marked `ponytail:` in the source:** the app cannot force
+which window `claude --chrome` attaches to — that is Claude Code's behaviour — so
+the profile is named in the prompt too. Restricting to "any browser with the
+Claude extension" is not available: `--chrome` is Chrome-only, with no equivalent
+flag to select another.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

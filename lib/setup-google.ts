@@ -9,7 +9,10 @@ export async function setupGoogle(email: string, serviceIds: string[]): Promise<
 }
 
 /** Opens Chrome at Google's account page so the user can confirm which
- *  account they're signed in as before the agent starts. */
-export async function openChromeAccountCheck(): Promise<{ opened: boolean }> {
-  return openChromeAccountCheckImpl()
+ *  account they're signed in as before the agent starts — in the PROFILE
+ *  signed in as `email`, where this machine has one. A machine with several
+ *  profiles otherwise shows whichever Chrome used last, which is an account
+ *  the user never asked about. */
+export async function openChromeAccountCheck(email: string): Promise<{ opened: boolean; profile: string | null }> {
+  return openChromeAccountCheckImpl(email)
 }

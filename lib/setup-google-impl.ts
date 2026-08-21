@@ -10,6 +10,7 @@ import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg, servicesFr
 import { listGoogleAccounts, type GoogleAccount } from "./google-accounts"
 import { isPlausibleEmail } from "./sign-in-claude-impl"
 import { DATA_DIR } from "./data-dir"
+import { listChromeProfiles, findProfileForEmail, type ChromeProfile } from "./chrome-profiles"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -25,6 +26,9 @@ export type SetupGoogleResult = { started: boolean; message: string }
 // the two functions below asking this two different ways is exactly how a
 // machine passed the installed-check and then silently did nothing.
 const LINUX_CHROME_BINARIES = ["google-chrome", "google-chrome-stable"]
+
+const MAC_CHROME_BINARY = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+const ACCOUNT_PAGE = "https://myaccount.google.com"
 
 /**
  * The scopes this app actually uses. Kept deliberately narrow (v64): every
@@ -53,9 +57,13 @@ export function buildGoogleSetupPrompt(
   serviceIds: string[] = DEFAULT_GOOGLE_SERVICE_IDS,
   /** Services this account ALREADY carries. Non-empty means the one-time
    *  console setup is done, so the agent gets the much shorter job below. */
-  grantedIds: string[] = []
+  grantedIds: string[] = [],
+  /** The Chrome profile directory signed in as this address, when the caller
+   *  could determine one. Named in the prompt because a machine with several
+   *  profiles has several signed-in accounts, and "the browser" is ambiguous. */
+  profileDirectory: string | null = null
 ): string {
-  if (grantedIds.length > 0) return buildGoogleExpandPrompt(email, serviceIds, grantedIds)
+  if (grantedIds.length > 0) return buildGoogleExpandPrompt(email, serviceIds, grantedIds, profileDirectory)
   const services = serviceListArg(serviceIds)
   const chosen = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id))
   // The console checklist is built from the chosen services, not a fixed pair:
@@ -75,7 +83,10 @@ export function buildGoogleSetupPrompt(
     steps,
     "",
     "Important:",
-    `- FIRST check which Google account the browser is signed in as. If it is not ${email}, stop and tell me — do not click anything. Setting this up on the wrong account silently connects the wrong mailbox.`,
+    profileDirectory
+      ? `- This machine has more than one Chrome profile. Use the one signed in as ${email} — Chrome calls it "${profileDirectory}". Switch to it first if the window you get is on a different account.`
+      : `- FIRST check which Google account the browser is signed in as.`,
+    `- If the browser is not signed in as ${email}, stop and tell me — do not click anything. Setting this up on the wrong account silently connects the wrong mailbox.`,
     `- On the "Say who can use it" step, enter ${email}.`,
     `- Choose "Desktop app" as the client type. Any other type produces credentials gog cannot use.`,
     "- Do not skip the Publish step. Without it Google expires the connection after 7 days.",
@@ -103,7 +114,12 @@ export function buildGoogleSetupPrompt(
  * never just the new ones: requesting a narrower set is how you'd silently
  * drop Gmail from an account that had it.
  */
-function buildGoogleExpandPrompt(email: string, serviceIds: string[], grantedIds: string[]): string {
+function buildGoogleExpandPrompt(
+  email: string,
+  serviceIds: string[],
+  grantedIds: string[],
+  profileDirectory: string | null = null
+): string {
   const services = serviceListArg([...grantedIds, ...serviceIds])
   const already = GOOGLE_SERVICES.filter((svc) => grantedIds.includes(svc.id))
   const added = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id) && !grantedIds.includes(svc.id))
@@ -118,7 +134,10 @@ function buildGoogleExpandPrompt(email: string, serviceIds: string[], grantedIds
     added.length > 0 ? `Enable these APIs in the existing project:\n\n${steps}` : "No new APIs need enabling.",
     "",
     "Important:",
-    `- FIRST check which Google account the browser is signed in as. If it is not ${email}, stop and tell me — do not click anything.`,
+    profileDirectory
+      ? `- This machine has more than one Chrome profile. Use the one signed in as ${email} — Chrome calls it "${profileDirectory}".`
+      : `- FIRST check which Google account the browser is signed in as.`,
+    `- If the browser is not signed in as ${email}, stop and tell me — do not click anything.`,
     "- If the console shows more than one project, use the one that already has the other APIs turned on. Ask me if it isn't obvious which.",
     "- Do not create billing accounts, service accounts, or a second OAuth client.",
     "",
@@ -141,11 +160,12 @@ function buildGoogleExpandPrompt(email: string, serviceIds: string[], grantedIds
  * `open -Ra` resolves a bundle without launching it — exit 0 present, exit 1
  * absent, measured directly rather than assumed.
  *
- * Whether the user is SIGNED IN to Google, and as whom, is deliberately not
- * checked here: there is no API for it, and reading Chrome's own profile or
- * cookie store to find out would be both fragile and a bigger intrusion than
- * this feature is worth. That half is a confirmation the user gives, backed
- * by the agent re-checking it in-browser before it clicks anything.
+ * WHICH Google account it is signed in as is answered separately, by
+ * lib/chrome-profiles.ts. This used to say there was no way to know and left it
+ * to a checkbox — wrong: there is no web API, but Chrome writes each profile's
+ * signed-in address to a plain JSON file, and a machine with three profiles
+ * (as the report that prompted this had) otherwise gets whichever one Chrome
+ * used last.
  */
 export async function isChromeInstalled(execFn: ExecFileFn, platform: NodeJS.Platform): Promise<boolean> {
   if (platform === "darwin") {
@@ -170,16 +190,33 @@ export async function isChromeInstalled(execFn: ExecFileFn, platform: NodeJS.Pla
 /** Opens CHROME — not the default browser — at Google's account page, so the
  *  user can see which account they're signed in as and switch if needed. The
  *  distinction matters: a user whose default browser is Safari would
- *  otherwise verify the wrong browser entirely, and the agent drives Chrome. */
+ *  otherwise verify the wrong browser entirely, and the agent drives Chrome.
+ *
+ *  Opens the PROFILE signed in as `email` where one exists. Without that this
+ *  showed whichever profile Chrome used last, so on a multi-profile machine the
+ *  user was invited to confirm an account that had nothing to do with the
+ *  address they typed — and then tick a box saying it matched. */
 export async function openChromeAccountCheckImpl(
+  email: string = "",
   execFn: ExecFileFn = defaultExecFile,
-  platform: NodeJS.Platform = process.platform
-): Promise<{ opened: boolean }> {
+  platform: NodeJS.Platform = process.platform,
+  listProfilesFn: () => Promise<ChromeProfile[]> = () => listChromeProfiles(platform)
+): Promise<{ opened: boolean; profile: string | null }> {
+  const match = email.trim() ? findProfileForEmail(await listProfilesFn(), email) : null
+  const profileArgs = match ? [`--profile-directory=${match.directory}`] : []
   try {
     if (platform === "darwin") {
+      if (match) {
+        // `open --args` is ignored when Chrome is already running, which is
+        // exactly when profile selection matters. The binary honours the flag
+        // either way, and (like Linux) does not return until Chrome exits, so
+        // it is fired rather than awaited.
+        void execFn(MAC_CHROME_BINARY, [...profileArgs, ACCOUNT_PAGE]).catch(() => {})
+        return { opened: true, profile: match.directory }
+      }
       // `open` returns as soon as it hands off to LaunchServices.
-      await execFn("open", ["-a", "Google Chrome", "https://myaccount.google.com"])
-      return { opened: true }
+      await execFn("open", ["-a", "Google Chrome", ACCOUNT_PAGE])
+      return { opened: true, profile: null }
     }
     // `isChromeInstalled` accepts either name, so hardcoding one here meant a
     // machine carrying only google-chrome-stable passed that check and then
@@ -195,12 +232,12 @@ export async function openChromeAccountCheckImpl(
       // so awaiting it would hang this action for as long as the window is
       // open. Fire it and report success on hand-off, the same contract as
       // macOS.
-      void execFn(binary, ["https://myaccount.google.com"]).catch(() => {})
-      return { opened: true }
+      void execFn(binary, [...profileArgs, ACCOUNT_PAGE]).catch(() => {})
+      return { opened: true, profile: match?.directory ?? null }
     }
-    return { opened: false }
+    return { opened: false, profile: null }
   } catch {
-    return { opened: false }
+    return { opened: false, profile: null }
   }
 }
 
@@ -235,7 +272,11 @@ export async function setupGoogleImpl(
    *  shared `execFn` down is not an option either: `defaultExecFile` here is
    *  also what openChromeAccountCheckImpl uses, and memoizing THAT would turn
    *  a second "Open Chrome and check" click into a silent no-op. */
-  listAccountsFn: () => Promise<GoogleAccount[]> = () => listGoogleAccounts()
+  listAccountsFn: () => Promise<GoogleAccount[]> = () => listGoogleAccounts(),
+  /** Trailing, so every existing call site and test keeps working untouched
+   *  (the v46 rule). Its own seam rather than a shared exec: this reads a file,
+   *  not a process. */
+  listProfilesFn: () => Promise<ChromeProfile[]> = () => listChromeProfiles(platform, home)
 ): Promise<SetupGoogleResult> {
   const address = email.trim()
   // Reuses the sign-in validator rather than a second opinion on what an
@@ -252,6 +293,31 @@ export async function setupGoogleImpl(
     return {
       started: false,
       message: "Google Chrome isn't installed. Your AI needs it to click through Google's pages — install Chrome, then try again.",
+    }
+  }
+
+  // Which Chrome profile is signed in as this address. The agent operates the
+  // user's real Google account, so this is the difference between connecting
+  // the mailbox they asked for and silently connecting a different one — and
+  // it is a hard gate, not a hint, because the previous version's only guard
+  // was a sentence in the prompt asking the model to notice and stop.
+  //
+  // Empty means Chrome's Local State could not be read at all (not installed
+  // the usual way, a reshaped file, a locked-down home). That is "can't tell",
+  // not "no match", so it falls through to the old behaviour rather than
+  // blocking a setup that would have worked.
+  // ponytail: this app can pick the right profile and refuse a wrong one, but
+  // it cannot force which window `claude --chrome` attaches to — that is Claude
+  // Code's own behaviour. So the profile is ALSO named in the prompt, and the
+  // agent is still told to stop if the account is wrong. Tighten this if Claude
+  // Code ever grows a profile flag of its own.
+  const profiles = await listProfilesFn()
+  const profile = findProfileForEmail(profiles, address)
+  if (profiles.length > 0 && !profile) {
+    const known = profiles.map((p) => p.email).join(", ")
+    return {
+      started: false,
+      message: `No Chrome profile on this machine is signed in as ${address}. Chrome here is signed in as ${known}. Sign in to Chrome as ${address} first, or type one of those addresses instead — otherwise the setup would connect the wrong account.`,
     }
   }
 
@@ -273,7 +339,7 @@ export async function setupGoogleImpl(
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted)],
+    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null)],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh
