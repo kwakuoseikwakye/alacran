@@ -1544,6 +1544,25 @@ the profile is named in the prompt too. Restricting to "any browser with the
 Claude extension" is not available: `--chrome` is Chrome-only, with no equivalent
 flag to select another.
 
+**v94 (2026-08-21) followed v93 after a real agent run failed.** v93 fixed which
+Chrome profile the app OPENS; this is which browser the agent ATTACHES to, and
+they are different problems. **The finding: the Claude browser extension
+registers connections against the CLAUDE ACCOUNT, not the machine** — a Chrome on
+another computer signed into the same Claude account is offered as a connectable
+browser, and the run attached to a Linux box's Chrome from this Mac. Not
+choosable from here. **A wrong hypothesis worth not retrying:** the agent
+suggested the extension was missing from the Default profile (extensions are
+per-profile); checked directly, `fcoeoabgfenejglbffodgkkbkcdhcgfn` is in BOTH
+Default and Profile 2, so an extension pre-flight would have returned a false
+green. What the app does now is raise the matching profile's Chrome itself right
+before spawning (reusing `openChromeAccountCheckImpl`, not a second opener) and
+name the failure mode in the prompt. **Standing answer for "make it work with any
+agent":** the browser route cannot be — `--chrome` is Claude Code's own flag with
+no equivalent elsewhere, the same shape as v42/v61's MCP finding. The
+agent-agnostic route already exists and is rendered for every executor: the six
+console links plus one `gog auth setup` command. Only the shortcut is Claude-only,
+and no new mechanism was built to pretend otherwise.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

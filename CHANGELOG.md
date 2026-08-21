@@ -3041,6 +3041,51 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v94 (2026-08-21): the browser the agent attaches to isn't this machine's
+
+Follow-up to v93, from a real agent run that failed. v93 fixed which Chrome
+profile Alacrán *opens*; this is about which browser the agent *attaches to*,
+and they turn out to be different problems.
+
+**What the run found.** The agent reported two connected Chrome browsers, both
+`osPlatform: Linux`, neither local to this Mac — one signed in as the wrong
+account and sitting on a password re-entry screen, the other with no Google
+session at all. It refused to click anything, which is exactly right. The cause:
+**the Claude browser extension registers connections against the Claude
+account, not the machine.** A Chrome on another computer signed into the same
+Claude account is offered as a connectable browser here. That is Claude Code's
+model, not this app's, and nothing here can pick for it.
+
+**One hypothesis from that run was wrong and is worth recording so it isn't
+retried.** The agent suggested the extension was installed in Profile 2 but not
+Default, Chrome extensions being per-profile. Checked directly: extension
+`fcoeoabgfenejglbffodgkkbkcdhcgfn` ("Claude") is present in **both** Default and
+Profile 2. Installing it again would have fixed nothing, and a pre-flight check
+for it would have returned a false green.
+
+**What this app can actually do, and now does.** Bring the matching profile's
+Chrome up itself, on the account page, immediately before spawning the agent —
+so the correct local browser is running and frontmost rather than left to
+chance. That reuses `openChromeAccountCheckImpl` rather than growing a second
+way to open Chrome. And the prompt now names the failure mode explicitly: more
+than one browser may be offered, including ones on other computers signed into
+the same Claude account; use only a local one, and stop rather than use a remote
+one. The agent worked that out by instinct this time; it should not have to.
+
+**What it cannot do, stated on the card rather than papered over.** It cannot
+choose which browser the extension attaches to. So the card now says that if you
+use Claude on more than one computer your AI may see those browsers too, that it
+is told to refuse them, and that the numbered console steps work with any AI or
+none.
+
+**On "make this work for any agent — Claude, Codex, Gemini, local models".** The
+browser route cannot be made agent-agnostic: `--chrome` is Claude Code's own
+flag and no other executor has an equivalent (v42/v61 established the same
+shape for MCP). The agent-agnostic route already exists and always has — the six
+console links plus one `gog auth setup … --credentials … --login` command are
+rendered for every executor, gated on nothing. Only the shortcut is Claude-only.
+No new mechanism was built for this, deliberately.
+
 ## v93 (2026-08-21): which Chrome profile, said out loud and enforced
 
 Reported from real use: the Google setup agent kept operating a different

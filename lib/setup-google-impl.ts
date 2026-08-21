@@ -87,6 +87,7 @@ export function buildGoogleSetupPrompt(
       ? `- This machine has more than one Chrome profile. Use the one signed in as ${email} — Chrome calls it "${profileDirectory}". Switch to it first if the window you get is on a different account.`
       : `- FIRST check which Google account the browser is signed in as.`,
     `- If the browser is not signed in as ${email}, stop and tell me — do not click anything. Setting this up on the wrong account silently connects the wrong mailbox.`,
+    "- More than one browser may be offered, INCLUDING browsers on other computers signed into the same Claude account. Use only one that is local to this machine. If the only browsers you can reach are remote, or none is on the right account, stop and say so rather than using one of them.",
     `- On the "Say who can use it" step, enter ${email}.`,
     `- Choose "Desktop app" as the client type. Any other type produces credentials gog cannot use.`,
     "- Do not skip the Publish step. Without it Google expires the connection after 7 days.",
@@ -138,6 +139,7 @@ function buildGoogleExpandPrompt(
       ? `- This machine has more than one Chrome profile. Use the one signed in as ${email} — Chrome calls it "${profileDirectory}".`
       : `- FIRST check which Google account the browser is signed in as.`,
     `- If the browser is not signed in as ${email}, stop and tell me — do not click anything.`,
+    "- More than one browser may be offered, INCLUDING browsers on other computers signed into the same Claude account. Use only one that is local to this machine, and stop rather than using a remote one.",
     "- If the console shows more than one project, use the one that already has the other APIs turned on. Ask me if it isn't obvious which.",
     "- Do not create billing accounts, service accounts, or a second OAuth client.",
     "",
@@ -319,6 +321,18 @@ export async function setupGoogleImpl(
       started: false,
       message: `No Chrome profile on this machine is signed in as ${address}. Chrome here is signed in as ${known}. Sign in to Chrome as ${address} first, or type one of those addresses instead — otherwise the setup would connect the wrong account.`,
     }
+  }
+
+  // Bring the matching profile's Chrome up BEFORE the agent starts, on the
+  // account page it checks first. Reported from a real run: the Claude browser
+  // extension registers connections against the CLAUDE account, not the
+  // machine, so a Chrome on another computer signed into the same Claude
+  // account is offered as a connectable browser here — the agent attached to a
+  // Linux box's Chrome and correctly refused to click. Alacrán cannot choose
+  // which browser the extension attaches to, but it can make sure the right
+  // local one is running and frontmost rather than leaving it to chance.
+  if (profile) {
+    await openChromeAccountCheckImpl(address, execFn, platform, listProfilesFn)
   }
 
   const launch = await resolveTerminalLaunchCommand(platform, execFn)

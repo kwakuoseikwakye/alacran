@@ -347,7 +347,16 @@ function GoogleAutoSetup({
         <p className="text-[11px] font-medium">First: is Chrome signed in to that account?</p>
         <p className="text-[11px] text-muted-foreground">
           Your AI uses your own Chrome window, so it can only reach the account Chrome is already signed in to. If this
-          machine has several Chrome profiles, this opens the one signed in as the address above.
+          machine has several Chrome profiles, this opens the one signed in as the address above — leave it open.
+        </p>
+        {/* Reported from a real run: the Claude browser extension lists
+            connections per Claude ACCOUNT, not per machine, so a Chrome on
+            another computer you are signed in on is offered here too. Nothing
+            this app can choose for it, so the honest move is to say so. */}
+        <p className="text-[11px] text-muted-foreground">
+          If you use Claude on more than one computer, your AI may also see those browsers. It is told to refuse any
+          that is not on this machine — if it stops and says so, that is why. The numbered steps below work with any
+          AI, or none.
         </p>
         <Button type="button" size="sm" variant="outline" onClick={checkAccount}>
           <ExternalLink className="mr-1.5 size-3.5" />
