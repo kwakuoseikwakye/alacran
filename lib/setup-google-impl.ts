@@ -10,7 +10,7 @@ import { GOOGLE_SERVICES, DEFAULT_GOOGLE_SERVICE_IDS, serviceListArg, servicesFr
 import { listGoogleAccounts, type GoogleAccount } from "./google-accounts"
 import { isPlausibleEmail } from "./sign-in-claude-impl"
 import { DATA_DIR } from "./data-dir"
-import { listChromeProfiles, findProfileForEmail, type ChromeProfile } from "./chrome-profiles"
+import { listChromeProfiles, findProfileForEmail, CLAUDE_EXTENSION_PAGE, type ChromeProfile } from "./chrome-profiles"
 
 const execFileAsync = promisify(nodeExecFile)
 
@@ -264,7 +264,10 @@ export async function openChromeAccountCheckImpl(
   email: string = "",
   execFn: ExecFileFn = defaultExecFile,
   platform: NodeJS.Platform = process.platform,
-  listProfilesFn: () => Promise<ChromeProfile[]> = () => listChromeProfiles(platform)
+  listProfilesFn: () => Promise<ChromeProfile[]> = () => listChromeProfiles(platform),
+  /** Where to point that profile. Defaults to Google's account page; the
+   *  pairing step passes claude.ai/chrome instead. */
+  url: string = ACCOUNT_PAGE
 ): Promise<{ opened: boolean; profile: string | null }> {
   const match = email.trim() ? findProfileForEmail(await listProfilesFn(), email) : null
   const profileArgs = match ? [`--profile-directory=${match.directory}`] : []
@@ -275,11 +278,11 @@ export async function openChromeAccountCheckImpl(
         // exactly when profile selection matters. The binary honours the flag
         // either way, and (like Linux) does not return until Chrome exits, so
         // it is fired rather than awaited.
-        void execFn(MAC_CHROME_BINARY, [...profileArgs, ACCOUNT_PAGE]).catch(() => {})
+        void execFn(MAC_CHROME_BINARY, [...profileArgs, url]).catch(() => {})
         return { opened: true, profile: match.directory }
       }
       // `open` returns as soon as it hands off to LaunchServices.
-      await execFn("open", ["-a", "Google Chrome", ACCOUNT_PAGE])
+      await execFn("open", ["-a", "Google Chrome", url])
       return { opened: true, profile: null }
     }
     // `isChromeInstalled` accepts either name, so hardcoding one here meant a
@@ -296,7 +299,7 @@ export async function openChromeAccountCheckImpl(
       // so awaiting it would hang this action for as long as the window is
       // open. Fire it and report success on hand-off, the same contract as
       // macOS.
-      void execFn(binary, [...profileArgs, ACCOUNT_PAGE]).catch(() => {})
+      void execFn(binary, [...profileArgs, url]).catch(() => {})
       return { opened: true, profile: match?.directory ?? null }
     }
     return { opened: false, profile: null }
@@ -395,6 +398,18 @@ export async function setupGoogleImpl(
   // local one is running and frontmost rather than leaving it to chance.
   if (profile) {
     await openChromeAccountCheckImpl(address, execFn, platform, listProfilesFn)
+  }
+
+  // `claude --chrome` reaches a browser only through the Claude extension, and
+  // extensions are per-profile. A profile without it is a dead end the app can
+  // see from disk, rather than one the agent discovers after the user has spent
+  // a session on it — which is how this surfaced: three runs, three different
+  // ways of finding out there was no reachable browser.
+  if (profile && !profile.hasClaudeExtension) {
+    return {
+      started: false,
+      message: `Chrome's "${profile.directory}" profile — the one signed in as ${address} — doesn't have the Claude extension. Your AI can only drive a browser through it, and extensions are per-profile, so having it elsewhere doesn't count. Install it from ${CLAUDE_EXTENSION_PAGE} while that profile is open, then try again.`,
+    }
   }
 
   const launch = await resolveTerminalLaunchCommand(platform, execFn)

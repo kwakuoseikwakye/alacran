@@ -13,7 +13,7 @@ import { GOOGLE_CONSOLE_STEPS } from "@/lib/google-console-steps"
 import { recheckConnectStatus } from "@/lib/connect/connect-actions"
 import { installTool } from "@/lib/install-tool"
 import { installRepair } from "@/lib/install-repair"
-import { openChromeAccountCheck, setupGoogle } from "@/lib/setup-google"
+import { openChromeAccountCheck, openChromePairing, setupGoogle } from "@/lib/setup-google"
 import { signInClaude } from "@/lib/sign-in-claude"
 // Type-only, and it must stay that way: install-tool-impl imports
 // node:child_process, so a value import would drag it into the client bundle
@@ -347,6 +347,25 @@ function GoogleAutoSetup({
     else setMessage(null)
   }
 
+  /** The step that was missing entirely. `claude --chrome` reaches a browser
+   *  only through the extension, and the extension pairs by CLAUDE account — so
+   *  a profile can have it installed and still report no connected browser
+   *  because it's signed in to claude.ai as someone else. Nothing can check
+   *  that from here, but it can be opened in the right profile and the account
+   *  named, which is the whole of what a user needs to fix it. */
+  async function pairExtension() {
+    const result = await openChromePairing(email)
+    if (!result.opened) {
+      setMessage("Couldn't open Chrome. Is it installed?")
+      return
+    }
+    setMessage(
+      result.claudeAccount
+        ? `Opened claude.ai in ${result.profile ? `the "${result.profile}" profile` : "Chrome"}. Install the extension there if it's missing, and make sure it's signed in as ${result.claudeAccount} — the same account this app runs on. Anything else and your AI sees no browser at all.`
+        : `Opened claude.ai in ${result.profile ? `the "${result.profile}" profile` : "Chrome"}. Sign the extension in with the same Claude account this app runs on.`
+    )
+  }
+
   async function run() {
     setBusy(true)
     try {
@@ -405,6 +424,10 @@ function GoogleAutoSetup({
           to claude.ai with the same Claude account this app runs on. The extension pairs by account, not by machine.
           If your AI reports no browser at all, that pairing is what is missing.
         </p>
+        <Button type="button" size="sm" variant="outline" onClick={pairExtension}>
+          <ExternalLink className="mr-1.5 size-3.5" />
+          Pair the extension
+        </Button>
         <Button type="button" size="sm" variant="outline" onClick={checkAccount}>
           <ExternalLink className="mr-1.5 size-3.5" />
           Open Chrome and check

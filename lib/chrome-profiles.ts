@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises"
+import { readFile, readdir } from "node:fs/promises"
 import { homedir } from "node:os"
 import path from "node:path"
 
@@ -25,7 +25,18 @@ export type ChromeProfile = {
   directory: string
   /** The signed-in Google address, lowercased. */
   email: string
+  /** Whether the Claude browser extension is installed in THIS profile.
+   *  Extensions are per-profile, and `claude --chrome` can only reach a browser
+   *  the extension is in — so a profile without it is a dead end the app can
+   *  see coming instead of the agent discovering it mid-run. */
+  hasClaudeExtension: boolean
 }
+
+/** The Claude browser extension's stable Chrome Web Store id. */
+export const CLAUDE_EXTENSION_ID = "fcoeoabgfenejglbffodgkkbkcdhcgfn"
+
+/** Where the extension link lives, for the pairing step. */
+export const CLAUDE_EXTENSION_PAGE = "https://claude.ai/chrome"
 
 export type ReadFileFn = (filePath: string) => Promise<string>
 
@@ -33,15 +44,25 @@ const defaultReadFile: ReadFileFn = (filePath) => readFile(filePath, "utf-8")
 
 /** Chrome's own state file. Windows is not a build target (see README). */
 export function localStatePath(platform: NodeJS.Platform, home: string): string | null {
-  if (platform === "darwin") return path.join(home, "Library", "Application Support", "Google", "Chrome", "Local State")
-  if (platform === "linux") return path.join(home, ".config", "google-chrome", "Local State")
+  const root = chromeRoot(platform, home)
+  return root ? path.join(root, "Local State") : null
+}
+
+function chromeRoot(platform: NodeJS.Platform, home: string): string | null {
+  if (platform === "darwin") return path.join(home, "Library", "Application Support", "Google", "Chrome")
+  if (platform === "linux") return path.join(home, ".config", "google-chrome")
   return null
 }
+
+export type ReadDirFn = (dirPath: string) => Promise<string[]>
+
+const defaultReadDir: ReadDirFn = (dirPath) => readdir(dirPath)
 
 export async function listChromeProfiles(
   platform: NodeJS.Platform = process.platform,
   home: string = homedir(),
-  readFileFn: ReadFileFn = defaultReadFile
+  readFileFn: ReadFileFn = defaultReadFile,
+  readDirFn: ReadDirFn = defaultReadDir
 ): Promise<ChromeProfile[]> {
   const statePath = localStatePath(platform, home)
   if (!statePath) return []
@@ -65,7 +86,15 @@ export async function listChromeProfiles(
     // than offered as a target.
     const email = (info as { user_name?: unknown } | null)?.user_name
     if (typeof email === "string" && email.trim() !== "") {
-      profiles.push({ directory, email: email.trim().toLowerCase() })
+      const root = chromeRoot(platform, home)
+      const installed = root
+        ? await readDirFn(path.join(root, directory, "Extensions")).catch(() => [] as string[])
+        : []
+      profiles.push({
+        directory,
+        email: email.trim().toLowerCase(),
+        hasClaudeExtension: installed.includes(CLAUDE_EXTENSION_ID),
+      })
     }
   }
   return profiles

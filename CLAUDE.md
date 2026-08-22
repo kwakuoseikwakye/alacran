@@ -1619,6 +1619,23 @@ no pairing and no particular AI. The card now also states the prerequisite chain
 claude.ai login matching the account this app runs on — because none of it is
 checkable from here.
 
+**v98 (2026-08-23) made the Google browser-agent route reachable instead of
+routing around it.** Its prerequisite chain is four links and only two were ever
+checked: Chrome installed (v71), a profile signed in as the target address (v93),
+**the Claude extension installed in THAT profile** (new — extensions are
+per-profile, so `ChromeProfile.hasClaudeExtension` reads
+`<profile>/Extensions/fcoeoabgfenejglbffodgkkbkcdhcgfn` and `setupGoogleImpl`
+refuses before spawning if it is missing), and **that profile signed in to
+claude.ai as the same Claude account this app runs on** — which is what an empty
+`list_connected_browsers` actually means. **The rule: the extension pairs by
+CLAUDE ACCOUNT, not by machine.** That last link cannot be read locally, but it
+can be acted on: the new "Pair the extension" button opens claude.ai/chrome in
+the matching profile and names the account from `claude auth status`
+(`fundpeck@gmail.com` here). Note link 3 alone would NOT have explained the
+reported failure — the extension was already in the right profile — which is why
+the pairing step, not the extension check, is the fix. v97's ordering stands: the
+console steps still lead, since they need none of this.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

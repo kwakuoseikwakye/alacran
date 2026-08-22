@@ -3041,6 +3041,53 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v98 (2026-08-23): making the AI route actually reachable
+
+Three runs had failed three different ways and the response so far had been to
+route around the browser agent. That isn't what was asked for. This slice takes
+the prerequisite chain seriously instead: two of its four links are checkable
+from disk, the third is not checkable but IS actionable, and none of them had a
+name on screen.
+
+```
+1. Chrome installed                                      checked since v71
+2. a profile signed in as the target Google address      checked since v93
+3. the Claude extension installed in THAT profile        checked here
+4. that profile signed in to claude.ai as the same
+   Claude account this app runs on                       not checkable — now actionable
+```
+
+**Link 3 is a directory read.** Extensions are per-profile, so a profile without
+`fcoeoabgfenejglbffodgkkbkcdhcgfn` can never be driven by `claude --chrome` no
+matter what else is true. `ChromeProfile` now carries `hasClaudeExtension`, and
+`setupGoogleImpl` refuses before spawning if the matching profile lacks it,
+naming the profile and saying that having it in another one doesn't count.
+
+**Link 4 is why `list_connected_browsers` came back empty.** The extension pairs
+by **Claude account**, not by machine — so a profile can have the extension
+installed and still report no browser at all, because it's signed in to
+claude.ai as somebody else. Nothing local can read that. What it can do is open
+claude.ai/chrome **in the right profile** and name the account it has to match,
+which is the whole of what a person needs to fix it. That is the new **Pair the
+extension** button, and it reads the account from `claude auth status` rather
+than guessing: on this machine it says `fundpeck@gmail.com`.
+
+Verified against the real machine, which shows why link 3 alone would not have
+explained the failure — the extension was already in the right profile:
+
+```
+Claude Code account: fundpeck@gmail.com (pro)
+
+Default     kwakuoseikwakye@gmail.com        extension: yes
+Profile 2   sanuki@plh.life                  extension: yes
+Profile 3   think.innovation.labs@gmail.com  extension: no
+```
+
+So for the reported case the gate passes and the pairing button is the fix.
+v97's ordering stands — the console steps still come first, because they need
+none of this — but the AI route now has every link either enforced or named,
+instead of being discovered one lost session at a time.
+
 ## v97 (2026-08-22): a readable plan, and the walkthrough where it was needed
 
 Two problems from one run, neither of them the one that was reported.
