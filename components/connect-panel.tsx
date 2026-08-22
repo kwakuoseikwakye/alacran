@@ -141,6 +141,16 @@ function ConnectGoogleApps({
   // here would either narrow the token or run the first-time console setup on
   // a machine that already has an OAuth client, so build nothing.
   const grantsUnknown = stored && accountGranted === undefined
+  // Whether this address can use the Google setup that already exists here. An
+  // OAuth client belongs to one Cloud project, and a Workspace project's
+  // consent screen admits only its own domain — so an address at a domain none
+  // of the connected accounts share cannot reuse it, and Google refuses it with
+  // "Error 403: org_internal". Reported from real use, after the card offered a
+  // `gog auth add` that could only ever fail.
+  const domainOf = (value: string) => value.split("@")[1]?.trim().toLowerCase() ?? ""
+  const needsOwnProject =
+    address !== "" && accounts.length > 0 && !accounts.some((a) => domainOf(a) === domainOf(address))
+
   // Never narrower than what's already there: gog stores what --services asks
   // for, so dropping one from the list drops the scope.
   const requested = serviceListArg([...(accountGranted ?? []), ...services])
@@ -227,6 +237,25 @@ function ConnectGoogleApps({
       )}
       {address && !grantsUnknown && !nothingNew && (
         <>
+          {needsOwnProject && (
+            <div className="space-y-1.5 rounded-md border border-warning/30 bg-warning/10 p-2.5">
+              <p className="text-[11px] font-medium">This address needs its own Google project.</p>
+              <p className="text-[11px] text-muted-foreground">
+                Your existing setup belongs to {accounts.map((a) => domainOf(a)).filter((d, i, all) => all.indexOf(d) === i).join(", ")} and
+                Google only lets accounts in that organisation use it — anything else is refused with{" "}
+                <span className="font-mono">Error 403: org_internal</span>. Setting one up for {address} is the same
+                one-time walkthrough as the first time, signed in as that address. Nothing you already have is touched.
+              </p>
+              <ol className="list-decimal space-y-1.5 pl-4 text-[11px] text-muted-foreground">
+                {GOOGLE_CONSOLE_STEPS.map((step) => (
+                  <li key={step.title}>
+                    <ConsoleLink href={step.href}>{step.title}</ConsoleLink>
+                    <span className="block">{step.then}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
           <GoogleAutoSetup
             email={address}
             services={services}
@@ -234,7 +263,16 @@ function ConnectGoogleApps({
             claudeReady={claudeReady}
           />
           {claudeReady && <p className="text-[11px] font-medium text-muted-foreground">Or do it yourself:</p>}
-          <CommandLine command={`gog auth add ${address} --services ${requested}`} />
+          {/* An out-of-org address has no client yet, so `auth add` has nothing
+              to add to — it needs `auth setup` with its own downloaded key and
+              its own client name, which is what the walkthrough above produces. */}
+          <CommandLine
+            command={
+              needsOwnProject
+                ? `gog auth setup ${address} --credentials <the downloaded file> --services ${requested} --client ${domainOf(address).replace(/[^a-z0-9]+/g, "-")} --login`
+                : `gog auth add ${address} --services ${requested}`
+            }
+          />
           <p className="text-[11px] text-muted-foreground">
             Each new app also needs its API turned on in your Google Cloud project first, or the sign-in will
             refuse it. That&apos;s the part your AI does for you above.
@@ -355,8 +393,17 @@ function GoogleAutoSetup({
             this app can choose for it, so the honest move is to say so. */}
         <p className="text-[11px] text-muted-foreground">
           If you use Claude on more than one computer, your AI may also see those browsers. It is told to refuse any
-          that is not on this machine — if it stops and says so, that is why. The numbered steps below work with any
-          AI, or none.
+          that is not on this machine — if it stops and says so, that is why.
+        </p>
+        {/* Reported three times running: wrong profile, then remote-only
+            browsers, then no browser at all. The extension pairs by Claude
+            account, and none of this is checkable from here — so the chain is
+            stated up front rather than discovered one failed session at a time. */}
+        <p className="text-[11px] text-muted-foreground">
+          For your AI to reach Chrome at all, that profile needs the{" "}
+          <ConsoleLink href="https://claude.ai/chrome">Claude extension</ConsoleLink> installed <em>and</em> signed in
+          to claude.ai with the same Claude account this app runs on. The extension pairs by account, not by machine.
+          If your AI reports no browser at all, that pairing is what is missing.
         </p>
         <Button type="button" size="sm" variant="outline" onClick={checkAccount}>
           <ExternalLink className="mr-1.5 size-3.5" />
@@ -431,9 +478,12 @@ function GoogleSetup({ stage, claudeReady, granted }: { stage: "client" | "accou
       {/* The whole point of 0.6: nobody should have to do the six steps below
           by hand. They stay on the page as the fallback, and as the thing the
           agent is literally working through — same array, one source. */}
-      <GoogleAutoSetup email={address} services={services} granted={granted} claudeReady={claudeReady} />
-
-      {claudeReady && <p className="text-xs font-medium text-muted-foreground">Or do it yourself:</p>}
+      {/* The console steps come FIRST now. The AI shortcut is genuinely faster
+          when its browser pairing works, but it has failed three ways in real
+          use (wrong profile, only remote browsers, no browser connected) and
+          each costs a whole session to discover. This list needs no extension,
+          no pairing and no particular AI — it is the route that always works,
+          so it should not be the thing hidden under "or do it yourself". */}
       <ol className="list-decimal space-y-2 pl-5 text-xs text-muted-foreground">
         {GOOGLE_CONSOLE_STEPS.map((step) => (
           <li key={step.title}>
@@ -442,6 +492,11 @@ function GoogleSetup({ stage, claudeReady, granted }: { stage: "client" | "accou
           </li>
         ))}
       </ol>
+      {claudeReady && (
+        <p className="text-xs font-medium text-muted-foreground">Or let your AI click through them for you:</p>
+      )}
+      <GoogleAutoSetup email={address} services={services} granted={granted} claudeReady={claudeReady} />
+
       <div className="space-y-1.5 border-t border-border pt-3">
         <p className="text-xs text-muted-foreground">
           <strong>Last step.</strong> With the address above filled in, run this command. It picks up the

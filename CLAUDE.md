@@ -1598,6 +1598,27 @@ project never disturbs the working accounts. Two consequences worth keeping:
 union (only meaningful within one project); and a virgin machine still uses gog's
 own `default` name, since the first client has nothing to coexist with.
 
+**v97 (2026-08-22) fixed two things a failed setup run exposed.** (1) The mangled
+console URLs users reported (`console.cloud.googgoogleapis.com`) were a TERMINAL
+artifact, not bad data — a ~4KB prompt passed as one argv token, redrawn over
+itself. Generating the prompt proved the links were intact. It now goes to
+`google-setup-prompt.md` with a one-line "read this" instruction (the shape
+`buildVisibleRunScript` already used), and a test asserts every
+`GOOGLE_CONSOLE_STEPS` href survives into the file. **Rule: verify a "corrupted
+output" report against the generator before believing it.** (2) The real blocker:
+`ConnectGoogleApps` ("Add another account") never rendered the console
+walkthrough, so an out-of-org address got only the AI route (which had zero
+connected browsers) and a `gog auth add` that can only return
+`org_internal`. It now detects the case client-side by domain and renders the
+full walkthrough plus the correct `gog auth setup … --client <domain>` command.
+**Standing decision: the AI browser shortcut no longer leads on that card.** It
+has failed three distinct ways in real use (wrong profile, remote-only browsers,
+no browser at all), each costing a session; the console steps need no extension,
+no pairing and no particular AI. The card now also states the prerequisite chain
+— the extension pairs by CLAUDE ACCOUNT, so the profile needs the extension AND a
+claude.ai login matching the account this app runs on — because none of it is
+checkable from here.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

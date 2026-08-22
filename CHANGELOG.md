@@ -3041,6 +3041,48 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v97 (2026-08-22): a readable plan, and the walkthrough where it was needed
+
+Two problems from one run, neither of them the one that was reported.
+
+**The mangled console URLs were a terminal artifact, not bad data.** The run
+showed `console.cloud.googgoogleapis.com`, `https://consoleience`, and sentences
+cut mid-word. Generating the real prompt shows every link intact — the ~4KB
+prompt was spliced in as a single argv token and the terminal redrew over it.
+The agent always received the right bytes, but a plan you cannot read is a plan
+you cannot check, and those are links a person may well click by hand. The
+prompt is written to `google-setup-prompt.md` and the session is handed a
+one-line instruction to read it, the same shape `buildVisibleRunScript` already
+uses. A test now asserts every `GOOGLE_CONSOLE_STEPS` href survives into the
+file, so a truncated link fails the suite rather than a user's afternoon.
+
+**The real blocker was that "Add another account" never offered the walkthrough.**
+`list_connected_browsers` returned empty — zero browsers, so the AI route was
+dead — and the only fallback that card rendered was `gog auth add`, which for an
+out-of-org address is precisely the command that returns
+`Error 403: org_internal`. Both routes led nowhere. That card now detects the
+case client-side (the typed domain matches none of the connected accounts) and
+renders the full six-step console walkthrough inline, naming the organisation
+the existing setup belongs to and quoting the error verbatim. Its manual command
+switches accordingly:
+
+```
+out-of-org  gog auth setup kwakuoseikwakye@gmail.com --credentials <file> \
+              --services gmail,calendar --client gmail-com --login
+same-org    gog auth add third@plh.life --services gmail,calendar
+```
+
+**The AI shortcut no longer leads.** It has now failed three distinct ways in
+real use — wrong Chrome profile, only remote browsers offered, then no browser
+connected at all — and each costs a whole session to discover. The numbered
+console steps need no extension, no pairing and no particular AI, so they come
+first and the agent button follows as "or let your AI click through them for
+you". The card also states the prerequisite chain that was never written down:
+the extension pairs by **Claude account**, so that Chrome profile must have the
+extension installed *and* be signed in to claude.ai as the same Claude account
+this app runs on. None of that is checkable from here, which is exactly why it
+belongs on screen instead of being discovered one failed session at a time.
+
 ## v96 (2026-08-22): one OAuth client does not serve every account
 
 Reported from the run v95 enabled: adding a personal `@gmail.com` address to a

@@ -456,13 +456,25 @@ export async function setupGoogleImpl(
     }
   }
 
+  // The prompt goes in a FILE, and the terminal gets a one-line instruction to
+  // read it. It used to be spliced in as a single ~4KB argv token, which the
+  // terminal then redrew over itself: the user saw mangled console URLs
+  // (`console.cloud.googgoogleapis.com`) and half-truncated sentences, and
+  // reasonably concluded the app had generated garbage. The agent always got
+  // the right bytes — argv is not wrapped — but a plan you cannot read is a
+  // plan you cannot check, and these are links a person may well click by hand.
+  // Same shape buildVisibleRunScript already uses for its own prompts.
+  const promptPath = path.join(dataDir, "google-setup-prompt.md")
+  await mkdir(dataDir, { recursive: true })
+  await writeFile(
+    promptPath,
+    buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null, projectEnabled, client),
+    "utf-8"
+  )
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: [
-      "--chrome",
-      buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null, projectEnabled, client),
-    ],
+    introArgs: ["--chrome", `Read ${promptPath} and follow it exactly. Do not summarise it back to me first.`],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh
