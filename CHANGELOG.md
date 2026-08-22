@@ -3041,6 +3041,56 @@ good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
 which added the artifact step and made the workflow say so; the PAT half is
 still open.)*
 
+## v96 (2026-08-22): one OAuth client does not serve every account
+
+Reported from the run v95 enabled: adding a personal `@gmail.com` address to a
+machine already connected to a `@plh.life` Workspace opened the sign-in and
+Google refused it outright —
+
+```
+Error 403: org_internal
+gog CLI is restricted to users within its organization
+```
+
+**v95's assumption was too coarse, and this is its regression.** It reused the
+existing OAuth client whenever *any* account was connected. But a client belongs
+to one Cloud project, and that project's consent screen here is **Internal** —
+which admits only accounts inside the `plh.life` Workspace. A personal Gmail is
+outside it, so the reuse could never have worked. Before v95 this case took the
+full console path and would have created a project the address could use; v95
+short-circuited it into a guaranteed 403.
+
+**gog already models this properly, which the app was ignoring.** Both
+`auth setup` and `auth add` take `--client=NAME` — *"selects stored credentials +
+token bucket"* — and `auth list -j` reports a `client` per account. So clients
+coexist with separate credentials and tokens. `GoogleAccount` now carries that
+field, and `clientNameForAddress` decides: reuse the client that already serves
+this address's **domain**, otherwise derive a new name from the domain
+(`gmail.com` → `gmail-com`). On this machine:
+
+```
+connected: nana@plh.life [client=default], sanuki@plh.life [client=default]
+
+kwakuoseikwakye@gmail.com   client=gmail-com   NEW project — existing one untouched
+third@plh.life              client=default     reuse (gmail,calendar,drive,docs,sheets,tasks,contacts)
+someone@acme.co             client=acme-co     NEW project — existing one untouched
+```
+
+An outside address now gets the full console job again — but scoped: the prompt
+names `org_internal` as the reason, says to create a NEW project while signed in
+as that address, and says explicitly not to reuse or modify the existing one or
+disturb the accounts already connected. The final command carries
+`--client gmail-com`, so the new credentials land in their own bucket and
+`nana@plh.life`/`sanuki@plh.life` keep working untouched.
+
+**"Enabled APIs" is now read per client, not per machine.** v95 took the union
+across every account; that is only meaningful within one project. It reads from
+the accounts on the client being reused.
+
+**A virgin machine still gets gog's own `default` client**, not an invented name
+— the first client has nothing to coexist with, and diverging there would make
+every install before this inconsistent for no gain.
+
 ## v95 (2026-08-21): adding a third address is not a first-time setup
 
 Reported from real use, and correct: a machine with two Google accounts already

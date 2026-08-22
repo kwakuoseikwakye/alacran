@@ -1581,6 +1581,23 @@ and "what `--services` to request" — they diverge for a new address on a set-u
 machine, and getting it wrong authorizes the new address for scopes another
 account happens to hold. A test pins that direction specifically.
 
+**v96 (2026-08-22) fixed a v95 regression: one OAuth client does not serve every
+account.** Adding a personal `@gmail.com` to a machine connected to a `@plh.life`
+Workspace hit Google's `Error 403: org_internal`. **The rule v95 missed: an OAuth
+client belongs to ONE Cloud project, and an Internal consent screen admits only
+that Workspace's accounts.** v95 reused the client whenever any account existed,
+which for an outside address is a guaranteed 403 — before v95 that case ran the
+full console path and would have worked. **gog already models this and the app was
+ignoring it:** `auth setup`/`auth add` take `--client=NAME` ("selects stored
+credentials + token bucket") and `auth list -j` reports a `client` per account, so
+clients coexist with separate credentials and tokens. `GoogleAccount` now carries
+`client`; `clientNameForAddress` reuses the client already serving the address's
+DOMAIN and otherwise derives a new one (`gmail.com` → `gmail-com`), so a new
+project never disturbs the working accounts. Two consequences worth keeping:
+"enabled APIs" must be read from the accounts on THAT client, not the machine-wide
+union (only meaningful within one project); and a virgin machine still uses gog's
+own `default` name, since the first client has nothing to coexist with.
+
 ## Roadmap (named, not yet designed)
 
 Per the user's stated direction, this dashboard is heading toward a

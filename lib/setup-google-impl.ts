@@ -30,6 +30,38 @@ const LINUX_CHROME_BINARIES = ["google-chrome", "google-chrome-stable"]
 const MAC_CHROME_BINARY = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 const ACCOUNT_PAGE = "https://myaccount.google.com"
 
+
+/** The bit after the @, lowercased. "" for anything that isn't an address. */
+function domainOf(email: string): string {
+  return email.split("@")[1]?.trim().toLowerCase() ?? ""
+}
+
+/**
+ * gog's `--client` name to use for this address.
+ *
+ * An OAuth client belongs to ONE Google Cloud project, and a project whose
+ * consent screen is Internal admits only accounts inside that Workspace. So a
+ * client is reusable for an address only if it already serves that address's
+ * domain — reusing the plh.life client for a personal gmail.com address is what
+ * produced Google's `Error 403: org_internal`, reported from real use.
+ *
+ * Returns the existing client when one already serves the domain, otherwise a
+ * NEW name derived from the domain. gog keeps a separate credential and token
+ * bucket per client name, so adding one cannot disturb accounts already working
+ * under another.
+ */
+export function clientNameForAddress(accounts: GoogleAccount[], address: string): { client: string; existing: boolean } {
+  // Nothing connected: this IS the first client, so use gog's own default name
+  // rather than inventing one. A named client only earns its keep when it has
+  // to coexist with a project that would refuse this address.
+  if (accounts.length === 0) return { client: "default", existing: false }
+
+  const domain = domainOf(address)
+  const serving = accounts.find((a) => domainOf(a.email) === domain)
+  if (serving) return { client: serving.client, existing: true }
+  return { client: domain ? domain.replace(/[^a-z0-9]+/g, "-") : "default", existing: false }
+}
+
 /**
  * The scopes this app actually uses. Kept deliberately narrow (v64): every
  * extra service is another API the user — or here, the agent — must click
@@ -65,10 +97,17 @@ export function buildGoogleSetupPrompt(
   /** Services the Cloud project already has enabled, across every connected
    *  account. Non-empty means a client exists, so the short job applies even
    *  for an address that has nothing of its own yet. */
-  projectEnabledIds: string[] = []
+  projectEnabledIds: string[] = [],
+  /** gog's `--client` name this address will be stored under. Anything other
+   *  than "default" means it needs its OWN Cloud project, because no existing
+   *  client's project admits it. */
+  client: string = "default"
 ): string {
   if (grantedIds.length > 0 || projectEnabledIds.length > 0) {
-    return buildGoogleExpandPrompt(email, serviceIds, grantedIds, profileDirectory, projectEnabledIds.length > 0 ? projectEnabledIds : grantedIds)
+    return buildGoogleExpandPrompt(
+      email, serviceIds, grantedIds, profileDirectory,
+      projectEnabledIds.length > 0 ? projectEnabledIds : grantedIds, client
+    )
   }
   const services = serviceListArg(serviceIds)
   const chosen = GOOGLE_SERVICES.filter((svc) => services.split(",").includes(svc.id))
@@ -76,6 +115,7 @@ export function buildGoogleSetupPrompt(
   // consent FAILS for a service whose API was never enabled, so the two lists
   // have to be the same list. GOOGLE_CONSOLE_STEPS still supplies every step
   // that isn't per-API (create project, consent screen, client, publish).
+  const clientFlag = client === "default" ? "" : ` --client ${client}`
   const enableSteps = chosen.map((svc) => `Turn on ${svc.label} — ${svc.apiPage}\n   Click the blue Enable button. That is the whole step.`)
   const otherSteps = GOOGLE_CONSOLE_STEPS.filter((s) => !s.title.startsWith("Turn on")).map((s) => `${s.title} — ${s.href}\n   ${s.then}`)
   const steps = [otherSteps[0], ...enableSteps, ...otherSteps.slice(1)]
@@ -84,6 +124,12 @@ export function buildGoogleSetupPrompt(
   return [
     `Set up Google API access for ${email} on this machine, using the browser.`,
     "",
+    ...(client === "default"
+      ? []
+      : [
+          `This machine already has Google set up for a different organisation, and that setup CANNOT be reused for ${email}: its consent screen is restricted to its own Workspace, so Google refuses outside accounts with "Error 403: org_internal". So create a NEW project while signed in as ${email} — do not reuse or modify the existing one, and do not touch the accounts already connected here.`,
+          "",
+        ]),
     "Google publishes no API for creating an OAuth client, so this genuinely has to be done by clicking through the Cloud Console. Work through these pages in order:",
     "",
     steps,
@@ -101,7 +147,7 @@ export function buildGoogleSetupPrompt(
     "",
     "When the JSON has downloaded (it lands in ~/Downloads and is named something like client_secret_….apps.googleusercontent.com.json), finish by running exactly:",
     "",
-    `  gog auth setup ${email} --credentials <the downloaded file> --services ${services} --login`,
+    `  gog auth setup ${email} --credentials <the downloaded file> --services ${services}${clientFlag} --login`,
     "",
     "That stores the key and opens the browser sign-in. Approve it. Then run `gog auth list` and show me the output so we can both see it worked.",
   ].join("\n")
@@ -131,13 +177,15 @@ function buildGoogleExpandPrompt(
    *  new address on a machine that is already set up: nothing to enable, but
    *  this address has nothing granted yet. Defaults to grantedIds so the
    *  existing single-account callers are unchanged. */
-  projectEnabledIds: string[] = grantedIds
+  projectEnabledIds: string[] = grantedIds,
+  client: string = "default"
 ): string {
   const services = serviceListArg([...grantedIds, ...serviceIds])
   const already = GOOGLE_SERVICES.filter((svc) => projectEnabledIds.includes(svc.id))
   const added = GOOGLE_SERVICES.filter(
     (svc) => services.split(",").includes(svc.id) && !projectEnabledIds.includes(svc.id)
   )
+  const clientFlag = client === "default" ? "" : ` --client ${client}`
   const steps = added
     .map((svc, i) => `${i + 1}. Turn on ${svc.label} — ${svc.apiPage}\n   Click the blue Enable button. That is the whole step.`)
     .join("\n")
@@ -159,7 +207,7 @@ function buildGoogleExpandPrompt(
     "",
     "Then finish by running exactly:",
     "",
-    `  gog auth add ${email} --services ${services}`,
+    `  gog auth add ${email} --services ${services}${clientFlag}`,
     "",
     // The union is spelled out because an agent "helpfully" trimming this to
     // the new services would revoke the ones the user already had.
@@ -371,7 +419,13 @@ export async function setupGoogleImpl(
   // accounts through the whole six-step first-time setup just to add a third —
   // reported from real use, and the reason the run got stuck on a browser it
   // never needed.
-  const projectEnabled = [...new Set(accounts.flatMap((a) => servicesFromScopes(a.scopes)))]
+  // Which OAuth client this address can actually use. A client that serves no
+  // account at this address's domain is not reusable — see clientNameForAddress.
+  const { client, existing: clientExists } = clientNameForAddress(accounts, address)
+  const clientArgs = client === "default" ? [] : ["--client", client]
+  // Only the accounts on THAT client tell us what its project has enabled.
+  const onClient = accounts.filter((a) => a.client === client)
+  const projectEnabled = [...new Set(onClient.flatMap((a) => servicesFromScopes(a.scopes)))]
   const wanted = [...new Set([...granted, ...serviceIds])]
   const needsEnabling = wanted.filter((id) => !projectEnabled.includes(id))
 
@@ -381,13 +435,13 @@ export async function setupGoogleImpl(
   // consent opens in whatever the default browser is, and gog targets the
   // address it was given. Works on every executor, because no executor is
   // involved.
-  if (accounts.length > 0 && needsEnabling.length === 0) {
+  if (clientExists && needsEnabling.length === 0) {
     const launchNow = await resolveTerminalLaunchCommand(platform, execFn)
     if (!launchNow) return { started: false, message: "No supported terminal found on this machine." }
     const addScript = buildInteractiveTerminalScript({
       binaryName: "gog",
       cwd: home,
-      introArgs: ["auth", "add", address, "--services", serviceListArg(wanted)],
+      introArgs: ["auth", "add", address, "--services", serviceListArg(wanted), ...clientArgs],
     })
     const addScriptPath = path.join(dataDir, "google-add-account.sh")
     await mkdir(dataDir, { recursive: true })
@@ -405,7 +459,10 @@ export async function setupGoogleImpl(
   const script = buildInteractiveTerminalScript({
     binaryName: "claude",
     cwd: home,
-    introArgs: ["--chrome", buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null, projectEnabled)],
+    introArgs: [
+      "--chrome",
+      buildGoogleSetupPrompt(address, serviceIds, granted, profile?.directory ?? null, projectEnabled, client),
+    ],
   })
   const scriptPath = path.join(dataDir, "google-setup.sh")
   // DATA_DIR is created lazily by whichever feature writes first. On a fresh

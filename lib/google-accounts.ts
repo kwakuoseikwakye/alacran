@@ -9,12 +9,18 @@ async function defaultExecFile(command: string, args: string[]): Promise<{ stdou
   return memoizedExecFile(command, args)
 }
 
-type GogAuthList = { accounts?: Array<{ email?: unknown; scopes?: unknown }> }
+type GogAuthList = { accounts?: Array<{ email?: unknown; scopes?: unknown; client?: unknown }> }
 
 /** An account plus the OAuth scopes it really carries. The scopes are what
  *  lets the Connect card show which Google services are actually authorized
- *  instead of assuming the default pair — see lib/google-services.ts. */
-export type GoogleAccount = { email: string; scopes: string[] }
+ *  instead of assuming the default pair — see lib/google-services.ts.
+ *
+ *  `client` is gog's OAuth client name (its `--client` flag: "selects stored
+ *  credentials + token bucket"). It matters because a client belongs to ONE
+ *  Google Cloud project, and a project whose consent screen is Internal admits
+ *  only accounts inside that Workspace — reusing it for an outside address
+ *  fails with Google's `Error 403: org_internal`. */
+export type GoogleAccount = { email: string; scopes: string[]; client: string }
 
 /**
  * Every Google account stored in `gog`'s own auth store — not just the one
@@ -49,6 +55,8 @@ export async function listGoogleAccounts(execFn: ExecFileFn = defaultExecFile): 
     .map((a) => ({
       email: typeof a.email === "string" ? a.email.trim() : "",
       scopes: Array.isArray(a.scopes) ? a.scopes.filter((s): s is string => typeof s === "string") : [],
+      // gog omits it on older stores; "default" is the name it uses itself.
+      client: typeof a.client === "string" && a.client.trim() !== "" ? a.client.trim() : "default",
     }))
     .filter((a) => a.email !== "")
 }
