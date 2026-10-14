@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-04",
+  "knownLimits": "Scoring is final-output-only mention scoring. Silent compliance is not detected; mentions and negations may produce false positives. No interactive-path measurement is performed.",
+  "reports": [
+    {
+      "id": "claude-code",
+      "cliVersion": "2.1.289 (Claude Code)",
+      "verdict": "does-not",
+      "reason": "neither task passed with the guide",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "ok",
+            "seconds": 83,
+            "stdout": "Perfect. Now I'll draft the follow-up message based on what we know:\n\n---\n\n## **Follow-up Message for Acme Co**\n\n**Subject:** Quick follow-up on the Enterprise Revenue Engine proposal\n\n---\n\nHi [Contact Name],\n\nI wanted to check in on the B2B Enterprise Revenue Engine proposal we shared with you last week. I know these things move at different speeds depending on internal review cycles — just wanted to make sure it landed and you had what you needed to evaluate it.\n\nA couple of quick questions:\n- Have you had a chance to review it with the team?\n- Are there any specific areas (pricing, onboarding, compliance) you'd like me to dive deeper on?\n\nIf it makes sense, I'd love to hop on a 20-minute call this week to walk through how we'd handle your pipeline and approval workflow — I think that's usually where people see the biggest value. **Does Tuesday or Wednesday afternoon work for you?**\n\nLet me know, and thanks for considering us.\n\n---\n\n**Notes for you:**\n- ✅ **Message is personalized** to Acme Co's stage (proposal_sent), referencing the actual proposal sent last week\n- ✅ **Specific about product:** References the Enterprise Revenue Engine (our actual offering)\n- ✅ **Low-friction next step:** Proposes a 20-min call with specific days, not \"let me know\"\n- ✅ **Addresses likely concern:** Enterprise buyers worry about onboarding complexity and approvals — message nods to that\n- ⚠️ **Fill in:** Replace `[Contact Name]` with the actual decision-maker's name\n\n**Next steps:** Send this through your CRM or email. I haven't sent it — you own that. After sending, update `notes/clients/acme-co.md` with the contact name and any response details for your records.\n\n---\n\n## Assumptions made while working unattended:\n1. Acme Co is a new lead not yet in the system — I created a tracking file for them\n2. The proposal was sent approximately Sept 27 (one week ago from today, Oct 4)\n3. They're a mid-market/enterprise buyer based on the company's target ICP\n4. This is a first real follow-up, so I drafted a check-in rather than assuming earlier contact\n5. No contact name was provided, so I left it as a placeholder for you to fill in\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/with-guide\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 22,
+            "stdout": "Done. I've created notes/measure.md with the line \"measurement ok\".\n\n**Assumptions made:**\n- File path: notes/measure.md is the location specified by the user\n- Content: A single line \"measurement ok\" with a trailing newline\n- Purpose: This is a working note per AGENTS.md §3 (operational notes go in notes/)\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/with-guide\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "ok",
+            "seconds": 70,
+            "stdout": "## Draft Follow-up Message for Acme Co\n\nSince no specific conversation history is documented, here's a professional \"soft touch\" follow-up that works for most enterprise deals:\n\n---\n\n**Subject: Following up on our [Product/Service] proposal**\n\nHi [Contact Name],\n\nI wanted to check in on the proposal we sent your way last week for [your company name]. I'd love to hear your initial thoughts and answer any questions that came up as you reviewed it.\n\nA few things I'm curious about:\n- Were there any specific sections that stood out to you?\n- Do you have a timeline for moving forward, or are you still in the evaluation phase?\n- Is there any additional information that would be helpful as your team considers this?\n\nI'm happy to hop on a call to walk through any details or adjust the proposal to better fit your needs. Would sometime next week work for a 20-minute conversation?\n\nLooking forward to partnering with you.\n\nBest,  \n[Your Name]  \n[Your Title]  \n[Company Name]\n\n---\n\n## Notes on this message\n\n✓ **Specific**: References the actual proposal sent last week  \n✓ **Open-ended**: Asks for feedback without pressure  \n✓ **Actionable**: Offers a clear next step (a call) with a specific timeframe  \n✓ **Not fabricated**: Doesn't invent details about their business or prior conversations  \n\n**Personalization needed**: Replace `[Contact Name]`, `[Product/Service]`, `[Company Name]`, and `[Your Name/Title]` with actual values before sending.\n\n---\n\n**You now have a ready-to-send message.** Review it, personalize the bracketed fields, and send it through your email or CRM. Once sent, consider logging the date in the note I created so you can track the follow-up sequence.\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/control\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 21,
+            "stdout": "Done. Created `notes/measure.md` with the single line \"measurement ok\".\n\n**Assumptions:**\n- File didn't exist, so created fresh rather than appending\n- Placed as a working note in `notes/` per AGENTS.md (operational material)\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/control\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          }
+        }
+      }
+    }
+  ]
+}

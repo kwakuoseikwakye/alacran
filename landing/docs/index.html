@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Alacrán documentation | Memory, agents, and business workflows</title>
+  <meta name="description" content="Understand Alacrán’s local files, company workspaces, agent execution, review controls, skills, integrations, and operational diagnostics.">
+  <meta name="theme-color" content="#22362c">
+  <link rel="canonical" href="https://www.alacran.app/docs">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Alacrán">
+  <meta property="og:url" content="https://www.alacran.app/docs">
+  <meta property="og:title" content="Alacrán documentation | Memory, agents, and business workflows">
+  <meta property="og:description" content="Understand Alacrán’s local files, company workspaces, agent execution, review controls, skills, integrations, and operational diagnostics.">
+  <meta property="og:image" content="https://www.alacran.app/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Alacrán: Your business, organized. Your AI, put to work.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Alacrán documentation | Memory, agents, and business workflows">
+  <meta name="twitter:description" content="Understand Alacrán’s local files, company workspaces, agent execution, review controls, skills, integrations, and operational diagnostics.">
+  <meta name="twitter:image" content="https://www.alacran.app/og.png">
+  <script type="application/ld+json">{"@context": "https://schema.org", "@graph": [{"@type": "Organization", "@id": "https://www.alacran.app/#org", "name": "Alacrán", "url": "https://www.alacran.app/", "logo": "https://www.alacran.app/logo.png", "slogan": "The agentic business environment"}, {"@type": "WebPage", "url": "https://www.alacran.app/docs", "name": "Alacrán documentation | Memory, agents, and business workflows", "description": "Understand Alacrán’s local files, company workspaces, agent execution, review controls, skills, integrations, and operational diagnostics."}]}</script>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="/favicon.png" sizes="128x133">
+  <link rel="preload" href="/fonts/bigshoulders.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/franklin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/v5.css">
+  <script src="/v4.js" defer></script>
+  <script src="/brands.js" defer></script>
+</head>
+<body class="sub">
+<a class="skip" href="#main">Skip to content</a>
+<header class="nav" id="top">
+  <a class="brand" href="/" aria-label="Alacrán home"><i class="mk" aria-hidden="true"></i><span>Alacrán</span></a>
+  <nav class="nav-links" id="navlinks" aria-label="Main navigation"><a href="/#features">Product</a><a href="/use-cases">Use cases</a><a href="/templates">Starter packs</a><a href="/integrations">Integrations</a><details class="guides"><summary class="is-current">Guides<span class="caret" aria-hidden="true"></span></summary><div class="menu"><a href="/getting-started"><strong>Get started</strong><small>Install and save a first result</small></a><a href="/how-to-use"><strong>How to use</strong><small>A daily routine with AI</small></a><a href="/docs" aria-current="page"><strong>Documentation</strong><small>Files, agents and controls</small></a></div></details><button class="motion-toggle" type="button">Pause motion</button></nav>
+  <details class="dl dl-nav"><summary class="btn btn-primary">Download Alacrán<span class="caret" aria-hidden="true"></span></summary><div class="menu"><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-arm64.dmg" download><strong>Mac</strong><small>Apple Silicon</small><span class="tag">.dmg</span></a><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-x64.dmg" download><strong>Mac</strong><small>Intel</small><span class="tag">.dmg</span></a><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download><strong>Linux</strong><small>Debian / Ubuntu</small><span class="tag">.deb</span></a><a class="menu-foot" href="/getting-started">Read the setup guide <span aria-hidden="true">→</span></a></div></details>
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu"><span></span><span></span></button>
+</header>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="3"/></filter></svg>
+<main id="main">
+<section class="hero"><div class="hero-copy"><h1>How Alacrán brings company knowledge and AI work together.</h1>
+<p>Alacrán combines a local company record system with operational screens and tools for running and reviewing agent work. The desktop workspace gives those parts a shared place to operate.</p></div><div class="folder" aria-hidden="true"><span class="stamp">Yours</span><small><span>File copy</span><span>Example company</span></small>
+<code style="--n:0"><b>definitions/</b><span>company facts</span></code><code style="--n:1"><b>notes/</b><span>working notes</span></code><code style="--n:2"><b>docs/decisions/</b><span>the reasoning</span></code><code style="--n:3"><b>records/</b><span>department data</span></code><code style="--n:4"><b>AGENTS.md</b><span>working rules</span></code>
+<div class="commit"><b>approved</b> follow-up draft, saved to history</div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>The company folder</h2></div><div class="reveal"><p>Each company has a folder containing readable business information and operational records.</p>
+<div class="table-wrap"><table><thead><tr><th scope="col">Location</th><th scope="col">Purpose</th></tr></thead><tbody><tr><th scope="row"><code>definitions/</code></th><td>Company facts, structure, and operating definitions</td></tr><tr><th scope="row"><code>notes/</code></th><td>Working notes, summaries, research, and session material</td></tr><tr><th scope="row"><code>docs/decisions/</code></th><td>Decisions and the reasoning behind them</td></tr><tr><th scope="row"><code>records/</code></th><td>Structured records used by departments and workflows</td></tr><tr><th scope="row"><code>AGENTS.md</code></th><td>Instructions and working rules for agents in the company folder</td></tr></tbody></table></div>
+<p>Markdown supports readable documents. YAML supports structured records. Version history helps inspect changes and recover earlier recorded states. Local version history is not a substitute for a separate backup.</p></div></div></section>
+<section class="sec alt"><div class="sec-in"><div class="reveal"><h2 data-split>Company memory and knowledge lifecycle</h2></div><div class="reveal"><p>The company profile provides a shared reference for business facts. Notes and records add operational context. Decision logs preserve why a choice was made.</p>
+<p>The knowledge graph helps explore relationships between entities, files, facts, and decisions. Lifecycle states distinguish draft, proposed, active, and deprecated knowledge. A graph view helps navigate information; it does not certify that the information is complete or correct.</p></div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>Departments and structured records</h2></div><div class="reveal"><p>Department screens bring together metrics, records, connection status, and relevant agent actions. Record schemas help validate the structure of saved data. Custom departments can define additional records and workflows for specialized operations.</p>
+<p>Validation can detect malformed data. It cannot establish that a customer statement, financial entry, or AI conclusion is true.</p><figure class="shot " data-scroll3d><div class="shot-frame"><div class="bar"><i></i><i></i><i></i><span>Alacrán</span></div><picture><source media="(max-width: 720px)" srcset="/screens/departments-detail.webp" width="1000" height="428"><img src="/screens/departments-1200.webp" srcset="/screens/departments-1200.webp 1200w, /screens/departments.webp 1904w" sizes="(max-width: 1200px) 100vw, 1100px" width="1200" height="671" alt="Departments screen listing each department with its record files, and the people who sign off on changes" loading="lazy"></picture></div><figcaption class="shot-foot"><span class="disclosure">Alacrán&#x27;s own workspace</span><button type="button" class="zoom" data-full="/screens/departments.webp" data-alt="Departments screen listing each department with its record files, and the people who sign off on changes">View full screenshot</button></figcaption></figure></div></div></section>
+<section class="sec alt"><div class="sec-in"><div class="reveal"><h2 data-split>Agent execution</h2></div><div class="reveal"><p>Choose a supported executor globally or for a company. Alacrán supplies company context and interfaces for tasks, run visibility, and review.</p>
+<p>Advanced workspaces include embedded terminals and multiple terminal views. Managed agent commands can use isolated Git worktrees to separate proposed work from the main working tree. Session notes help preserve useful context from completed work.</p>
+<p>Worktree isolation separates file changes; it is not, by itself, a security sandbox for network access, credentials, or external services.</p></div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>Review and control boundaries</h2></div><div class="reveal"><p>Alacrán combines several kinds of control:</p>
+<ul><li>Proposed file changes from managed workflows can be reviewed before they are kept.</li><li>Risk labels help identify work that needs closer attention.</li><li>Revision requests send feedback back into the workflow.</li><li>Read-only connections limit what those particular integrations can do.</li><li>Agent instructions require human involvement for consequential actions.</li></ul>
+<p>The five action categories are money, contracts and commitments, irreversible operations, publication, and credentials or access changes.</p>
+<p>A written instruction is different from a permission enforced by software. Effective protection depends on the workflow, executor permissions, connector capabilities, and the controls applied to that execution path. Review these boundaries before connecting tools with write access.</p>
+<p>Approving a file change does not approve every possible external action described in that file.</p></div></div></section>
+<section class="sec alt"><div class="sec-in"><div class="reveal"><h2 data-split>Multiple companies and Company Strings</h2></div><div class="reveal"><p>Each company maintains its own workspace and records. Company Strings offers deliberate sharing of selected eligible context between workspaces, with a scope review before linking.</p>
+<p>The sharing interface excludes categories such as private notes, raw chats, financial ledgers, customer records, and credentials from that sharing path. Check the preview before confirming a link.</p>
+<p>Severing a link removes the ongoing sharing relationship. It does not retract information already used in a result, copied elsewhere, or sent to an external provider.</p></div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>Skills and recurring workflows</h2></div><div class="reveal"><p>Skills package reusable instructions for particular tasks. Built-in commands cover company definition, briefings, decisions, retrospectives, department synchronization, message triage, and engineering work.</p>
+<p>The skills editor supports adapting and versioning these instructions. Workflow maps show the structure of operational processes, while execution records help track runs.</p>
+<p>Scheduled work requires the local application and relevant dependencies to remain available. Use the visible run status to distinguish a completed job from a missed or failed run.</p><figure class="shot " data-scroll3d><div class="shot-frame"><div class="bar"><i></i><i></i><i></i><span>Alacrán</span></div><picture><source media="(max-width: 720px)" srcset="/screens/workflows-detail.webp" width="1000" height="415"><img src="/screens/workflows-1200.webp" srcset="/screens/workflows-1200.webp 1200w, /screens/workflows.webp 1904w" sizes="(max-width: 1200px) 100vw, 1100px" width="1200" height="671" alt="Workflows screen with daily cadence and governance workflows, each with Run in Terminal and Prepare draft buttons" loading="lazy"></picture></div><figcaption class="shot-foot"><span class="disclosure">Alacrán&#x27;s own workspace</span><button type="button" class="zoom" data-full="/screens/workflows.webp" data-alt="Workflows screen with daily cadence and governance workflows, each with Run in Terminal and Prepare draft buttons">View full screenshot</button></figcaption></figure></div></div></section>
+<section class="sec alt" id="data-and-connections"><div class="sec-in"><div class="reveal"><h2 data-split>Data and connections</h2></div><div class="reveal"><p>Company records are stored on your computer. AI execution can send prompts and relevant context to the selected provider. Voice features may send audio to a speech service. Connected tools exchange information with the services you enable. Optional GitHub backup transfers files to your configured repository.</p>
+<p>Local storage does not imply fully offline operation or that every answer is produced locally. Some direct factual lookups may be resolved from saved records; generative work depends on the configured agent.</p></div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>Diagnostics and maintenance</h2></div><div class="reveal"><p>System Doctor checks repository condition, expected folders, dependencies, connector readiness, and record structure. Suggested repair actions help address detected problems.</p>
+<p>The application supports background persistence and launch-at-login settings. Closing a window can leave jobs running. Use Quit to stop the app.</p>
+<p>The documented update mechanism verifies signed release artifacts before installation. This verification is distinct from Apple notarization of a Mac application.</p></div></div></section>
+<section class="sec alt"><div class="sec-in"><div class="reveal"><h2 data-split>Working with the company folder from an agent</h2></div><div class="reveal"><p>Read the company’s <code>AGENTS.md</code> before changing its files. Consult <code>definitions/ontology/company.yaml</code> for company facts, then relevant decisions, notes, and records. Leave unknown facts explicitly unresolved and follow the workflow’s review requirements.</p></div></div></section>
+<section class="sec "><div class="sec-in"><div class="reveal"><h2 data-split>How does this compare with a notes app and an agent harness?</h2></div><div class="reveal"><p>Those tools can form a flexible foundation for an AI workspace. Alacrán brings operational departments, company setup, agent work, review screens, and diagnostics into an integrated business application. The practical value is the amount of configuration and maintenance it handles for a repeatable business workflow.</p>
+<div class="actions"><a class="btn btn-ghost" href="/getting-started">Set up a company</a><a class="btn btn-ghost" href="/integrations">Explore connections</a></div></div></div></section>
+<section class="sec cta"><div class="sec-in"><div class="reveal"><h2 data-split>Put your business knowledge to work.</h2></div><div class="reveal"><p>Create your company workspace, connect your AI, and prepare your first result for review.</p>
+<div class="actions"><details class="dl "><summary class="btn btn-primary">Download Alacrán<span class="caret" aria-hidden="true"></span></summary><div class="menu"><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-arm64.dmg" download><strong>Mac</strong><small>Apple Silicon</small><span class="tag">.dmg</span></a><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-x64.dmg" download><strong>Mac</strong><small>Intel</small><span class="tag">.dmg</span></a><a href="https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb" download><strong>Linux</strong><small>Debian / Ubuntu</small><span class="tag">.deb</span></a><a class="menu-foot" href="/getting-started">Read the setup guide <span aria-hidden="true">→</span></a></div></details><a class="btn btn-ghost" href="/getting-started">Read the setup guide</a></div></div></div></section>
+</main>
+<footer class="foot">
+  <div class="foot-top">
+    <div class="foot-brand">
+      <a class="brand" href="/"><i class="mk" aria-hidden="true"></i><span>Alacrán</span></a>
+      <p class="foot-tag">Your business knowledge. Your AI. Your workspace.</p>
+      <p>Alacrán brings business records, AI workflows, and human review together on your desktop.</p>
+    </div>
+    <nav class="foot-cols" aria-label="Footer">
+      <div><h2>Product</h2><a href="/#features">Features</a><a href="/templates">Starter packs</a><a href="/integrations">Integrations</a><a href="/use-cases">Use cases</a></div>
+      <div><h2>Departments</h2><a href="/departments/customers">Customers</a><a href="/departments/finances">Finances</a><a href="/departments/content">Content &amp; social</a><a href="/departments/messages">Messages</a></div>
+      <div><h2>Resources</h2><a href="/getting-started">Get started</a><a href="/how-to-use">How to use</a><a href="/docs">Documentation</a><a href="https://github.com/kwakuoseikwakye/alacran-releases" target="_blank" rel="noreferrer">GitHub</a></div>
+      <div><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:contact@alacran.app">Contact</a></div>
+    </nav>
+  </div>
+  <p class="foot-note">Free app for macOS and Linux. Connected AI and third-party services may have separate charges.</p>
+  <p class="foot-word" aria-hidden="true">ALACRÁN</p>
+</footer>
+<dialog class="viewer" aria-label="Full screenshot">
+  <form method="dialog" class="viewer-bar"><button class="btn btn-ghost viewer-close" value="close">Close</button></form>
+  <img alt="">
+</dialog>
+<dialog class="mac-help" aria-labelledby="mac-title">
+  <form method="dialog" class="viewer-bar"><button class="btn btn-ghost viewer-close" value="close">Close</button></form>
+  <div class="mac-body">
+    <h2 id="mac-title">Your download has started. One more step on a Mac.</h2>
+    <p class="lede">Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you do this once, macOS may block the app, often with the message "Alacrán is damaged and can't be opened". It is not damaged.</p>
+    <ol class="mac-steps">
+      <li><b>Install.</b> Open the downloaded <code>.dmg</code> and drag Alacrán into Applications.</li>
+      <li><b>Run this in Terminal, once.</b> It clears the quarantine flag macOS puts on downloaded files.
+        <div class="cmd"><code id="mac-cmd">xattr -cr "/Applications/Alacran.app"</code><button type="button" class="btn btn-primary" data-copy="#mac-cmd">Copy command</button></div>
+      </li>
+      <li><b>Open Alacrán</b> from Applications.</li>
+    </ol>
+    <p class="fine">You only need this for the first install. Updates inside the app do not need it. Prefer to read more? <a href="/getting-started">Read the setup guide</a>.</p>
+  </div>
+</dialog>
+</body>
+</html>

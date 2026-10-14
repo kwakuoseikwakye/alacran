@@ -1,0 +1,58 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: engineering-teams
+      name: Modern Engineering Teams & CTOs
+      job_to_be_done: Ship reliable AI-native software with autonomous verification and zero regressions
+      alternative: Manual code reviews, slow manual QA cycles, and brittle CI scripts
+  acquisition:
+    - channel: Developer Documentation & Open Source
+      notes: Bottom-up adoption via developer documentation, GitHub, and local tooling
+    - channel: Direct Founder Demos
+      notes: Live walkthroughs of autonomous engineering loops and §6 Human Gate reviews
+
+org:
+  roles:
+    - id: tech-lead
+      name: Tech Lead & Architect
+      owns: System architecture, technical roadmaps, and code review standards
+    - id: software-engineer
+      name: Full-Stack Software Engineer
+      owns: Feature implementation, automated test suites, and refactoring
+    - id: qa-architect
+      name: Quality & Verification Architect
+      owns: Test coverage, regression testing, and verification harnesses
+    - id: platform-ops
+      name: DevOps & Infrastructure Engineer
+      owns: Local development environments, container runtimes, and deployment pipelines
+  decisions:
+    - decision: Production deployments, database migrations & data deletion
+      approver: tech-lead
+    - decision: Architecture redesigns & major framework changes
+      approver: tech-lead
+    - decision: Infrastructure spending & cloud provider billing
+      approver: tech-lead
+    - decision: Public release notes & technical blog publications
+      approver: tech-lead
+    - decision: SSH keys, token rotation & secret management
+      approver: platform-ops
+
+product:
+  offerings:
+    - id: software-platform
+      name: Autonomous Engineering Engine
+      promise: High-velocity local software development backed by verifiable tests and §6 Human Gates
+      pricing: Open Core / Commercial Local License
+  value_flow:
+    - step: Requirement Spec & Architecture Design
+      owner: tech-lead
+    - step: Test-Driven Development & Implementation
+      owner: software-engineer
+    - step: Automated Verification & Security Audit
+      owner: qa-architect
+    - step: Human Gate Review & Release
+      owner: tech-lead
+  bottleneck: Engineering spec review speed and verification test turnaround time

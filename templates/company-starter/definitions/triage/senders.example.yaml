@@ -1,0 +1,4 @@
+# Rename to senders.yaml and fill in. An empty or missing file means
+# "accept nothing" — triage will refuse to run rather than accept any sender.
+senders:
+  - colleague@example.com

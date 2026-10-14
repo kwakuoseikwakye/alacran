@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-04",
+  "knownLimits": "Scoring is final-output-only mention scoring. Silent compliance is not detected; mentions and negations may produce false positives. No interactive-path measurement is performed.",
+  "reports": [
+    {
+      "id": "kimi",
+      "cliVersion": "0.39.0",
+      "verdict": "unverified",
+      "reason": "the guide routing run ended as error",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "error",
+            "seconds": 6,
+            "stdout": "",
+            "stderr": "kimi version 0.39.0\nerror: failed to run prompt: provider.auth_error: 403 Your current subscription does not have access to Kimi Code right now. Upgrade your plan to keep coding with Kimi Code: https://www.kimi.com/code/#pricing\nSee log: <home>/.kimi-code/logs/kimi-code.log\n"
+          },
+          "verify": {
+            "status": "error",
+            "seconds": 5,
+            "stdout": "",
+            "stderr": "kimi version 0.39.0\nerror: failed to run prompt: provider.auth_error: 403 Your current subscription does not have access to Kimi Code right now. Upgrade your plan to keep coding with Kimi Code: https://www.kimi.com/code/#pricing\nSee log: <home>/.kimi-code/logs/kimi-code.log\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          },
+          "verify": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          }
+        }
+      }
+    }
+  ]
+}

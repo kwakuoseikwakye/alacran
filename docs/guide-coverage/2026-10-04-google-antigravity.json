@@ -1,0 +1,64 @@
+{
+  "date": "2026-10-04",
+  "knownLimits": "Scoring is final-output-only mention scoring. Silent compliance is not detected; mentions and negations may produce false positives. No interactive-path measurement is performed.",
+  "reports": [
+    {
+      "id": "google-antigravity",
+      "cliVersion": "1.2.16",
+      "verdict": "unverified",
+      "reason": "the guide routing run ended as timeout",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "timeout",
+            "seconds": 180,
+            "stdout": "I will wait for the research subagent to finish searching the workspace files for Acme Co information.\n",
+            "stderr": ""
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 36,
+            "stdout": "The requested line has been added to [notes/measure.md](file:///private<tmp>/with-guide/notes/measure.md).\n\nNo installed skill directly matched this operation, so ordinary assistance was used per the guidance in [AGENTS.md](file:///private<tmp>/with-guide/AGENTS.md). While shell commands could not be run to execute `/verify`, the invariants in [scripts/verify.py](file:///private<tmp>/with-guide/scripts/verify.py) were reviewed and are unaffected by this note file. When ready, you can run `/handoff` to record where things stand.\n\n### Assumptions Made\n1. **File existence**: [notes/measure.md](file:///private<tmp>/with-guide/notes/measure.md) did not previously exist; it was assumed that creating the file containing the single line was the desired action.\n2. **Formatting**: Assumed standard newline termination (`measurement ok\\n`) for the added line.\n",
+            "stderr": ""
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "timeout",
+            "seconds": 180,
+            "stdout": "In accordance with the project instructions, I am waiting for the repository explorer subagent to locate the relevant lead notes and proposal history for Acme Co. Once the subagent finishes researching the workspace, I will review the findings and draft the follow-up.\n",
+            "stderr": ""
+          },
+          "verify": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          }
+        }
+      }
+    }
+  ]
+}

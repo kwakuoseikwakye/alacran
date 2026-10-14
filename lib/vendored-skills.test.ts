@@ -1,0 +1,199 @@
+import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises"
+import { tmpdir } from "node:os"
+import path from "node:path"
+import { parseVendoredTag, getVendoredSkillsUpdate, isAppManagedSkillPath } from "./vendored-skills"
+
+describe("parseVendoredTag", () => {
+  it("reads the Tag line the sync script writes", () => {
+    expect(parseVendoredTag("# Vendored\n\nSource: x\nTag: v2.10.0\nVendored by: y\n")).toBe("v2.10.0")
+  })
+
+  it("returns null when there is no Tag line", () => {
+    expect(parseVendoredTag("# Some skill\n\nNothing stamped here.\n")).toBeNull()
+  })
+
+  it("does not match a Tag mentioned mid-line", () => {
+    expect(parseVendoredTag("The Tag: v1.0.0 is written by the script\n")).toBeNull()
+  })
+})
+
+describe("getVendoredSkillsUpdate", () => {
+  let base: string
+  let packsRoot: string
+  let company: string
+
+  async function writeCompanyTag(tag: string) {
+    const dir = path.join(company, ".claude", "skills")
+    await mkdir(dir, { recursive: true })
+    await writeFile(path.join(dir, "UPSTREAM.md"), `Tag: ${tag}\n`, "utf-8")
+  }
+
+  beforeEach(async () => {
+    base = await mkdtemp(path.join(tmpdir(), "vendored-skills-"))
+    packsRoot = path.join(base, "packs")
+    company = path.join(base, "company")
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "skills"), { recursive: true })
+    // The pack must ship the command the company is matched by: a pack is
+    // identified by its own command files, not a hardcoded marker name.
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+    await writeFile(
+      path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"),
+      "Tag: v2.10.0\n",
+      "utf-8"
+    )
+    // Marker command: what identifies this as a marketing-pack company.
+    await mkdir(path.join(company, ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+  })
+
+  afterEach(async () => {
+    await rm(base, { recursive: true, force: true })
+  })
+
+  it("offers the update to a company scaffolded before vendored skills existed", async () => {
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toEqual({
+      packDirName: "marketing",
+      installedTag: null,
+      bundledTag: "v2.10.0",
+    })
+  })
+
+  it("offers the update when the company's tag is behind", async () => {
+    await writeCompanyTag("v2.9.0")
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toEqual({
+      packDirName: "marketing",
+      installedTag: "v2.9.0",
+      bundledTag: "v2.10.0",
+    })
+  })
+
+  it("offers nothing when the company is already on the bundled tag", async () => {
+    await writeCompanyTag("v2.10.0")
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toBeNull()
+  })
+
+  it("offers nothing to a company from a pack that vendors no skills", async () => {
+    await rm(path.join(company, ".claude", "commands", "draft-campaign.md"))
+    await writeFile(path.join(company, ".claude", "commands", "follow-up-lead.md"), "x", "utf-8")
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toBeNull()
+  })
+
+  it("offers nothing when the app's own copy is unstamped", async () => {
+    await rm(path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"))
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toBeNull()
+  })
+
+  it("matches an HR company to the HR pack, not the marketing one", async () => {
+    // Same shape as the marketing case, driven by that pack's own marker: this
+    // is what stops one pack's skills landing in another pack's company.
+    await rm(path.join(company, ".claude", "commands", "draft-campaign.md"))
+    await writeFile(path.join(company, ".claude", "commands", "screen-candidate.md"), "x", "utf-8")
+    const real = path.join(process.cwd(), "templates", "packs")
+    const update = await getVendoredSkillsUpdate(company, real)
+    expect(update?.packDirName).toBe("hr-people")
+    expect(update?.bundledTag).toMatch(/^v\d+\.\d+\.\d+$/)
+  })
+
+  it("recognises the real bundled marketing pack", async () => {
+    const real = path.join(process.cwd(), "templates", "packs")
+    const update = await getVendoredSkillsUpdate(company, real)
+    expect(update?.packDirName).toBe("marketing")
+    expect(update?.bundledTag).toMatch(/^v\d+\.\d+\.\d+$/)
+  })
+})
+
+describe("isAppManagedSkillPath", () => {
+  let base: string
+  let packsRoot: string
+  let company: string
+  const skill = (name: string) => path.join(company, ".claude", "skills", name, "SKILL.md")
+
+  beforeEach(async () => {
+    base = await mkdtemp(path.join(tmpdir(), "app-managed-"))
+    packsRoot = path.join(base, "packs")
+    company = path.join(base, "company")
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "skills", "copywriting"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n", "utf-8")
+    // A pack is identified by the command files it ships, so the fixture needs them.
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+    await mkdir(path.join(company, ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+    await mkdir(path.join(company, ".claude", "skills"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "skills", "UPSTREAM.md"), "Tag: v2.10.0\n", "utf-8")
+  })
+
+  afterEach(async () => {
+    await rm(base, { recursive: true, force: true })
+  })
+
+  it("claims a skill the app ships for this company's pack", async () => {
+    expect(await isAppManagedSkillPath(company, skill("copywriting"), packsRoot)).toBe(true)
+  })
+
+  it("leaves a skill the user wrote alone, even inside the same directory", async () => {
+    expect(await isAppManagedSkillPath(company, skill("my-own-skill"), packsRoot)).toBe(false)
+  })
+
+  it("claims nothing in an unstamped company, since none of it came from the app", async () => {
+    await rm(path.join(company, ".claude", "skills", "UPSTREAM.md"))
+    expect(await isAppManagedSkillPath(company, skill("copywriting"), packsRoot)).toBe(false)
+  })
+
+  it("claims nothing outside .claude/skills", async () => {
+    expect(await isAppManagedSkillPath(company, path.join(company, ".claude", "commands", "draft-campaign.md"), packsRoot)).toBe(false)
+    expect(await isAppManagedSkillPath(company, path.join(base, "elsewhere", "SKILL.md"), packsRoot)).toBe(false)
+  })
+})
+
+describe("isAppManagedSkillPath with the skills in the shared layout", () => {
+  let base: string
+  let packsRoot: string
+  let company: string
+  const shared = (name: string) => path.join(company, ".agents", "skills", name, "SKILL.md")
+  const legacy = (name: string) => path.join(company, ".claude", "skills", name, "SKILL.md")
+
+  beforeEach(async () => {
+    base = await mkdtemp(path.join(tmpdir(), "app-managed-shared-"))
+    packsRoot = path.join(base, "packs")
+    company = path.join(base, "company")
+    await mkdir(path.join(packsRoot, "marketing", ".agents", "skills", "copywriting"), { recursive: true })
+    await mkdir(path.join(packsRoot, "marketing", ".agents", "vendored"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".agents", "vendored", "UPSTREAM-marketing.md"), "Tag: v2.10.0\n", "utf-8")
+    await mkdir(path.join(packsRoot, "marketing", ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(packsRoot, "marketing", ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+    await mkdir(path.join(company, ".agents", "skills"), { recursive: true })
+    await mkdir(path.join(company, ".agents", "vendored"), { recursive: true })
+    await writeFile(path.join(company, ".agents", "vendored", "UPSTREAM-marketing.md"), "Tag: v2.10.0\n", "utf-8")
+    await mkdir(path.join(company, ".claude", "commands"), { recursive: true })
+    await writeFile(path.join(company, ".claude", "commands", "draft-campaign.md"), "x", "utf-8")
+  })
+
+  afterEach(async () => {
+    await rm(base, { recursive: true, force: true })
+  })
+
+  it("claims the shared copy and the generated one, so neither can be edited and then overwritten", async () => {
+    expect(await isAppManagedSkillPath(company, shared("copywriting"), packsRoot)).toBe(true)
+    expect(await isAppManagedSkillPath(company, legacy("copywriting"), packsRoot)).toBe(true)
+  })
+
+  it("leaves a skill the user wrote in the shared folder alone", async () => {
+    expect(await isAppManagedSkillPath(company, shared("my-own-skill"), packsRoot)).toBe(false)
+  })
+
+  it("claims nothing in a company with no stamp for the pack", async () => {
+    await rm(path.join(company, ".agents", "vendored", "UPSTREAM-marketing.md"))
+    expect(await isAppManagedSkillPath(company, shared("copywriting"), packsRoot)).toBe(false)
+  })
+
+  it("finds the pack by the stamp's new home, not only by the legacy one", async () => {
+    const { getVendoredSkillsUpdate } = await import("./vendored-skills")
+    // Current and moved: nothing to offer.
+    await mkdir(path.join(company, ".agents", "skills", "copywriting"), { recursive: true })
+    await writeFile(shared("copywriting"), "x", "utf-8")
+    expect(await getVendoredSkillsUpdate(company, packsRoot)).toBeNull()
+  })
+})

@@ -1,0 +1,53 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: employees-candidates
+      name: Team Members & High-Caliber Candidates
+      job_to_be_done: Transparent career growth, equitable compensation, and frictionless onboarding
+      alternative: Disorganized recruiting spreadsheets and opaque HR processes
+  acquisition:
+    - channel: Direct Talent Sourcing & Referrals
+      notes: Outbound talent sourcing and internal referral programs
+
+org:
+  roles:
+    - id: talent-lead
+      name: Head of Talent Acquisition
+      owns: Recruiting pipeline, candidate experience, and hiring benchmarks
+    - id: people-partner
+      name: People Operations Partner
+      owns: Onboarding workflows, benefits administration, and team retention
+    - id: culture-ops
+      name: Workplace & Culture Specialist
+      owns: Internal documentation, team offsites, and recognition programs
+  decisions:
+    - decision: Compensation bands, signing bonuses & headcount budget commitments
+      approver: talent-lead
+    - decision: Official employment offers, consulting contracts & termination agreements
+      approver: talent-lead
+    - decision: Deletion or archiving of sensitive personnel & candidate records
+      approver: people-partner
+    - decision: Public job descriptions, career site posts & employer branding updates
+      approver: talent-lead
+    - decision: HRIS administrative permissions & background check platform access
+      approver: people-partner
+
+product:
+  offerings:
+    - id: people-ops-engine
+      name: People & Talent Operations Engine
+      promise: High-trust team building with ironclad §6 Human Gates around offers and sensitive personnel data
+      pricing: Internal Operations Model
+  value_flow:
+    - step: Role Scoping & Candidate Sourcing
+      owner: talent-lead
+    - step: Structured Assessment & Technical Interviews
+      owner: talent-lead
+    - step: §6 Human Gate Offer & Compensation Approval
+      owner: talent-lead
+    - step: Team Onboarding & Cultural Integration
+      owner: people-partner
+  bottleneck: Hiring manager interview availability and structured rubric calibration

@@ -1,0 +1,55 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: growth-founders
+      name: High-Growth Founders & Product Marketers
+      job_to_be_done: Build authentic brand authority, capture inbound demand, and scale content distribution
+      alternative: Bloated marketing agencies and noisy un targeted social ad spend
+  acquisition:
+    - channel: Editorial Publications & Thought Leadership
+      notes: Deep-dive architectural breakdowns and founder war stories
+    - channel: Social Distribution & Community
+      notes: Value-first sharing on developer and founder networks
+
+org:
+  roles:
+    - id: growth-lead
+      name: Head of Growth & Marketing
+      owns: Brand narrative, marketing budget allocation, and inbound conversion metrics
+    - id: content-marketer
+      name: Content Strategist & Writer
+      owns: Editorial calendar, technical writing, and educational documentation
+    - id: demand-gen
+      name: Demand Generation & Channel Specialist
+      owns: Paid channels, search optimization, and distribution analytics
+  decisions:
+    - decision: Marketing campaign budgets, paid media spend & ad commitments
+      approver: growth-lead
+    - decision: Creator sponsorship agreements & agency statements of work
+      approver: growth-lead
+    - decision: Purging subscriber mailing lists & analytics histories
+      approver: growth-lead
+    - decision: Outbound newsletters, social broadcasts & press announcements
+      approver: growth-lead
+    - decision: Social media API keys, advertising tokens & tracking pixels
+      approver: demand-gen
+
+product:
+  offerings:
+    - id: content-growth-engine
+      name: Growth & Brand Distribution Engine
+      promise: Compelling brand resonance and organic organic inbound flow governed by §6 publication stopping rules
+      pricing: Retainer / Growth Tier
+  value_flow:
+    - step: Market & Audience Intelligence Gathering
+      owner: demand-gen
+    - step: Content Asset Creation & Editorial Polish
+      owner: content-marketer
+    - step: §6 Human Gate Editorial Review
+      owner: growth-lead
+    - step: Multi-Channel Outbound Distribution
+      owner: demand-gen
+  bottleneck: Editorial quality assurance and executive review before distribution

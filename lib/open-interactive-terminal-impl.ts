@@ -1,0 +1,119 @@
+import { defaultExecFile } from "./default-exec-file"
+import { spawn as defaultSpawn, type ChildProcess } from "node:child_process"
+import { mkdir, writeFile } from "node:fs/promises"
+import path from "node:path"
+import { getEffectiveAgents } from "./get-effective-agents"
+import { resolveAiExecutorForAgent } from "./ai-executor-registry"
+import { buildInteractiveTerminalScript } from "./company-commands/build-visible-run-script"
+import { buildCompanyContextPrimer } from "./company-summary"
+import { readCompanyInventory } from "./skills/company-inventory"
+import { syncAgentSkills } from "./skills/sync-agent-skills"
+import { resolveTerminalLaunchCommand, launchTerminalScript, type ExecFileFn } from "./terminal-launch-command"
+import { DATA_DIR } from "./data-dir"
+
+export type SpawnFn = (command: string, args: string[], opts: Record<string, unknown>) => ChildProcess
+export type GetAgentsFn = typeof getEffectiveAgents
+export type ResolveExecutorFn = typeof resolveAiExecutorForAgent
+
+export type OpenTerminalResult = { started: boolean; message: string }
+
+/**
+ * Opens a real terminal window, cd'd into the company's own directory,
+ * running a plain interactive session of whichever AI executor is
+ * configured for it. Deliberately not scoped or gated — this hands full
+ * control to the user, exactly as if they'd `cd`'d there and run the
+ * executor themselves. The only thing this exists to remove is the need to
+ * find the company's path and type the command by hand.
+ *
+ * "Exactly as if they'd `cd`'d there" is not the same session on every
+ * executor, which is the thing this used to get wrong. Claude Code arrives
+ * already holding the company's working agreement and command files; Kiro
+ * arrives holding nothing. So an executor that reports no
+ * `autoLoadsCompanyContext` is seeded with COMPANY_CONTEXT_PRIMER — the same
+ * knowledge, asked for out loud. Claude Code's session is unchanged.
+ *
+ * macOS and Linux each need a different command to open that window at all
+ * (see terminal-launch-command.ts); everything past that point is identical.
+ *
+ * `introPrompt`, when given, seeds the session's first message instead of
+ * opening fully blank — used by the "Get Started" button to have the agent
+ * read the company's own skills/definitions and introduce itself, for a
+ * user who doesn't yet know what to type. Not every executor supports
+ * this (see ai-executors.ts's `buildInteractiveIntroArgs`); when it
+ * doesn't, this silently falls back to the same blank session `introPrompt`
+ * being unset gives, and says so in the returned message rather than
+ * pretending the intro happened.
+ */
+export async function openInteractiveTerminalImpl(
+  agentId: string,
+  spawnFn: SpawnFn = defaultSpawn,
+  getAgents: GetAgentsFn = getEffectiveAgents,
+  resolveExecutor: ResolveExecutorFn = resolveAiExecutorForAgent,
+  platform: NodeJS.Platform = process.platform,
+  dataDir: string = DATA_DIR,
+  execFn: ExecFileFn = defaultExecFile,
+  introPrompt?: string
+): Promise<OpenTerminalResult> {
+  const agents = await getAgents()
+  const agent = agents.find((a) => a.id === agentId)
+  // The one action an `external` folder gets. Get Started is NOT relaxed with
+  // it: that path guards separately in open-interactive-terminal-with-help,
+  // and its intro prompt reads skills and an ontology an external folder has
+  // no reason to own.
+  if (!agent || (agent.kind !== "command-set" && agent.kind !== "external")) {
+    return { started: false, message: "Unknown company" }
+  }
+
+  const executor = await resolveExecutor(agent.id)
+
+  const launch = await resolveTerminalLaunchCommand(platform, execFn)
+  if (!launch) {
+    return {
+      started: false,
+      message: `No supported terminal found on this machine. Run "${executor.binaryName}" yourself in ${agent.rootPath}.`,
+    }
+  }
+
+  // An executor that doesn't find the company's files on its own gets told to
+  // read them (see buildCompanyContextPrimer). Claude Code loads them at startup,
+  // so its bare session stays byte-identical to what it always was — this adds
+  // context to the executors that were missing it, never to the one that
+  // wasn't.
+  //
+  // Only for a real company. An `external` folder is somebody's own project
+  // with no AGENTS.md, no .claude/commands and no ontology, so priming it would
+  // send the agent hunting for files that were never meant to be there — v66's
+  // rule that every company feature stays keyed to `command-set`, and Open in
+  // Terminal is the one thing an external folder gets.
+  // Skills written by hand (or by an agent's own skill-creator) into .agents/skills reach the agents
+  // that read their own folders. Cheap (a hash compare) and never fatal: a terminal should open
+  // whatever this finds. Command-set companies only, like the primer below.
+  if (agent.kind === "command-set") await syncAgentSkills(agent.rootPath).catch(() => undefined)
+  const needsPrimer = agent.kind === "command-set" && !executor.autoLoadsCompanyContext
+  const seed =
+    introPrompt ?? (needsPrimer ? buildCompanyContextPrimer(await readCompanyInventory(agent.rootPath), executor.id) : undefined)
+  const introArgs = seed ? executor.buildInteractiveIntroArgs?.(seed) : undefined
+  // Own filename so a "Get Started" launch never races the plain "Open in
+  // Terminal" button's script file if both are clicked close together.
+  const scriptPath = path.join(dataDir, `${agent.id}.${introPrompt ? "get-started" : "open-terminal"}.sh`)
+  const script = buildInteractiveTerminalScript({ binaryName: executor.binaryName, cwd: agent.rootPath, introArgs })
+  // See sign-in-claude-impl.ts: DATA_DIR is created lazily, so a fresh
+  // install that has never written one can ENOENT here.
+  await mkdir(dataDir, { recursive: true })
+  await writeFile(scriptPath, script, { mode: 0o755 })
+
+  const outcome = await launchTerminalScript(launch, scriptPath, agent.rootPath, spawnFn)
+  if (!outcome.opened) {
+    return {
+      started: false,
+      message: `Couldn't open a terminal — ${outcome.reason}. Run "${executor.binaryName}" yourself in ${agent.rootPath}.`,
+    }
+  }
+  const skippedIntro = Boolean(introPrompt) && !introArgs
+  return {
+    started: true,
+    message: skippedIntro
+      ? `Opened Terminal (${executor.label} can't be seeded with an intro — ask it directly)`
+      : "Opened Terminal",
+  }
+}

@@ -1,0 +1,29 @@
+# Alacrán
+
+> Alacrán is the agentic business environment: a local-first desktop app that brings company knowledge, departments, and AI agents into one workspace, so you can run business workflows, review the results, and keep control of your records. Free for macOS and Linux.
+
+Every page below has a Markdown version at the same address with `.md` added. All of it in one file: https://www.alacran.app/llms-full.txt
+
+## Start here
+
+- [Get started with Alacrán | Your first company workspace](https://www.alacran.app/getting-started.md): Install Alacrán, connect your AI, describe your business, and review your first draft. A practical guide to setting up your company workspace.
+- [How to use Alacrán | A daily AI business workflow](https://www.alacran.app/how-to-use.md): Use Alacrán for briefings, department updates, AI tasks, approvals, and company knowledge. Build a repeatable routine around your business.
+- [Alacrán documentation | Memory, agents, and business workflows](https://www.alacran.app/docs.md): Understand Alacrán’s local files, company workspaces, agent execution, review controls, skills, integrations, and operational diagnostics.
+
+## Reference
+
+- [Alacrán starter packs | Start with the work you do](https://www.alacran.app/templates.md): Choose a starting workspace for general business operations, engineering, marketing, sales, support, people operations, or leadership.
+- [Alacrán integrations | Connect your AI and business tools](https://www.alacran.app/integrations.md): Connect supported AI agents and business services to Alacrán. Understand workflow support, setup requirements, permissions, and provider costs.
+- [Alacrán use cases | Practical AI workflows for your business](https://www.alacran.app/use-cases.md): Explore business workflows for briefings, follow-ups, content, financial reviews, multiple ventures, and software work with Alacrán.
+
+## Departments
+
+- [Alacrán Customers | Prospect research and sales follow-ups](https://www.alacran.app/departments/customers.md): Organize prospects, pipeline stages, and customer context. Use AI to prepare research and follow-up drafts you can review in Alacrán.
+- [Alacrán Finances | A clearer view of business income and costs](https://www.alacran.app/departments/finances.md): Review recorded revenue, expenses, cash, and runway in Alacrán. Import financial information and investigate potential savings with AI assistance.
+- [Alacrán Content & Social | From business ideas to reviewed drafts](https://www.alacran.app/departments/content.md): Prepare content in your business voice, review drafts, track publication status, and inspect supported social metrics in Alacrán.
+- [Alacrán Messages | Catch up and prepare customer replies](https://www.alacran.app/departments/messages.md): Bring supported inboxes and chats into a catch-up workflow. Find inquiries needing attention and review AI-prepared replies in Alacrán.
+
+## Legal
+
+- [Alacrán Privacy Policy | Local files and connected services](https://www.alacran.app/privacy.md): Read how Alacrán handles local company files, AI providers, connected services, credentials, updates, and your choices.
+- [Alacrán Terms of Service](https://www.alacran.app/terms.md): Read the terms for using Alacrán, including AI output review, connected services, ownership of your files, and responsibilities.

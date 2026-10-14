@@ -1,0 +1,38 @@
+name: Feature request
+description: Suggest something Alacrán should be able to do
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The most useful feature requests describe a **problem**, not a
+        solution. Several features in this project turned out to be 80%
+        already built once the actual need was understood — so tell us what
+        you're trying to get done and let the design follow.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to accomplish?
+      description: The situation and why the current behavior gets in the way.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What did you have in mind?
+      description: Optional. A rough sketch is fine.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What are you doing instead today?
+      description: Workarounds, other tools, or doing it by hand.
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Would you be up for building it?
+      options:
+        - label: I'd be willing to open a PR for this

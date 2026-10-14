@@ -1,0 +1,96 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { CopyButton } from "@/components/copy-button"
+import { getCompanyOwnership } from "@/lib/ownership/ownership-actions"
+import { getAiExecutor } from "@/lib/ai-executors"
+import type { CompanyOwnership } from "@/lib/ownership/get-company-ownership-impl"
+
+export const OWNERSHIP_BLURB =
+  "See exactly where this company's data lives, and what, if anything, leaves this computer."
+
+export function CompanyOwnershipSheet({ agentId, companyName }: { agentId: string; companyName: string }) {
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [ownership, setOwnership] = useState<CompanyOwnership | null>(null)
+
+  async function handleOpen() {
+    setPending(true)
+    try {
+      const result = await getCompanyOwnership(agentId)
+      setOwnership(result)
+    } catch {
+      setOwnership({ ok: false, message: "Couldn't read ownership info." })
+    } finally {
+      setPending(false)
+      setOpen(true)
+    }
+  }
+
+  return (
+    <>
+      <Button size="sm" variant="outline" className="w-full" onClick={handleOpen} disabled={pending}>
+        {pending ? "Loading…" : "View ownership"}
+      </Button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent className="w-full sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>What {companyName} uses, and where it lives</SheetTitle>
+            <SheetDescription>What stays on this machine, and what leaves it.</SheetDescription>
+          </SheetHeader>
+          {ownership && !ownership.ok && (
+            <p className="px-4 text-sm text-destructive">Unable to load: {ownership.message}</p>
+          )}
+          {ownership && ownership.ok && (
+            <div className="space-y-4 px-4 pb-4 text-sm">
+              <section className="space-y-1.5">
+                <h3 className="font-medium">Data location</h3>
+                <div className="flex items-center gap-2 rounded-md border border-border bg-background/60 px-3 py-2">
+                  <code className="min-w-0 flex-1 overflow-x-auto font-mono text-xs whitespace-pre">
+                    {ownership.rootPath}
+                  </code>
+                  <CopyButton text={ownership.rootPath} />
+                </div>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="font-medium">AI provider</h3>
+                <p className="text-muted-foreground">{getAiExecutor(ownership.aiExecutorId).label}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="font-medium">Integrations</h3>
+                <p className="text-muted-foreground">{ownership.integrationStatus}</p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="font-medium">Backup destination</h3>
+                <p className="text-muted-foreground">
+                  {ownership.remoteUrl ?? "Not backed up yet. Nothing leaves this machine."}
+                </p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="font-medium">One thing a backup does not carry</h3>
+                <p className="text-muted-foreground">
+                  If you&apos;ve given this company its own Stripe, Slack, Notion, or other account instead of
+                  the one set up on this computer, that choice stays on this computer only — it is not part of
+                  the backup. If you ever restore this company on another computer, it will quietly go back to
+                  using whatever account is set up there, which could mean charging the wrong Stripe account or
+                  posting to the wrong Slack. After restoring somewhere else, check &quot;What this company
+                  uses&quot; and give it its own accounts again if it still needs them.
+                </p>
+              </section>
+              <section className="space-y-1.5">
+                <h3 className="font-medium">External network access</h3>
+                <ul className="list-disc space-y-1 pl-4 text-muted-foreground">
+                  {ownership.networkAccess.map((entry) => (
+                    <li key={entry}>{entry}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
+  )
+}

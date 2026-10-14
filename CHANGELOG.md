@@ -1,0 +1,13970 @@
+# Changelog
+
+Alacrán was built one small, versioned slice at a time — brainstorm, written
+design spec, written plan, implement, verify against the real thing, merge.
+This file is the chronological record of every slice that shipped, kept in the
+detail it was written in rather than compressed into release notes.
+
+The matching design specs and implementation plans are working documents,
+written before the code for each slice and kept locally — this file is
+the durable public record of what they led to.
+
+Versions here are internal slice numbers, not semantic-version releases; see
+[the releases page](https://github.com/kwakuoseikwakye/alacran-releases/releases)
+for downloadable builds.
+
+**The `### What's new for you` block is the only part of this file the app
+shows a user.** The What's New window in the app reads this file, and since
+v163 it extracts nothing but that block — an entry without one does not appear
+in the app at all, which is the right answer for a CI fix or an internal
+refactor. Write it in plain language for someone non-technical: no file paths,
+no CSS, no test counts, nothing about `tsc`. The heading declares the category
+and the release the slice shipped in, `### What's new for you (feature,
+v0.57.0)`; the category is one of `feature`, `improvement` or `fix` and is
+never guessed from the prose. The version is optional — omit it while the
+release number is still unknown and add it when `package.json` is bumped,
+rather than putting a number in that no user has ever installed. First line is
+the headline, one sentence; bullets under it are the detail; the block ends at
+the first line that is neither, so it can sit at the top of a section with the
+engineering write-up below it and take none of it along.
+
+## v1: read-only status board
+
+The first slice: an agent tree view (`/`) plus a three-column activity board
+(`/activity`), with one adapter per agent reading state those tools already
+produced on disk. Introduced the symlink-safe file-detail Server Action
+(`lib/get-activity-detail.ts`) that every later read path reuses.
+
+Known limitations at the time, all since resolved: no way to trigger runs from
+the UI (v2 added the first), no skill-editing or versioning UI (v4/v6/v7), and
+best-effort parsing of a cycle-log format that shipped empty by default.
+
+## v2: triggering email-pipeline-agent
+
+The Email Pipeline Agent card has a "Run now" button that runs `bin/poll.sh`
+immediately instead of waiting for the next scheduled 5-minute launchd tick.
+It's safe to click at any time — `poll.sh` has its own lock file
+(`state/poll.lock`) that makes an overlapping run (whether triggered here or
+by the scheduler) a fast no-op rather than a double-run. The button is
+disabled and shows "Running…" whenever that lock is held, regardless of what
+started the run.
+
+This is still the only write action in the app — `ai-company-starter-main`
+and `plh-ops` remain read-only in this dashboard.
+
+## v3: skill/command browser
+
+`/skills` lists every skill and command across all three agents — read-only,
+same as v1's status board. It's built from the same YAML frontmatter
+(`name`/`description`) every skill/command file already has; nothing new to
+maintain in those files. Clicking an entry reuses the same file-detail Server
+Action the activity board uses (`lib/get-activity-detail.ts`), since every
+skill/command lives inside an agent root that function already trusts.
+
+Still no editing — this is a viewer, not yet an editor. Adding a 4th agent
+means writing one adapter under `lib/skills/` matching the pattern of the
+existing three, registering it in `SKILL_ADAPTERS` in `lib/config.ts`, same
+as adding an activity adapter.
+
+## v4: skill/command editor
+
+Any entry in `/skills` can now be edited in place. Clicking "Edit" swaps
+the read-only view for a textarea; "Save" shows a real diff of what will
+change before anything is written. Confirming writes the file and creates
+a git commit scoped to exactly that one file in its own agent's repo — no
+custom version history to maintain, `git log`/`git diff`/`git revert`
+already work on every edit. Writes are restricted to files that are
+current, real skill/command entries — not just anything living inside an
+agent's directory.
+
+## v5: triggering ai-company-starter-main's /verify
+
+The "AI Company Starter" card has a "Run verify" button that runs
+`scripts/verify.py --json` directly and shows the PASS/WARN/FAIL/INFO
+results, with a details view for the full row list. Unlike the
+`email-pipeline-agent` trigger (v2) or skill editing (v4), this needs no
+confirmation dialog — `verify.py` only reads files, per its own docstring,
+so there's nothing to confirm before running it.
+
+The other 9 slash-commands under `ai-company-starter-main/.claude/commands/`
+(`/decision`, `/retro`, `/define-company`, etc.) are NOT triggerable from
+this dashboard yet — they're interactive, multi-turn dialogues that need a
+real Claude Code session, a separate and larger mechanism than running one
+existing script.
+
+## v6: skill edit history
+
+Every skill/command's detail panel in `/skills` now has a "History" toggle
+alongside "Content". It lists every commit that has touched that file and
+shows a diff for whichever one you click — reusing the same `DiffView`
+v4's editor uses, just fed two revisions of the file pulled via `git show`
+instead of a live draft. Nothing here writes anything; it's a viewer on
+top of the git history v4's edits were already creating.
+
+## v7: revert to a past skill revision
+
+The History view's per-commit diff now has a "Revert to this version"
+button. It reuses the exact same save action v4's editor uses — reverting
+is just "write this historical content as the new current content, then
+commit" — so there's no new write surface to reason about, only a new way
+to supply what gets saved. The confirmation dialog diffs the file's
+current content against the version you're reverting to (not the
+in-commit diff shown above it, since edits since that commit could make
+the two differ). Switching between Content and History always reflects
+the latest saved/reverted content now, fixing a staleness gap that existed
+since v6 added a second view to switch to.
+
+## v8: run ai-company-starter-main commands
+
+Five of `ai-company-starter-main`'s ten slash-commands (`digest`, `decision`,
+`retro`, `define-company`, `handoff`) can now be run directly from the
+`/skills` detail panel's new "Run" tab, instead of only from an interactive
+`claude` session. Filling in the command's fields and clicking Run spawns a
+real, headless `claude -p` session — but with Bash entirely disallowed and
+its file-editing access scoped, via a path-scoped `Edit(<pattern>)` permission
+rule (not a bare `Write` grant, which Claude Code silently never enforces by
+path — only `Edit` rules are path-matched), to only that command's expected
+output location, under `--permission-mode default` (not `acceptEdits`, which
+would auto-approve edits anywhere in the working directory regardless of that
+scoping). This exact mechanism was corrected mid-implementation after a real
+live test showed an earlier `--add-dir`-based design didn't actually confine
+writes at all. The spawned agent can read/grep/glob the repository and write
+to that one place; it cannot run shell commands, cannot `git commit`, and
+cannot call `gh`. Once the run finishes, the dashboard diffs what changed and
+shows the same confirm-with-diff dialog used everywhere else in this app
+before committing anything, through the same single-file-scoped commit path
+v4 already established — the agent never commits on its own, and the commit
+wrapper independently re-validates (via realpath'd path comparison, not the
+raw path) that the file being committed is actually within the requesting
+command's declared output location.
+
+Three commands were deliberately left out: `create-epic` (files real GitHub
+issues with no further confirmation gate once started — a different design
+problem than this slice solves), and `ingest-context` / `office` (hard
+interactive gates and a persistent background server, respectively, neither
+of which fits "run once, produce a file, exit").
+
+## v9: trigger plh-ops's daily-team-log on demand
+
+The `plh-ops` card now has a "Run now" button that triggers the exact same
+routine already registered as a nightly (22:00) scheduled task on this
+machine — reading `~/.claude/daily-team-log/config.json`, summarizing the
+operator's own local Claude Code session history, and committing the
+result to the shared `plh-ops` repo. Unlike every other write action in
+this app, this one **pushes to a remote shared with the analysis
+agent and teammates** — the confirm dialog discloses this plainly before
+the run starts, since there's no local diff to preview beforehand (the
+routine's job is to summarize and commit autonomously, same as its
+existing nightly schedule). The spawned session still follows this
+project's least-privilege discipline: no bare `Write` grant (only
+`Edit(<output_repo>/**)`), `--permission-mode default` (not `acceptEdits`),
+and Bash scoped to the exact five command shapes the routine needs — never
+a blanket grant, even though this routine's prompt has no user-field
+interpolation at all (there's nothing here for a user to inject into).
+
+If the machine hasn't run the daily-team-log skill's one-time setup yet,
+the button reports that plainly instead of attempting a run.
+
+This slice was deliberately verified with unit tests only, never a real
+end-to-end run — the routine reads real private session history and
+pushes to a real shared repo, so the real "Run now" button is left for
+the user to click themselves, at their own discretion, whenever they're
+ready.
+
+## v10: live log streaming for in-flight runs
+
+The email-pipeline poll button, every company-command's "Run" tab, and the
+plh-ops daily-team-log button all now show the growing tail of their log
+file while running, instead of only a static "Running…" label — polled
+the same ~3s interval each already used for its running/idle status, not
+a separate mechanism. No websockets or SSE; it's the same file each
+feature already writes, just read a little more of it on every tick. The
+email-pipeline button also gained a real client-side poll loop for the
+first time (`getPollStatus`), including a mount-time resume so loading the
+dashboard while the automated 5-minute cron job happens to be running
+doesn't leave the button stuck — previously it only reflected the page's
+initial server-render snapshot plus its own button-press state, which
+meant it never actually tracked `poll.sh`'s real running state after the
+button was clicked or across a page reload.
+
+## v13: user-typed commit messages for skill edits
+
+Both the skill editor's save dialog and the history view's revert dialog
+now have an optional "Commit message" field. Left blank, the exact same
+auto-generated message (`Edit <fileName> via AI-Native control panel`)
+v4 always used is still what gets committed — nothing changes unless you
+type something. Typed, that text becomes the commit message instead,
+trimmed of surrounding whitespace and capped at 500 characters (rejected
+outright above that, not truncated, matching every other length-validated
+field in this app).
+
+## v11: register a second AI company
+
+The dashboard's home page now has an "Add a company" form: point it at
+an existing local directory (one you've already created or cloned
+yourself, e.g. via GitHub's "Use this template" on `ai-company-starter-main`
++ `gh repo clone`) that has both a `.git` and a `.claude` directory, and
+it becomes a fully managed agent — showing up in the agent tree, the
+activity board (via a generic recent-commits feed), and the skills
+browser with full editing/history/revert, with zero per-company code.
+"Remove" only un-registers it; the actual directory and its git history
+are never touched.
+
+Deliberately NOT generalized to registered companies: `ai-company-starter-main`'s
+"Run verify" button (v5) and its 5 runnable slash-commands (v8) — both
+are hand-authored for this one company's actual script and actual
+commands, and a genuinely different second company (different concept,
+per the original idea behind this whole project) wouldn't have the same
+`scripts/verify.py` or the same commands. Building a truly dynamic
+version of either is a bigger, separate effort, not attempted here. Also
+not attempted: creating a new company FROM the template automatically —
+`ai-company-starter-main`'s local clone has no git remote configured, so
+there's no way to discover which GitHub template to clone from the
+filesystem alone; you create the new company's directory yourself, the
+dashboard only registers it.
+
+## v12: agent avatars (display-only)
+
+Every agent card (the 3 built-in agents and any v11-registered company)
+now has an inline "Save avatar" field: paste an image URL
+(`https://`/`http://`/`data:image/...`) and it's shown as a small round
+image on the card. This slice is deliberately display-only — it does not
+call Higgsfield's image-generation MCP, because that tool isn't reachable
+in any session yet (added to local config via `claude mcp add`, but a
+running session has to be started after that to see it). The registry
+this slice ships (`agentId -> imageUrl`, a simple key-value set,
+upserting on a second save) is exactly what a future "Generate with
+Higgsfield" button would feed into — no changes needed here once that
+tool is reachable, just a new button that calls it and passes the result
+to the same `setAvatar` action.
+
+## v14: design system, nav, and Agents page (piece 1 of 3)
+
+The first of 3 slices for a full visual pass, brainstormed with real
+screenshots of the app as it looked before this work (not assumed from
+memory) and a browser-based mockup comparison. Dark, Linear/Vercel-
+inspired palette (one indigo accent, three semantic status colors),
+replacing the plain grayscale shadcn defaults — dark-only, not a
+light/dark toggle, since this is a personal, single-operator tool kept
+open for hours, not a multi-tenant product. A missing `Input` primitive
+(this project only ever added `Textarea`) replaces every single-line
+field that was awkwardly using a multi-line textarea. The "Add a
+company" form — previously always-open with the same visual weight as a
+real agent card — is now a collapsed disclosure. Nav gained an
+active-route indicator and icons. No functional changes anywhere; every
+existing action (register/remove a company, save/remove an avatar, edit
+a skill, revert to a past revision) works exactly as before, just
+restyled.
+
+Two more slices follow: v15 restructures the Activity page (currently a
+single 12,000+px column with no grouping), and v16 covers the Skills
+page, remaining dialogs, and a full responsive audit at phone/tablet/
+desktop widths.
+
+## v15: Activity page restructure (piece 2 of 3)
+
+Second of 3 slices for the visual/UX pass (v14 shipped the design system,
+nav, and Agents page). The `/activity` page previously rendered a fixed
+3-column status board where each column listed every matching activity
+with no grouping or limit — a real screenshot before this work measured
+the page at 12,000+px tall. Replaced with two sections: a "Needs
+Attention" list pinned at the top (always expanded, so nothing that needs
+action is ever buried in scroll), and a day-grouped history feed below it
+— today's activities expanded by default, every earlier day collapsed
+into a one-line, click-to-expand header. No data-fetching or adapter
+changes; this is a client-side grouping and rendering change only, using
+a new pure `groupActivitiesByDay` helper (unit tested for the
+midnight-straddling edge case) and a new `ActivityDayGroup` component.
+
+One more slice follows: v16 covers the Skills page, remaining dialogs,
+and a full responsive audit at phone/tablet/desktop widths.
+
+## v16: Skills page, remaining dialogs, and responsive audit (piece 3 of 3)
+
+The third and final slice of the visual/UX pass (v14: design system, nav,
+Agents page; v15: Activity page restructure). Unlike v14/v15, this
+slice's scope came from a direct audit — reading every remaining
+dialog-bearing component and taking real Playwright screenshots at
+375/768/1280px — rather than a mockup, and fixed exactly what that audit
+found: detail Sheets (Activity, Skills, and the verify-results dialog)
+were cramped and overlapping the page below the 640px breakpoint, because
+each consumer's `sm:max-w-xl` only overrides the desktop width, leaving
+the Sheet primitive's own mobile-width default (`w-3/4`) in place; the
+diff view's added/removed text colors relied on a `dark:` Tailwind
+variant that never activates in this dark-only app, so it's now using
+this project's own `--success`/`--destructive` design tokens instead;
+the company-command runner's single-line fields still used a `rows={1}`
+`Textarea` (the one place v14's `Input`-primitive sweep missed); and the
+Skills page's kind badges ("skill"/"command") had no color coding, unlike
+the Agents page. Every other page and component, at every tested width,
+was already correct — this slice touches only what the audit confirmed
+needed it.
+
+This completes the 3-slice visual/UX pass.
+
+## v17: create a company from the template
+
+"Add a company" (v11) could only register a directory that already had
+`.git` and `.claude` — there was no way to create one. This slice adds
+that: when the typed path doesn't exist yet (but its parent directory
+does), the form now offers to scaffold it from `ai-company-starter-main`'s
+generic parts before registering it, instead of immediately erroring.
+
+`ai-company-starter-main` is simultaneously this template's origin *and*
+a real, working company (real ontology data, real session history, real
+decisions) — so this isn't a blind directory copy. An explicit manifest
+(`lib/company-template-manifest.ts`) lists exactly which ~40 paths are
+genuinely generic (`.claude/*`, `docs/templates`, `scripts/verify.py`,
+empty `definitions/`/`notes/` structure, etc.) and copies only those;
+everything else (the real ontology, real decisions, the teaching
+`examples/` demo, an unrelated leftover project's `.kiro/specs/`, the
+optional `tools/office/` visualization plugin) is never touched. A fresh
+`HANDOFF.md` is generated rather than copying the real 172-line session
+history. The new directory gets its own `git init` and initial commit,
+then registers through the existing, unmodified `registerCompanyImpl`.
+
+This is piece 1 of a larger roadmap toward a guided onboarding
+experience built on `ai-company-starter-main` as the core: guided
+company-context setup (v18), integrations setup (v19), and guided
+command/workflow discovery (v20) are named but not yet designed.
+
+## v18: guided company-context setup
+
+`/define-company` (the Claude Code command that fills in a new company's
+`definitions/ontology/company.yaml`) is fully conversational — it assumes
+the user is comfortable chatting with an AI agent in a terminal. This
+dashboard's audience is non-technical people setting up their AI
+company, so v18 adds a plain step-by-step wizard instead: business
+domain, stakeholders, value flow, and biggest bottleneck, one screen at a
+time, with a plain-language review before saving — no YAML, no terminal.
+
+`/define-company` does two different things: asking those four
+structured questions, and using the AI agent's own reasoning to *invent*
+industry-specific `customer`/`org`/`product` domain entities. This slice
+only does the first — the entity sections are copied unmodified from the
+company's own `docs/templates/ontology-starter.yaml` (the same skeleton
+v17 already scaffolds into every new company). Real AI-assisted entity
+generation is deferred until v19 (connect an agent) exists, so it can use
+an already-connected agent instead of this dashboard building its own
+AI-calling infrastructure just for this.
+
+The "Set up your company" button appears on any `command-set`-kind
+agent's card that doesn't have a `company.yaml` yet — which in practice
+today means a company just created via v17, since `ai-company-starter-main`
+already has one. This is the first slice to add a real npm dependency
+(`yaml`, for correct escaping of free-text answers into generated YAML)
+rather than reusing what was already installed.
+
+This is piece 2 of the roadmap toward a guided onboarding
+experience (v17: create a company; v19: connect an agent/integrations;
+v20: guided command/workflow discovery — still just named, not designed).
+
+## v19: integrations status
+
+The roadmap named v19 "integrations setup (email, calendar, etc.)" —
+investigating what that actually means today found that `email-pipeline-agent`'s
+email connection isn't something this dashboard could meaningfully
+"set up": it's the `gog` CLI tool, authenticated once at the OS level
+outside any repo, with only a plain, non-secret `account` field in
+`config.json` visible in-repo. New connections already have a
+purpose-built, carefully security-conscious process
+(`ai-company-starter-main`'s `api-connect` Claude Code skill — never lets
+a secret touch chat, hands off via `.env`-paste only, the AI never logs
+in or clicks "agree"/"create" buttons). Reimplementing any part of that
+inside this web app — OAuth flows, credential storage — would duplicate
+an already-solved mechanism and turn the dashboard into a
+credential-holding system in its own right.
+
+It also turned out a freshly-scaffolded company (v17) has nothing that
+would *use* a connected integration yet — `email-pipeline-agent`'s email
+pipeline is bespoke to one organization, not part of the generic template. So
+there's no real "connect email for your new company" scenario to build
+today; that becomes real once v20 (workflow/plugin install) exists.
+
+Given that, v19 ships what's actually real: a read-only "Integrations"
+line on every agent card. `email-pipeline-agent` shows its already-configured
+email account; every other agent honestly shows "none configured yet."
+No OAuth, no credential storage, no new dependency — one file read, one
+hardcoded check for the one real example that exists.
+
+This is piece 3 of the roadmap. v20 (guided command/workflow discovery,
+possibly formalizing a "plugin" concept) is next, still just named, not
+designed.
+
+## v20: install the daily-team-log workflow
+
+The roadmap named v20 "guided command/workflow discovery, possibly
+formalizing the plugin concept." Investigating what's real found that
+command/workflow discovery has been fully solved since v11 (the Skills
+page already scans any registered company's `.claude/skills/` and
+`.claude/commands/`) — nothing needed there. "Formalize the plugin
+concept" as a general, reusable packaging format has no existing
+mechanism to build on anywhere in this ecosystem — every real workflow
+(`email-pipeline-agent`'s 6-role email pipeline, `plh-ops`'s
+`skill-installer`) is bespoke to its own repo. Designing a real
+plugin-packaging format from scratch would be a bigger effort than
+v17-v19 combined, for a population of examples this project deliberately
+keeps at one.
+
+So v20 hand-builds a one-off installer for exactly one workflow instead:
+`plh-ops`'s `daily-team-log` skill, chosen because it's the one workflow
+in this whole ecosystem that was already designed to be portable — its
+own `config.example.json` and self-bootstrapping `Setup.md` already
+auto-detect who's using it and which projects to include, entirely
+locally (no OAuth, no external API). Its extractor script, `gather.py`,
+is copied verbatim (confirmed zero org- or person-specific content); its
+`SKILL.md` and `Setup.md` are regenerated rather than copied, since the
+originals hardcode both the upstream owner/repo to clone and a fixed set
+of per-teammate report folders — copying them as-is would have pointed a
+new company's daily reports at the upstream shared repo instead of its
+own. The
+"Install daily-team-log" button appears on any `command-set`-kind
+agent's card that doesn't have it yet; the actual bootstrap (who you
+are, which projects, scheduling) still happens inside Claude Code
+afterward, the same division of labor v19 established for `api-connect`.
+
+**Known, disclosed limitation:** `gather.py`'s config lives at a fixed,
+global, per-machine path (`~/.claude/daily-team-log/config.json`), not
+scoped per-installation — documented in the installed `SKILL.md` itself.
+Only one company's `daily-team-log` can be actively bootstrapped per
+machine at a time in this version; fixing that would mean redesigning
+`gather.py`'s config storage, exactly the "generalize the format" work
+this slice deliberately didn't do.
+
+This is piece 4 of the roadmap.
+
+## v21: AI-generated ontology entities via generalized define-company
+
+After v20, two roadmap threads remained unscoped: a fresh company having
+a real integration to connect, and AI-generated `customer`/`org`/
+`product` ontology entities via a connected agent (deferred since v18).
+Investigating the first found no small next step — a fresh company
+already has `api-connect` available as a skill, but no generic workflow
+in `ai-company-starter-main`'s template consumes an external
+integration, and building one would mean designing something like
+`email-pipeline-agent`'s bespoke email pipeline as a generic feature — the
+same scale of "no format to build on" problem v20 declined to solve.
+
+The second turned out to already be mostly built. v8 (long before v18's
+wizard existed) already shipped a fully-specified `define-company`
+command in `lib/company-commands/registry.ts` that spawns a headless
+`claude -p` session and uses the AI's own reasoning to write
+`definitions/ontology/company.yaml`'s customer/org/product domains —
+exactly the entity-generation half of `/define-company` that v18
+explicitly deferred as needing "a connected agent." It just didn't work
+for any company besides `ai-company-starter-main`, hardcoded in four
+places. v21 generalized all three backend files
+(`run-company-command-impl.ts` and the status/log-tail/result/commit
+wrappers) to accept a target `agentId`, resolved via
+`getEffectiveAgents()` — the same security boundary
+(`resolveWithinAgentRoot`) already worked against any registered
+company, it just wasn't being asked to. Along the way, found and fixed
+a real, previously-invisible bug: the run-lock/run-result/log files were
+keyed only by command id in one shared directory, so a second company
+running `define-company` would have silently overwritten a first
+company's unconfirmed result. `COMPANY_COMMANDS_DATA_DIR` is now scoped
+per agent (`.data/company-runs/<agentId>/`).
+
+Scope stayed narrow on purpose: only `define-company` is generalized —
+`digest`/`decision`/`retro`/`handoff` still only run through the
+existing Skills-page "Run" tab, unchanged and still
+`ai-company-starter-main`-only. The one new entry point is a step added
+to v18's wizard: after the same 4 questions, "Save now" keeps v18's
+exact generic-entity behavior, and a new "Let AI draft tailored
+entities" option spawns `define-company` headlessly using the same
+answers (reformatted from the wizard's structured shape into the plain
+free-text fields `define-company` expects), polls, and shows the AI's
+diff for confirmation before committing — nothing is written until the
+user explicitly confirms, same as every other write path in this
+project.
+
+Per the user's explicit choice, live verification for this slice is
+unit-tests-only for the real spawn path (same precedent as v9) — every
+prior slice's live test was a near-instant, zero-cost local operation,
+and actually triggering `define-company` means a real, paid `claude -p`
+session with genuine reasoning time. The generalized plumbing and the
+wizard's new step are verified with fake spawn/exec functions and a
+live UI walkthrough up to confirming the run reports "Started"; the
+real button ships working, and a real end-to-end AI-generated diff is
+left for the user to trigger themselves whenever ready.
+
+This is piece 5 of the roadmap.
+
+## v22: check-inbox — a real, generic integration-consuming command
+
+After v21, one roadmap thread remained: a fresh company having a real
+integration worth connecting. Investigating turned up two things prior
+slices had missed. First, `harness-engineering` — named as "core"
+alongside `ai-company-starter-main` since v17 but never examined — is a
+clone of a third-party public repo (a methodology thesis on writing
+agent-facing docs), not functional infrastructure; `ai-company-starter-main`
+doesn't reference it. Second, and the real finding: `email-pipeline-agent`'s
+"email connection," long assumed bespoke, is actually a call into `gog`
+(gogcli) — a real, already-installed, general-purpose Google API CLI
+(Gmail, Calendar, Drive, and more) with its own OAuth account store. And
+`api-connect` (already scaffolded into every company) is a fully generic
+"connect anything" skill that already handles OAuth for exactly this kind
+of tool.
+
+So "connect an integration" was never the missing piece — it's already
+solved and already generic. The actual gap was narrower: no command in
+the template *does* anything with a connected integration. v22 adds
+exactly one: `check-inbox`, a strictly read-only "summarize my unread
+mail" command that runs `gog -a auto gmail search`/`get` and writes a
+metadata-only summary to `notes/company/email-checks/`. It never sends,
+labels, archives, or reads message bodies.
+
+Two pieces of machinery made this fit the existing system. The headless
+command-runner (v8, generalized in v21) spawned every command with
+`--disallowedTools "Bash"`; `check-inbox` is the first that needs a real
+CLI, so `CompanyCommand` gained an optional `bashPatterns` field — a
+command that declares patterns gets narrowly-scoped `Bash(gog ...)`
+access (exactly the two read-only gog calls, nothing else) instead of a
+blanket disallow, reusing the same scoped-Bash approach v9's
+`daily-team-log` trigger already used. The 5 existing commands omit the
+field and spawn byte-identically to before. And the Skills-page "Run"
+tab, gated to `ai-company-starter-main` only since v21, now opens to any
+`command-set` company — a natural completion of v21's generalization,
+running each command against the selected company's own repo. The
+`check-inbox.md` command file was added to the `ai-company-starter-main`
+template, so every new company inherits it through v17's existing
+whole-folder copy.
+
+**Known, disclosed limitation:** `gog`'s auth store is global
+per-machine and `check-inbox` uses `-a auto`, so only one company can
+meaningfully have its own connected Google account active for this
+command at a time — the same shape as v20's `daily-team-log`
+config-collision limitation, documented rather than fixed.
+
+This is piece 6 of the roadmap.
+
+## v23–v25: productize (Day 1 of the 4-day launch push)
+
+The project pivoted from a personal local tool to a downloadable product,
+planned as a 4-day push. Day 1 makes a fresh install a clean product
+while the developer's own machine keeps full daily use with zero setup,
+split into three slices:
+
+- **v23 — de-PLH the config.** The 3 example agents (`email-pipeline-agent`,
+  `ai-company-starter-main`, `plh-ops`) were hardcoded in `lib/config.ts`
+  at `~/AI-Native/*` paths. They now load via a testable
+  `buildBuiltins(exists)` (`lib/builtin-agents.ts`) **only if their
+  directories exist on disk**. On a developer machine they exist → all
+  three load with their full bespoke features (v2/v5/v9/v19/v20),
+  unchanged, zero setup. On a fresh install none exist → `AGENTS`/
+  `ADAPTERS`/`SKILL_ADAPTERS` are empty → the app starts clean. Their
+  bespoke features already gate on `agent.id`, so they simply go dormant
+  when absent — no deletion. Also: the install-daily-team-log button now
+  hides when its `plh-ops` source is absent (no broken action on a fresh
+  install), and the two cosmetic "ai-company-starter-main template"
+  strings are genericized to "company starter template".
+
+- **v24 — bundle the template.** Creating a company copied from
+  `~/AI-Native/ai-company-starter-main`, which doesn't exist on a user's
+  machine. The cleaned template (exactly v17's audited `TEMPLATE_MANIFEST`
+  allowlist) is now a committed in-repo snapshot at
+  `templates/company-starter/`, and the create action sources from there —
+  deterministic, offline, no `~/AI-Native` dependency. The impl was
+  already parameterized on the source path, so this was a one-line
+  repoint plus the bundled files (scrub-verified free of
+  organization-specific data).
+
+- **v25 — first-run onboarding + dependency detection.** An empty agent
+  list now renders an `OnboardingWelcome` screen (instead of a bare grid)
+  with a `checkDependencies()` server action that detects Claude Code CLI
+  + `gog` on `PATH` and shows detect-and-guide install steps for whatever
+  is missing, plus the "create your first company" CTA. Matches the
+  locked launch decision to target CLI-comfortable early adopters with
+  guided (not automated) dependency install.
+
+These are Day 1 of the launch push.
+
+## v28: Connect page — detect/guide/re-check for your tools
+
+Onboarding *promised* "connect your AI agent / Gmail," but connecting still
+required dropping to a terminal blind — the one genuine in-app break on the
+buy→launch→create-company→**connect Google**→run-`check-inbox` golden path.
+Investigation confirmed connecting is inherently an interactive CLI/OAuth
+flow (`gog auth setup` opens a browser for consent; Claude login happens in
+the `claude` CLI), so the app can't own it — but it *can* honestly detect
+state. `gog auth status -j` returns clean JSON (`account.email`,
+`credentials_exists`, **no tokens**), and `which claude` detects the agent.
+
+v28 ships a dedicated, machine-global **`/connect`** page (both `gog` auth and
+Claude login are per-machine, not per-company) using the same
+**detect → guide → re-check** pattern as v25's dependency check:
+
+- **`lib/connect/connect-status-impl.ts`** — `getConnectStatusImpl(execFn?)`
+  (injectable `ExecFileFn`) probes both tools and returns a typed
+  `ConnectStatus` with per-tool `connected` + `detail` + copy-able connect
+  `command` + install link. Each probe is independently try/caught; the JSON
+  parse is guarded. **Read-only** (`which`, `gog auth status -j`) — no writes,
+  no OAuth, no credential storage, and **no `claude` spawn** (honors the
+  standing no-auto-spawn safety rule; login is proven by running a command,
+  not detected).
+- **`lib/connect/connect-actions.ts`** — zero-extra-param `"use server"`
+  `getConnectStatus()` (seam stays in the impl), same shape as
+  `checkDependencies`.
+- **`app/connect/page.tsx`** (`force-dynamic`) fetches initial status
+  server-side (no loading flash) and renders **`components/connect-panel.tsx`**
+  (client): two tool cards with a Connected/Not-connected badge, guidance
+  steps, a code block + Copy button for the connect command, and a global
+  **Re-check** button that re-invokes the action. Nav gains a **Connect**
+  link; onboarding links to it.
+
+5 new unit tests (both-connected / claude-missing / gog-missing / no-account /
+malformed-JSON) with a fake `ExecFileFn`; 277 tests green; `tsc`/`build`
+clean; live-verified both the connected path (real account email shown) and
+the not-connected guidance UI.
+
+## v29 (2026-07-28): one design language — Alacrán across app + landing
+
+The landing site and the dashboard had drifted into two different products:
+the site was the Alacrán brand (warm near-black, red scorpion, Geist, glass
+nav, light-by-default), the app was the generic indigo `#5865f2` shadcn dark
+theme from v14. Asked which way to unify, the user chose **brand wins** — the
+app moves onto the Alacrán palette and the two share one language.
+
+**Design tokens.** `app/globals.css` keeps every v14 token *name* and changes
+only the values (venom-night surfaces `#0c0708`/`#16100f`, bone text, one red
+accent `#ff2e43`, warm `#241a19` borders) — so per the standing rule **no
+`components/ui/*` primitive was edited**; the whole re-skin cascades. Two
+judgement calls: `--destructive` became a flatter `#ff4d4d` so an error never
+reads as a call to action next to a red brand accent, and `AgentCard`'s kind
+badges moved off blue/violet/teal onto warm ember/amber/teal.
+
+**Type.** Nunito (display) + Nunito Sans (body) replace Geist on both halves.
+The app loads them through `next/font/google`, which downloads and self-hosts
+at build time — **verified: 10 `.woff2` in `.next/static/media`, no
+`fonts.gstatic.com` reference in the server output**, so the packaged `.app`
+still renders correctly with no network. Nunito is rounder and optically wider
+than Geist, so headings went to weight 800 with `-0.02em` tracking instead of
+700/`-0.035em`.
+
+**Real product marks.** `scripts/generate-brand-icons.mjs` extracts official
+path data from the Simple Icons dataset (CC0) into two committed artefacts —
+`lib/brand-icons.ts` (React `<BrandIcon>`) and `landing/brands.js` (an SVG
+`<symbol>` sprite). `simple-icons` is `--no-save`, build-time only: the shipped
+app has no runtime dependency and works offline. Marks are monochrome by
+default and take the vendor's colour only when it means something (a live
+connection, a hover, the hero orbit), so a wall of logos doesn't fight the
+single-accent palette. Each has an `onDark` variant because GitHub, Notion,
+Anthropic and Apple ship pure-black marks that would be invisible.
+**Slack and OpenAI are deliberately absent** — both vendors had their marks
+withdrawn from Simple Icons, and a redrawn trademark is worse than none; they
+are named in prose instead.
+
+**Interactive onboarding.** `OnboardingWelcome` went from a static checklist to
+a three-step flow (Install → Connect → Create) with a clickable step rail,
+per-step live detection, animated status chips, copy-able install/auth
+commands, "Skip for now" escapes, and a **`focus`/`visibilitychange`
+re-probe** so leaving to run `gog auth setup` in a terminal and coming back
+updates the flow without a manual click. It composes the existing
+`checkDependencies()` (installed?) and `getConnectStatus()` (signed in?)
+actions — no new server surface. `AddCompanyForm` gained an optional
+`prominent` prop so the final step gets a real CTA while the dashboard keeps
+its quiet ghost button.
+
+**Motion.** A small vocabulary in `globals.css` (`a-rise`, `a-pop`, `a-live`,
+`a-sweep`, `a-glow`, `a-float`, `a-glass`) driven by a `--d` custom property
+for staggered entrances, all disabled under `prefers-reduced-motion`.
+
+**Landing.** Now **dark by default** (the app has no light mode, so a
+light-by-default site was the single biggest mismatch); the toggle survives as
+an opt-in and now persists to `localStorage`, applied by a head-level script so
+there's no flash. New sections: a counter-rotating **orbit** of real product
+marks around the scorpion (marks counter-spin to stay upright), and an
+**"Inside the app"** panel built from the same tokens as the real dashboard —
+same glass nav pill, same card shapes, same kind-badge colours. The emoji
+favicon was replaced with the real mark (`landing/favicon.svg` + `app/icon.svg`,
+which also fixes a 404 the app was serving for `/favicon.ico`).
+
+**Four real bugs found and fixed during live verification, not review:**
+1. `.nav` used `position:fixed; left:50%; transform:translateX(-50%)` — a fixed
+   element at `left:50%` only gets **half the viewport** as available width, so
+   shrink-to-fit wrapped the CTA to two lines and, at `border-radius:999px`,
+   turned the whole bar into a lozenge. Fixed with `left:0; right:0;
+   margin-inline:auto; width:fit-content`.
+2. The orbit's satellite radius was a hard-coded `196px` while its container
+   shrank to `min(460px,84vw)` — on a 375px phone the marks sat at `-37..412`
+   and pushed the document to a 462px scroll width. Radii are now derived from
+   a `--size` custom property.
+3. The app nav's scrolling link row lacked `min-w-0`: a flex child defaults to
+   `min-width:auto` and refused to shrink, pushing "Connect" off-screen and
+   making the whole page scroll horizontally at 364px.
+4. `CardTitle` is a **grid** item inside `CardHeader`, so its automatic minimum
+   size meant `truncate` never engaged and the title overflowed its own card.
+   Fixed on the two consumers (`connect-panel`, `agent-card`), primitive
+   untouched.
+
+Verified: `tsc` clean, **277 tests green**, `eslint` 0 errors (2 pre-existing
+warnings in untouched test files), `npm run build` clean. Live-checked with
+real screenshots at 1280px and 375px across the dashboard, the Connect page
+(both the real connected account and, via a `HOME`-pointed-at-an-empty-dir dev
+server, the not-connected path), all three onboarding steps, and the landing
+site — plus a scripted overflow audit confirming **no horizontal scroll and
+zero escaping elements** at 364px on both halves.
+
+### v29a: the supplied scorpion artwork becomes the logo
+
+The user supplied `landing/scorpion.png` and asked for it as the logo, in red.
+Two things had to be solved before it could sit on a dark surface.
+
+**It isn't what its name says.** Despite the `.png` extension the file is a
+**JPEG, 840x916, RGB with no alpha** — the "transparency" is a checkerboard
+pattern flattened into the image. So the artwork had to be keyed out.
+
+**A luminance threshold would have punched holes in it**, because interior
+white highlights are exactly as bright as the background. Instead
+`scripts/generate-logo.py` labels every light region as a connected component
+and classifies it by the *checkerboard signature*: the background alternates
+239/255, so ~50% of its pixels are "dim" (<247), while an interior highlight is
+uniformly white. Measured on the real file the separation is clean — outer
+background 54% dim, the two regions enclosed by the pincer loops 55% and 50%,
+every genuine highlight between 4% and 11%. That gap is what the threshold
+splits, and it is why the enclosed loops come out transparent while the
+highlights survive. Edges are then feathered by luminance, since JPEG blurs
+background into outline over a pixel or two.
+
+Colour is a gradient map of luminance onto the brand's scorpion gradient. The
+darkest stop was lifted from `#8c0f1c` to `#a61426` after comparing renders at
+22/40/84px: the original floor made outlines vanish against the near-black
+surface and the 20px nav mark read as a blob. Lifting further (`#c01a2e`)
+flattened the segmentation detail at large sizes.
+
+Outputs are committed, so neither the build nor CI needs PIL: `landing/logo.png`
+and `components/alacran-logo.png` (600px, quantised to a 128-colour palette —
+192 KB → 33 KB) plus 128px favicons at `landing/favicon.png` and `app/icon.png`.
+
+Wiring: `AlacranMark` now renders the raster through `next/image` with a
+**static import** — the file lands in `.next/static/media`, which
+`scripts/package-macos.sh` already copies — and with **`unoptimized`**, because
+the packaged desktop build ships no `sharp` and running a 33 KB bundled PNG
+through the Image Optimization API would buy nothing. Verified: the rendered
+markup carries `data-nimg` with **zero `/_next/image` URLs**. All 7 landing
+pages dropped the inline `#alacran` SVG symbol for `<img src="logo.png">`
+(0 leftover references), and every mark is sized by width with `height:auto` —
+the art is 600x626, so the old fixed squares would have squashed it ~4%
+(measured after: rendered ratios 1.038/1.042 against a native 1.043).
+
+The Three.js hero emblem was replaced by the artwork, and the now-unreferenced
+`landing/vendor/three.min.js` (656 KB) and `landing/logo3d.js` were deleted —
+both recoverable from git history if you want the 3D version back.
+
+## v30: starter template expansion — 7 categorized packs + real landing copy
+
+Expanded the starter-pack system from 4 packs to 7, organized into
+categories (General / Engineering / Sales / Marketing / Support / HR &
+People / Leadership).
+`marketing-sales` was split into separate **Sales** (`/follow-up-lead`) and
+**Marketing** (`/draft-campaign`) packs — their ontology and commands moved
+over unchanged, just partitioned by domain (`customer` → Sales, `product` →
+Marketing). Two new packs were built fresh: **Customer support**
+(`customer.ticket` ontology, `/triage-ticket` + `/draft-response`) and **HR &
+People** (`org.candidate` ontology, `/screen-candidate` + `/draft-offer` —
+`/draft-offer` explicitly routes through `.claude/rules/hitl-gate.md` since
+compensation/contract terms are named triggers there). `lib/company-starter-packs.ts`
+gained a `category` field; the "Add a company" picker
+(`components/add-company-form.tsx`) now groups its radio-card grid under
+category headings instead of one flat list — no new page or filter UI, per
+the deliberate choice to keep this app's plain-dashboard aesthetic rather
+than build a full tabbed gallery. `landing/templates/index.html`,
+previously stale (it said "more starters soon" while packs already
+shipped), now names all 7 real packs with real descriptions, grouped the
+same way.
+
+## v31: scheduled-runs toggle for the email-pipeline agent
+
+The `email-pipeline-agent` card's launchd status line becomes an interactive
+on/off control for the job's recurring schedule
+(`com.example.email-pipeline`, `StartInterval` 300s). Before this slice the
+dashboard could start a poll (v2's "Run now") and observe it, but
+stopping the schedule needed `launchctl unload` in a terminal. New
+`lib/scheduled-job/`: `set-scheduled-job-impl.ts` shells `launchctl
+load`/`unload` against a hardcoded plist path
+(`PIPELINE_LAUNCHD_PLIST_PATH`, never a parameter — the Server Action is
+browser-reachable, and a caller-supplied path would let it unload
+arbitrary launchd jobs), then decides success by reading the job's
+actual state back via the existing `checkLaunchdJob()` and comparing it
+to what was requested, rather than trusting the command's exit code.
+
+That resulting-state check turned out to be necessary, not merely
+defensive. Live verification found one exit-code anomaly on macOS
+(observed on 26.2): a redundant `unload` on an already-unloaded plist
+prints a failure to stderr but exits 0, so `promisify(execFile)` —
+which only rejects on a non-zero exit — never throws. No case of
+`launchctl` exiting non-zero was ever observed; the impl still catches
+a thrown error as a defensive fallback for failure modes that weren't
+triggered in this test (a missing plist, a permissions error), not
+because any of them is known to exit non-zero. Reading the state back
+via `checkLaunchdJob()` is the one check that covers both without
+needing to know in advance which exit code a given failure produces.
+
+Unload also stops a run already in progress, not only future scheduled
+runs — measured directly (a disposable long-running LaunchAgent's PID
+was gone immediately after `launchctl unload`, confirmed again ~2s
+later), not assumed. The confirm dialog (required in both directions)
+discloses this before turning the schedule off. "Run now" (v2) stays
+independent of the schedule either way. The control renders only when
+`email-pipeline-agent` is a present existence-gated built-in AND its plist
+file exists, so a fresh install sees nothing. The displayed state always comes from a real
+`checkLaunchdJob()` read taken after the attempt, never an optimistic
+guess, so a failed unload can never render as "off". Like v2 (Run now),
+v9 (daily-team-log trigger) and v19 (integration status), this is
+deliberately bespoke to one agent id — the population is one; generalise
+if a second scheduled agent ever exists.
+
+Live verification used a disposable `com.alacran.testjob` (running
+`/usr/bin/true`), never the real scheduled job, per the standing safety
+rule: toggled through the real `launchctl` code path, confirmed via
+`launchctl list` before and after, then deleted. The real scheduled job's
+state was confirmed unchanged at three checkpoints during the session;
+the toggle's confirm dialog was opened and cancelled against the real
+card, never confirmed. The real button is left for the maintainer to
+click.
+
+### Follow-up: make "off" persistent (same day)
+
+The bare `unload`/`load` above turned out to have a gap: a bare `unload`
+writes no persistent disable override at all (measured, macOS 26.2 —
+the label stays absent from `launchctl print-disabled gui/$UID`), so
+"off" had nothing backing it across a logout or reboot. The maintainer
+decided Stop and Start now use `-w` in both directions: `unload -w`
+writes a `=> disabled` entry, and `load -w` clears it. That second half
+was the risk — only `launchctl enable` was previously proven to clear
+an override, not `load -w` — so it was measured before being written
+down: a disposable `com.alacran.wtest` job (macOS 26.2, build 25C56) was
+taken through `unload -w` → `load -w` twice, and both round-trips
+reliably cleared the override (`=> enabled`) and reloaded the job. A
+second, independent exit-code lie was found along the way and is now
+documented in the impl's doc comment: a bare `load` while the override
+is set silently no-ops (job never loads) while still exiting 0, stderr
+reporting `Load failed: 5: Input/output error` — the same
+exit-code-lies pattern the resulting-state check already existed to
+handle, on the opposite verb. This is a real trap for
+`email-pipeline-agent`'s own `install.sh`, which uses a bare `load`: running
+it while the toggle is off will appear to succeed and not actually start
+the job, since only the toggle's own Start path clears the override.
+That repo is out of scope to modify, so this is a documented caveat, not
+a fix. Verification repeated the same disposable-job discipline as
+above, plus confirming the disable override itself was cleared and
+`print-disabled` returned to baseline before cleanup.
+
+## v32 (2026-08-04): read-only triage intake — email and GitHub issues
+
+Two new commands, `triage-email` and `triage-issue`, each take one inbound
+item — an allowlisted colleague's email, or a GitHub issue reference — and
+write a single analysis file to `notes/company/triage/`: what's being
+asked, which repo it likely concerns, where in that repo it probably
+lives, how to tackle it, and any risks or injection-attempt concerns.
+Neither command touches anything else; both go through the existing
+diff-then-commit gate before any write is real.
+
+**Why this needed new machinery, not just a new command.** The headless
+session a company command spawns is given `cwd: agent.rootPath` and no
+`--add-dir` — it cannot read any repository except the company's own. That
+made a triage command that needs to look at *product* repos (to route "the
+signup flow is broken" to the right codebase) structurally impossible to
+build as a prompt alone. So this slice adds a **prefetch seam**
+(`lib/company-commands/prefetch/`) that runs control-panel-side, before any
+agent spawns: it reads the target message or issue, reads the candidate
+repos' branch/dirty-state/recent-commits, and can **refuse** — aborting the
+run with no spawn at all, so a doomed run costs no API call. `handoff`'s
+existing v8 git-log gathering was extracted into this same seam unchanged,
+byte-identical output, so refactoring it wasn't a second bug surface.
+
+**Config is fail-closed, on purpose.** Each command reads two YAML files
+from the company's own repo: `definitions/triage/senders.yaml` (who
+`triage-email` will act on) and `definitions/triage/repos.yaml` (which
+repos either command may route into, name/path/description each). A
+missing or empty file means "accept nothing," never "accept anything" —
+the run refuses and names the exact path to create. These files ship as
+`.example.yaml` in the template, specifically so a fresh company fails
+closed until an operator deliberately renames and fills them in. They are
+**not editable from the dashboard**: the skills editor only writes paths
+already in the discovered skill/command set
+(`lib/resolve-known-skill.ts`), and a `definitions/triage/*.yaml` data file
+is neither — so for now, filling them in is a terminal-only step.
+
+**Every `gog` call in this slice carries `--readonly` and
+`--gmail-no-send`**, on top of whatever the allowlist already restricts;
+fetching the email body additionally passes `--wrap-untrusted`. On top of
+that, the control panel emits **its own** fence around every byte of
+attacker-influenced text — `--- UNTRUSTED:<nonce> ---` … `--- END
+UNTRUSTED:<nonce> ---`, a fresh `crypto.randomUUID()`-derived nonce per run
+— and both prompts frame everything inside it as data describing a request,
+never as instructions. Two reasons it is the control panel's fence and not
+`gog`'s: the framing layer is only *independent* of `gog` (as the spec's
+three-layers claim requires) if it doesn't depend on a flag prefetch never
+verifies arrived; and the nonce is what stops the wrapped content closing
+its own region, since a fixed marker can be forged by a body containing
+`</external-untrusted>`. **The fence holds the sender's headers too**, not
+just the body: `From`, `Date` and `Subject` are as sender-controlled as the
+body. The message id the control panel resolved itself sits outside, and so
+does the repo-context block (branch, `git status`, recent commits, file
+list) — git-derived rather than attacker-influenced, but worth naming rather
+than folding into "everything but the fence." `triage-issue` mirrors this with `gh
+issue view` and nothing else — never `create`, `comment`, `edit`, or
+`close`. **Filing an issue is deliberately not this slice** — it's deferred
+to v33 behind a second, separate confirmation gate on top of the existing
+diff-and-commit one, the same reasoning that excluded `create-epic` back in
+v8: a public write with no local artifact to review first needs its own
+explicit human step, not just the local diff gate.
+
+**A bug caught mid-slice, not by accident:** the sender allowlist was
+originally checked only on the auto-search path (no `messageId` supplied);
+supplying a specific `messageId` directly skipped it entirely, so any
+sender's mail could be fetched and analysed by ID. Fixed by moving the
+check to run once, unconditionally, after the `messageId` is resolved —
+via a metadata-only `From` fetch, deliberately outside the untrusted body
+wrapper, so the trust decision is never made by reading the content it's
+meant to gate. **Named for what it is, not what it sounds like:** the
+allowlist is a From-header filter, not sender authentication — nothing here
+checks SPF, DKIM or DMARC — and a header resolving to more than one address
+(`Evil <evil@attacker.com> owner@example.com`) is refused rather than resolved
+to whichever address happens to be on the list.
+
+**The design is sized for low volume**, on the order of a message a day
+from a handful of known senders. That is exactly what a manual,
+one-at-a-time triage command is for; it's also why the allowlist defaults
+to nobody rather than guessing.
+
+**The no-`Bash`, scoped-write confinement this relies on is specific to
+the Claude Code executor.** `lib/ai-executors.ts`'s `openai-codex` entry
+passes only `--sandbox workspace-write` and `aider` passes only
+`--yes-always --no-auto-commits` — neither reads `editScopePattern` or
+`bashPatterns` at all. Run either of these two commands through a company
+configured for Codex or Aider, and the guarantees above do not hold: this
+app does not set, and cannot verify, either executor's own sandbox. Stated
+plainly in both commands' `.md` files, not just here.
+
+## v34 (2026-08-05): ownership dashboard — what leaves this machine, per company
+
+Every real company (a `command-set` agent) now has a "View ownership"
+button on its card, opening a Sheet with five things: where its data lives
+(the local root path, copyable), which AI provider runs its commands,
+what's connected (the existing integration-status line), whether it's
+backed up (the existing GitHub remote check), and a synthesized "external
+network access" summary tying the previous three together.
+
+**Named v34, not v33** — v33 is the still-unshipped "file as GitHub issue"
+follow-up named in v32's writeup; this slice is unrelated to it and takes
+the next free number instead of colliding with that reservation.
+
+**Nothing new was measured or tracked — this slice only surfaces signals
+that were already real.** `getCompanyRemoteImpl` (the backup button's own
+check), `getIntegrationStatus`, and `getAiExecutorIdForAgent` already
+existed and were already tested; the new `lib/ownership/` module composes
+them into one `CompanyOwnership` object and adds one pure function,
+`summarizeNetworkAccess`, that derives the network-access summary from the
+other three rather than tracking anything independently.
+
+**The one place this is deliberately less certain than the rest: Aider.**
+Claude Code and OpenAI Codex are both a real call to a cloud API under the
+user's own account, so their line says so. Aider's model backend (cloud or
+local) is the user's own Aider config, invisible to this app — so its line
+says exactly that, rather than guessing. Overclaiming there would make the
+dashboard less trustworthy than saying nothing.
+
+Scoped to `command-set` agents only, same as the existing backup button and
+AI-executor picker — `email-pipeline-agent` and `plh-ops` don't get the
+button, since they aren't company-shaped (no per-company backup remote or
+AI-executor choice in the same sense).
+
+This came out of `addition.md`'s "Ownership Dashboard" as the most
+immediately buildable piece of that longer-range vision (that file is a
+draft vision doc at the repo root, not yet relocated to a permanent
+`docs/` home): the marketplace, multi-AI-framework, and cloud-sync threads
+in it are unrelated to this slice and each need their own maintainer
+decision before any design work starts.
+
+## v35 (2026-08-06): terminal-visible company-command runs, with a pre-run gate
+
+A per-company setting — set in the company-setup wizard, editable
+afterward — makes every command for that company run in a real, visible
+macOS Terminal window instead of headless, with a gate before anything
+happens: the window shows the exact prompt and waits for Enter (or
+Ctrl-C to abort) before the agent runs at all. When the run finishes, it
+offers `claude -c` to continue that exact conversation interactively.
+Aimed at technical users who want to watch — or, if they take the
+offered continuation, drive — what's happening, without giving up the
+existing diff-then-commit gate for the constrained run itself. macOS
+only; the setting simply doesn't appear elsewhere.
+
+**The command's prompt, tool allowlist, and diff-then-commit gate are
+byte-identical to a headless run.** Everything before the spawn point —
+validation, prefetch, `buildPrompt`, `executor.buildArgs` — is untouched.
+Only where the process's stdio goes, and whether a human sees a gate
+first, changes.
+
+**The trickiest part of the design is who owns the run-lock's lifetime.**
+`open -a Terminal <script>` returns to Node the instant Terminal is told
+to open a window — long before the script, let alone the real run inside
+it, finishes. So visible mode does **not** attach the existing
+`child.on("exit", ...)` handler; the generated wrapper script's own
+`trap 'rm -f "$LOCKPATH"' EXIT` owns the lock instead, covering an abort
+at the pre-run gate and the window simply being closed. The trap is then
+explicitly disarmed (`trap - EXIT`) at the moment the script releases the
+lock itself after a normal run — see the final review's findings below.
+
+**Measured, not assumed, twice over, before shipping:**
+- **macOS's real `/bin/bash` is 3.2.57** (Apple ships the last GPLv2
+  release) — confirmed by direct invocation, not inferred from version
+  numbers. An early draft's script used `mapfile -d ''` to read the
+  NUL-delimited args file back; `mapfile` requires bash 4+ and doesn't
+  exist on the actual target shell (`mapfile: command not found`,
+  confirmed). Replaced with a `while IFS= read -r -d ""` loop, verified in
+  session to round-trip a NUL-delimited array correctly *including an
+  empty-string element* under the real system bash — and re-verified via
+  a live run against a disposable `/tmp` company, where the generated
+  script executed correctly end-to-end up to the gate.
+- **A NUL byte in the prompt would have been a real argv-injection path
+  into the spawned `claude` process**, caught in review before merge, not
+  after: `spawnArgs.join("\0")` used NUL as the args-file delimiter but
+  never checked the payload was NUL-free. A NUL inside the prompt would
+  silently split it into extra argv entries when the script's read loop
+  parsed it back — e.g. injecting `--dangerously-skip-permissions`. The
+  headless path already rejects this (Node's own `spawn()` throws
+  `ERR_INVALID_ARG_VALUE` on a NUL in argv, confirmed directly); the
+  visible path was silently accepting it instead, on exactly the path
+  `triage-email`/`triage-issue`'s unsanitized email/issue body text
+  reaches. Fixed with a one-line guard that refuses the run the same way
+  the headless path already does, before anything is written to disk.
+- **The script's `cd` had no failure guard**, also caught in review: a
+  bare `cd "$CWD"` that fails (the company directory renamed, deleted, or
+  on an unmounted volume between the click and the window opening) would
+  have let the run proceed in whatever directory Terminal happened to
+  start in — running the command against the wrong repo. Now
+  `cd "$CWD" || exit 1`, with the trap still releasing the lock on the way
+  out.
+- **The EXIT trap stayed armed after the script's own explicit release**,
+  caught in the final whole-branch review. After the constrained run
+  finishes the script does `rm -f "$LOCKPATH"` (correctly releasing the
+  lock it owns) and then waits at the take-over gate — with the trap still
+  live. Only `exec` discards a trap, so the *safe* exit from that gate was
+  the one that takes over the window; closing it or pressing Ctrl-C fired
+  the trap a second time and deleted whatever lock file was at that path —
+  by then plausibly a *later* run's, since the app correctly allows a new
+  run the moment the lock is released. `lib/file-lock.ts` has no staleness
+  check of any kind (no PID liveness, no TTL, no sweep), so the mirror-image
+  failure — a leaked lock — wedges that company's commands until someone
+  deletes the file by hand; both directions are now covered by disarming
+  with `trap - EXIT` at the exact point ownership ends.
+
+**A live end-to-end check surfaced one more real, if minor, finding:**
+the pre-run gate's `cat -v` (rendering control characters visibly instead
+of letting the terminal execute them, specifically so injected ANSI
+sequences in attacker-influenced prompt text can't hide or rewrite what
+the gate displays) also renders ordinary UTF-8 multi-byte characters —
+em-dashes, in the actual prompt text checked during live verification —
+as ugly-but-harmless escape sequences (`M-^@M-^T`) rather than the real
+character. Not a security defect — `cat -v`'s whole job is exactly this
+kind of visibility — but a real readability cost on non-ASCII prompt
+text, left as a known, disclosed limitation rather than fixed in this
+slice.
+
+**Also fixed in passing:** `lib/ai-executors.ts` was passing
+`--permission-mode default`, an undocumented legacy alias — confirmed
+accepted by the real CLI, but not among the six documented mode values
+(`acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`).
+Pinned to the real value, `"manual"`. `lib/daily-team-log/trigger-daily-team-log-impl.ts`
+has the identical hardcoded string in a separate spawn path — left
+untouched, disclosed not fixed, same shape as other cross-cutting
+findings this project records rather than opportunistically patches.
+
+## v36 (2026-08-06): fix the macOS app icon not showing after install
+
+A packaging-only bugfix, not a feature slice — found via a user report
+("when i install the app the icon does not show"), diagnosed with
+`superpowers:systematic-debugging` rather than the usual brainstorm-spec-
+plan flow, and shipped as a patch version (v0.5.1) rather than the minor
+bumps used for feature slices.
+
+**Root cause, confirmed by direct inspection, not guessed:**
+`scripts/package-macos.sh` never generated a `.icns` file and the
+`Info.plist` it writes had no `CFBundleIconFile` key at all — checked
+both the shipped `Info.plist` and the whole repo for any `.icns` file
+before writing a line of fix. Every single install got macOS's generic
+fallback icon, deterministically — this was never intermittent or
+environment-specific.
+
+**The fix, and what was measured before writing it:** the brand mark
+(`components/alacran-logo.png`) is 600×626, not square, and this
+project's own convention is that it must never be squashed into a
+square. Before touching the packaging script, `sips -p`'s padding
+behavior was tested directly — confirmed (via a raw pixel read, not
+assumed) that it pads onto a square canvas with genuine alpha
+transparency, not a solid fill. The script now pads the mark once onto
+a square, transparent master, generates all ten sizes `iconutil` expects
+in a `.iconset`, packs it into `AppIcon.icns`, and adds
+`CFBundleIconFile` to `Info.plist`. Verified visually, not just
+structurally: a real Quick Look thumbnail of the generated `.icns`
+confirmed the correct scorpion mark renders, centered and unsquashed.
+
+## v37 (2026-08-06): tidy the licence and branding of the bundled company-starter template
+
+A cleanup slice, not a feature — triggered by a direct request to review
+`templates/company-starter/`, since it's the real bundled source
+`create-company-from-template.ts` copies into every new company.
+
+**What it found:** the bundled template still carried the licence text and
+the branding of the program it was imported from. Changed:
+
+- **License**: replaced with real MIT (matching this repo's own
+  `LICENSE`), plus a clarifying note that it covers only the template
+  scaffolding, not a company's own filled-in data.
+- **Branding**: removed the originating program's framing from
+  `README.md`, `CLAUDE.md`, and ~20 other docs; renamed the template to
+  `company-starter` everywhere (titles, directory trees, footers).
+- **Deleted program-specific files** with no place in a software
+  template: `exercises/`, five docs that were pure event logistics
+  (participant guide, day flow, feedback collection, context-gathering
+  checklist, a beginner-guide landing page), and 4 feedback GitHub issue
+  templates.
+
+**Also found and fixed in the same review:**
+
+- **Japanese content translated to English** in `scripts/cycle/`, a CI
+  sanitize-gate pattern (a redundant katakana duplicate of an already-
+  English brand term), and a stale Japanese heading reference in this
+  repo's own `lib/company-commands/registry.ts` (pointed at a heading
+  that had already been translated to English in an earlier slice — the
+  reference just never got updated). Verified clean against the
+  pre-existing `scripts/jp-audit.py`.
+- **The `/office` command and its test file removed.** `office.md` and
+  `tests/test_office.py` both reference `tools/office/office.py`, a
+  third-party "pixel-agents" visualization tool — but `git log --all`
+  confirms `tools/office/` has never existed anywhere in this repo's
+  history. It was never deleted; it was simply never bundled, even
+  though the command doc and 401 lines of tests for it were. Because
+  both `.claude/commands` and `tests` are whole-folder entries in the
+  copy manifest, every company created through Alacrán inherited a
+  `/office` command that always fails and a test file that fails to
+  even collect (`ModuleNotFoundError: No module named 'office'`) —
+  confirmed as the root cause of a pytest collection failure hit while
+  verifying an earlier slice.
+- **The `piro`/`piro-run` skills removed.** Both were built specifically
+  around Amazon/AWS's real "Kiro" product — generating files in Kiro's
+  proprietary spec format, and described themselves in terms of that
+  product. Alacrán is not affiliated with AWS, so both were removed
+  rather than kept, since neither skill is load-bearing for most users.
+
+`lib/company-template-manifest.ts` and `lib/company-starter-packs.ts`
+updated so newly-created companies stop copying any of the deleted
+paths. The one remaining `templates/company-starter` pytest failure
+(`PATHREF-01`, dangling references to `examples/harukaze-ec/`) was
+confirmed pre-existing and unrelated, via `git stash` against the
+pre-edit baseline reproducing the exact same failure.
+
+## v38 (2026-08-06): "Open in Terminal" — the direct answer to "I defined my company, now what?"
+
+Triggered by real user feedback after using a fresh install: after finishing
+the company-setup wizard, there was no path to actually building anything —
+the Skills page's Run tab can only run/edit commands the app already knows
+about (`lib/resolve-known-skill.ts` requires write targets to already be a
+discovered skill), so it structurally cannot help someone create a brand-new
+skill. The user asked for exactly one thing: a button that opens a real,
+interactive AI-executor session in the company's own directory, so they can
+just ask it to build what they need — no terminal-typing, no `cd` first.
+
+Reused v35's exact "open a real Terminal window" mechanism
+(`spawnFn("open", ["-a", "Terminal", scriptPath], ...)`) but stripped down to
+the minimum: no prompt, no `--allowedTools` scoping, no run-lock, no
+diff-and-commit gate. `buildInteractiveTerminalScript` (added alongside
+`buildVisibleRunScript`, sharing its `shQuote` helper) just `cd`s into the
+company root and `exec`s whichever AI executor is configured for it
+(`resolveAiExecutorForAgent` — same multi-executor support the Run tab
+already uses). This is deliberately not a scoped/automated action; it's the
+same thing as the user `cd`-ing there and running the executor by hand, just
+without needing to find the path or remember the command. New "Open in
+Terminal" button on every `command-set` agent's card, gated to macOS like
+v35's visible-run option.
+
+Also investigated a second report from the same feedback — a company named
+"PLH Triage" appearing on a freshly-installed second laptop. Traced
+`lib/data-dir.ts`: the real per-user registry
+(`~/Library/Application Support/Alacrán/companies.json`) is empty by design
+on any machine that hasn't registered a company yet — confirmed directly.
+The dev-mode registry (`.data/companies.json`, gitignored) is the one that
+had "PLH Triage" in it. No code path in `scripts/package-macos.sh` ever
+copies `.data/` into a packaged build. Conclusion: not a product bug — it's
+what happens when a whole project checkout (not just a downloaded release)
+travels between machines, since a raw folder copy doesn't honor
+`.gitignore`. No fix shipped; the existing "Remove" button on any registered
+company's card already handles it.
+
+## v39 (2026-08-07): the company guide — a plain-language walkthrough of every card action
+
+Closes the loop v38 opened: after finishing the company-setup wizard, a user
+still had no idea what any of the buttons on their new card actually did.
+Driven by explicit feedback that the app needs to work for both CLI-
+comfortable and non-technical users, so the copy bar was set higher than
+"label plus icon" — every non-obvious action, especially "Open in Terminal"
+(which hands off to a raw terminal window), needed plain-language framing
+that doesn't assume any CLI literacy.
+
+Skipped a spotlight-tour library (none installed, none needed for this
+audience) for something much smaller: a `Sheet` listing one line per action,
+opened once automatically the first time a company's info is filled in
+(tracked with a single `localStorage` flag, the same mechanism the landing
+site already uses for its theme toggle — no new registry, no Server Action),
+and reachable anytime after via a small "?" icon next to the kind badge.
+
+Each button's blurb is exported as a constant from that button's own file
+(`OPEN_TERMINAL_BLURB`, `BACKUP_BLURB`, etc.) — the copy lives next to the
+component it describes, not in a separate list that could drift. A new pure
+`lib/company-guide-steps.ts` (`buildGuideSteps`) takes the exact same show*
+flags `AgentCard` already computes and filters them down to the steps that
+actually apply, so the guide can never explain a button that isn't really on
+the card — confirmed live: the built-in "AI Company Starter" card's guide
+correctly omitted "Remove" (not a registered company) while including
+everything else. This kept the component itself untested, matching every
+other button component in this app (none have `.test.tsx` files — there's no
+React Testing Library/jsdom here, and adding one for a single component
+wasn't worth it), while the actual filtering logic is fully covered by plain
+vitest.
+
+Live-verified with Playwright against a real dev server (throwaway port
+4322, no repo state touched): the guide auto-opened on first load with the
+correct 7 steps for the real `ai-company-starter-main` built-in, stayed
+closed on a reload (flag persisted), and the persistent "?" reopened it
+identically on demand.
+
+## v40 (2026-08-08): sidebar nav — replaces the top nav on every page
+
+Swapped the top `Nav` bar (`components/nav.tsx`, deleted) for a collapsible
+glassmorphic sidebar (`components/sidebar.tsx`): 72px icon-only rail on
+desktop that expands to 228px on hover, a bottom tab strip on mobile
+(`<640px`), and three blurred ambient "orb" gradients drifting behind the
+content (`prefers-reduced-motion` turns the drift off, sidebar hover-expand
+included). Every page (`/`, `/activity`, `/connect`, `/skills`) moved from
+its own `<main className="mx-auto max-w-* ...">` wrapper to two shared
+layout classes owned by `app/layout.tsx`: `.dash-topbar` for the page
+header and `.dash-content` for the body, both new tokens in
+`app/globals.css` alongside the sidebar/orb rules — no existing
+`components/ui/*` primitive touched, per the standing design-token
+convention. All existing tests, `tsc`, and `next build` pass unchanged; no
+new dependency.
+
+## v41 (2026-08-08): connect and assign more than one Google account
+
+Real user gap: this app only ever exposed one Google account, machine-wide
+(`-a auto`, hardcoded into `check-inbox`'s prompt/bashPatterns and
+`triage-email`'s prefetch), documented as a known limitation since v20/v22.
+Investigation found the limitation was never in `gog` — the installed
+binary (v0.34.1) already supports multiple stored accounts end to end
+(`gog auth add`, `gog auth list`, `-a <email|alias|auto>` per call, verified
+directly against the real CLI) — the app just never exposed more than the
+one "auto" resolves to. No new integration needed.
+
+**Connect page**: `ToolStatus.google` gains `accounts: string[]` (a new
+`gog auth list -j` call, `lib/google-accounts.ts`) — every stored account
+shown as a chip, plus a typed-email → `gog auth add <email>` copyable
+command. Same "show the command, you run it, press Re-check" pattern
+already used for every other guidance flow on that page; the app never
+spawns interactive OAuth itself.
+
+**Per-company assignment**: `definitions/integrations/google.yaml`
+(`accounts: [...]`) in the company's own repo — company-owned data, same
+tier as `definitions/ontology/company.yaml`, not an app preference, so a
+manual/interactive run (v38's Open Terminal) reads the same source of
+truth a dashboard-triggered run does. Written only through a dedicated
+`saveGoogleAccountsImpl` (mirrors `save-company-ontology-impl.ts` exactly,
+including the single-file-scoped commit), never through the generic
+skill-editor gate. New `GoogleAccountsPicker` card control (checkboxes over
+`gog auth list`'s accounts) sits next to the existing `AiExecutorPicker`,
+gated the same way (`isCommandSet`), and got its own company-guide step.
+Missing/empty config resolves to `[]`, and every call site falls back to
+`["auto"]` — an unconfigured company is unaffected; the pre-existing
+`check-inbox` bashPatterns test (`"gog -a auto gmail search*"`) still
+passes unmodified.
+
+**check-inbox** (the agent runs `gog` itself): `CompanyCommand.bashPatterns`
+can now be a function of the resolved accounts — only this command uses the
+function form, every other command's static array is untouched —
+resolving to one `Bash(gog -a <account> ...)` pair per configured account.
+`buildPrompt` gained a 4th `accounts` param so the prompt itself loops
+per-account instead of a bare `-a auto`.
+
+**triage-email** (prefetch runs `gog` control-panel-side; the agent has no
+Bash access at all): the search step now loops the company's configured
+accounts in priority order, first allowlisted match wins — documented as a
+`ponytail:` simplification rather than a true cross-account recency sort,
+since that needs a confirmed `gog --plain` date format that isn't
+discoverable without a live query against a real inbox. The metadata/body
+fetch reuse whichever account the matching search row came from; an
+explicit message-id override (no search) tries each configured account in
+turn since a bare id doesn't say which mailbox it lives in.
+
+Both template commands (`check-inbox.md`, `triage-email.md`, a commit in
+`ai-company-starter-main` itself, same mechanism as v22) now mention
+`definitions/integrations/google.yaml` so a manual/interactive run matches
+dashboard-run behavior instead of staying hardcoded to `auto`.
+
+**Same-day fix, caught by automated security review:** account values are
+joined with a bare comma into Claude Code's `--allowedTools` string
+(`lib/ai-executors.ts`), so an account containing a comma or close-paren
+could have spliced in an unintended extra `Bash(...)` allowlist entry —
+real allowlist injection, not just bad data, since the picker UI only
+constrains normal use and `saveGoogleAccounts` is a public Server Action
+while the YAML file is deliberately hand-editable. Fixed at the one
+chokepoint every consumer already routes through: `readGoogleAccounts`
+now drops anything not shaped like an email (`isSafeAccountEmail`), and
+`saveGoogleAccountsImpl` additionally rejects it at write time with a
+clear error instead of a silent drop.
+
+Live-verified against a real dev server (throwaway port 4326) with this
+machine's real single connected account: the Connect page correctly showed
+it as a chip plus the add-another flow, and a command-set company's card
+correctly rendered the checkbox picker with that account. Deliberately
+did **not** click the checkbox live — doing so commits
+`definitions/integrations/google.yaml` into whichever real company repo
+rendered it, and the standing safety rule's sanctioned live-test targets
+don't cover an arbitrary write into a real company beyond the one
+dedicated `stock-note.md` case; every write path is instead covered by
+`vitest` against disposable temp directories. Full suite: 522 tests
+passing, `tsc` and `next build` clean.
+
+## v42 (2026-08-08): Google Antigravity CLI as a fourth pluggable AI executor
+
+"Choose which AI agent runs a company's commands" already existed since
+the multi-model slice that shipped alongside v41 — `lib/ai-executors.ts`'s
+`AI_EXECUTORS` registry, `AiExecutorPicker` on the agent card, and the
+per-agent `ai-executors.json` assignment already made Claude Code, OpenAI
+Codex CLI, and Aider pluggable. This slice added a fourth entry; no new
+mechanism was needed.
+
+Verification was the actual work. Every existing entry's flags were
+confirmed against the real installed CLI's `--help` output before
+shipping (the file's own header comment says so for Codex/Aider); web
+search for Antigravity CLI's flags turned up mostly unreliable results —
+one fetched page described its command as *"Anthropic's official CLI for
+Claude,"* a hallucination lifted from Claude Code's own description, not
+real Antigravity documentation. Declined to guess flags for a tool that
+spawns real subprocesses with edit/bash access against real company
+repos. The user had it installed locally (`agy`, v1.1.11); ran
+`agy --help` directly against the real binary instead, matching the
+project's existing bar. Did **not** trigger a live prompt/model call, per
+the standing rule against letting an automated pass complete a real
+headless spawn — flag *shapes* are confirmed real, end-to-end behavior
+against a live account is left for the user.
+
+`google-antigravity` uses `-p <prompt> --output-format text --mode
+accept-edits --dangerously-skip-permissions` — no per-pattern
+Edit()/Bash() allowlist exists on this CLI (unlike Claude Code), so it
+falls into the same coarser "auto-approve everything, no human present"
+bucket as Aider's `--yes-always`, verified as `--dangerously-skip-permissions`
+in the real `--help` output. `--mode accept-edits` is needed for it to
+actually write file changes rather than just propose a plan.
+
+Adding a 4th `AiExecutorId` broke `tsc` on the first try: `lib/ownership
+/summarize-network-access.ts`'s `Record<AiExecutorId, string>` (v34) is
+exhaustive by construction, so the compiler itself caught the missing
+case — added "Google (Antigravity CLI) — your own account," the same
+"always a real account-bound cloud call" bucket as Claude Code/Codex (not
+Aider's honest "depends," since Antigravity's backend isn't
+user-configurable the way Aider's is).
+
+New standing rule from this slice's stalled first pass (blocked
+mid-investigation on unverifiable flags, then unblocked once the user
+supplied a locally-installed binary to test against): every feature now
+gets documented — including blocked/in-progress ones, not just shipped
+ones — added to this file's "Established conventions" list.
+
+Full suite: 530 tests passing (84 files), `tsc` and `next build` clean.
+No live UI/Playwright pass — the change is confined to the executor
+registry + one exhaustive label map, both fully covered by the existing
+`vitest` pattern (byte-identical assertions on `buildArgs`' output, same
+as every other executor).
+
+**Same-day follow-up, from real usage:** the user picked Antigravity in
+the per-company executor picker, then went looking for it on the Connect
+page and couldn't find any install/connection status for it. Root cause:
+`lib/connect/connect-status-impl.ts`'s "AI agent" card was hardcoded to
+check only the `claude` binary — a gap that predates this slice entirely
+(Codex and Aider were never added to it either when they shipped). Fixed
+at the root rather than patching in a 4th special case: `claudeStatus`
+now loops `listAiExecutors()` and reports install status (`which
+<binaryName>`) for all four, exposed as a new `executors` field on the
+existing `claude` `ToolStatus` — the card's own `connected`/`detail`
+still mean exactly "is Claude Code, the default, installed" (zero change
+to that meaning or its existing test assertions), with the other three
+executors' status shown as a badge list underneath, same visual pattern
+as the Google card's account chips. No new brand icons needed — text
+badges only, sidestepping the fact that Simple Icons has no OpenAI mark
+(withdrawn) and no Aider mark at all. Live-verified on a throwaway dev
+server (port 3002): with `agy` genuinely installed and `codex`/`aider`
+genuinely not, the page correctly showed "Google Antigravity CLI —
+installed" in green and the other two as "not found." New test asserts
+the full `executors` array; all 10 pre-existing `connect-status-impl`
+tests pass unmodified since the default fake `which` handler already
+resolved every binary name. Full suite: 531 tests, `tsc`/`next build`
+clean.
+
+**Second same-day follow-up — the badge-list shape above was itself bad
+design**, called out directly: cramming all 4 executors under a card
+still titled "AI agent (Claude Code)" with a `Connected` badge that only
+ever meant Claude Code's own state was confusing regardless of how
+accurate the badges underneath were. Redesigned properly instead of
+patching the badge copy: each registered AI executor now gets its own
+full `ToolStatus` card — own title, own real `connected`/`detail`, own
+install guidance (reusing `installHint`/`installLink` from
+`lib/ai-executors.ts`, unused by any UI until now) — the same shape
+`google`/`github` already had, generalized rather than special-cased.
+`ConnectStatus.claude` is gone; `ConnectStatus.aiExecutors: ToolStatus[]`
+replaces it, produced by looping `listAiExecutors()`. Two more call sites
+that read `.claude` directly needed updating:
+`components/onboarding-welcome.tsx`'s two-step "Install/Connect" gate
+(deliberately still scoped to Claude Code only, the one built-in
+default — now looks it up via `aiExecutors.find(id === "claude-code")`
+instead of a dedicated field) and `connect-panel.tsx`'s brand-icon map
+(`TOOL_BRAND` is now `Partial`, with a generic `Bot` icon fallback for
+Codex/Aider, which have no real mark in the Simple Icons dataset — no
+icon was hand-drawn). `lib/ownership/get-company-ownership-impl.ts` only
+ever read `.google`, so it was unaffected. Rewrote the 4
+`connect-status-impl.test.ts` cases that referenced `status.claude`
+directly (a real behavior/shape change, not the kind of pure DI
+extraction this repo's "keep old tests passing unmodified" convention
+governs) plus one replacing the old badge-list assertion with a per-card
+one. Live-verified again on the same throwaway port: six independent
+cards now render (Claude Code, OpenAI Codex CLI, Aider, Google
+Antigravity CLI, Google, GitHub), each with its own accurate
+connected/not-connected state and, for the three not installed, real
+copyable install commands. Full suite: 531 tests, `tsc`/`next build`
+clean (one `.next` cache corruption hit mid-build from the concurrent
+dev-server run above — `rm -rf .next` and rebuilding was the fix, not a
+real regression).
+
+## v43 (2026-08-09): the Network tab — a graphical map of what every company is plugged into
+
+Direct user request: "a graphical representation... where users can see
+how their companies are connected or not connected. like how obsidian
+does it but this design must be different." Shipped a new `/network`
+page, reachable from a new sidebar item, rather than folding it into an
+existing page — it's a distinct view (all companies at once, cross-
+company), not a per-company detail like the Ownership Sheet.
+
+**Design decision: bipartite graph, not a force graph.** Obsidian's
+graph view is a physics simulation because the link structure is
+genuinely unknown ahead of time. Here it isn't — every edge (which AI
+executor a company runs on, whether it's backed up to GitHub, whether
+Google or Notion is connected) is already known, deterministic data.
+So instead of nodes bouncing around a canvas, companies sit in a fixed
+left column, services (AI executors in use, Google, GitHub, Notion) sit
+in a fixed right column, and curved SVG "cable" edges connect them —
+closer to a subway map or a Sankey diagram than Obsidian's graph, and
+inherently more responsive-friendly (a force-graph canvas has no good
+small-screen story; a two-column list does).
+
+**`lib/build-network-map.ts`** composes the per-company edge data from
+primitives that already existed for the Ownership Sheet and Connect
+page — `getConnectStatusImpl`, `getCompanyRemoteImpl`,
+`getAiExecutorIdForAgent`, `readGoogleAccounts`, and
+`connectStatus.notion.companies` — no new detection logic anywhere, only
+a different output shape (structured `{service, connected, detail}[]`
+per company instead of a formatted sentence) so the UI can pick an icon
+and a connected/not-connected state per service. Deliberately mirrors
+this app's existing "don't overclaim" discipline: edges are only ever
+produced for a service a company's *kind* actually supports elsewhere in
+the real UI (`AgentCard`'s show* flags) — a `pipeline` agent
+(`email-pipeline-agent`) gets only a Google/email edge (its one real
+integration), a `report-log` agent (`plh-ops`) gets none at all and
+renders as a genuinely isolated node, and only `command-set` companies
+get the full github/google/notion trio. Nothing here invents a
+capability the rest of the app doesn't have.
+
+**Rendering has no client-side layout pass.** Every node (company card
+or service node) is a fixed-height, flex-centered slot; row Y-positions
+are plain `index * PITCH + PITCH / 2` arithmetic computed at render
+time, and the connecting SVG's `viewBox` uses those same pixel units —
+no `ResizeObserver`, no `getBoundingClientRect`. `components/
+network-graph.tsx` is a small client component only for the hover-
+highlight interaction (dims unrelated companies/wires/services on
+hover); the diagram itself is otherwise plain server-rendered markup.
+Chip rows scroll horizontally instead of wrapping, which is what keeps
+the "every slot is a fixed height" assumption safe against long company
+names or many edges.
+
+**Color follows the app's own semantic palette, not per-vendor brand
+colors** — deliberately, to match `BrandIcon`'s existing documented house
+rule that vendor color is reserved for icons "at the moments that earn
+it," not a wash across the whole UI. Wires: ember for "runs on" (the AI-
+executor relationship, always true once a company exists, not a binary
+connect/disconnect state), success-green for a real, live connection,
+dashed muted-gray for "not connected yet." `TOOL_BRAND` (which AI
+executor gets which real product mark, with a generic `Bot` fallback for
+Codex/Aider, which have no mark in the Simple Icons dataset) was
+exported from `connect-panel.tsx` rather than redefined, so both pages
+agree.
+
+**Responsive by CSS breakpoint, not JS.** Below ~880px the wires and the
+services column disappear entirely; each company's own chip row — which
+renders on desktop too, as redundant non-color-dependent detail, each
+chip carrying a native `title` tooltip with the full status sentence —
+is the only thing left, and already carries the complete picture on a
+phone-width screen without a canvas diagram fighting the viewport.
+
+Zero new dependencies (plain SVG + CSS; no graph/diagram library added),
+zero write paths (the whole page is read-only composition of data the
+app already tracks), and zero edits to any existing page's own logic
+other than exporting one existing constant. New test:
+`lib/build-network-map.test.ts` (pipeline/report-log/command-set edge
+shapes, both disconnected-by-default and fully-connected). Live-verified
+on a throwaway dev server against the real registered companies on this
+machine — hover-dimming, the mobile stacked layout, and the desktop
+cable view all confirmed by screenshot; `/connect` and `/` (Agents)
+re-checked unaffected by the `TOOL_BRAND` export. Full suite: 561 tests,
+`tsc`/`next build` clean.
+
+## v44 (2026-08-09): Google Antigravity's real product mark on the Connect page
+
+The "Google Antigravity CLI" card on `/connect` (and anywhere else
+`TOOL_BRAND` feeds `BrandIcon`, including v43's Network tab) was showing
+Google's plain "G" as a stand-in — Simple Icons, this app's one sanctioned
+source of vendor marks, doesn't carry Antigravity (confirmed against the
+installed `simple-icons@16.28.0`, the latest published version: no
+`siAntigravity` or `siGoogleantigravity` export exists). Per this repo's
+"never hand-draw or approximate a vendor logo" rule, the fix wasn't to
+sketch one.
+
+Instead: fetched Antigravity's own real mark directly from
+`antigravity.google`'s own hosted assets (`/assets/image/antigravity-
+logo.png` and `/favicon.ico`, both confirmed identical) — a gradient arch
+silhouette — and traced it with `potrace` (installed via `brew`, a one-off
+local tool, same "build-time-only, never a runtime dependency" treatment
+already established for `simple-icons` itself) into a flat path on the same
+24×24 grid every other mark in `lib/brand-icons.ts` uses. The affine math to
+un-transform potrace's raw decipixel output back into that grid had a real
+bug caught before shipping: relative cubic-curve control points in SVG path
+data are each independently offset from the segment's start point, not
+chained to one another — an initial chained interpretation doubled the
+traced shape's bounding box, silently, with no error, only visible by
+rendering the result and comparing it against the source PNG.
+
+Because the real mark is a blue→green→orange gradient and `BrandIcon` only
+ever renders a flat single-color fill (deliberately, per its own house
+rule), `hex` is the dominant color sampled from the mark itself
+(area-weighted average across the opaque pixels) rather than an invented
+value — it lands on the same Google Blue (`#4285f4`) already used for every
+other Google mark in the file, keeping the family visually consistent
+rather than introducing an off-palette one-off.
+
+Shipped as a `MANUAL_MARKS` array in `scripts/generate-brand-icons.mjs`,
+alongside (not replacing) the existing Simple-Icons-derived `SPEC` list, so
+it's regenerated and won't be hand-edited out of sync, and documented
+inline with its provenance (source URL, fetch date) for the next person who
+wonders where a non-Simple-Icons path came from. `TOOL_BRAND` in
+`connect-panel.tsx` now maps `google-antigravity` to its own id instead of
+borrowing `google`. Live-verified by screenshot on `/connect`; full suite
+(561 tests), `tsc`, and `next build` all clean.
+
+## v45 (2026-08-09): macOS update installs but doesn't replace the running app
+
+Real user report: on a second Mac, the in-app update banner appeared, the
+new `.dmg` was downloaded and dragged over the old `.app` in
+`/Applications`, but the running app kept showing the old version instead
+of picking up the new build.
+
+Root cause, in `scripts/package-macos.sh`'s launcher template: before
+starting, it kills whatever's already bound to the app's port (so a prior
+un-quit instance doesn't linger and get silently reused) — but the actual
+implementation was one `kill` plus a fixed `sleep 0.5`, with no check that
+the port was actually free afterward. If the prior instance takes longer
+than 0.5s to release the port (measured live: a plain `SIGTERM` to a
+process that delays its exit — the same shape as a Node server finishing
+an in-flight request/keep-alive from a browser tab that's actively showing
+the update banner, exactly the moment a user is mid-update) — this run's
+own `node server.js &` loses the `EADDRINUSE` race in the background with
+no visible error, and the readiness check that follows happily gets a 200
+from the OLD server that never actually died. The user sees "installed the
+update" and a running app that's still the old one.
+
+This is the same bug class already root-caused and fixed once in this same
+file — the self-test step's post-run cleanup (`kill` + confirm-via-`lsof`
++ escalate to `-9`) — just never applied to the pre-launch clear that real
+users' installs actually depend on. Fixed by reusing that exact pattern
+here too, rather than inventing a new one.
+
+Verified live, not just read: reproduced the failure with a bare Python
+socket server that delays 1.5s after `SIGTERM` before exiting (simulating
+the slow-shutdown case) — the old fixed-`sleep 0.5` logic left the port
+occupied every time; the new confirm-and-escalate loop cleared it within
+two 0.25s iterations. Confirmed the fix is what actually ships by
+inspecting the real generated launcher inside a fresh build (`bash -n`
+clean, the escaped `\$` template variables came through as literal
+runtime references, not expanded at package time). Shipped as a patch
+version (v0.7.14), diagnosed via `superpowers:systematic-debugging`
+rather than the usual brainstorm-spec-plan flow, same as v36's icon fix —
+a packaging-script fix with no application-code change.
+
+## v46 (2026-08-10): "Get Started" — a real answer to "I built this, now what?"
+
+Real user question, grounded in a concrete case: a user creates a company,
+writes custom skills for it, defines the company — then doesn't know how
+to actually use any of it. Investigation found the gap was real, not just
+a missing affordance: the Skills page's Run tab only recognizes the 9
+fixed built-in commands (`digest`/`decision`/`retro`/`handoff`/
+`define-company`/`check-inbox`/`check-notion`/`triage-email`/
+`triage-issue`) by exact filename match (`skill-browser.tsx`) — a custom
+skill the user writes has **no run affordance in the dashboard at all**.
+The only real path was already v38's "Open in Terminal" (a real
+interactive AI session, `cd`'d into the company's own files, full
+unscoped access) — but it opens completely blank, so a user who doesn't
+already know what to ask has nowhere to start.
+
+Closed that specific gap rather than rebuilding the mechanism: a new "Get
+Started" button reuses v38's exact interactive-terminal machinery (same
+executor, same directory, same unscoped access), just seeds the session's
+first message instead of opening blank — "read this company's skills and
+ontology, then introduce yourself and tell me what you can help me do."
+
+The seeding mechanism is per-executor, verified against each CLI's real
+`--help` (not assumed, same bar as v42's Antigravity flags) — installed
+Codex and ran `uvx --from aider-chat aider --help` specifically to check,
+rather than guessing from memory:
+
+- **Claude Code** and **OpenAI Codex**: a bare positional prompt starts
+  the interactive session with that as the first turn (`claude --help`:
+  "starts an interactive session by default"; `codex --help`: "[PROMPT]
+  Optional user prompt to start the session").
+- **Google Antigravity CLI**: needs its own explicit flag, `-i` /
+  `--prompt-interactive` — "Run an initial prompt interactively and
+  continue the session." A bare positional isn't documented to do this.
+- **Aider**: genuinely has no equivalent. Its only message flag,
+  `--message`/`-m`, is documented to "process reply then exit (disables
+  chat mode)" — the opposite of staying open. `AiExecutor.
+  buildInteractiveIntroArgs` is deliberately `undefined` for aider rather
+  than shipping a guessed flag; `openInteractiveTerminalImpl` detects the
+  missing capability and falls back to the exact same blank session
+  "Open in Terminal" already gives, with a message that says so
+  ("...can't be seeded with an intro — ask it directly") instead of
+  silently pretending the intro happened.
+
+Machinery: `buildInteractiveTerminalScript` gained an optional
+`introArgs` param (empty/absent reproduces its exact prior output, byte
+for byte — the existing test asserting `exec "$BINARY"` needed zero
+changes); `openInteractiveTerminalImpl` gained a trailing optional
+`introPrompt` param, so every existing call site and test keeps working
+unchanged. A new `openInteractiveTerminalWithHelp` server action and
+`GetStartedButton` component mirror the existing `openInteractiveTerminal`
+/ `OpenTerminalButton` pair exactly. Same gating as "Open in Terminal"
+(`command-set` kind only), its own guide step in
+`lib/company-guide-steps.ts` right above "Open in Terminal", and its own
+script filename (`<agent>.get-started.sh` vs. `<agent>.open-terminal.sh`)
+so the two buttons can never race each other's script file.
+
+**Not live-tested end to end, deliberately.** Unlike a blank terminal
+session, a seeded prompt is documented to submit and get a real reply the
+instant the process starts — the same real-API-call risk this project's
+standing safety rule already treats headless `-p` spawns as off-limits
+for in an unattended pass, just via a different flag shape. Verified
+instead down to the exact spawned argv: 8 new unit tests assert the
+literal generated shell-script content (including the exact seeded
+prompt string, safely quoted) for each executor and the aider fallback
+path, and a live screenshot confirmed the button renders — gated
+correctly, right label, right position — without ever clicking it. Full
+suite: 569 tests, `tsc`/`next build` clean.
+
+## v47 (2026-08-10): "Get Started" stops re-reading everything it already knows
+
+Direct follow-up to v46, from the user watching it work: every click re-read
+every skill file and the ontology from scratch to re-derive the same
+introduction it gave last time, even when nothing had changed — real,
+wasted tokens on every repeat click.
+
+Fixed with a cache the app decides is stale **without any AI call**, not by
+asking the agent to judge freshness itself (asking it to "check if this
+looks current" still costs tokens re-deriving the answer on every click,
+defeating the point). `lib/company-summary.ts`: a plain `git log -1
+--format=%H -- <watched paths>` comparison against a `source_commit:`
+field stored in a new file, `docs/company-summary.md`'s own frontmatter —
+watched paths are `.claude/skills`, `.claude/commands`, and
+`definitions/ontology/company.yaml`, the same three things the seeded
+intro already asks the agent to read. Match → the seeded prompt just says
+"read `docs/company-summary.md` and introduce yourself, don't re-read the
+underlying files." Mismatch, or no summary yet, or git can't answer at
+all (no repo, no commits touching those paths yet — treated as "can't
+prove this is fresh," not as fresh) → the original full read-everything
+prompt, with one addition: write `docs/company-summary.md` back with
+today's date and the real current commit SHA, preserving its existing
+`created:` date on update rather than resetting it (same "if it exists,
+update in place" shape as `HANDOFF.md`'s own command). Portable core, not
+a `.claude/*` executor artifact, alongside `docs/decisions/` and
+`HANDOFF.md` — matches this project's own stated principle that `.claude/*`
+is one adapter on top of the real data, not the data itself.
+
+Lazy, not a watcher: the check only happens the next time someone clicks
+Get Started, matching every other piece of automation in this app — no
+daemon, nothing runs unless a button is clicked.
+
+`openInteractiveTerminalWithHelp` is now a real impl (`open-interactive-
+terminal-with-help-impl.ts`, previously just a hardcoded-constant pass-
+through) that looks up the agent a second time before calling the
+existing `openInteractiveTerminalImpl` — needed because the freshness
+check requires `agent.rootPath` before that call can even happen. A small,
+deliberate duplication rather than reshaping the already-tested inner
+function's contract. `lib/help-intro-prompt.ts` (v46's single fixed
+prompt) is retired; both prompt variants now live in `company-summary.ts`
+next to the logic that picks between them.
+
+Verified three ways: unit tests with mocked git/fs for both the freshness
+module and its new caller (11 new tests); a real, disposable `/tmp` git
+repo (this project's own sanctioned live-test pattern) exercising the
+actual module against real `git log` and real file writes through all
+three transitions — no summary → stale with the real SHA embedded; a
+matching summary written → fresh; a new commit → stale again with the new
+SHA — deleted after; and, same discipline as v46, no real AI spawn
+triggered (a seeded prompt still fires a real, costed reply the instant
+the process starts). Full suite: 580 tests, `tsc`/`next build` clean.
+
+## v48 (2026-08-10): the `gog` install link 404'd — real cause, real fix
+
+User report. `https://github.com/gogcli/gog` (the Connect page's Google
+guidance link, `lib/connect/connect-status-impl.ts`, and README's own
+prerequisites table) 404s — confirmed directly (`curl -sI`), not just
+taken on the report. Root cause, found by checking how `gog` is actually
+installed on a real machine rather than guessing a fixed URL: the project
+moved. `brew info gogcli` on this machine shows it was installed from
+`openclaw/tap` (`https://github.com/openclaw/homebrew-tap`, homepage
+`https://github.com/openclaw/gogcli`) — and, further, `gogcli` has since
+been accepted into `homebrew-core` itself (`brew info homebrew/core/
+gogcli`), with its own canonical site, `https://gogcli.sh` (verified live,
+200). That homepage is what the app now links to and what README points
+at — more official than either GitHub URL, and it simplifies the install
+command too: `brew install gogcli`, no tap needed anymore, replacing the
+stale `brew install gogcli/tap/gog` (which was never a valid tap path in
+the first place — `gogcli/tap` was never real; the actual tap was always
+`openclaw/tap`). Same fix in both places that had the stale link:
+`lib/connect/connect-status-impl.ts` (and its test's exact-match
+assertion) and `README.md`'s prerequisites table. Full suite: 580 tests,
+`tsc`/`next build` clean.
+
+## v49 (2026-08-10): move the skill Edit button out of the scroll
+
+User report: the Skills page's side drawer put "Edit" at the bottom of the
+full file dump in the Content tab — on a long skill file, that meant
+scrolling past the entire content just to find it. Moved it up into the
+tab row itself, alongside Content/History/Run, so it's always visible
+without scrolling: **Content | Edit | History | Run**.
+
+`SkillEditor`'s `editing` boolean was previously self-managed internal
+state with its own "Edit" button rendered at the bottom of the read-only
+view. Lifted to a controlled prop (`editing` + `onEditingChange`) driven
+by `SkillBrowser`'s existing `view` state, which just gained an `"edit"`
+value alongside `"content"`/`"history"`/`"run"` — no new state variable,
+reuses the tab machinery already there. Clicking "Edit" sets `view` to
+`"edit"`; Cancel or a successful Save call `onEditingChange(false)`,
+which sends `view` back to `"content"`.
+
+No component-level tests exist in this codebase for `.tsx` files (this
+project's test suite is `lib/*.ts` DI-seam logic only), so verified live
+instead — and hit a real tooling quirk doing it: the Playwright
+screenshot tool kept rendering a stale, pre-click frame even after
+clicking "Edit," while the accessibility snapshot correctly showed
+`button "Edit" [active]` and a live `textbox`. Didn't trust either
+alone — confirmed with a direct `document.querySelector` check in the
+real browser: the `Edit` button carries the active class and a real
+`<textarea>` with the file's actual content exists in the DOM. The
+screenshot tool's stale paint was the artifact, not the app. Full suite:
+580 tests (unchanged — this is a pure UI change), `tsc`/`next build`
+clean.
+
+## v50 (2026-08-10): drag-and-drop reorderable agent cards
+
+User request: let users rearrange the Agents-page cards by hand. Two
+decisions checked with the user before building — both took the
+recommended, simpler option: all cards are reorderable together (the 3
+gated built-ins mixed in with registered companies, not pinned separately),
+and the saved order lives in `localStorage` (per-browser, same mechanism
+v39's company-guide flag already uses), not written to `companies.json` —
+no server change, and it naturally covers the built-ins too since they
+aren't registry entries.
+
+New `components/reorderable-grid.tsx` — a client component wrapping the
+`.bento-grid` — replaces the bare array map in `app/page.tsx`. Each card
+becomes a plain `draggable` `div` using the native HTML5 drag-and-drop
+API (no library); dropping one onto another moves it in a local `order`
+array and writes the new id order to `localStorage`
+(`alacran-card-order`). On mount, a `useEffect` reconciles that saved
+order against the current agent list — known ids sort first in their
+saved positions, any id missing from the saved list (a newly registered
+company) falls in afterward in its original position — so a stale or
+empty saved order never drops a card. Server-rendered order (registration
+order) is the first paint; the saved order applies once the effect runs
+client-side, same one-render-later tradeoff v39's flag already accepted.
+
+Live-verified on a throwaway dev server: dragged the third card in front
+of the first, watched the DOM reorder immediately, confirmed the new
+order landed in `localStorage`, and confirmed it survived a full reload.
+Full suite: 580 tests (no server-side logic changed), `tsc`/`next build`
+clean.
+
+## v51 (2026-08-10): a Settings page — light/dark mode, update checks, resets
+
+User request: a Settings page with a manual light/dark switch, a manual
+update check, and "any other settings you recommend." New `/settings`
+route (`app/settings/page.tsx` → `components/settings-panel.tsx`), added
+to the sidebar nav.
+
+**Light/dark toggle.** The app's palette (`app/globals.css`) had been
+dark-only since v14/v29 — no light tokens existed at all. The marketing
+site (`landing/styles.css`) already shipped its own verified light
+"desert day" theme as an opt-in toggle, so rather than inventing new
+colors this ports those exact values into a `:root[data-theme="light"]`
+override block, keeping the existing bare `:root` as the (unchanged)
+dark default — one brand, mirrored, per the standing convention. Every
+`components/ui/*` primitive and every page-level class already consumed
+CSS custom properties with zero hardcoded colors (confirmed by grep
+before writing a line of CSS), so the override cascades everywhere with
+no primitive edits — live-verified by screenshotting Settings, Agents,
+and Connect in both themes. One non-token exception ported too: the
+ambient background orbs use `mix-blend-mode: screen`, tuned for a
+near-black backdrop, so a `:root[data-theme="light"] .surreal-orb`
+override swaps to `multiply` like the landing site already does for
+its own orbs, or they'd wash out to invisible on a light background.
+
+**Known, disclosed limitation carried over, not fixed:** `BrandIcon`'s
+`tone="brand"` colors (`lib/brand-icons.ts`'s `onDark` field, used in ~6
+spots — the Gmail-connected badge, Connect page tool cards, Network tab
+wires) are fixed hex values documented as "the vendor colour to use for a
+mark on a dark surface." They're generated by `scripts/generate-brand-
+icons.mjs` from the Simple Icons dataset and were left untouched rather
+than invasively adding a second light-tuned tint per icon and
+regenerating; live screenshots show them still legible on the light
+palette, just not repainted for it.
+
+A no-flash theme switch needs the classic pattern: a blocking inline
+`<script>` in `<head>` that sets `data-theme` from `localStorage` before
+first paint, plus `suppressHydrationWarning` on `<html>` since React
+would otherwise flag the attribute it doesn't itself render. Building
+this surfaced a real, reproducible React Server Components bug and, while
+chasing a second symptom that looked identical, a red herring that wasn't
+one at all — both worth recording:
+
+- **Real bug, confirmed by direct test:** a *Server* Component that
+  imports a plain (non-component) value — a string, a function — from a
+  `"use client"` file gets back `undefined` at render time, silently
+  (`localStorage.getItem(undefined)` shipped in real SSR output before
+  this was caught). Reproduced deterministically with a throwaway export
+  and `console.log` in `app/layout.tsx`. Fixed by moving `THEME_STORAGE_KEY`
+  into a plain module, `lib/theme.ts`, that both the server layout and the
+  client `ThemeToggle` import from — exactly the pattern this codebase's
+  own `lib/company-guide-steps.ts` already used (unknowingly) for its
+  blurb constants, now understood rather than just copied.
+- **Looked like the same bug, wasn't:** a *client* component
+  (`settings-panel.tsx`) importing a plain function from *another client*
+  component's file (`update-banner.tsx`) crashed with `__webpack_modules__
+  is not a function`. Before writing that down as the same root cause, it
+  was tested in isolation — a scratch client-to-client plain-value import
+  worked fine on a clean dev server. The real cause was dev-server
+  webpack/HMR cache corruption from several rapid edits in a row
+  (including one mid-edit syntax error); a full `rm -rf .next` + restart
+  made it disappear. `waitForServerThenReload` was still moved to
+  `lib/updates/wait-for-server-then-reload.ts` — not because the old
+  location was broken, but because two client components now share it —
+  and the comment says exactly that instead of the disproven claim.
+
+**Update checks.** New `lib/updates/check-for-updates-now-impl.ts`
+(DI-seamed, tested) backs a `checkForUpdatesNow()` server action: unlike
+`updateStatusImpl` (the passive banner — throttled to once/24h, silent
+about a version the user already dismissed, so it doesn't nag),
+a button the user pressed on purpose always hits the network and always
+reports the truth, dismissed or not, while still preserving an existing
+dismissal in storage so the banner's own behavior is unaffected. Gated
+the same way as the banner (`NODE_ENV === "production"`) — a friendly
+"only runs in a packaged build" message in dev rather than pretending to
+check. Found available, the Settings page reuses the existing
+`performLinuxUpdate`/`restartApp` actions directly for its own
+"Update & Restart" (Linux only, same Gatekeeper-quarantine reasoning as
+the banner), with a "Download it" link everywhere else.
+
+**Other settings recommended and added, kept small:** a "Local
+preferences" card resetting the two other one-time `localStorage` flags
+this app already writes with no other UI path to clear them —
+`alacran-card-order` (v50) and `alacran-guide-seen` (v39) — and an
+"About" card (version, MIT license note, GitHub/Changelog links). Left
+out deliberately: anything implying telemetry, an account, or a license
+gate, all explicitly false for this project; a system/auto theme option,
+since the marketing site's own toggle this mirrors is deliberately
+binary.
+
+Full suite: 588 tests (8 new, `check-for-updates-now-impl.test.ts`),
+`tsc`/`next build` clean. Live-verified on a throwaway dev server:
+manual check's disabled-in-dev message, both reset buttons' confirmation
+text, and the theme toggle across Settings, Agents, and Connect, dark
+and light, with no console errors or hydration warnings.
+
+**Real incident found while committing this slice's own work, disclosed
+rather than quietly fixed:** the previous session's v0.7.19 "Release"
+commit only staged `package.json`/`package-lock.json` — v50's actual
+code (`app/page.tsx`'s edits, `components/reorderable-grid.tsx`) was
+left as uncommitted working-tree changes and never made it into that
+commit at all. The local macOS rebuild didn't catch this (it builds
+from the working tree, which had the real files), but the Linux CI
+build does a clean checkout of the pushed tag — so the **published
+`v0.7.19` `Alacran.deb` shipped without the reorderable-cards feature
+entirely**, while the macOS `.dmg` uploaded alongside it had it. Fixed
+forward rather than rewriting the already-public `v0.7.19` tag: v50's
+missing files were committed on their own (accurately labeled) commit,
+folded into this slice's v0.7.20 release so both platforms carry the
+same code from here on.
+
+## v52 (2026-08-10): backup self-heals a stale GitHub remote instead of erroring
+
+User report: GitHub showed "Connected" and the backup button ran, but
+failed with git's raw "Please make sure you have the correct access
+rights and the repository exists." Root cause: `backupCompanyImpl`
+treated any configured `origin` as proof a real, reachable GitHub repo
+was behind it, and went straight to `git push`. A company whose `.git`
+came with an `origin` already set (by hand, or from wherever the
+directory was registered from) but whose GitHub repo was never actually
+created hits exactly that git error every time.
+
+Fixed at the root: a push failure matching that exact wording (or the
+HTTPS "not found" form) now clears the stale `origin` and falls through
+to the same `gh repo create --private --source --push` path a first-ever
+backup already took — one shared code path for "no remote" and "remote
+points nowhere," instead of a second special case. A push failure with
+any *other* message (network, expired auth) still surfaces as-is rather
+than silently spawning a redundant second repo. Two new tests; full
+suite: 590 tests, `tsc`/`next build` clean.
+
+## v53 (2026-08-10): real Claude Code false positive, PATH-restart copy, a Connect help guide
+
+Two user reports plus a requested feature, all from the same non-technical
+setup session.
+
+**Claude Code showed "Connected" with only the Claude desktop app
+installed.** Root cause: `aiExecutorStatus` (and `checkDependenciesImpl`'s
+onboarding gate) trusted a bare `which claude` as proof — but something
+already on that machine's PATH named `claude` (almost certainly a
+Homebrew Cask launcher shim for the desktop app) satisfied `which`
+without being the real CLI at all. Fixed with a real behavior check,
+`lib/is-claude-code-cli.ts`: only trust `which claude` as a first-pass
+filter, then confirm by actually running `claude --version` and checking
+for the real CLI's own signature ("X.Y.Z (Claude Code)", confirmed live
+against a real install). Used in both places that were checking Claude
+Code specifically. 4 new tests for the shared check, plus one regression
+test proving `getConnectStatusImpl` itself no longer reports connected
+for a same-named non-CLI binary.
+
+**"Reopen this app" was ambiguous, and that was the second report.** A
+user installed Claude Code and the app still couldn't find it. Real
+mechanism, not a guess: `scripts/package-macos.sh`'s launcher captures
+PATH once, at app startup (v0.7.5's shell-login-PATH fix); "Re-check"
+re-runs the same probe against the same already-running process's already-
+fixed `process.env.PATH`, so it can never see a CLI installed after that
+launch. The guidance text said "Reopen this app or press Re-check" — read
+naturally as "refresh the page," which does nothing for this. Reworded to
+be unambiguous: "Fully quit and reopen the Alacrán app itself (not just
+this browser tab), then press Re-check."
+
+**New: a step-by-step Connect help guide**, requested directly — a non-
+technical user found the existing per-card guidance (which already
+assumes terminal comfort) hard to get through alone. `components/
+connect-help.tsx` mirrors v39's `CompanyGuide` Sheet pattern exactly (a
+"?" button, auto-opens once per browser via a `localStorage` flag) but
+gated on "is anything actually not connected yet" instead of v39's
+`hasOntology`. Content is deliberately generic — what a terminal is, how
+to open one per OS, how to copy/paste a command into it, and the PATH-
+restart gotcha above — rather than re-describing what each tool does
+(already on its own card, and would drift out of sync here if a new
+executor's ever added). Live-verified: auto-opens on a fresh browser
+when something's unconnected, stays closed after being dismissed, the
+"?" reopens it manually, and it renders correctly alongside the real
+card data on this machine (Claude Code correctly still shows Connected
+with the real CLI installed).
+
+Full suite: 596 tests, `tsc`/`next build` clean.
+
+## v54 (2026-08-10): backup pushes over HTTPS with gh's own credential helper
+
+User report: the GitHub repo gets created fine, but the push right after
+it fails with git's raw "make sure you have the correct access rights" —
+despite the user having real push/pull access, and despite `gh` being
+confirmed signed in (this button doesn't even show until `githubStatus()`
+verifies that).
+
+Root cause, confirmed on a real machine: `gh auth status` shows a
+per-account "Git operations protocol" (`ssh` here) that's independent of
+`gh`'s global `git_protocol` config default and isn't something `gh repo
+create` lets a caller override per-call. So `gh repo create --remote
+=origin` wires up an **SSH** remote regardless — and pushing over SSH
+needs a working, unlocked SSH key, which is a completely separate
+credential from whatever made `gh auth login` succeed. A user can have
+real GitHub access and a perfectly working `gh` CLI and still have no
+SSH key at all.
+
+Fixed by no longer trusting whatever protocol `gh` picked: `gh repo
+create` now runs without `--push`; `git@github.com:owner/repo.git`
+remotes get rewritten to the HTTPS form (`ensurePushableRemote` in
+`lib/github/backup-company-impl.ts`), `gh auth setup-git` wires git's
+HTTPS credential helper to `gh`'s own already-verified token (confirmed
+live — idempotent, writes a real `credential.https://github.com.helper`
+git-config entry), and only then does the push happen, as its own
+explicit step. Applied uniformly to both the first-backup (create) path
+and every subsequent-backup (existing remote) path, not just the one the
+report named — the same SSH-without-a-key problem would have recurred on
+every push after the first. Existing tests updated for the new call
+shape (create no longer implies push); one restructured into a stateful
+mock proving the self-heal path's retry succeeds against the *rewritten*
+remote. Full suite: 596 tests, `tsc`/`next build` clean.
+
+## v55 (2026-08-10): backup no longer blocked by the template's own CI workflow
+
+User report, with the exact error attached: repo created fine, but
+`git push` was rejected — `refusing to allow an OAuth App to create or
+update workflow .github/workflows/verify.yml without workflow scope`.
+v54 already fixed the SSH-protocol cause of a similar-looking failure;
+this was a real, different second cause, confirmed by checking what the
+company's own repo actually contains.
+
+**Root cause:** `templates/company-starter/.github/workflows/verify.yml`
+— a GitHub Actions CI wrapper around `scripts/verify.py` — was in
+`TEMPLATE_MANIFEST` and so got copied into *every* company created
+through this app's "Add a company" flow. Pushing any commit that
+contains a `.github/workflows/*` file needs the `workflow` OAuth scope,
+which `gh auth login`'s default scopes don't request (confirmed on a
+real `gh auth status`: `gist, read:org, repo` — no `workflow`). So the
+very first backup of *any* newly-created company was broken by its own
+starter content, for anyone whose `gh` token has the ordinary default
+scopes.
+
+**Fixed two ways, for two different companies:**
+1. New companies never get the file at all — `TEMPLATE_MANIFEST` now
+   copies only `.github/ISSUE_TEMPLATE/config.yml` from `.github`, not
+   the workflows folder. Nothing real is lost: `/verify` (the slash
+   command) and a human both already run `scripts/verify.py` directly;
+   the GitHub Actions wrapper only mattered for a collaborative,
+   PR-reviewed project, which isn't this app's audience. One new guard
+   test (`company-template-manifest.test.ts`) asserts no
+   `.github/workflows` entry can sneak back into the manifest.
+2. Companies created *before* this fix still have the file committed,
+   so their push would keep failing regardless of point 1.
+   `pushSelfHealingWorkflowScope` in `lib/github/backup-company-impl.ts`
+   catches this exact rejection, untracks `.github/workflows` (`git rm
+   -r --cached` + a commit), and retries once — same self-heal shape as
+   v52's stale-remote fix, applied to both the first-backup and
+   subsequent-backup push paths. A push that fails for a genuinely
+   different reason (including "nothing to untrack") still surfaces
+   as-is.
+
+3 new tests; full suite: 599 tests, `tsc`/`next build` clean. Not
+live-tested end to end (would mean creating a real GitHub repo as a side
+effect, outside this project's sanctioned live-test list) — verified via
+mocked exec calls the same way v52/v54's backup fixes were.
+
+## v56: security + robustness review fixes
+
+Not a feature slice — three defects found by a whole-repo security and
+correctness review, fixed together. No new user-facing capability.
+
+**1. Permission scoping only ever existed for Claude Code.** Since v42 a
+company can be assigned any of four AI executors, but only Claude Code's
+`buildArgs` consumes `editScopePattern` and `bashPatterns` — Codex, Aider and
+Antigravity ignore both and substitute one coarse auto-approve flag
+(`--sandbox workspace-write` / `--yes-always` /
+`--dangerously-skip-permissions`). That's fine for a command whose prompt is
+only what the user typed. It is not fine for `triage-email`, `triage-issue`,
+`check-inbox` and `check-notion`, which splice attacker-authored text (an
+email body, an issue, a Notion page) straight into the prompt: the tool
+allowlist is precisely the layer that's supposed to hold when a
+prompt-injection payload gets past v32's nonced fence, and for three of the
+four executors there was no allowlist at all. The picker offered all four with
+no warning.
+
+No flag was invented to fake the missing sandbox — those CLIs genuinely have
+no per-path/per-command allowlist, so the honest fix is to refuse the pairing.
+New `AiExecutor.enforcesToolScope` (true only for `claude-code`) and
+`CompanyCommand.untrustedInput` (set on those four commands);
+`runCompanyCommandImpl` refuses the combination **before** taking the run lock
+and **before** any prefetch, so a doomed run never touches the user's real
+mailbox or issue tracker either. Everything else (`digest`, `decision`,
+`retro`, `handoff`, `define-company`) still runs on any executor, unchanged.
+Two guards against drift: `ai-executors.test.ts` derives `enforcesToolScope`
+from what `buildArgs` really emits rather than restating a list of ids, and
+`registry.test.ts` fails if a command that can reach outside content (a scoped
+Bash allowlist, or any prefetch other than `repo-status`) forgets the flag.
+
+**2. A missing executor binary crashed the whole server and permanently
+wedged the company.** `spawn` was called with no `'error'` listener at five
+sites. Measured directly on node v24.12.0: for a binary that isn't on PATH,
+`'error'` fires and `'exit'` never does — so the unhandled event is an
+uncaught exception that kills the Next.js process, *and* the `'exit'` handler
+that releases the run lock never runs. `lib/file-lock.ts` has no PID liveness,
+TTL or sweep, so the lock survived the restart and every later run for that
+company reported "Already running" until someone deleted the file by hand.
+Trivially reachable: the executor picker offers all four with no
+installed-check anywhere. Fixed at all five sites
+(`run-company-command-impl.ts` on both the headless and visible paths,
+`trigger-poll-impl.ts`, `open-interactive-terminal-impl.ts`,
+`restart-app-impl.ts`); where a lock is held the handler releases it and
+appends a plain-language note to the log the Run tab already tails. The
+visible path needs it too: if the terminal launcher never starts, the wrapper
+script's own `trap` never fires and nothing else would free the lock. Only
+`trigger-daily-team-log-impl.ts` already had it.
+
+**3. v55's workflow-scope self-heal could not have worked.** It untracked
+`.github/workflows` at the tip and retried the push — but GitHub's check is on
+what the push *introduces*, not what the final tree contains, and the case it
+was written for is a pre-v55 company's first-ever backup, where the push
+carries the whole history including the commit that added the file. The retry
+would be rejected identically, leaving the user with a junk commit and the
+original error. Three further problems came free with it: a bare `git commit`
+that could sweep up unrelated staged work (against this repo's own rule and
+`lib/git-commit-file.ts`'s pattern), a `git rm` failure that masked the real
+push error behind `fatal: pathspec ... did not match any files`, and a heal
+that wasn't durable anyway (`--cached` leaves the file on disk untracked, so
+any later `git add -A` re-adds it).
+
+All four go away by deleting the untrack-and-retry rather than patching each.
+`pushWithWorkflowScopeCheck` now refuses *before* pushing when the repo's
+history contains a workflow (`git log --all -- .github/workflows`, which still
+finds it when the tip no longer has it) and gh's token lacks the scope
+(`gh auth status`), with the one instruction that actually resolves it:
+`gh auth refresh -s workflow`. The same guidance is the backstop if a push is
+still rejected for the scope. Nothing is committed or rewritten on the user's
+behalf. This deliberately reverses v55's "rather than making the user
+re-authenticate" call — re-authenticating is the only fix short of rewriting
+their history.
+
+Both probes were verified against real output rather than mocks: `gh auth
+status` on a real machine (`Token scopes: 'gist', 'read:org', 'repo'` — no
+`workflow`, i.e. the affected case) parsed correctly by the shipped regex, and
+the history probe checked in a disposable `/tmp` repo through all three states
+— never had a workflow, has one at the tip, and had one that was later removed
+(the exact case the old tip-level fix got wrong). The end-to-end push is still
+not live-tested, since that means creating a real GitHub repo as a side
+effect — but unlike v55's fix, this one is correct regardless of whether
+GitHub evaluates the push per-commit or on the resulting tree.
+
+**4. The template's own docs described a CI file new companies don't get.**
+`README.md`, `docs/directory-map.md` and `docs/starter-manual.md` are all in
+`TEMPLATE_MANIFEST`, so they're copied into every new company — and all three
+still listed `.github/workflows/verify.yml` in their directory tours after v55
+stopped shipping it. The worst of them was README's Security Operations
+section, which claimed the template "ships a **gitleaks (free) scan** in its
+CI" as the answer for private repos without GitHub Advanced Security, plus a
+whole bullet on registering a `GITLEAKS_LICENSE` for org-owned repos. Neither
+is true: no CI ships at all, and `scripts/verify.py` only checks that
+`.gitignore` *effectively* blocks `secrets/` and `.env` — it never scans
+history for committed credentials. That section now says exactly that, and
+points at running a scanner yourself rather than implying one is already
+running. `directory-map.md`'s entry was doubly stale: it also described "the
+feedback-* templates", which v37 deleted.
+
+**5. `.github` left the manifest entirely.** v55 kept
+`.github/ISSUE_TEMPLATE/config.yml` as the one harmless survivor, but its
+whole content is `blank_issues_enabled: true` — GitHub's own default — and
+v37 had already deleted every issue template it could configure. A new company
+now gets no `.github` directory at all. `templates/company-starter/.github/`
+was deleted too: nothing copied or read it, and an uncopied file sitting in a
+template directory is a trap for whoever edits the manifest next.
+(`scripts/verify.py`'s `:(exclude).github/workflows/verify.yml` pathspec and
+its matching test stay — the test writes its own fixture, and the exclusion
+still protects a user who later adds CI of their own.)
+
+The manifest guard test broadened from "no `.github/workflows` entry" to "no
+`.github` entry", and a new test scaffolds a company from the **real** bundled
+template into a disposable `/tmp` dir and asserts both halves at once: no
+`.github` directory, and no shipped doc mentioning a `.github/` path. Every
+other test in that file uses a synthetic source dir, so none of them could
+have caught this. Confirmed to have teeth by running it against the pre-fix
+tree, where it fails.
+
+Full suite: 608 tests, `tsc`/`next build` clean. `templates/company-starter`'s
+own pytest suite is unchanged at 117 passed / 1 failed — the same pre-existing
+PATHREF-01 failure (dangling `examples/harukaze-ec/` references) recorded in
+v37, verified identical against a `git stash`'d baseline.
+
+## v57: macOS in-app updates
+
+macOS gets the "Update & Restart" button Linux has had since the update
+checker shipped. Before this, a macOS user had to open the releases page,
+download the `.dmg`, drag it to Applications, and run `xattr -cr` by hand —
+every single update.
+
+**The reason this was previously refused turned out to be false.**
+`perform-linux-update-impl.ts` documented macOS as impossible: ad-hoc signed,
+unnotarized builds are Gatekeeper-quarantined, so an auto-installed update
+"would silently produce a build that looks updated but refuses to launch."
+Measured on macOS 26.2 rather than reasoned about: `com.apple.quarantine` is
+attached by the **downloading application** — browsers opt in via
+`LSFileQuarantineEnabled`, `curl` and Node's `fetch` do not. The real
+published `Alacran.dmg`, fetched with Node and mounted, carried only
+`com.apple.provenance` on every file including the `.app` inside — **zero
+quarantine attributes**. The blocker is real for a Safari download and absent
+on the path this slice builds. `xattr -cr` is still run on the staged bundle,
+now as insurance rather than a prerequisite.
+
+**The second unknown was real and had to be probed.** macOS 13+ TCC "App
+Management" gates one app modifying another's bundle, and its self-update
+exemption is defined in terms of signing identity — which an ad-hoc build
+(`TeamIdentifier=not set`) hasn't got, so whether this app may replace itself
+was genuinely unanswerable from docs. Probed with a purpose-built bundle of
+this app's exact shape (ad-hoc signed, installed in `/Applications`, started
+by LaunchServices, bash launcher running `node` from inside its own bundle):
+the self-replace **succeeded, no prompt, no EPERM**. A shell-run version of
+the same test also passed but wasn't trusted — a shell can hold TCC rights an
+app doesn't.
+
+**What shipped:**
+
+- `scripts/package-macos.sh` now also builds `dist/Alacran.zip`
+  (`ditto -c -k --sequesterRsrc --keepParent`). Chosen over reusing the
+  `.dmg` because it drops `hdiutil attach`/`detach` entirely — a failed
+  detach leaves a mounted volume behind for no benefit — and because `ditto`
+  round-trips the bundle with `codesign --verify --deep` still passing and
+  the launcher's exec bit intact, which `zip -r` does not guarantee. It's
+  also 19 MB against the `.dmg`'s 30 MB. The `.dmg` stays: it's the human
+  install gesture.
+- `lib/updates/resolve-app-bundle.ts` finds the running bundle from
+  `process.cwd()` (the launcher cd's to `<bundle>/Contents/Resources/app`),
+  never a hardcoded `/Applications` — a copy on an external disk or a second
+  test install updates *itself*. Returns null outside a `.app`, which is what
+  keeps the updater away from a developer's working tree.
+- `lib/updates/perform-mac-update-impl.ts` downloads the zip, extracts to a
+  staging dir **on the same volume as the install** (`rename()` can't cross
+  volumes, and staging beside the bundle keeps that true on an external
+  disk), sanity-checks the payload before touching anything live, then swaps
+  with rollback: move the live bundle aside, move the new one in, and if that
+  second step fails move the original straight back. Replacing a running
+  bundle is safe — the live process holds the old inodes open. Failing to
+  delete the old copy afterwards is treated as litter, not a failed update.
+- `restartAppImpl` gained a darwin branch: `open -a <resolved bundle>`, so
+  LaunchServices starts it the way a double-click would.
+- `performLinuxUpdate` became `performUpdate`, dispatching on platform, so
+  the banner and the Settings card each keep one code path. `canAutoUpdate`
+  now covers darwin.
+
+**Verified live, against the real installed app.** `/Applications/Alacrán.app`
+(v0.7.24, installed from the published DMG) was swapped by the real
+`performMacUpdateImpl` — real `ditto`, real `xattr`, real `rename`, only the
+network stubbed to serve a locally built zip — and came out at **0.8.0** with
+`codesign --verify --deep` passing, the launcher executable, and no
+quarantine attribute. Then launched it and confirmed the swapped bundle
+serves HTTP 200 reporting 0.8.0, with the listening process's cwd traced to
+`/Applications/Alacrán.app/Contents/Resources/app` and its parent to that
+bundle's own launcher — checked specifically because a `next dev` server on
+the same machine would have reported the same version number and looked
+identical.
+
+**Sequencing, which is easy to get wrong:** the updater fetches the *latest*
+release's `Alacran.zip`. v0.8.0's release must include that asset or every
+macOS update attempt 404s. Anyone on ≤ v0.7.24 has no macOS updater at all,
+so they take one last manual update to v0.8.0; auto-update works from there.
+
+Still out of scope: signing and notarization. A first install downloaded in a
+browser still shows the Gatekeeper warning and still needs one `xattr -cr`.
+This slice only removes the manual steps for people who already have the app.
+
+15 new tests; full suite: 622 tests, `tsc`/`next build` clean.
+
+## v58: solid sidebar, plural nav labels
+
+UI-only, no behaviour change.
+
+**The sidebar is opaque now.** `.app-sidebar` was
+`color-mix(in srgb, var(--card) 55%, transparent)` — 45% transparent on a
+fixed, full-height element, so page content scrolled visibly behind the
+navigation and the two competed for the same pixels. Reported directly by the
+user as the background "interrupting the content". A blur was never going to
+fix that: `backdrop-filter` softens what shows through, it doesn't stop it
+showing through. Now `background: var(--card)`, solid in both themes
+(`#16100f` / `#fdf8f4`), with `backdrop-filter` removed alongside it — once
+the surface is opaque the blur composites a layer nobody can see, on the
+tallest element on the page. The border and shadow carry the edge instead.
+`.app-bottom-nav` (the same sidebar at the mobile breakpoint, previously 80%
+opaque) got the same treatment. The `--glass*` tokens are untouched: the
+floating nav pill and the Sheet still use them, and those are overlays where
+the frosting does real work.
+
+**Nav labels went plural:** Network → Networks, Activity → Activities,
+Connect → Connectors. One `NAV` array in `components/sidebar.tsx` drives both
+the desktop rail and the mobile strip, so it's a single edit for both.
+
+Verified live in both themes at desktop and mobile widths: computed
+backgrounds are fully opaque with no alpha channel and `backdrop-filter: none`,
+and no nav label clips inside the 228px expanded rail (the longest,
+"Connectors", ends at 124px).
+
+**Two things deliberately left alone, both disclosed rather than fixed:**
+
+1. `/network` and `/activity` still head their pages `Network` and `Activity`
+   (singular), which now disagrees with their nav labels. `/connect` doesn't
+   have this problem because its heading is a sentence ("Connect your
+   tools"). Scoped out — the request was for the sidebar.
+2. **The mobile bottom nav overflows on every phone width, and these renames
+   made it worse.** Two destinations are unreachable on a phone with no
+   visible scroll affordance. Pre-existing — it arrived when v40 put six
+   items in that strip, confirmed by swapping the labels back and
+   re-measuring — so the renames changed the magnitude, not whether it's
+   broken. Wants its own fix; not attempted in this slice.
+   **Fixed in v59** (see below). The figures originally published here —
+   "548px of intrinsic width, up from 509px" — were wrong: they
+   double-counted the strip's own 32px of horizontal padding. The measured
+   requirement is 532px total with fonts loaded. The overflow was real and the
+   before/after direction was right; only the absolute numbers were inflated.
+
+Full suite: 622 tests, `tsc`/`next build` clean.
+
+## v59: the mobile bottom nav fits again
+
+Fixes the overflow v58 disclosed and made worse. Below **560px** the six tabs
+drop their text labels and the icons carry the bar; above it nothing changes.
+
+Sizes, measured with fonts loaded, as the total the strip requires — the six
+item boxes plus its own 32px of horizontal padding:
+
+| state | required |
+|---|---|
+| labelled, Nunito Sans loaded | 532px |
+| labelled, fallback face (during font swap) | 551px |
+| icons only | 296px |
+
+Against 320–430px on real handsets, the labelled bar pushed its last two
+destinations off-screen with no scroll affordance — Connectors and Settings
+were simply unreachable on a phone. Icon-only needs 296px, so it clears the
+narrowest handset with room to spare.
+
+**Why icons rather than shorter words or a "More" menu:** `.app-sidebar` on
+desktop is already an icon-only rail that reveals its labels when it expands.
+This is that existing pattern at a smaller size, not a new one invented for
+the occasion.
+
+**The labels are hidden visually only, never `display: none`.** The `<span>`
+is each link's accessible name, so removing it would leave a screen reader
+with six unlabelled destinations. Standard `clip-path` visually-hidden
+recipe; verified the accessibility tree still exposes all six names with
+`aria-current="page"` intact on the active tab.
+
+The 560px breakpoint has slack in both font states (28px loaded, 9px
+mid-swap) and was verified empirically at 561px — labels visible, zero
+overflow, nothing clipped, 18px spare. Item padding also became a uniform
+`11px`, giving every tab a 44px touch target (the platform minimum) instead
+of a box that varied with label length. That made the strip 65px tall rather
+than 74px, which `.app-shell-main`'s `padding-bottom: 72px` still clears —
+checked, with the last content ending at 596px against a nav top of 635px.
+
+Measured at 320 / 360 / 390 / 414 / 430 / 561 / 575px: zero overflow at every
+one, and every tab inside the strip's own box.
+
+**A correction this slice also lands:** the comment in `app/globals.css` and
+v58's changelog entry both quoted 548px/509px for the labelled requirement.
+Both double-counted the 32px padding, because `scrollWidth` already includes
+it. Caught in review, and worth fixing rather than leaving: taken at face
+value those numbers imply the 560px breakpoint is ~20px too low and that
+561–579px viewports still overflow, which they measurably do not. The
+comment now carries the real figures and an explicit note not to move the
+breakpoint on the strength of them.
+
+Full suite: 622 tests, `tsc`/`next build` clean.
+
+## v60: page headings match their nav labels
+
+Loose end from v58. Renaming the nav items to plural left `/network` and
+`/activity` heading their own pages `Network` and `Activity` — singular, and
+contradicting the label you just clicked. Now `Networks` and `Activities`.
+
+`/skills` ("Skills & Commands") and `/connect` ("Connect your tools") were
+already fine and are untouched: the first is a superset of its label, the
+second a sentence, so neither reads as a contradiction the way a bare
+singular noun does.
+
+Checked all six pages against all six nav labels rather than only the two
+reported, so this can't be half-done.
+
+## v61: per-company MCP connectors
+
+Second door onto external tools. Everything Alacrán could connect before this
+went through a CLI — `gog` for Google, `gh` for GitHub, a `NOTION_TOKEN` in
+`.env` placed by the `api-connect` skill. That's a terminal-shaped path, and
+v39 and v53 both exist because real users of this app aren't CLI-literate. A
+company can now be pointed at Canva, Figma, Lovable, Docusign, Vercel or a
+Google MCP server with nothing installed and no key pasted.
+
+The slice is small because a live probe, run before any code was written,
+collapsed it to one file write. A hand-written `.mcp.json` at the company's
+root is picked up by the real CLI and reported as `Scope: Project config
+(shared via .mcp.json)`, status "⏸ Pending approval (run `claude` to
+approve)". That last clause is the finding that mattered: **approval happens
+by running `claude`, which is exactly what v38's already-shipped "Open in
+Terminal" button does.** So this slice ships no OAuth code, no token storage
+and no login button — Claude Code handles discovery, approval, the browser
+flow and the token store itself, and the Sheet ends with an instruction
+instead. `SECURITY.md`'s promises about what leaves the machine stay true
+because nothing new leaves it: the credential lands in the user's own CLI.
+
+Verified against the real installed CLIs, not docs (v42's rule):
+
+- `claude mcp add -s project` writes `.mcp.json`; scopes are `local`/`user`/`project`.
+- `claude mcp login <name>` / `logout <name>` do the OAuth, with `--no-browser` for headless.
+- `codex mcp add` has **no** scope or project flag — machine-global
+  `~/.codex/config.toml` only. A fourth instance of the recurring
+  per-machine-global-config shape, after `gog` and `daily-team-log`.
+- `agy --help` (Antigravity v1.1.11) has no `mcp` subcommand at all; it has `plugin`.
+- Aider has no MCP. Not installed on the dev machine, so stated as unknown
+  rather than asserted.
+
+So the button is gated on the company's assigned executor being Claude Code —
+free to check, since `app/page.tsx` already resolved `aiExecutorId` two lines
+above. `lib/company-guide-steps.ts` gets the same flag, so v39's guide can
+never explain a button a company hasn't got.
+
+The eight preset URLs came from `claude mcp list` on a real machine, where the
+CLI itself health-checked each one. Notion and GitHub are deliberately absent:
+their endpoints couldn't be verified that way, and Notion already has a
+working per-company path. `mcp-presets.test.ts` runs every preset through the
+same validators a user-typed value faces, so a typo'd addition fails the suite
+instead of being silently dropped at runtime.
+
+Where MCP tools are reachable is a security decision, not a convenience one.
+They work in **Open in Terminal** (v38) and **Get Started** (v46), which have
+no tool allowlist — so this needed zero changes to the command sandbox. The
+nine headless commands keep their fixed `--allowedTools` and never see an
+`mcp__*` tool. That's deliberate: an MCP tool sits outside the
+`Edit(...)`/`Bash(...)` model entirely, so putting one in scope for a command
+that splices attacker-authored text into its prompt (`triage-email`,
+`triage-issue`, `check-inbox`, `check-notion`) would hand an email author a
+write API to the user's design files — exactly the hole v56 exists to close.
+`run-company-command-impl.ts` and `ai-executors.ts` were named as untouchable
+in the plan's constraints and were not touched.
+
+Deliberate cuts, each with the condition that would reverse it: stdio/local
+command servers (all eight presets are HTTP, and a local server is the one
+input needing real command validation — `claude mcp add` still covers it);
+`mcp__*` in headless commands (no command needs one yet, and guarding it
+properly is its own slice); Codex/Aider/Antigravity; `enableAllProjectMcpServers`
+in the company template, since the approval prompt is free and auto-approving
+would mean a `.mcp.json` arriving via `git pull` connects silently; and MCP
+nodes on the Network tab, which `build-network-map.ts` can compose cheaply
+later.
+
+Two things a review of the plan caught before they shipped. `McpServer` must be
+a **type-only** import in the `"use client"` Sheet — `mcp-servers-config.ts`
+imports `node:fs/promises`, and a value import would drag it into the client
+bundle and fail the build (confirmed by a clean `next build`). And a failed
+commit must not fail the save, unlike `saveGoogleAccountsImpl`: `commitFile`
+throws when `git add` refuses, and `.mcp.json` is commonly gitignored in real
+repos, so a company registered from an existing directory (v11's flow) would
+have turned every save into a 500. The file write is the point; the commit is
+convenience. Scoped to this impl, not to `commitFile`, whose skill-edit
+callers want a failed commit to stay loud.
+
+Live-verified end to end against a disposable `/tmp` company and a disposable
+`ALACRAN_DATA_DIR`, so the real registry was never touched: added Canva
+through the UI, confirmed the written file *and* that the real `claude mcp get
+canva` reports it as project-scoped, confirmed it survived a reload, confirmed
+it appears in the Ownership Sheet's network-access list, removed it, and
+confirmed the real CLI no longer sees it — both writes committed in the
+company's own repo. Also confirmed the button and its guide entry disappear
+when that company is switched to Codex and come back when switched back. No
+`claude mcp login` was run and no model was spawned; the OAuth flow is the
+user's own action against their own accounts. Disposable dirs deleted;
+`email-pipeline-agent` and `plh-ops` confirmed untouched.
+
+One real UX finding from that pass, fixed in the same slice: the Address
+field's placeholder was a bare realistic URL, indistinguishable from an
+already-filled value at a glance — it fooled this slice's own review of its
+own screenshot. Both placeholders now read `e.g. …`.
+
+647 tests, `tsc` and `next build` clean.
+
+**Follow-up, measured right after the release:** the one question left open by
+the design — whether `claude mcp login <name>` works on a still-pending project
+server, which would have justified a one-click "Sign in" button — was settled,
+and the answer retires the idea rather than scheduling it. `claude mcp login`
+refuses outright, with "is from .mcp.json and awaiting approval. Run `claude`
+in this directory to review it first." It bails before any network call and
+writes nothing to the credential store. Probed against a disposable
+`/tmp` repo using `--no-browser` with stdin closed, so no authorization URL was
+ever fetched or visited and no real OAuth began. The consequence: login needs
+approval first, approval is only reachable by running `claude` interactively in
+the company's directory, and that is precisely what Open in Terminal already
+does — so a "Sign in" button could only open a terminal and repeat the
+instruction the Sheet already gives. It is not deferred; it is not worth
+building.
+
+## v61.1 (2026-08-11): approval isn't missable
+
+Copy-only follow-up to v61, from a real gap in its own shipped wording. The
+Sheet's first sentence said these tools "are available in Open in Terminal and
+Get Started sessions" — true only *after* the server is approved, which the
+section below the form explained but which a user reading only the top would
+miss. That mattered more than usual because approval turned out to have no
+bypass at all (see v61's follow-up: `mcp login` refuses a pending server,
+`enableAllProjectMcpServers` doesn't clear it), so a missed approval is a tool
+that silently never works.
+
+Three changes, no logic:
+
+- The blurb (shared with v39's company guide) now says adding a tool is "step
+  one of two" and that it doesn't work until approved and signed in.
+- Adding a tool raises a warning-toned banner naming that tool — "Added
+  <name> — one more step before it works" — stated at the moment the user
+  acts rather than only in a paragraph further down.
+- The instruction section became "Making a tool actually work" with two
+  numbered steps, the first flagged as "the step people miss."
+
+One thing the live pass caught: a bare "Saved" was still rendering under the
+Add button beside the new banner, which reads as *finished* — the exact wrong
+impression. It's suppressed while the banner is up.
+
+Also re-confirmed a documented trap rather than chasing it: a React Client
+Manifest 500 appeared mid-edit and was dev-server cache corruption from rapid
+edits (v51 documented this same symptom), gone after a clean restart with
+`.next` removed.
+
+Verified on a disposable `/tmp` company and disposable `ALACRAN_DATA_DIR`: all
+six copy assertions pass against the real DOM. 647 tests, `tsc` and
+`next build` clean.
+
+## v62 (2026-08-11): new type — Sora + Inter replace Nunito
+
+Asked to pick a better typeface and decide rather than present options. Nunito
+had two real problems for this product: its rounded terminals read soft and
+consumer-friendly, which pulls against a brand built on a scorpion, a warm
+near-black shell and one venom red — and rounded shapes lose crispness at the
+11–13px this dashboard uses almost everywhere (`text-xs` is the most common
+size in the app).
+
+**Sora for display, Inter for body**, mirrored in `app/globals.css` and
+`landing/styles.css` per the one-brand rule. Sora is geometric and precise,
+which suits a control panel that is mostly dense status text and file paths,
+and it draws a real 800 weight — so every heading already asking for 800 keeps
+a genuine drawn weight instead of a synthesized one, and not a single
+`font-weight` in the landing markup had to change. Inter is the strongest
+available face for small dark-UI text and deliberately neutral, leaving Sora to
+carry the personality. Headings went from `-0.02em` to `-0.03em`, since Sora is
+optically narrower than Nunito.
+
+**Deliberately not a return to Geist**, which v29 replaced on purpose — the
+landing CSS still carried a comment comparing Nunito to "the old Geist," which
+is how the previous decision was found before repeating it in reverse.
+
+The two properties that had to survive, both verified rather than assumed:
+
+- **Self-hosting.** The app still loads type via `next/font/google`, so the
+  packaged `.app` renders with no network: 9 `.woff2` in
+  `.next/static/media`, zero `fonts.gstatic.com`/`fonts.googleapis.com`
+  references in the server output. A CDN `@import` in the app would be a
+  phone-home, which this project forbids; the landing site keeps its CDN
+  import, which is fine for a website.
+- **The mobile bottom nav.** v59/v60 shipped a 560px breakpoint with the
+  labelled six-tab strip needing 532px with Nunito Sans — the one layout in
+  this app a font swap can silently break. Re-measured on the real production
+  build with fonts loaded: **Inter needs 541px**, 9px wider, leaving 20px slack
+  at 561px instead of 29px, and 551px mid-swap in the fallback face leaving
+  10px. Both fit; nothing clipped; verified empirically at 561px. The note in
+  `app/globals.css` now carries the new numbers and says explicitly that this
+  is the measurement to re-check on any future type change.
+
+Token names stopped naming the font: `--font-nunito`/`--font-nunito-sans`
+became `--font-display-face`/`--font-body-face`. The type has now changed twice,
+and a variable named after a font is a comment that becomes a lie on the next
+change. `CLAUDE.md`'s standing one-brand rule was updated with the new families,
+the self-hosting requirement, and the nav-measurement obligation.
+
+Verified live in both themes on the app and the landing site (light and dark),
+plus the app's real registered companies. 647 tests, `tsc`/`next build`/lint
+clean.
+
+## v63 (2026-08-12): tall drawers and dialogs scroll
+
+A user-reported bug: pasting a lot of text into the company-details drawer made
+it "get stuck" — the bottom of the form, including the Next/Save buttons, was
+unreachable. Diagnosed as a defect in two primitives rather than in any drawer.
+
+`SheetContent` is a `fixed`, `h-full`, `flex flex-col` panel with **no scroll
+container anywhere** — any child taller than the viewport was simply clipped,
+with nothing to scroll. Two of the ten consumers had each hand-patched their own
+inner `flex-1 overflow-y-auto` (`add-company-form.tsx`,
+`mcp-servers-sheet.tsx`); the four that hadn't were all broken by definition:
+the company-setup wizard (the one reported), the company guide, the ownership
+sheet, and the connect help. The remaining consumers use a fixed-height
+`ScrollArea` and were never affected.
+
+`AlertDialogContent` had the same class of bug from the opposite direction: no
+`max-height` at all, while centred with `translate-y-[-50%]`. A confirm dialog
+taller than the viewport therefore overflows *both* ends with no way to reach
+either — which the skill-editor, skill-history and command-runner dialogs can
+each do, since they already contain a `max-h-[60vh]` diff preview plus a header
+and a footer.
+
+Fixed once in each primitive instead of per-consumer, since every caller routes
+through them and a per-drawer patch leaves the next drawer broken too:
+
+- `SheetContent` now wraps `children` in a
+  `flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain` div. It
+  wraps `children` rather than putting `overflow-y-auto` on `SheetContent`
+  itself (the actual one-liner) so the close button — `absolute`, and therefore
+  a scrolling descendant of any scroll container it sits inside — stays pinned.
+  The wrapper keeps `flex flex-col` so the two consumers already relying on
+  flex semantics for their own inner scroll behave exactly as before.
+- `AlertDialogContent` gained `max-h-[calc(100dvh-2rem)] overflow-y-auto
+  overscroll-contain`.
+
+**This deliberately edits `components/ui/*`, which `CLAUDE.md` forbids** — that
+rule is about styling issues, where the fix belongs in a token or a consumer's
+className. This is a structurally missing scroll container shared by every
+caller, so the rule's own logic (one fix where everything routes through, rather
+than N) points at the primitive. Confirmed with the maintainer before shipping.
+
+Measured live at 1000×560 rather than eyeballed. The pre-fix shape was proved
+genuinely stuck first (`canScroll: false`, `scrollTop` pinned at 0 with the
+wrapper's overflow forced back to `visible`). After: 1293px of content in the
+560px drawer scrolls its full 733px with Back/Next reachable and the close X
+still at `top: 16`; a 1450px alert dialog clamps to 528px inside the 560px
+viewport and scrolls 924px. Both were dismissed at their gates — nothing saved,
+nothing installed. 647 tests, `tsc`/`next build` clean.
+
+## v64 (2026-08-12): the two Google connect paths that could never work
+
+Two user-reported bugs, same shape: the app offered a Google connection whose
+advertised next step connected nothing. Both root causes were measured against
+the live tools rather than inferred, and both turned out to be *this app
+describing someone else's system wrongly*, not a defect in gog or Claude Code.
+
+**1. The Gmail / Calendar / Drive MCP presets could never authenticate.**
+v61 shipped eight `MCP_PRESETS`, three of them Google
+(`gmailmcp.googleapis.com`, `calendarmcp.googleapis.com`,
+`drivemcp.googleapis.com`). Every attempt to sign in errored. Probing the real
+endpoints found two independent reasons, either one fatal:
+
+- Their OAuth protected-resource metadata names `https://accounts.google.com/`
+  as the authorization server, and that server advertises **no
+  `registration_endpoint`** in either `.well-known` document. Claude Code holds
+  no pre-registered client for an arbitrary MCP server, so Dynamic Client
+  Registration (RFC 7591) is its only route to a `client_id` — without it,
+  sign-in cannot succeed by any path the user could take. Every other preset
+  (Canva, Figma, Lovable, Vercel) does advertise one, which is exactly why only
+  the Google three failed.
+- They also answer unauthenticated `initialize` **and** `tools/list` with `200`
+  and a full tool list, and never a `401` with `WWW-Authenticate`. So the client
+  sees a healthy server, no OAuth flow is ever triggered, and the failure
+  surfaces only per tool call as `isError: true` "Request is missing required
+  authentication credential." That is why it read as "always throwing errors"
+  rather than as a login prompt.
+
+Removed, not repaired — making them work needs a Google Cloud OAuth client the
+user creates, which a preset URL in a dropdown cannot supply. Google's working
+path in this app has always been `gog` (v22/v41). `mcp-presets.ts` now carries
+the two-curl DCR check to run before adding any preset, a test fails on any
+re-added `*.googleapis.com` entry, and the Sheet says so on screen — anyone who
+already added one still has a dead entry only they can remove.
+
+**2. The Connect page's Google card offered `gog auth setup`, which is a guide,
+not an action.** Run bare it prints `status: guided`, `project_created: false`,
+`apis_enabled: false`, `credentials_saved: false` and five next_steps, then
+exits — having done nothing. The card wrapped it in "Run the command below in
+your terminal and complete the Google sign-in. Come back and press Re-check,"
+so users ran it, nothing connected, and the card showed no further step. Every
+not-connected Google state returned that same one command.
+
+The fix splits the three real gates and shows only the one the user is behind,
+using `credentials_exists` — a boolean `googleStatus` already parsed and threw
+away. It is file-backed (`credentials_path` under gog's own home) and flips
+independently of `email`, which reads back from the OS keyring; measured
+against a disposable `gog --home` where `credentials_exists` went false while
+`email` still resolved. That is what makes it the reliable discriminator
+between "no OAuth client yet" and "client stored, just needs authorizing" —
+two states the old code could not tell apart.
+
+- `install` — gog missing. Unchanged: `brew install gogcli` + link.
+- `client` — no OAuth client. Google's rules set the shape and no UI removes
+  it: an OAuth client can only be created by a human in the Cloud console,
+  there being no API for it, which is why gog's own quickstart says to download
+  the JSON by hand. So the card links all six console pages directly, says what
+  to click on each, and hands over one command that stores the download **and**
+  runs the browser sign-in: `gog auth setup <email> --credentials
+  ~/Downloads/client_secret_*.json --login --services gmail,calendar`.
+- `account` — client stored, no account. Just `gog auth add <email> --services
+  gmail,calendar`.
+
+`--open-console` was evaluated as the shortcut and rejected on measurement: it
+refuses without gcloud ("--open-console requires --gcloud-project or an active
+gcloud project"), and a non-technical user has no gcloud. The gcloud-assisted
+path (`--create-project --enable-apis`) was rejected for the same audience on
+step count — it adds a ~500MB SDK install and a second browser sign-in
+(`gcloud auth login`) to save console clicks, making four browser trips where
+the manual path needs two.
+
+Scopes narrowed from gog's six-service default to `gmail,calendar` — what
+`check-inbox` and `triage-email` actually call, and what the card has always
+been named for. Verified by dry-run that this drops the APIs the user must
+click Enable on from six to exactly the two the card links, so the console
+steps and the command agree. `GOOGLE_SURFACE` lost its Drive and Chat marks to
+match: showing a mark for a scope never requested is a promise the connection
+doesn't keep. Every command on screen was dry-run verified against the real
+installed gog (v0.34.1) before shipping, and the "Publish app" step is called
+out as not-skippable because Testing-mode refresh tokens expire after 7 days —
+the one that would otherwise return later as "it stopped working."
+
+Live-verified on a throwaway port with a disposable `GOG_HOME`, which makes the
+app see a fresh machine without touching the real auth store: the `client`
+stage rendered all six console links with no stray command, and typing an
+address produced the exact dry-run-verified command. The `account` stage is
+unit-tested only — reproducing it live would need the real keyring cleared,
+which is not a sanctioned test target. Onboarding's Google row reads the same
+`guidance` and now correctly shows no command where it used to show the
+inert one; its existing "Open the full Connect page →" link is the real route.
+654 tests, `tsc`/`next build` clean.
+
+## v65 (2026-08-12): importing a repo that isn't shaped like a company
+
+Registering an existing directory required both `.git` and `.claude`. The
+second check was doing no work: it was a proxy for "is this an Alacrán
+company", and it never actually tested that. `.claude` is a Claude-Code
+adapter artifact, not the portable core (v17's own principle), so a repo can
+be a perfectly good company without one — `email-pipeline-agent` is exactly that
+shape, a real working agent with a git repo and no `.claude` — while any
+unrelated repo that happens to have one sailed through. It rejected the real
+case and admitted the fake one.
+
+Removed, leaving `.git` as the only structural requirement. Nothing downstream
+needed it: `genericCommandSetSkillAdapter` returns an empty list when the
+directory is absent, and Open in Terminal / Get Started just run the
+configured executor in the company root. One check deleted at the shared
+chokepoint fixes all four callers of `registerCompanyImpl`, rather than the
+UI path alone.
+
+`restoreCompanyImpl` leaned on the same check to reject "a clone that produced
+something that isn't a company," and its doc comment claimed to enforce
+membership. Both corrected to the honest behaviour: a clone that reports
+success but leaves no git repository is still rejected (that guard is real and
+now has its own test), while a cloned repo without `.claude` restores instead
+of failing. The weak heuristic was not replaced with a flag to keep it alive
+for one caller — it was wrong for every caller.
+
+Context: this came from importing the three companies under `~/AI-Native/`.
+Two findings that needed no code. Feature availability is decided by
+`kind === "command-set"`, which every registered company gets
+unconditionally — so registering an existing directory already grants the
+full set (Get Started, Open in Terminal, Connect tools, Back up, Ownership,
+guide), and there is no app-created privilege; v17's create flow ends by
+calling the same `registerCompanyImpl`. And a company registered in `next dev`
+is invisible to the installed app on purpose: dev writes the repo's own
+`.data/`, production writes `~/Library/Application Support/Alacrán/`
+(`data-dir.ts`, so an update replacing the bundle can't destroy the registry).
+Registering PLH Triage in the installed app gave it all nine card actions
+immediately, with no change to the repo itself.
+
+Moving `email-pipeline-agent`/`plh-ops` out of `~/AI-Native/` was considered and
+rejected as a non-solution: their card features are gated by the hardcoded
+`kind` in `builtin-agents.ts`, not by location, so relocating changes nothing
+visible — while breaking the live launchd job (which writes to absolute
+`.../email-pipeline-agent/logs/poll.{out,err}.log`) and un-loading both built-ins,
+which are existence-gated on that exact path. Registering them alongside their
+built-in cards gets the company features with no move and no write to either
+protected repo. 655 tests, `tsc`/`next build` clean.
+
+## v66 (2026-08-12): external folders — add anything, get one button
+
+Adds a fourth `AgentKind`, `external`: a folder the user already works in that
+follows none of this app's conventions. A checkbox on "Add a company" — *"This
+is an existing project or workflow, not an Alacrán company"* — registers it,
+and it gets exactly one action, **Open in Terminal**. No setup wizard, no
+backup, no ownership, no MCP, no Get Started, no skills, and nothing is ever
+written into the folder.
+
+Until now the only two outcomes were "a full command-set company" or "not
+registered at all". v65 had already removed the `.claude` requirement, so any
+git repo could be added — but registration hands out `kind: "command-set"`
+unconditionally, meaning an unrelated project got the whole company surface,
+including a "Set up your company" button that writes
+`definitions/ontology/company.yaml` into it. Offering that for someone else's
+repo is the wrong default; this kind is the honest third answer.
+
+Shape of the change, in the direction that keeps future features safe: every
+other flag in `app/page.tsx` stays keyed to `isCommandSet`, and only
+`showOpenTerminalButton` ORs in `isExternal`. A new company feature is
+therefore off for external folders by default rather than needing to be
+excluded one at a time.
+
+- `RegisteredCompany.kind?: "external"` — optional, so every entry written
+  before this release keeps working with no migration; absent means
+  command-set.
+- `.git` is skipped **only** for external. The point of the kind is folders
+  that follow no convention, and demanding a repo would exclude most of them.
+  Companies still require it: backup, the activity feed and commit-on-save are
+  all git operations. `genericGitLogActivityAdapter` already returns `[]` when
+  `git log` fails, so a non-repo folder needed no special-casing there.
+- The create-from-template branch is skipped when the box is ticked —
+  scaffolding a company into someone's unrelated project is the opposite of
+  what the option means — so a missing path simply fails registration.
+- **Get Started deliberately did not follow.** It delegates *through*
+  `openInteractiveTerminalImpl`, so relaxing that shared guard could have
+  leaked it; `open-interactive-terminal-with-help-impl` keeps its own
+  `command-set` check, and a test now pins that. Its intro prompt reads skills
+  and an ontology an external folder has no reason to own.
+- `build-network-map`'s final branch is a **fall-through**, not an exhaustive
+  map, so `tsc` could not catch that an external folder would silently acquire
+  github/google/notion/executor edges. Found by reading it. It now returns an
+  isolated node alongside `report-log`, matching v43's rule that an edge is
+  only ever drawn for a service a kind actually supports elsewhere in the app.
+  `KIND_BADGE_CLASS` is a real `Record<AgentKind, string>` and did fail at
+  `tsc`, which is the difference worth noting between the two.
+
+Live-verified against a throwaway `/tmp` folder with no `.git` and no
+`.claude` — the case both pre-v65 rules rejected outright. It registered as
+`kind: "external"`, the card showed the `external` badge with Open in Terminal
+and Remove only, and the folder was byte-for-byte untouched afterwards.
+660 tests, `tsc`/`next build` clean.
+
+**Incident during this slice's own live verification, worth recording.**
+Filling the form via `document.querySelector('input[type="checkbox"]')` hit the
+*first* checkbox on the page — the Google-accounts picker on a company card
+behind the open Sheet — not the new one. That picker auto-saves, so it wrote
+and committed `definitions/integrations/google.yaml` into the real
+`plh-triage` repo. Caught immediately, scoped (one commit, one file, not
+pushed), reported, and undone with `git reset --hard HEAD~1` after asking. The
+lesson is narrow and mechanical: **scope every automated selector to the
+dialog under test**, because a page-wide selector in this app can reach live
+controls that write to real repos on change. The same ambiguity on the
+"Update & Restart" button had errored loudly instead, which is what a
+strict-mode locator does and what an unscoped `querySelector` never will.
+
+### v0.11.1 — same-day fix: v0.11.0's tag failed CI and published nothing
+
+v66's own new test, `opens a terminal for an external folder`, passed locally
+and failed on CI with `ENOENT ... .data/acme.open-terminal.sh`. It was the only
+test in that file to run *past* the kind guard to the launcher-script write, and
+it never passed a `dataDir` — so it used the default `process.cwd()/.data`,
+which exists on this dev machine (it holds the dev company registry) and does
+not exist in a clean CI checkout. Every other test there that reaches the write
+already used `mkdtemp`; this one now does too.
+
+A test that depends on untracked local state is the failure mode worth naming:
+`npx vitest run` was green here and red on a clean tree, so the suite could not
+have caught it. Verified this time by temporarily moving `.data` aside and
+re-running the whole suite — 660 passed with it absent, which is the state CI
+actually builds in.
+
+No user impact: `package-linux.yml` runs tests before publishing, so v0.11.0
+produced no release at all and `latest` stayed v0.10.3 throughout. Fixed forward
+as v0.11.1 rather than re-pointing the public v0.11.0 tag — the same call this
+repo made for v0.7.19.
+
+## v67 (2026-08-12): replace the bundled company template with own-authored scaffolding
+
+Not a feature — a provenance cleanup that follows on from v37.
+
+**Why.** The bundled template had been imported from an external starter kit,
+and v37 had only changed its licence text and branding. This slice stops
+shipping that imported material and replaces it with scaffolding written for
+this repo.
+
+**What replaced it.** The template is now 33 files, written for this repo:
+
+- `README.md`, `CLAUDE.md` — a scaffold's worth of orientation, not a manual.
+- `.claude/commands/` — exactly the commands the app's own registry runs
+  (`define-company`, `digest`, `decision`, `retro`, `handoff`, `verify`,
+  plus the four read-only connectors), each written against the real
+  `outputPath` in `lib/company-commands/registry.ts` so a command file can't
+  promise a path the commit gate won't accept.
+- `docs/templates/ontology-starter.yaml` — rewritten from scratch, because it
+  is a hard dependency of `lib/save-company-ontology-impl.ts` and
+  `registry.ts`'s `define-company` prompt, not an optional doc.
+- `scripts/verify.py` — rewritten. Three checks that are cheap to get wrong
+  and expensive to find late: `secrets/`/`.env` really are git-ignored (via
+  `git check-ignore`, with a text fallback outside a repo), the ontology
+  exists with no `<<TODO>>` left, and every decision file has a
+  Why/Reasoning section. It does **not** claim to scan for already-committed
+  secrets; the docstring says so, since the previous script's docs implied a
+  scan it never performed.
+- Folder skeletons with a README each explaining what belongs there.
+
+**Kept, because it was provably this project's own work:**
+`check-inbox.md` (v22), `check-notion.md`, `triage-email.md`,
+`triage-issue.md` (v32), the two `definitions/triage/*.example.yaml`, and all
+28 files of `templates/packs/` — zero of which existed at `b2692db`.
+
+**Dropped rather than rewritten**, because rewriting them would have meant
+inventing features to fill a shape: `.claude/rules/` and `.claude/hooks/`
+(5 each), `.claude/skills/` (11 files, including an "AI readiness diagnostic"
+that was pure program material), `docs/concepts/`, four narrative docs,
+`definitions/hitl|kpi|cycles|retro`, `scripts/cycle/`, the template's own
+pytest suite, and the `create-epic`/`ingest-context`/`stock-note` commands —
+none of which the app ever ran. `TEMPLATE_MANIFEST` shrank from 34 entries to
+19 to match.
+
+**Two stale cross-references this surfaced**, both of which would have shipped
+into every new company as a doc that lies: `FRESH_HANDOFF_CONTENT` cited
+`CLAUDE.md` "§2.6" and "§5" — section numbers the new `CLAUDE.md` doesn't
+have — and the two kept connector commands pointed at an `api-connect` skill
+that no longer ships in the template. Both fixed.
+
+**Verified** with `tsc`, 660/660 vitest (including the v56 test that scaffolds
+from the REAL bundled template, whose pinned doc list needed updating for the
+deleted files), and a real scaffold into a disposable `/tmp` git repo where
+`verify.py` was exercised through all three of its states — fresh company,
+decision missing its reasoning, and fully clean — then deleted.
+
+## v68 (2026-08-12): remove the email-polling daemon surface
+
+The app no longer knows about the email-polling agent. Requested directly:
+that built-in existed to watch one specific mailbox, and the app was the
+thing surfacing and triggering it.
+
+**Deleted outright** — every file that existed only to serve it:
+`lib/adapters/email-pipeline-agent.ts`, `get-poll-log-tail.ts`, `poll-lock.ts`,
+`launchd.ts`, `lib/get-poll-status.ts`, `lib/trigger-poll{,-impl}.ts`, all of
+`lib/scheduled-job/` (v31's on/off control), and the two client components
+`trigger-poll-button.tsx` / `scheduled-job-toggle.tsx`. The built-in
+descriptor and `PIPELINE_LAUNCHD_LABEL` went with them, so the app now
+loads 2 existence-gated built-ins instead of 3. 32 tests and 6 test files
+went too — they tested the removed features, and keeping them would have
+meant keeping the code.
+
+**Two places printed a real mailbox on screen, not one.** The obvious one was
+`getIntegrationStatus`, which read a hardcoded agent id's `config.json` and
+rendered `Email connected (<address>)` on its card. The second was
+`buildNetworkMap`'s `readPipelineEmail`, which did the same thing again for
+the Network tab's Google edge — found only by grepping for the *symbol*
+rather than the feature, which is the lesson worth keeping: the same data can
+surface through two unrelated pages, and fixing the one you were told about
+leaves the other live. Both are gone; a new test asserts an address is never
+surfaced even when a `config.json` beside the company holds one.
+
+**A real bug this introduced and caught before commit.** Removing the
+`pipeline` early-return in `buildNetworkMap` made that kind fall through to
+the company branch, which draws github/google/notion/executor edges — the
+exact trap CLAUDE.md's v66 note warns about, since the last branch is a
+fall-through and not an exhaustive `Record`, so `tsc` says nothing. Fixed by
+listing `pipeline` alongside `report-log`/`external` in the isolated-node
+guard. The `pipeline` AgentKind itself was **kept**: it's used as an arbitrary
+fixture kind in ~15 unrelated test files, so deleting it would have churned
+all of them to remove one now-unreachable branch.
+
+**Guards that named people were reshaped, not deleted.** Three tests proved a
+regenerated `SKILL.md`/`Setup.md` carries none of the upstream team's
+identity — by spelling out a GitHub owner and three first names, putting the
+identifiers into the repo that the guard exists to keep out of a generated
+file. They now assert shape: no `github.com/<owner>/<repo>`, no
+`reports/<Capitalized>`. Verified they still fail on a regression.
+
+`tsc` clean, vitest 628/628, `next build` clean across all 8 routes.
+
+## v69 (2026-08-12): freee as an MCP connector
+
+Added freee — Japanese accounting, HR, invoicing, payroll and e-signature
+software — to the per-company MCP connector presets (v61). One entry in
+`MCP_PRESETS`; no new mechanism, no new file, no new dependency. `.mcp.json`
+writing, approval, OAuth and credential storage are Claude Code's, exactly as
+they were for the five presets already there.
+
+**The gate this had to pass first.** `lib/mcp-presets.ts` carries a standing
+rule written by v64: a preset must be Dynamic-Client-Registration-checked
+against the live endpoint before it's added, because v64 shipped three Google
+presets that could never authenticate and had to delete them. freee was
+checked the same way, before any code changed:
+
+- `POST /mcp` unauthenticated answers **`401`** with
+  `WWW-Authenticate: Bearer error="invalid_token"` and a `resource_metadata`
+  pointer. This is precisely what the Google presets never did — they
+  answered `200` with a full tool list, so no client ever started an OAuth
+  flow and the failure only showed up per tool call.
+- `/.well-known/oauth-protected-resource/mcp` names its authorization server
+  as its own origin (`https://mcp.freee.co.jp/`), whose metadata advertises
+  **`registration_endpoint: https://mcp.freee.co.jp/register`**. DCR is the
+  only way Claude Code can obtain a `client_id` for an arbitrary MCP server,
+  so this is the check that separates a preset that works from one that
+  can't.
+
+**freee's local server was deliberately not used.** freee ships both a hosted
+server and a local stdio one (`npx freee-mcp configure`, OAuth PKCE against a
+user-created freee app, callback on `127.0.0.1:54321`). The stdio shape is
+explicitly out of scope for this UI — `isSafeServerUrl` is https-only by
+design, since a local server means a user-supplied command line, the one
+input that would need real command validation. `claude mcp add` still covers
+that for power users. The hosted endpoint is the same shape as every other
+entry, which is why this slice is one line.
+
+**No new tests.** `mcp-presets.test.ts`'s existing assertions already cover
+any addition: every preset must pass the same `isSafeServerName` /
+`isSafeServerUrl` validation a user-typed value passes, names must be unique,
+and no `*.googleapis.com` host may reappear. That was the point of writing
+them as loops over `MCP_PRESETS` rather than per-entry cases.
+
+**A stale doc line fixed in passing.** README still advertised "Canva, Figma,
+Lovable, Docusign, Vercel or a Google MCP server" — the Google half was
+deleted in v64 and the sentence was never updated. Corrected in the same line
+that gained freee.
+
+`tsc` clean, vitest 628/628, `next build` clean across all 8 routes. Live-
+verified on a throwaway dev server (port 3117): the freee preset renders in
+the Connect tools Sheet and fills the form with `freee` /
+`https://mcp.freee.co.jp/mcp`. **"Add" was deliberately not clicked** — it
+writes and commits a real `.mcp.json` into a real repo, which the standing
+safety rule forbids for a test. Selectors were taken from scoped snapshot
+refs inside the open Sheet, per v66's note about page-wide selectors reaching
+live auto-saving controls on the cards behind it.
+
+### Release note (v0.13.1): the Linux half nearly didn't ship
+
+The tag push fired `package-linux.yml` as designed and it **failed** — not
+from anything in this slice. Its publish step reads `GH_TOKEN` from a repo
+secret (the releases token), and that secret does not exist (`gh secret
+list` on the repo is empty), so `gh` exited 4 with "To use GitHub CLI in a
+GitHub Actions workflow, set the GH_TOKEN environment variable". The `.deb`
+had already built fine; the workflow has no `upload-artifact` step, so the
+build was simply lost with it.
+
+**Why this couldn't be worked around by publishing the macOS half alone.**
+`DEB_ASSET_URL`, `MAC_ASSET_URL` and both landing-page download buttons all
+point at `releases/latest/download/<name>`. A v0.13.1 release carrying only
+the mac assets would immediately become `latest` and 404 every Linux user's
+in-app update — surfacing as `performLinuxUpdateImpl`'s "Couldn't download
+the update. Check your connection and try again", which would be a lie. That
+is the same failure shape v57 recorded for the then-missing `Alacran.zip`,
+pointed at the other platform.
+
+**So the `.deb` was built locally in Docker instead**, disproving this
+project's own standing claim that Linux packaging can only happen in CI
+because the dev machine has no `dpkg-deb`: a `node:24-bookworm` container
+has one. `npm install` (not `npm ci`, per the lockfile drift CI already
+documents), then `scripts/package-linux.sh` unmodified — including its own
+headless self-test, so the artifact was boot-tested on real Debian, and
+`dpkg-deb -x` confirmed `mcp.freee.co.jp` in the extracted payload and
+`Version: 0.13.1` in the control file. One transient failure worth knowing
+about: `next/font/google` fetches at build time, and a flaky fetch kills the
+whole build with an opaque webpack error — re-running fixed it.
+
+All three assets were then published in a single `gh release create`, so
+`latest` was never observed missing one. Verified after the fact by
+downloading all three public URLs in full (200, real byte counts) rather
+than trusting the upload's own output.
+
+**Still open, needs the maintainer:** create a PAT with write access to
+`alacran-releases` and add it as a repo secret on the
+`alacran` repo, or Linux packaging stays a manual Docker step. Adding an
+`upload-artifact` step would also stop a failed publish from throwing away a
+good build. *(The secret was added on 2026-08-18 and answers 401 — see v87,
+which added the artifact step and made the workflow say so; the PAT half is
+still open.)*
+
+## v108 (2026-08-26): the workspace redesign, matched to the reviewed prototype
+
+**The redesign from v103–v107 was structurally faithful to the reviewed
+prototype but visually diverged in a few places dominant enough to read as
+"nothing alike."** Compared side by side against the prototype's actual HTML
+(not memory) at every step, screenshotting both. The gaps were concentrated
+in a handful of always-visible spots rather than spread everywhere.
+
+**The sidebar was the single biggest driver.** It was a 228px labelled list
+with a solid boxed active state; the prototype's rail is 88px, icon over
+label, a thin left accent line. Since the rail is on every page, this alone
+was most of the "doesn't look like it" impression. Rebuilt to match,
+collapsed state included (72px → 60px, icon-only).
+
+**The explorer gained a company switcher.** Selecting a company used to keep
+it in the same flat list as every other company, just highlighted — the
+prototype promotes the focused company to a bordered switcher (a colour-coded
+initial glyph, name, path, a chevron back to the list), and its tree renders
+directly underneath with no redundant expand row. Switching the "All files"
+tab while already focused needed one added effect to fetch the newly-visible
+root's listing — without it, the tree would sit on "Reading…" forever, since
+nothing else in that mode triggers the fetch.
+
+**The file-detail view gained the breadcrumb the prototype has** (`Company /
+Department / file`), and the tab labelled "Content" is now "Read", matching
+the prototype exactly.
+
+**Settings rows are boxed now, with a real toggle switch.** They were plain
+unboxed lines with a native checkbox. New `components/ui/switch.tsx` wraps
+`radix-ui`'s `Switch` (already a dependency, nothing new installed) styled to
+the prototype's pill toggle; every setting row is now a bordered box via a
+small `Row` helper in `settings-panel.tsx`.
+
+**Tree row icons now say what they are**: a terminal-prompt icon for
+commands, a book icon for skills — both from `lucide-react`, already
+installed — replacing the generic file icons that carried no distinction.
+
+**The overview cards gained the prototype's colour-coded identity glyph, and
+a real regression surfaced and got fixed properly rather than reverted.**
+First pass added a 26px glyph to `AgentCard`'s header row and it tipped an
+already-marginal layout over: a long badge (`command-set`) plus the guide
+tooltip icon left just enough room for a short company name until the glyph
+took another 36px, and "Demo Co" started truncating to "D...". The header row
+now uses `flex-wrap` instead: the name gets its full line, and the badge
+cluster wraps to a second line on the cards tight enough to need it. New
+`lib/glyph-hue.ts` picks one of four existing accent tokens by a hash of the
+company id, shared by the switcher, the overview cards, and the network
+map's node cards (sized down to 22px there via a CSS rule matching the one
+already sizing the photo-avatar `<img>` variant).
+
+**Found and fixed in passing:** `lib/get-activity-detail.test.ts` still
+asserted the throwing behaviour `getActivityDetail` had *before* v107's fix —
+four tests failing on unrelated code, since nobody had updated the test file
+when the function's return shape changed from throw to `{ ok, content |
+message }`. Not a regression from this slice; a leftover from v107 that a
+full test run surfaced immediately.
+
+**Deliberately left different from the prototype, on purpose, not by
+oversight:** Activity's filters stay company-based rather than the
+prototype's "Waiting on you / Failed / Scheduled" — `ActivityStatus` has
+exactly one real value, `"done"` (v107's own restraint), so those filters
+would always show zero results against real data. The fake window
+titlebar/traffic-lights in the prototype don't exist here either — that was
+the prototype simulating a browser tab for its own demo purposes; the real
+app is an actual native window and doesn't need to fake being one.
+
+## v109 (2026-08-26): macOS packaging moves to its own Electron repo
+
+**By explicit request, not a technical necessity.** v100's WKWebView shell
+worked; this reverses that decision for macOS only, moving it to a separate
+separately maintained repository (the macOS desktop shell),
+built as an Electron app instead. Linux is untouched — `scripts/package-linux.sh`
+and `scripts/webview-linux.py` are exactly what they were before this slice.
+`scripts/package-macos.sh` and `scripts/webview-macos.swift` are deleted from
+this repo, not archived.
+
+**The decision that kept this from being a rewrite:** the new repo's
+`electron/main.js` spawns the same bundled vanilla Node binary running the
+same `server.js` the bash launcher did, rather than running the server on
+Electron's own Node runtime. `node-pty`'s prebuilt binary is compiled for a
+plain Node ABI, and a real vanilla Node process is exactly what it already
+expected — so the in-app terminal needed zero changes. Electron only replaces
+the shell (window, menu, updater), not the payload. the macOS shell's
+`build-app-payload.sh` ports `package-macos.sh`'s payload-assembly logic
+verbatim rather than reimplementing it — the `templates/` contents-copy
+handling, the node-pty `build/Release` + Mach-O assertion, the pinned/
+checksummed Node download all carry over with the incidents that produced
+them still documented in the comments that moved with the code.
+
+**Two things a grep for every reference to the deleted files caught before
+they became silent regressions:** `lib/install-tool-impl.ts` and
+`lib/connect/connect-status-impl.ts` both explicitly depend on the bash
+launcher's PATH-widening (`COMMON_BINS`, `$HOME/.local/bin` especially,
+where the Claude Code installer lands) being on the server process's PATH —
+a double-clicked/LaunchServices-started Electron app inherits no more shell-
+rc PATH than the old bash launcher's double-clicked `.app` did, so this was
+ported into `main.js` as `resolveWidePath()`, same login-shell-plus-fixed-
+list reasoning intact. And `docs/native-app.md`'s four-rule window contract
+had two rules the first draft of `main.js` didn't satisfy yet — retry a
+failed load after 1s, and close the window if the server dies first — both
+now ported from the Swift shell's equivalents.
+
+**Distinct app, not an in-place upgrade.** New bundle id
+(`app.alacran.desktop.mac`), and its own `electron-updater` against the same
+public `alacran-releases` repo — control-panel's hand-rolled mac updater
+(`perform-mac-update-impl.ts`, `resolve-app-bundle.ts`) is deleted outright,
+since its bundle-swap logic validated a WKWebView `.app`'s specific
+`Contents/Resources/app` shape, which an Electron bundle doesn't have. New
+`lib/updates/can-auto-update.ts` returns `false` on every platform except
+Linux now, so control-panel's own "Check for updates"/"Update & Restart" UI
+correctly has nothing to show on mac — that's the Electron shell's job now.
+Needed no code at all: `~/Library/Application Support/Alacrán` is keyed on
+platform and home directory, not bundle identity, so an existing user's
+registered companies show up in the new app with zero migration step.
+
+**Release ritual, updated.** Rebuilding mac now happens in the other repo;
+uploading gained a third required asset, `latest-mac.yml`, since
+`electron-updater` won't detect an update without it and it's the easiest of
+the three to forget precisely because it isn't a familiar `.dmg`/`.zip` pair.
+
+## v110 (2026-08-26): the accented app name that crashed every mac launch
+
+**The first mac build published from the macOS shell (v0.33.0) could not
+start at all.** It crashed with `SIGTRAP` inside V8 on every launch, before any
+application code ran, so no user of the published `.dmg`/`.zip` ever saw the
+window. Fixed in that repo, not this one; recorded here because this is the
+durable log and because the fix changes two user-facing strings this repo owns.
+
+**Root cause: `productName: "Alacrán"`.** macOS stores a bundle's filename
+**NFD**-normalized (`Alacra` + U+0301 combining acute) while `Info.plist`'s
+`CFBundleExecutable` is written **NFC** (precomposed `á`). The two don't
+byte-match, so Electron's bootstrap cannot resolve its own executable. It is
+the same mismatch behind electron-builder's own `7z doesn't support
+NFD-normalized filenames` warning, which had been printing in every mac build
+log all along and reading as cosmetic — it was the diagnosis.
+
+**Why v100's WKWebView shell never hit it:** that bash launcher resolved paths
+itself instead of relying on Electron's own name lookup. The accent had been in
+`productName` since the first Electron build and was never survivable there.
+
+**The method, since the stack trace pointed at the wrong thing.** A V8/JIT trap
+invites signing and entitlement theories, and three were tried and disproven
+before the real cause was found — worth recording so none of them gets
+re-litigated:
+
+| Hypothesis | Tested | Result |
+|---|---|---|
+| Missing JIT entitlements | Added `entitlements.mac.plist`, rebuilt | Crashed identically |
+| Entitlements not enforced without Hardened Runtime | Added `--options runtime`, verified `flags=0x10002(adhoc,runtime)` | Crashed identically |
+| Electron 33 vs current macOS | Rebuilt on 44, then 42 | All three crash identically |
+| Bundled `resources/` corrupting startup | Added `node`, then `app-payload`, back one at a time | Both fine |
+
+What actually isolated it was **building a minimal Electron app and growing it
+toward the real one** — same signing, same `main.js`/`preload.js`, same bundled
+resources — which launched fine as `ElectronMinTest2` and crashed the moment it
+was renamed to the accented name, with nothing else changed. The lesson worth
+keeping: when a crash is inside a dependency's own bootstrap, the fastest route
+is a minimal reproduction grown forward, not the stack trace, which here named
+V8's JIT compiler and had nothing to do with JIT.
+
+**A false-negative trap that cost several rounds, and the rule from it:** an
+`open`-launched app started from an automated shell exits silently with status
+0 rather than showing Gatekeeper's first-run consent — it neither crashes nor
+runs. Every "did this launch?" verdict in this diagnosis therefore had to come
+from a human double-click, or from the crash report on disk; the automated
+launch proved nothing in either direction and twice suggested a fix had worked
+when it had not. `~/Library/Logs/DiagnosticReports/` and `log show` are the
+only trustworthy readouts from an automated pass.
+
+**Kept accented, deliberately — do not "consistency-fix" these:** the window
+title and menu (they come from `electron/main.js`, not `productName`), and
+`~/Library/Application Support/Alacrán`, written by `lib/data-dir.ts`. That
+directory is where an existing user's `companies.json` lives, so renaming it
+would orphan every registered company on every existing install. The app bundle
+is now `Alacran.app` and the data directory is still `Alacrán` — the asymmetry
+is the point.
+
+**Changed in this repo:** `README.md`'s `xattr -cr` line and its by-hand
+uninstall step now name `/Applications/Alacran.app`, and
+`scripts/uninstall-macos.sh` splits what had been one `APP_NAME` variable into
+an unaccented bundle path and an accented data directory, falling back to the
+old accented bundle so it still cleans up a pre-fix install. The published
+asset names (`Alacran.dmg`, `Alacran.zip`) were already unaccented and are
+unchanged, so no download link moved.
+
+## v111 (2026-08-26): a window you can drag, and a field you can find
+
+Three user-visible fixes, one of them the oldest complaint in the app.
+
+**The mac window could not be dragged.** `titleBarStyle: "hiddenInset"` floats
+the traffic lights over the page, and the page knew nothing about it: the nav
+rail's brand mark sat under the close/minimize/zoom buttons, and there was no
+drag region anywhere, so the only way to move the window was the menu bar.
+Fixed in the macOS shell's `electron/main.js`, not here — a 40px top
+gutter on the rail and 30px on the main pane clear the lights, that gutter and
+`.dash-topbar` become `-webkit-app-region: drag`, and every clickable child
+opts back out (a drag region eats clicks). Injected with
+`webContents.insertCSS` on `did-finish-load` rather than written into
+`app/globals.css`, because the browser and the Linux WebKitGTK shell both have
+a real titlebar and would lose 30px for nothing. Re-inserted per load, since
+`insertCSS` is scoped to the document and this window reloads on Cmd+R, on the
+`did-fail-load` retry, and after an update restart.
+
+**You could not see the input boxes.** shadcn ships `Input`/`Textarea` as
+`bg-transparent` with a 1px `--input` border — `#241a19` on `#16100f`, a
+hairline nobody finds until they click it. Fields are now a slot *milled into*
+the shell: new `--field`/`--field-edge`/`--field-lip`/`--field-sheen` tokens
+(`--input` stays what it was, because every `components/ui/*` primitive
+consumes it), an opaque floor below `--card`, light falling on the top lip, and
+an edge that is visible at rest. The light theme inverts the material on
+purpose — on cream a dark trough reads as dirt, so `--field` goes *above*
+`--card` and the sheen darkens instead of lightening.
+
+Three states, three materials, and the direction came from the client's own
+references (`beam.` / `metal.` / `gooey.jakubantalik.com`):
+
+| state | material | what it says |
+|---|---|---|
+| rest | metal — a milled slot, lit along its top edge | there is a field here |
+| hover | metal — one specular streak travels the slot | it is live |
+| focus | beam — a red→ember comet runs the perimeter | your keystrokes land here |
+| press (primary buttons) | gooey — the body shrinks, liquid squeezes out sideways | the machine took it |
+
+Those demos are WebGL/canvas shaders, not CSS — their bundles were pulled and
+checked. These are CSS reads of the same three ideas: no JS, no dependency, one
+inline SVG filter (`#a-gooey`) in `app/layout.tsx`.
+
+**Mechanics worth not rediscovering.** An `<input>` cannot have
+pseudo-elements, so both the surface and the lit border are background *layers*
+on the field itself, with a transparent border and the lower layers clipped to
+`border-box`. Five layers, always five, in every state — the beam's colours are
+custom properties that are `transparent` until `:focus`, which is what lets one
+constant stack cover all three states instead of three stacks that drift apart.
+The beam angle is a real `@property --a-beam-angle` so it can be animated.
+Four traps, each of which produced a visible artifact caught on screenshot:
+
+- **The opaque floor layer is load-bearing.** The surface layers are mostly
+  transparent, so without it the conic beam shows through the middle of the
+  field — including the conic's own seam, which reads as a vertical scratch
+  down every input on the page.
+- **Both surface layers are capped in px, not %.** A proportional gradient
+  stretched into a smear down the whole of `skill-editor.tsx`'s 50vh code pane.
+- **`background-position` percentages invert when the image is wider than the
+  box.** `(box - image)` goes negative, so `100%` parks the sheen off to the
+  *right* and `-62.5%` is the far side. The first attempt parked it in plain
+  view at rest.
+- **`data-slot="button"` misses half the primary buttons.** `<Button asChild>`
+  hands its props to a radix `Slot` child and the child's own `data-slot`
+  (`sheet-trigger`, and so on) overwrites `"button"`. The gooey press keys off
+  `data-variant` instead, with `:is(button, a)` to keep `<Badge
+  variant="default">` — a span, also carrying `data-variant` — out of it.
+
+`:focus`, not `:focus-visible`: the question the beam answers is identical
+whether the field was reached by Tab or by click. Reduced motion swaps the beam
+for a static ring and drops the gooey layer entirely.
+
+Nothing to mirror into `landing/styles.css` this time — the marketing site's
+only inputs are the three OS-picker radios, which are excluded from the
+treatment along with every other checkbox, radio, range, file and colour input.
+
+**The landing page repositions from memory to openness.** The hero was "give
+your AI a memory of your business"; it is now "the free, open harness for your
+own AI agent", with the description saying what that means in one breath —
+business as plain files, a fence around what the agent may write, a diff and a
+commit at the end, nothing of ours in between. The kicker follows (`MEMORY` →
+`OPEN`), and the docs' "Connect your AI" step stops promising ChatGPT and
+open-source models it cannot deliver: it says sign in to your own Claude
+account, which is what the app actually does.
+
+## v112 (2026-08-26): the landing page rebuilt as the workspace it sells
+
+**The home page now looks like the product.** `design_handoff_alacran_home/`
+had a full static replica of the Workspace screen; the marketing site was still
+the cinematic film-chrome cut (letterbox, fog banks, grain, sticky scenes) from
+before that handoff existed. The hero is now that replica — the four-pane app
+frame at real proportions, `88px / 264px / 1fr / 300px`, with the run gutter,
+the three-changes-waiting pill, the diff and the terminal replaying one real
+`/digest` — and the bands below it are built from the same components the app
+uses: `.card`, `.lrow`, `.panel`, `.list`.
+
+**Its own stylesheet, on purpose.** New `landing/home.css` and
+`landing/constellation.js`, and `landing/styles.css` untouched — the five
+subpages (`/docs`, `/use-cases`, `/templates`, `/integrations`, `/how-to-use`)
+still load it and were not part of this change. `landing/cinematic.css` (32KB)
+is now referenced by nothing and is a deletion waiting to happen.
+
+**One moving object, not scattered effects.** The motion direction is the
+client's reference (`styles.refero.design`, the Dala system): an animated field
+of outlined triangles rather than transitions on everything. One canvas, one
+`requestAnimationFrame`, palette colours only — a dense organic cloud of ~460
+triangles in the hero's negative space, five overlapping lobes with a
+sum-of-two-uniforms falloff, alpha dissolving at the rim so the cloud has no
+edge to notice, drawn in page coordinates so it scrolls away with the hero;
+under it a ~90-triangle ambient field in viewport coordinates, at 0.22 alpha,
+drifting behind every band below. Sections are `color-mix`-ed rather than
+opaque so it reads through them. The loop cancels on `visibilitychange` and
+reduced motion gets a single still frame.
+
+**Content the handoff would have lost.** The handoff is a design document and
+its copy is placeholder in the places that matter: it says you "pay whoever
+provides your AI", which is softer than the truth. The real requirement — a
+paid Claude subscription, around $20/month, no free tier to fall back on —
+stays, along with the `xattr` notarization explanation, the OS-preselected
+install tabs, the copy buttons, the real release URLs, and two sections the
+handoff has no equivalent for: the write allowlist (`03 THE FENCE`) and the
+honest outbound list (`06 WHAT LEAVES YOUR COMPUTER`).
+
+**Four bugs, each caught on screenshot rather than by reading.** Worth not
+rediscovering, because three of them are CSS cascade traps that look fine in
+the source:
+
+- **The scroll-reveal state class was `in`, and the closing band's wrapper is
+  `.close .in`.** The moment the IntersectionObserver fired, `.close .in
+  {display:flex}` started matching a revealed `div.rv.in` and flattened the
+  logo, headline and paragraph into a horizontal row. Renamed to `.rv.seen`.
+  The tell was that a computed-style dump taken before any scroll showed
+  `display: block` and a correct 717px width, and the same query after
+  `scrollIntoViewIfNeeded` showed 305px.
+- **`.steps{display:grid}` beats the UA `[hidden]{display:none}` rule** — same
+  specificity, author sheet wins — so all three install panels rendered at
+  once even though the JS was setting `hidden` correctly. Needs an explicit
+  `.steps[hidden]{display:none}`.
+- **The run log lost its line breaks.** It is written as lines in the markup
+  and had no `white-space`, unlike `.term` and `.cmd` which both set
+  `pre-wrap`.
+- **`brands.js` sprite marks came out solid black.** The sprite relies on the
+  consumer setting `fill: currentColor` (`styles.css` does it on `.bi`);
+  `home.css` did not, so every Google/GitHub/Notion/Apple mark filled with the
+  SVG default. Scoped to `.bi` rather than `svg`, because the app replica's
+  inline icons carry `fill="none"` as a presentation attribute and CSS would
+  override it.
+
+**Mobile drops the cloud entirely.** At `0.5` centre on a 390px viewport it
+lands straight on top of the headline and the copy becomes unreadable — the
+count goes to zero below 900px and the ambient field carries the atmosphere,
+with the product-shot frame as the signature instead.
+
+**Deliberately not done:** the day/night toggle is gone from home. The handoff
+is dark-only (`color-scheme: dark`) and a toggle with no light palette behind
+it is worse than no toggle; the subpages still have theirs, and the stored
+preference is untouched. Verified in Chrome at 1440 and 390 — no console
+errors, no horizontal overflow, tabs, accordion and the approve demo all live,
+and reduced motion checked as a separate context rather than assumed.
+
+## v113 (2026-08-27): the hero constellation becomes a brain
+
+The v112 hero field was a five-lobe blob — atmospheric, but the client's
+reference (`styles.refero.design`, the Dala system) is specific: the hero is an
+animated field of tiny outlined triangles *in the shape of a brain*. It is one
+now.
+
+**The silhouette is a path, not a pile of numbers.** `landing/constellation.js`
+carries a left-facing cerebrum as one SVG path — gyri along the top, frontal
+notch at the left, cerebellum bulging low right, brainstem below it, and the
+Sylvian fissure as a second subpath that `evenodd` turns into a hole — and
+samples points inside it with `isPointInPath` on a scratch 2D context, in the
+path's own 140×100 box, then maps them to screen. Rejection sampling against
+`Path2D` is native and about six lines; the shape stays editable as a path
+instead of as tuned lobe offsets. 1700 triangles, up from 460, because at the
+old count the fissure and the brainstem did not read.
+
+**Triangles are tethered now.** Each cloud triangle remembers the point it was
+sampled at and only breathes around it (±1.4–5px, two out-of-phase sines) while
+rotating. The v112 particles free-drifted with wrap-around, which was fine for a
+blob and would have dissolved a brain inside a minute — verified by screenshot
+at t=1.5s and t=10.5s, same shape. The ambient field still free-drifts, since
+its whole job is having no shape.
+
+**It steps aside at 1100px, not 900px.** The first cut gated the cloud on
+`> 900`, which was the wrong number read off the wrong breakpoint: `home.css`
+drops `.hero-copy`'s `max-width: 60%` at `max-width: 1100px`, so between 901 and
+1100 the copy fills the row and the brain sat on top of the paragraph — caught
+at 940px. Gating moved to `w > 1100`, evaluated in `seed()` rather than at load,
+so the brain also appears when a window is dragged across the breakpoint
+instead of staying missing until reload. The cloud is allocated unconditionally
+for that reason; below the breakpoint it is never stepped or drawn.
+
+Frame cost measured at 16.35ms/frame over 60 frames with 1700 + 90 triangles —
+still vsync-bound, so the naive stroke-per-triangle loop stays. Batching by
+tint would cut it to ~20 strokes a frame and buys nothing today. Verified at
+1440/1200/1100/940/390 with no console errors; reduced motion still gets one
+still frame.
+
+## v114 (2026-08-27): a brain that reads as one, motion you can see, and the section pages
+
+Three reported faults in one slice: the hero shape did not look like a brain, it
+did not appear to move, and the five section pages still wore the pre-v112
+design.
+
+**The brain is a line drawing now, not a filled silhouette.** v113 sampled points
+*inside* one closed outline with `isPointInPath`, which is why it read as a blob
+with a slit — what makes a brain legible is the folds, not the boundary. The path
+is now an actual drawing: the cerebrum outline, three cortical arcs concentric
+with the dome, five short grooves crossing them, the Sylvian fissure, three
+temporal gyri under it, a cerebellum with three striations, and two brainstem
+strokes. Triangles are scattered along those strokes with **`isPointInStroke`**,
+which is the same rejection loop with one word changed and `probe.lineWidth` set
+to the gyri's width in path units. 2200 triangles, up from 1700, because the
+strokes cover less area than the fill did. **The rule worth keeping: to draw a
+recognisable thing out of points, sample its lines, not its area.** The shape was
+authored by rendering candidate paths as stroked SVG and looking at them —
+three rounds, and the first two are in the changelog's own history as blobs.
+
+**It moves three ways at once, and none of them disturb the drawing.** The v113
+version *was* animating — ±1.4–5px of positional wobble on a 28-second period —
+which is indistinguishable from a still image, and the report was correct.
+Positions still only breathe around their sampled point (free drift dissolves the
+brain inside a minute, measured in v113), so the visible motion comes from
+brightness and scale instead: a pulse sweeping front to back like a signal
+crossing the cortex (`0.5 + 0.5 * sin(t * 0.0013 - hx * 0.016)`, driving alpha
+0.22–1 and size 0.66–1.26), the whole brain breathing ±2.2% about its centre, and
+every triangle turning three times faster. Verified by screenshotting the same
+560×420 crop 2.4s apart and confirming the bright band had crossed the shape.
+
+**The brain is now gated on `.hero` existing, not on the page's URL.** It only
+belongs where there is a column of negative space beside the copy, which is the
+home hero; a section page's hero is one column of prose, and the first port put
+the brain straight through it. One `querySelector` in `seed()` rather than a
+per-page flag, so a new page gets the right behaviour by default. The 1100px
+breakpoint gate from v113 still applies on top of it.
+
+**The five section pages now share the home page's stylesheet and chrome.** The
+payload of each page was kept verbatim and its shell rebuilt — new head, the
+home page's nav and footer, the ambient canvas, the mobile-menu and scroll-reveal
+scripts — with the class vocabulary renamed into the home page's
+(`.section` → `.sec`, `.card` → `.tile`, `.r` → `.rv`). `home.css` gained the
+bands they are built from: `.page-hero`, `.grid`/`.tile`, `.brandtile`,
+`.pill.live`/`.pill.next`, `.req`, the guide (`.guide-toc`, `.gstep`, `.gterm`,
+`.gnote`, `.gcode`) and `.close.center`. **`landing/styles.css` and
+`landing/cinematic.css` are now referenced by nothing** — 67KB of dead
+stylesheet, ready to delete.
+
+**The collision to watch for when merging two stylesheets:** the app replica
+already owns a bare `.note` (the amber "waiting on you" callout) and the docs
+page has its own trailing `.note`. Same specificity, so the later rule won
+per-property and inherited the amber border and background it never set — the
+docs note came out looking like a warning. Scoped to `.req .note` with the
+decoration explicitly cleared. This is the fourth cascade trap in three slices
+(v112's `.close .in`, v112's `[hidden]`, v113's none, this) and they share a
+shape: a class name that means one thing in one half of the file and something
+else in the other.
+
+Cards were given `.grid.two` and `.grid.four` where the item count would
+otherwise leave an orphan in a three-column row. 16.44ms/frame with 2200 + 90
+triangles, still vsync-bound. All five pages plus the home page verified at
+1440/1200/1100/940/390, no console errors, no horizontal overflow, and the guide
+page's sticky index collapses correctly on mobile.
+
+## v121 (2026-08-27): the drag that never worked, and an update that re-downloaded the whole app
+
+*(Renumbered from v117. Two branches were authored in parallel on the same
+day and both claimed 117 — this is the one that shipped, as tag v0.35.0;
+the landing-motion run kept v117-v120. Numbers are internal chronology and
+no published artifact names them, so renaming the heading rewrites nothing.)*
+
+Two mac bugs, and one of them is v111's own fix failing in the field.
+
+**v111's drag fix did not work, and could not have been caught.** It lived in
+the macOS shell's main process and was pushed into the page with
+`webContents.insertCSS` on `did-finish-load` — with the returned promise
+`.catch()`ed to nothing. So there was no error when it did not land, no way to
+test it without building and shipping an app, and nothing the page could read
+to say whether it had arrived. The lesson is the `.catch(() => {})`, not the
+CSS: a fix whose only failure mode is silence is a fix nobody can verify.
+
+**Moved into the page, where it is ordinary CSS.** The shell's preload — which
+had been deliberately empty since v109 — now publishes one object,
+`window.alacran`, and control-panel's existing pre-paint blocking script reads
+`window.alacran.shell` and stamps `data-shell="mac"` on `<html>` alongside
+`data-theme` and `data-nav`. Everything else is `:root[data-shell="mac"]` rules
+in `app/globals.css`. Set that attribute by hand in devtools and the whole
+layout is testable in a browser tab, which is how this one was checked before
+it shipped rather than after.
+
+| | v111 | v117 |
+|---|---|---|
+| lives in | the shell, injected | the page, a stylesheet |
+| delivery | `insertCSS` per load, errors swallowed | shipped in the CSS bundle |
+| drag handle | padding areas of the rail and header | a real 34px `#titlebar-drag`, plus the header |
+| testable without a build | no | yes |
+
+**Why a real element and not `body::before`.** Chromium builds its
+draggable-region map from layout objects and does not reliably pick up
+`-webkit-app-region` on a pseudo-element. One `<div id="titlebar-drag">` in the
+layout, `display: none` everywhere except mac, removes that question entirely.
+
+**`z-index: 40` on the strip is load-bearing in three directions:** above page
+content, so the pointer finds it; below the Sheet overlay (`z-50`), so an open
+dialog's close button — which sits well inside the top 34px — is not swallowed
+by a drag region; and below the rail (`z-60`), so the rail keeps the left 88px,
+which is exactly where the traffic lights are and where the OS draws them over
+the page anyway.
+
+**"Check for updates" on mac offered a link to GitHub and a manual re-download
+of the whole app.** `canAutoUpdate()` is `linux` only — correctly, because it
+answers "can this *server* run pkexec against a `.deb`" — and the mac half of
+the answer had nowhere to live. electron-updater was already in the shell,
+already pointed at `alacran-releases`, and already had the `latest-mac.yml`
+manifest v109 started publishing; the page simply could not reach it. It can
+now, over the same `window.alacran` bridge: `update.install()` and
+`update.onProgress()`, wired into both the Settings page and the update banner,
+with the button gated on `canAutoUpdate || desktop` in each.
+
+**The bridge is install-only, on purpose.** There is no `check` across it: the
+page already asks GitHub itself, exactly as Linux does, and a second source of
+truth in the UI is a second thing to drift. The install handler re-checks
+before downloading regardless — `downloadUpdate()` refuses outright without a
+prior check, and the one at launch goes stale the moment the app is left open
+for a day, which for this app is the normal case rather than the edge one.
+
+**`autoDownload` is now off.** The old startup call was
+`checkForUpdatesAndNotify()`, which fetched ~170MB unannounced and could then
+only offer to install on quit. It is a plain `checkForUpdates()` now, so the
+banner is right when the window opens and nothing is downloaded until the user
+presses the button.
+
+**What this cannot fix retroactively:** an installed v0.34.0 has neither the
+bridge nor a working drag, so it has to be replaced from the `.dmg` by hand one
+last time. From v0.35.0 on, Update & Restart does it.
+
+## v107 (2026-08-26): the last four pages, and a redacted error nobody had seen
+
+**Activity is a two-pane timeline** — runs on the left, the selected one's
+output on the right, sticky day headers, filter by company. It had been
+collapsible day groups opening a Sheet *over* the page: the wrong shape for
+something you read several of in a row, since comparing two meant closing and
+reopening, and the list you were working through was hidden behind the thing you
+opened from it. `activity-day-group.tsx` is **deleted** — a sticky header
+collapses a day better than a click that hides its rows.
+
+**No status colour, deliberately.** `ActivityStatus` has exactly one value,
+`"done"`. A severity stripe would be a legend for a distinction the data never
+draws — the same restraint as the run gutter's missing "failed" state in v104.
+
+**A redacted error the redesign exposed, and the standing rule it violated.**
+Clicking an activity whose `detailPath` is a directory showed:
+
+> An error occurred in the Server Components render. The specific message is
+> omitted in production builds to avoid leaking sensitive details…
+
+That is **exactly** the failure v91 wrote a standing rule about — a `"use
+server"` action that is a bare `return impl(...)` turns any throw into Next's
+production digest — and `getActivityDetail` had been violating it the whole
+time. Nobody had seen it because the old Sheet only rendered on activities you
+chose to open; a permanent detail pane hits it on the first run that wrote a
+folder. Fixed at the shared function, which **both** the workspace file viewer
+and the activity board call: it returns `{ ok, content | message }` now instead
+of throwing, and "this run wrote a folder rather than a single file" reaches the
+screen as the plain sentence it always was. Rendered muted rather than in
+destructive red, because it is information, not a failure.
+
+**Settings is sections with an index** instead of five stacked Cards, which gave
+every heading the same weight while adding four edges nobody reads. The index is
+**plain anchors** — native, no state, and the browser's own back button keeps
+working. Every section body is the previous JSX verbatim, so no update logic
+moved. The two helper components were renamed off `…Card` because they no longer
+render one.
+
+**The Map's motion now means something.** The flow animation was on every
+*connected* wire, so the page animated permanently and the movement carried no
+information — "connected" is a state, not an event. It is now reserved for a
+company with a run happening **right now**, sourced from v104's stat-only run
+signals, so there is no new detection and no subprocess on a `force-dynamic`
+render.
+
+**Connectors needed almost nothing.** v85 already shipped the grouped-rows
+design this slice had planned to build — one bordered group per section, one
+`<details>` row per tool, setup unfolding only where you click. What was
+actually outstanding was the type floor deferred out of v103.
+
+**The type floor was applied by classification, not by sweep** — 24 content
+occurrences raised to 12px, and left alone with a reason each: the uppercase
+tracked department, day and category headers; the counts sitting beside a name;
+the chips inside fixed-height map rows; and the digit inside a 16px circle.
+
+## v106 (2026-08-26): a real terminal, inside the app
+
+A pty in a dock on the right, opened with **⌘J**, closed by default.
+
+**Verified end to end, which earlier analysis could not be.** Against a
+disposable `/tmp` company: `tty` reports **`/dev/ttys010`** — a genuine
+terminal, not a pipe — `pwd` lands in the company's own folder, `cat` reads a
+real file, and widening the dock moves `stty size` from **24×55 to 25×103**. So
+SIGWINCH propagates and a full-screen TUI reflows, which is the whole reason
+this needs a real pty rather than `script(1)`.
+
+**`@homebridge/node-pty-prebuilt-multiarch`, not `node-pty`.** The fork ships
+prebuilt binaries for `linux-x64`/`arm64`/`arm`/`ia32` plus darwin and win32
+**inside the npm tarball**, resolved at runtime by platform and arch — so no
+machine needs a compiler and **the `.deb` stays `Architecture: all`**. Plain
+`node-pty` has no Linux prebuild at all and would have meant a toolchain at
+package time plus a per-arch package.
+
+**SSE down, POST up.** Next's standalone `server.js` exposes no WebSocket
+upgrade hook, and on localhost a POST per input burst is indistinguishable from
+a socket. No custom server.
+
+**The security work is the substance.** Server actions carry CSRF protection;
+route handlers do not — and this POST writes into a shell. A page on any site
+the user is visiting can send a cross-origin POST to `127.0.0.1` with no
+preflight as long as it keeps to a "simple" content type; the response is
+opaque to the attacker but the write still lands. So the handler requires an
+`Origin` **matching the Host header**, plus an `application/json` body that
+forces a preflight a cross-origin caller cannot pass. Verified in both
+directions: `evil.com` → 403, a *different port on the same host* → 403, a
+missing `Origin` → 403, and the app's own POST accepted.
+
+**The origin check was wrong on the first attempt, and only the browser found
+it.** It compared `Origin` against `new URL(request.url).origin` — but Next's
+standalone server reports its own internal URL there, so the app's own POST was
+rejected with a 403 while every curl test passed. The Host header is what the
+browser actually addressed, which is the value an attacker's Origin has to
+match and cannot.
+
+**A probe that never spawns.** Next derives `HEAD` from `GET`, so asking "is a
+terminal available" with a HEAD would have **started a shell as a side effect
+of checking whether it could**. Availability is its own `?probe=1` branch that
+returns before any spawn. On a machine whose Node has no matching prebuild —
+Ubuntu 24.04 ships Node 18, which has none — the dock says so in one sentence
+and Open in Terminal still works.
+
+**Two layout bugs the browser found.** Widening the dock to 760px squeezed the
+explorer and workbench to nothing, so the workbench now has a floor and the
+dock is capped at a share of the viewport. And the first responsive attempt set
+`--dock-w: 0` below the breakpoint, which was *worse* than the problem: the
+dock still rendered, at zero width, so opening the terminal showed nothing at
+all. Below 1280px it stacks full-width under the workbench instead — measured,
+because at 1200px the explorer and file pane both sit on their minimums.
+
+**Packaging.** `serverExternalPackages` plus an explicit copy in both scripts,
+because the binary path is built at runtime from platform+arch+ABI and Next's
+tracer cannot follow it. **`build/` is excluded deliberately** — it holds the
+build machine's own binary, and shipping it makes another architecture fall
+through to the wrong object file. Both scripts now fail loudly if `prebuilds/`
+is missing from the payload.
+
+**One terminal per company**, marked `ponytail:` — keyed by agent id, no second
+tab. Closing the panel does not kill the shell, so a build survives being
+hidden; the × in the header is what ends it.
+
+## v105 (2026-08-26): making and organising files, without ever destroying one
+
+Create, move-or-rename, delete, and a real folder tree behind an **All files**
+toggle. "By department" stays the default, so nothing changes for anyone who
+never opens it.
+
+**Three operations, not four** — on a filesystem rename and move are the same
+call, so they are one dialog taking a path relative to the company root.
+Changing the last part renames; adding a folder in front moves.
+
+**Almost no new code.** Containment is `resolveWithinAgentRoot`, already written
+and already tested. Every operation commits through `commitFile`, which already
+stages deletions and renames via `git add --` — so **no git code was written at
+all**, and a move lands in history as a genuine rename (verified on a real repo:
+`weekly-review.md => docs/decisions/2026-08-26-review.md`, one file changed)
+rather than a delete plus an unrelated create.
+
+**The guard that needed thinking about.** `resolveWithinAgentRoot` realpaths its
+argument, so it returns null for anything that does not exist yet — which is
+every path a create is about. It therefore runs on the **parent**, and the name
+is checked separately: a name containing a separator is *refused*, not
+`basename`'d, because silently truncating `../../etc/passwd` to `passwd` is
+worse than saying no. For a move, the resolved string is checked against the
+root **and** the destination's parent is realpath-guarded — the string check
+alone passes a destination whose parent is a symlink pointing out of the
+company. There is a test for exactly that, and removing the guard turns it red.
+
+**Delete never unlinks.** It moves into the app's own trash first, so it is
+recoverable whatever happens next, then commits the removal best-effort so a
+tracked file is recoverable from its History too. Both rather than choosing:
+deciding which applies costs a `git ls-files` spawn to answer a question whose
+wrong answer destroys the user's work. The app's trash rather than the OS one is
+marked `ponytail:` — it needs no per-platform spawn that can be absent, at the
+cost of Finder's "Put Back" not applying.
+
+**Editing an arbitrary file is deliberately not here.** `resolveWritableSkillPath`
+only accepts discovered skill and command files and that membership gate is a
+standing rule, so loose files open read-only. Editing anything else is what the
+terminal slice is for.
+
+**Two bugs found by running it, both invisible to types and tests.** (a)
+Expanding a company in All-files mode never fetched its root listing — the
+company row set `expanded` directly while only the folder tree's own rows called
+the loader, so it showed "Reading…" forever. The two now share a key space, and
+the company row keys on its **root path** in All-files mode for exactly that
+reason. (b) After any operation the cache was cleared, which left every
+*already-expanded* folder stuck on "Reading…" — nothing re-fetches a folder that
+is already open. Open listings are now re-read rather than dropped. The comment
+that claimed clearing was sufficient was wrong and has been corrected rather
+than deleted.
+
+Verified end to end against a disposable `/tmp` company: created a file (on
+disk, committed, clean tree), moved it into `docs/decisions/` (recorded as a
+rename), deleted it (gone from the company, present in the app's trash, and the
+prior version still readable from `HEAD~1`). Fixture deleted afterward.
+
+## v104 (2026-08-26): Agents and Skills become one workspace
+
+The merge the redesign exists for. `/` was a company's status and
+configuration; `/skills` was that same company's files. Nothing linked them, so
+you held "which page has the thing I want" in your head permanently. One
+surface now, with three states of the right-hand pane: **every company**, **one
+company**, or **one file**.
+
+**`skill-browser.tsx` BECAME `workspace.tsx`** (a `git mv`, so history follows
+it) rather than being forked. It already owned search, department grouping, the
+localStorage filing overrides, the tab strip, the app-managed read-only rule and
+the mobile stacking; a second component beside it would have forked all of that
+and the two would have drifted.
+
+**Every `AgentCard` is rendered on the server and passed down as a node keyed by
+agent id.** This is load-bearing rather than incidental: the card reads
+`os.homedir()`, so it cannot move to the client, and handing it over whole is
+what carries **all thirteen of its controls** through the merge untouched. The
+same nodes back both the overview grid and the single-company panel, so a card
+is built once instead of diverging into two. `getAgentCardFlags` was extracted
+from `app/page.tsx` first, in its own commit, for the same reason — two copies
+of a thirteen-flag computation is the pair that drifts until one surface quietly
+offers a button the other doesn't.
+
+**Verified by parity, not by types.** Every `show*` prop on `AgentCard` is
+optional, so a forgotten one vanishes silently instead of failing `tsc`. The
+prop list was compared against what is supplied: 30 props, 24 from the flags
+object and 6 explicit, none missing and none extra. Confirmed again in the
+browser — the single-company panel renders Set up your company, Get Started,
+Install daily-team-log, More, Add more skills, Back up to GitHub, View
+ownership, Save avatar and Remove, with the rest correctly Advanced-gated.
+
+**The tree still lists EVERY company**, not only the selected one. Searching for
+a file whose name you remember without first remembering which company owns it
+is a real thing `/skills` could do; losing it would have been a regression
+dressed as a simplification. The chevron and the company name are **separate
+buttons** — expanding a folder and changing what the right-hand pane is about
+are two different intentions, and one control doing both means you cannot look
+inside a company without also navigating to it.
+
+**The run gutter** is the signature: a command carries its last outcome as a
+tick at the head of its row; a skill carries nothing, because a skill doesn't
+run — the tick's *presence* is the statement "this is a thing that runs".
+
+**What the data actually supports was checked before the design, and it is less
+than the prototype promised.** `<commandId>.run.json` is deleted on commit
+(`commit-company-command-result-impl.ts`), so it cannot tell "approved" from
+"never ran"; `<commandId>.log` is written by every run and never deleted, so its
+mtime is the durable "has this ever run, and when". Four states, all facts:
+**running now** (the run lock), **waiting on you** (the pending list the sidebar
+dot already computed), **ran, with when** (the log's mtime), **never run**.
+**There is no "failed" state and the gutter must not invent one** — nothing
+records a non-zero outcome, and inferring failure from agent prose is a
+heuristic that would eventually mark a good run bad. `run-signals.ts` is
+`stat`-only for v70's reason: it feeds a `force-dynamic` page, so `git log`
+would be a subprocess per company on every render, forever. The lock is checked
+once per *company*, which is the scope it actually has.
+
+**Verified against real artifacts, not fixtures.** A disposable `/tmp` company
+was scaffolded with real registry command filenames, registered in a throwaway
+`ALACRAN_DATA_DIR`, and given planted run artifacts — a log stamped three hours
+ago, one two days ago, one command with an unapproved result, one never run. The
+tree returned exactly: `decision` waiting, `digest` "Last run 3h ago", `retro`
+"Last run 2d ago", `refresh` "Never run", and the skill with no tick at all.
+Deleted afterward, per the standing rule; the real registry and `~/AI-Native`
+were confirmed untouched by mtime.
+
+**One accessibility defect caught in the browser rather than in review:** the
+gutter's `sr-only` status text sat *before* the filename, so every row announced
+its state first and what it was second. Moved after the name — order is what
+builds an accessible name.
+
+**`/skills` is a permanent redirect, not a deletion.** It is in the sidebar's
+history, in `CLAUDE.md`, in this changelog and in muscle memory; a 404 is the
+same information delivered as a failure.
+
+**The nav word is "Companies".** Every piece of prose this app shows the user
+already says company — "Add a company", "your companies". Only the nav ever said
+"Agents". Two entries became one, and the pending dot moved with it.
+
+**The bottom-nav measurement was re-taken**, because `globals.css`'s note asks
+for it whenever that strip changes: five items at the widest instead of six,
+487px required against the 560px breakpoint, slack 20px → 73px. Also recorded
+there — the app styles `::-webkit-scrollbar` at 11px, so the layout viewport a
+media query sees is ~11px narrower than the window, which makes the original
+note's "verified at 561px" read as more headroom than it had.
+
+The surface-elevation token deliberately deferred out of v103 lands here, where
+it finally has a consumer.
+
+## v103 (2026-08-26): the operations app stops dressing like the landing page
+
+First of five slices toward a merged Companies workspace (spec:
+`2026-08-26-workspace-redesign-design.md`, prototype accepted before any code
+changed). This one adds no feature and moves nothing — it removes decoration,
+pins the nav, and repairs colours that never resolved.
+
+**The orbs are gone.** Three `position: fixed` 700-800px blurred orbs animating
+on 30-42s loops, on every page of a webview app. A permanent compositor cost,
+and the single most templated element in the UI. `.a-glow` deliberately stays:
+it reads as dead but `onboarding-welcome.tsx` still uses it, and a one-time
+welcome screen is the one place a hero flourish earns its keep. The landing
+site keeps its own orbs — the v29 mirroring rule binds palette values and type,
+neither of which changed here.
+
+**The cards stopped levitating.** `.bento-card:hover` lifted 4px with a red
+glow and `z-index: 10`, which raised the hovered card over its neighbours; every
+card also carried `backdrop-filter: blur(24px)`. The glass argument is the one
+`.app-sidebar` already makes in its own comment a few rules below — a
+translucent surface lets what is behind it compete for the same pixels, and a
+blur softens what shows through rather than stopping it. After the orbs went
+there was nothing left to frost either, so the filter was compositing an
+invisible layer once per card. `.netgraph-card` copied the pattern and got the
+same treatment. v89's `.bento-grid > * > .bento-card { height: 100% }` is
+untouched.
+
+**The rail is pinned and collapsing is a remembered choice.** It was 72px of
+unlabelled icons expanding to 228px on hover: pointer-only, moving out from
+under the cursor as it grew, and at rest six icons and no words for an audience
+that is not terminal-literate. **The width is now one custom property**,
+`--nav-w`, read by both `.app-sidebar`'s width and `.app-shell-main`'s
+`margin-left` — those were two literal `72px` values before, which is the pair
+that silently drifts. `data-nav` is stamped pre-paint by the same blocking
+script that already stamps `data-theme`; without it a remembered collapsed rail
+renders 228px and snaps to 72px on hydration, dragging the page with it.
+**Labels are hidden visually only when collapsed, never `display: none`** — each
+is its link's accessible name, the same clip-path recipe and the same reasoning
+`.bottom-nav-item` already uses at the mobile breakpoint (verified: 1px wide,
+still `display: block`, still reads "Agents"). The expand control stays on
+screen while collapsed, because v72's lesson was that hiding a surface can
+remove the only control that brings it back.
+
+**Four colours on the Activity page never resolved, not one.** The reported bug
+was `bg-card/60/50` — a double slash, so that `<pre>` has had no background
+since it was written. Grepping for the *shape* rather than fixing the line found
+three more, which is the lesson v68 and v73 each paid for once:
+`border-glass-edge` on the detail Sheet (`--glass-edge` is a plain custom
+property and is **not** mapped in `@theme inline`, so the class resolves to
+nothing and the bare `border-l` falls back to `currentColor` — exactly v73's
+Skills-page failure), plus `text-red-500` and `group-hover:text-red-400`, which
+reach into Tailwind's own palette, bypass the tokens, are not the brand red and
+do not follow the light theme. A repo-wide re-scan is clean: no malformed
+opacity classes, no raw palette colours, no classNames referencing unmapped
+custom properties.
+
+**An activity row is now a button.** Each was a `<div>` with `onClick` and
+`cursor-pointer`: it opens the detail panel, but Tab never reached it and a
+screen reader never announced it as activatable. Found while verifying the
+colour fix on the same page. v107 rewrites this file; accessibility basics do
+not wait for a redesign.
+
+**The planned repo-wide 12px type floor turned out to be one line.** Classifying
+each of the 33 hits instead of sweeping them showed most were premature —
+`agent-card` and `skill-browser` are rewritten by v104, `network-graph` and
+`connect-panel` by v107, so raising their type now is a diff that gets
+overwritten. Two more are not prose and stay: a step number inside a 16px
+circle, which 12px digits overflow, and an uppercase category header. What was
+left is the AI-engine limitation list, prose a user reads to choose an engine,
+in a file no later slice touches. **The rule v104-v107 apply as they write
+markup:** a 12px floor for content, none for uppercase tracked micro-labels or
+glyphs sized to fit a shape. `.bottom-nav-item`'s 10px label is excluded on
+purpose — `globals.css` carries a measured note beside it (six labelled tabs
+need 541px against a 560px breakpoint) and widening those labels is the exact
+silent break that comment warns about.
+
+**Verified** on a production build (`next start`, throwaway port) rather than
+only `next dev`: all six routes 200, both themes, a real click collapsing the
+rail with no dev overlay in the way, the repaired `<pre>` reporting a real
+background and a `--border` edge, and the row reporting as a `BUTTON`. 773
+tests pass with **no test file modified** — a slice claiming to change nothing
+functional must not need one rewritten.
+
+## v102 (2026-08-25): Kiro as a second executor, verified rather than assumed
+
+Kiro CLI joins `AI_EXECUTORS` with `enforcesToolScope: true` — the first
+executor besides Claude Code to clear that bar, which means `refresh` (the one
+`untrustedInput` command) runs on it and it is a real peer rather than a
+degraded option. The bar was met, not lowered.
+
+**The whole thing rests on two ABSENCES, both measured, one of them silent.**
+Kiro's edit scope is `toolsSettings.fs_write.allowedPaths` in an agent config
+file. Putting `fs_write` in that agent's `allowedTools` DISCARDS the path
+restriction — Kiro says so itself ("You have trusted fs_write tool, which
+overrides the toolsSettings") — and passing `--trust-all-tools` discards it
+with **no warning printed at all**. Measured every combination against a
+throwaway repo: with the tool trusted, a write to `notes/private.md` outside
+`allowedPaths` SUCCEEDED; with it untrusted, the same write was refused
+(`Command fs_write is rejected because it matches one or more rules on the
+denied list: non-interactive mode (no user to approve)`) while an in-scope
+write still went through. That asymmetry is the sandbox, and
+`ai-executors.test.ts` now fails if either flag reappears.
+
+**Three traps worth not re-deriving.**
+(1) **`kiro-cli agent validate` is not a gate.** It exits 0 even for malformed
+JSON, and it accepted an unknown tool name and an invented `toolsSettings`
+field without complaint. It checks well-formedness and known field types only —
+parse stdout for `Error:`, never the exit code. This is why the docs could not
+substitute for a live run.
+(2) **The docs describe a 3.0 that stable does not ship.** `kiro.dev` documents
+a `permissions.yaml` with capability rules; the installed CLI is 2.19.1 and
+uses `toolsSettings`/`allowedPaths`. Same shape of mistake v42 avoided by
+reading a real `--help` instead of search results.
+(3) **The first out-of-scope test was a false negative.** Asked to overwrite a
+file, the model refused on judgment ("prompt injection attack") while the
+sandbox would have allowed it. A benign-looking edit was needed to test the
+sandbox rather than the model's manners. Any future executor verification needs
+the same framing — an agent declining is not a guard.
+
+**The contract grew by one seam, in the right module.** Kiro's scope cannot be
+expressed as argv, so `prepareExecutorScope` (new `lib/executor-scope.ts`)
+writes `.kiro/agents/alacran.json` after the run lock is held and before the
+spawn; a throw aborts the run rather than spawning unscoped. It lives in its
+own module because **`lib/ai-executors.ts` is imported by client components**
+for labels, so a `node:fs` import there passes tsc AND vitest and fails only
+`next build` — caught exactly that way. That module stays isomorphic.
+**`bashPatterns` were refused for about an hour, then verified and implemented**
+— worth recording as the shape of mistake to avoid, not just the outcome. The
+first pass threw on them because Kiro's `toolsSettings.execute_bash.allowedCommands`
+was unexercised, and "unverified" was allowed to stand in for "unsupported".
+Testing it took two runs: with `execute_bash` in `tools` but NOT `allowedTools`,
+`git status --short` under `["^git status.*$"]` ran and `whoami` was rejected.
+**Unverified is a reason to go and verify, not a limitation to ship.**
+
+**The glob→regex translation is a security boundary, not a formatting detail.**
+Claude Code's `bashPatterns` are prefix globs; Kiro's `allowedCommands` are
+regexes. Passing one through as the other fails in two directions at once:
+`get*` as a regex is "ge" plus any number of "t", and an unanchored pattern
+matches a substring — so `rm -rf ~ # git pull` would satisfy `git pull.*`.
+`globToAnchoredRegex` escapes every metacharacter, expands each `*` to `.*` and
+anchors both ends, with its own tests including that exact injection string.
+Kiro's matcher turned out to be stricter than anchoring alone (it rejected
+`git status --short && whoami` under `git status.*`, so it evidently validates
+chained commands individually) — treated as a bonus, not relied on.
+`execute_bash` is added to `tools` **only** when a command actually declares
+patterns; a run that needs no shell does not get one.
+
+**v99's blanket invariant was the wrong shape and is now the right one.**
+`ai-executors.test.ts` asserted that *every* registered executor enforces a
+scope — correct while the registry held exactly the one CLI that does. The
+property that actually protects a company is the pairing, which
+`runCompanyCommandImpl` already implemented: a command carrying
+attacker-authored text only runs on an executor that can be confined to that
+command's own output path. The scope-proof test was generalized rather than
+weakened — it now runs `prepareExecutorScope` into a temp dir and proves the
+pattern reaches the CLI by argv **or** by file, and asserts the written config
+does not trust `fs_write`.
+
+**The picker came back with its writer, in that order** — v99's own note said
+re-adding an executor means re-adding both rather than reviving a dangling one.
+`setAiExecutorImpl` validates both ids against the real key sets. The picker is
+**advanced-only**: per the v71/v72 rule a new user-facing surface is hidden from
+simple mode and opts in, and choosing an AI engine is the definition of a
+decision the stated audience should not have to make.
+
+**Two adapter surfaces stopped being Claude-only**, both path-level rather than
+format-level. `genericCommandSetSkillAdapter` also scans `.kiro/skills`, so a
+Kiro company's Skills page is no longer empty — unconditionally, not dispatched
+on the executor, because `SkillAdapter` takes only an `Agent` and keying off the
+executor would mean threading the registry through `getEffectiveSkillAdapters`,
+which `resolve-known-skill.ts` (a write-authorization path) also calls. Note it
+widens the write allowlist, not just the display. `saveMcpServersImpl` also
+writes `.kiro/settings/mcp.json`: same `mcpServers` key and same `{ type, url }`
+entry, verified from the binary's own serde field names, so one extra path
+rather than one extra serializer. Each file is read before being rewritten so a
+hand-added stdio server survives in the file it was added to. **Only Claude's
+copy is committed** — Kiro treats config travelling inside a repo as an
+injection surface, and a restored company should not arrive carrying MCP
+servers.
+
+**Install button, and the reason it nearly wasn't.** An earlier pass skipped it
+on a hypothesised race — the `~/.local/bin` symlinks are written by the app on
+first launch, not by the installer, so the probe might run too early. Measured:
+that is not the failure. The real one is that **the installer reads `/dev/tty`
+when its app bundle already exists and `--force` does not suppress it**, so
+under `installToolImpl`'s `bash -lc` a reinstall dies with "Device not
+configured" and cleans up. That state is reachable — app present with the
+symlinks gone reads as "not found" and offers the button.
+**It ships anyway, failing loudly rather than being worked around.** The stderr
+names exactly what happened, which is the input v71's 0.5 repair fallback was
+built to receive, and without the button the same command fails identically
+with no repair affordance. `open -g -a` and `kiro-cli setup --no-confirm
+--global` were both measured and neither relinks, so the repair genuinely needs
+an agent: `install-repair-impl.ts` gains a Kiro entry and `ln *` (no more
+privileged than the `mv *`/`cp *` already in that allowlist, and the honest tool
+— copying an 86MB binary would go stale on the next update). No platform guard,
+unlike gh/gog: Kiro's installer handles macOS and Linux. `installId` is now
+derived from `install-tool-impl`'s own key set, so an executor without a
+verified installer still gets no button by default. `isInstalled`'s
+`id === "gh" ? "gh" : "gog"` became a real `Record<InstallableId, string>`,
+which is what made the fourth id a compile error instead of a wrong answer.
+
+**The sign-in button was hardcoded to `claude auth login`, and a second
+executor exposed it.** Setting `needsSignIn` on the Kiro card rendered the
+existing button, which would have opened a terminal signing the user into the
+WRONG CLI — caught before it shipped, by asking what the flag actually renders.
+New `AiExecutor.buildSignInArgs` (absent = no button, written instructions
+instead) and `signInAcceptsEmail` (Claude Code prefills its login page with
+`--email`; Kiro has no equivalent and asks for the provider, so the card must
+not ask for an address it will drop — the "the card lies" shape v64/v72/v74 each
+fixed). `sign-in-claude-impl.ts` is renamed `sign-in-executor-impl.ts`: the old
+name was about to become a lie, and `getAiExecutor`'s unknown-id fallback is
+what keeps a public Server Action from being steered into spawning an arbitrary
+binary. Two tests pin it — Kiro's script must contain `login --license free` and
+no `auth`, and a typed address must never reach an executor that drops it.
+
+**Kiro reports its own sign-in state**, so the Connect card says "Signed in as
+…" rather than "Installed — run a command to confirm". `kiro-cli whoami
+--format json` returns `{"accountType":"SocialGoogle","email":"…"}`; the file
+mirrors `claude-auth-status.ts` including its choice not to verify the
+logged-out branch by signing the machine out, so every ambiguous signal (non-zero
+exit, non-JSON body — `Not logged in` is printed as bare text — or a missing
+email) reads as logged out. **The comment claiming every executor but Claude
+Code "genuinely can't be probed without spawning a session" is deleted, not
+worked around** — same correction v71 made to this same file once already.
+
+**Google's OAuth client setup stays Claude-only** (`claude --chrome` has no Kiro
+equivalent) and needs no equivalent: it produces a machine-wide credential, so
+connecting once under Claude Code covers every executor. The Connect page
+already degrades honestly here — `claudeReady` gates the AI-driven button and a
+machine without Claude Code sees the manual console steps instead.
+
+**What Kiro cannot do is now stated where the choice is made.** New
+`AiExecutor.limitations?: string[]`, rendered by the picker for the selected
+executor, empty for Claude Code so it never reads as a warning about every
+engine. Two entries, both measured against 2.19.1 rather than inferred: **no
+browser tool at all** (its built-ins are fs_read, fs_write, execute_bash,
+use_aws, knowledge, thinking, introspect — the `browser_*` strings in the binary
+are user-agent parsing), so the one-click Google connection needs Claude Code
+installed; and **no `.claude/commands` equivalent**, so a company's own slash
+commands are absent inside a Kiro terminal session (`.kiro/workflows` and
+`.kiro/specs` are different concepts). A test asserts the copy no longer
+mentions Bash, so an implemented capability cannot go on quietly being
+advertised as a gap. **`AGENTS.md` needs no entry** — v86's move off the vendor
+filename pays off exactly as intended, and Kiro's binary carries 68 references
+to it.
+
+773 tests, tsc/eslint/next build all clean. Live-verified end to end against
+kiro-cli 2.19.1 with the app's own generated config and args: in-scope write
+created, out-of-scope write denied, file unchanged.
+
+
+## v101 (2026-08-25): a fresh Linux machine can actually create its first company
+
+Two bugs from one real Ubuntu 24.04 onboarding, both hit at the very first
+thing this app asks a new user to do. Neither is reachable on a developer
+machine, which is why neither had been seen.
+
+**git refuses to commit on a machine with no identity, and that failed the
+whole scaffold.** A fresh Linux install has no `user.name`/`user.email`; git
+synthesises one from the OS user and hostname, gets
+`parallels@ubuntu-linux-2404.(none)`, decides it is not a real address and
+gives up. The reported error was "Failed to scaffold company: ... Author
+identity unknown".
+
+**It was never only the scaffold** — that is the part worth keeping. Three
+places commit: `createCompanyFromTemplateImpl`, `adoptFolderImpl` and
+`commitFile`, and the last one backs EVERY approved command diff. Fixing the
+reported path alone would have let company creation succeed and then broken
+the first time the user approved anything. All three now route through one
+`gitCommit` helper.
+
+**The helper is reactive, not pre-flight, and that is a deliberate cost
+decision.** Probing `git var GIT_AUTHOR_IDENT` before every commit would add a
+process spawn to every approved diff forever, to catch a state almost no
+machine is in — v70's "what does this cost when it runs 50 times an hour"
+question. So the commit runs unchanged and only a FAILURE triggers the probe.
+Consequences worth not re-deriving: the happy path is byte-identical (every
+pre-existing test in `git-commit-file.test.ts` passes unchanged); a user with
+a real identity is never overridden, which is the bug that shipping a blanket
+`-c user.name=...` would have introduced; and any other failure — "nothing to
+commit", a rejecting hook — rethrows the ORIGINAL error, so the callers that
+treat that as benign (v61) still see what they expect. Detection is git's own
+exit code, never its error text, which is not stable across versions or
+locales.
+
+**Verified against real git in a Debian container**, not only mocks: a bare
+commit reproduces the reported error verbatim, `git var GIT_AUTHOR_IDENT` does
+exit non-zero in that state (the assumption the whole fix rests on — had it
+returned the bogus auto-detected identity, the fallback would never fire), the
+`-c` retry commits as `Alacrán <alacran@localhost>`, and a configured machine
+keeps its own author. The four new tests were confirmed to go red without the
+fix.
+
+**A brand-new company denied its own agent permission.** Claude Code ignores a
+workspace's `.claude/settings.json` until the workspace is trusted — "Ignoring
+5 permissions.allow entries ... this workspace has not been trusted" — so the
+first agent opened in a freshly scaffolded company was denied the four
+read-only git commands and `scripts/verify.py` that the bundled template ships
+precisely to make it work. `trustCompanyDirImpl` now marks the directory
+trusted in Claude Code's own `~/.claude.json` at the end of scaffolding.
+
+**This is not auto-accepting a security prompt, and the scope is what makes
+that true.** The dialog exists so that opening SOMEONE ELSE'S directory cannot
+silently activate a `.claude/settings.json` they wrote. This runs only for a
+company the app itself just scaffolded from its own bundled template, whose
+settings file this repo ships and whose contents are four read-only git
+commands plus a `deny` on `secrets/**` — there is no third-party content in it
+to trust. It is deliberately NOT called from `registerCompanyImpl` or
+`adoptFolderImpl`, where the files did come from somewhere else and the prompt
+is doing its job. **Keep that boundary if it ever gets another caller.**
+
+**The file is the user's entire Claude Code state** (~130KB, 47 projects on
+this machine), so the write is defensive out of proportion to the feature: it
+merges rather than replaces, preserves every other project and top-level key,
+refuses to overwrite a config it could not PARSE (destroying that to save one
+prompt is never the trade), writes through a temp file and `rename` so a crash
+cannot truncate it, and returns false rather than throwing — a company that
+scaffolded fine must never be reported as failed over a config file this app
+does not own.
+
+**Verified against the real Claude Code CLI (2.1.243)** with an isolated
+`CLAUDE_CONFIG_DIR` and no API call: `claude config list` in an untrusted
+disposable company reproduced the user's warning verbatim, and the same
+command after `trustCompanyDirImpl` ran no longer ignores the entries. That
+run also confirmed `CLAUDE_CONFIG_DIR` really does relocate `.claude.json`,
+which `defaultClaudeConfigPath` had only assumed.
+
+**Test-hygiene trap, v75's in the other direction:** giving the trust write a
+real default meant the existing scaffold tests would have written into the
+developer's own `~/.claude.json`. They now point `CLAUDE_CONFIG_DIR` at a
+temp dir, and the real file was hash-checked before and after the suite.
+
+## v100 (2026-08-25): a native window, and no browser
+
+Alacrán is a desktop app now. It still is what it always was — a local Next.js
+server on `127.0.0.1` — but it is shown in a real OS window instead of being
+handed to whatever browser the user had set as default. No tab, no address
+bar, no "it opened in Safari and my Claude extension is in Chrome".
+
+**Only the display step changed, deliberately.** `output: "standalone"` was
+already platform-agnostic, and both packaging scripts carry bug fixes that
+each cost a shipped release to find (the `templates/` nesting of v83, the
+`.data` leak of v0.7.8, v45's port race, the PATH discovery every launcher
+does). So the payload and the launcher are untouched in shape: the single line
+that ran `open`/`xdg-open` now runs a native webview instead.
+`scripts/webview-macos.swift` (WKWebView, ~170 lines, compiled at package time
+with `swiftc` into `Contents/MacOS/alacran-window`) and
+`scripts/webview-linux.py` (WebKitGTK via PyGObject) are the whole of the new
+surface. `docs/native-app.md` writes down the contract both satisfy.
+
+**Not Electron**, and the reason is the paragraph above rather than a dislike
+of it: every target OS ships a webview (WKWebView, WebKitGTK, WebView2), so
+Electron would have added ~200MB of Chromium, a second thing to keep patched,
+and a rewrite of the one part of this repo whose comments are a list of
+already-paid-for mistakes.
+
+**The window owns the app's lifetime now, in both directions.** The launcher
+`wait`s on the window rather than the server, so closing the window quits
+Alacrán — and a watchdog kills the window if the *server* dies first, which
+is what an in-app update looks like from the inside. The second direction is
+new; a browser tab outlives its server perfectly happily, a native window
+showing a dead page does not. **User-visible consequence, now stated in the
+README:** a closed window used to be free (the server kept running, and so did
+schedules). It isn't any more — minimise instead.
+
+### Findings worth not re-deriving
+
+**`open -a` silently stops relaunching the app once it has a real window, and
+this breaks in-app updates.** `restartAppImpl` relaunches macOS by handing the
+bundle to LaunchServices. That worked only because a bash launcher never
+registers as a running GUI application — the moment the Swift window sets
+`.regular` activation policy under the same bundle, LaunchServices considers
+Alacrán *running* and `open -a` just activates it, starting no new process.
+Measured with a purpose-built bundle that logged each launcher start: one line
+where two were needed, then two with `-n`. So `open -n -a` is load-bearing and
+must not be "tidied" away. The outgoing instance is retired by the launcher's
+own port-clearing step, which is why that step's correctness matters more now
+than it did.
+
+**`lsof -ti tcp:$PORT` matches client connections, not just listeners — and
+that was a live bug in the shipped launchers.** Both launchers clear a stale
+prior instance off the port before starting, escalating to `kill -9`. A bare
+`lsof -ti tcp:PORT` returns *any* process holding a socket on that port,
+including something merely *connected* to it — which, in a build whose whole
+job was to open the user's browser at that port, means the browser. Caught
+live here: the check matched Google Chrome's network-service helper. Every one
+of the five call sites is now `-sTCP:LISTEN`-scoped. Killing a user's browser
+networking on app launch was always possible; nothing had looked.
+
+**The window binary belongs in `Contents/MacOS`, not `Contents/Resources`.**
+CFBundle resolves `Bundle.main` by walking up from the executable to the
+enclosing `.app`, so a binary sitting there inherits the bundle's icon,
+display name and `Info.plist` for free — including the ATS declaration for the
+plain-HTTP local server. Confirmed from the window server: the running
+window's owner reports as `Alacrán`, not `alacran-window`. From `Resources` it
+would have been a nameless, icon-less process.
+
+**`target="_blank"` does nothing in a bare webview.** WKWebView drops a
+new-window request unless the UI delegate creates one, and WebKitGTK does the
+same without a `create` handler — so the app's seven external links (release
+notes, changelog, tool guidance) would have been dead on arrival. Both shells
+now send non-local URLs to the real browser and cancel the navigation. This
+was verified rather than assumed, because a Swift delegate method with a
+subtly wrong signature is simply never called and fails silently: a probe
+built from the real source with only `NSWorkspace.open` stubbed confirmed both
+paths fire (`createWebViewWith` for `_blank`, `decidePolicyFor` for an
+ordinary external link) while the window itself stayed on the local URL.
+
+**Cmd+C is menu-driven on macOS.** A WKWebView with no Edit menu has no
+working copy/paste/select-all at all — which would have been quietly
+disastrous on the Connect page, whose content is mostly commands you are meant
+to copy into a terminal. The shell builds a real menu bar.
+
+**macOS ships bash 3.2, so `wait -n` does not exist** (the same trap v35 hit
+with `mapfile`). The "server died, take the window down" half is a plain
+`kill -0` polling subshell instead.
+
+**Linux stays `Architecture: all` because the window is a script.** A compiled
+GTK shell would have made the `.deb` per-architecture and added a build step
+to CI; Python + GObject introspection needs neither, and WebKitGTK comes from
+the distro as a dependency (`python3-gi`, `gir1.2-gtk-3.0`,
+`gir1.2-webkit2-4.1 | gir1.2-webkit2-4.0`). Marked with a `ponytail:` note:
+GTK4/WebKit 6.0 is a second code path, not a version bump, and no current
+Debian/Ubuntu target needs it.
+
+### Windows
+
+Not built — it stays gated per the roadmap. But it is now additive rather than
+a migration, and `docs/native-app.md` says exactly what it needs: a WebView2
+host satisfying the same four-rule contract, a packaging script, and `win32`
+branches in `resolveDataDirFrom` (today it falls through to the XDG path,
+which works but is not `%APPDATA%` — worth changing *before* the first Windows
+user exists rather than as a data migration afterwards) and `restartAppImpl`.
+The platform-keyed paths already degrade rather than break: `performUpdate`
+returns "Automatic updates aren't available on this platform", and
+`restartAppImpl`'s spawn failure is swallowed by its existing `on("error")`
+guard.
+
+**Verified:** 740 tests across 101 files, `tsc`, `eslint` and `next build`
+clean; the real packaged `.app` built, self-tested, launched by double-click,
+confirmed on screen at 1280x860 owned by `Alacrán`, and both lifecycle
+directions exercised end to end with no orphaned process left behind either
+way.
+
+## v99 (2026-08-24): keep the company file true, and cut the surface to what's tested
+
+Four changes with one argument behind them: this app's whole claim is "the
+agent proposes, you approve, git remembers," and everything that doesn't
+serve that claim is either untested or in the way.
+
+### `refresh` — the upkeep half of `define-company`
+
+`define-company` (v8/v18/v21) writes a company's description of itself once.
+Nothing ever brought it back into line afterwards, so every skill, command and
+agent session downstream keeps reading a file that was accurate on the day it
+was written and has quietly gone stale since. **That's the one gap where a
+hosted knowledge product is structurally better than this one** — it re-reads
+its sources; a hand-typed ontology doesn't.
+
+Closed with **no new mechanism**: `refresh` is one `registry.ts` entry
+(`known-file`, `outputPath: definitions/ontology/company.yaml` — the same
+shape `define-company` already had), so the run → diff → approve → commit
+path, the run lock, the before-snapshot, `commitCompanyCommandResultImpl`'s
+realpath containment gate and the daily scheduler all apply unchanged. The
+agent's tool scope is exactly `Read,Grep,Glob,Edit(definitions/ontology/company.yaml)`
+with a blanket `Bash` disallow.
+
+**Where the evidence comes from, and why that split matters.** The new
+`prefetch/refresh.ts` gathers two things. The company's **own git history** is
+the signal that needs no connector at all — the notes, decisions and retros a
+user has been accumulating are exactly the evidence that a `company.yaml`
+written months ago is now wrong — and it is ranged from *the commit that last
+touched the ontology*, not a wall-clock window, which is what stops a company
+nobody has updated re-showing the same commits every single day. Notion is
+added when it happens to be connected, because the agent has no credentials
+and no Bash in this run and cannot reach it itself.
+
+**A missing Notion connection is a note, not a refusal.** `check-notion`'s
+prefetch refuses (`ok: false`) with instructions when there's no token, which
+is right for a command whose entire output is a Notion listing and wrong here:
+refresh's point is that it works on a fresh machine with nothing plugged in.
+The refusal is downgraded to a line in the prefetch text. Same for git — an
+unreadable git log degrades to a parenthesised note rather than aborting a run
+the agent's own `Read`/`Grep` over the repo could still have made useful.
+
+**The Notion titles are fenced, which `check-notion` never needed.**
+`buildCheckNotionPrefetch` ships page titles unfenced because its own prompt
+only ever asks the agent to *list* them. `refresh` asks the agent to **change a
+file**, which turns a page title into a real injection surface, so the nonced
+fence (`prefetch/untrusted-fence.ts`) goes on. The command therefore carries
+`untrustedInput: true`, and inherits both guards that flag already owns for
+free: `runCompanyCommandImpl` refuses it outright on any executor reporting
+`enforcesToolScope: false`, and `setScheduleImpl` refuses auto-commit on it in
+code — its result always waits for a human, which for an *editing* command is
+the case where "nobody looked at it" IS the whole risk.
+
+**Two prompt rules that are the actual product here**, not prose: a minimal
+diff (every line left alone is a line a human doesn't have to review), and an
+explicit licence to change nothing. Without the second, the model invents an
+edit to look productive and the diff — the entire deliverable — stops meaning
+anything. Uncertainty is written down (`# unconfirmed: <what it saw>`) rather
+than silently resolved.
+
+**Two entry points, deliberately, for two populations.**
+`templates/company-starter/.claude/commands/refresh.md` gives new companies
+the Skills-tree row and the daily-schedule control for free, since
+`TEMPLATE_MANIFEST` copies the whole `.claude/commands` directory. But
+`updateCompanySkillsImpl` only ever syncs `.claude/skills`, so **a template
+command file never reaches a company that already exists** — and every company
+with an ontology to refresh is, by definition, one that already exists. So the
+card gets a `RefreshOntologyButton` too: a Sheet around `CompanyCommandRunner`,
+structurally identical to `GetStartedButton`'s simple-mode branch, which is
+what makes a second entry point onto an existing registry command cost a Sheet
+and nothing else (the runner already owns the run button, log tail, diff,
+approve step and schedule control).
+
+**Shown in simple mode, not behind Advanced**, which is a deliberate reading
+of the v71 rule rather than an oversight: that rule exists to hide
+terminal-literate surfaces and make the first win "a diff the user approves."
+`refresh` *is* a diff the user approves. It's gated on `hasOntology` — there is
+nothing to refresh without one, and `commitCompanyCommandResultImpl` refuses a
+command whose expected output location doesn't exist anyway.
+
+### One executor: Claude Code
+
+`AI_EXECUTORS` had four entries; three of them had never been run end to end
+against a live account from this app, which the file's own comment and
+README's caveats both said out loud. Worse, each one's "non-interactive" flag
+(`--sandbox workspace-write`, `--yes-always`,
+`--dangerously-skip-permissions`) is the **opposite** of a path allowlist —
+which is why v56 had to build `enforcesToolScope` + `untrustedInput` to refuse
+running attacker-authored text on three of the four options a user could pick.
+Shipping untested paths costs credibility that the honesty of the rest of
+these docs otherwise earns for free.
+
+**Deleted, and it needed no migration**, because `getAiExecutor` and
+`getAiExecutorIdForAgent` both already treated an unknown id as the default: a
+company assigned to `aider` now silently resolves to Claude Code. Two tests
+pin exactly that, since it is the whole reason the deletion was safe.
+
+**What stayed, and why.** `enforcesToolScope`, `untrustedInput`, and
+`runCompanyCommandImpl`'s refusal are all unreachable today — every registered
+executor enforces a scope — and are all kept: deleting a security guard
+because the current configuration makes it unreachable is how it fails to
+exist on the day a second executor comes back. A new test asserts every
+registered executor enforces a scope, so that day fails loudly. `bashPatterns`
+is kept for the same reason (no command declares it now; it is how a command
+gets a narrow Bash allowlist instead of a blanket disallow, and re-adding a
+`gog`-backed job is exactly the "plugin later" that was named). The
+`ai-executor-registry` **reads** stay — six live callers, and a pre-v99 install
+has that file on disk — but `setAiExecutorImpl` and `lib/set-ai-executor.ts`
+went with the picker that was their only caller. A dangling writer no UI can
+reach is worse than no writer.
+
+`AiExecutorPicker` is deleted, along with its guide step, its `AgentCard`
+prop, and the now-dead `aiExecutorId` prop the card no longer read. The
+`showMcpButton` gate stopped being `aiExecutorId === "claude-code"` (always
+true now) and carries a comment saying to re-gate it if a second executor
+returns.
+
+### Three jobs, not nine
+
+`COMPANY_COMMANDS` went from ten to six: `digest`, `decision` and `retro` are
+the one-click jobs, plus `refresh`, plus `orientation` and `define-company`,
+which are not pickable at all — they back the Get Started button and the setup
+wizard.
+
+**The rule used to pick the three: works on a fresh install with nothing
+connected.** `digest`, `decision` and `retro` read only what the user typed
+and the company's own repo. `check-inbox` and `triage-email` need `gog`
+installed and authorized; `triage-issue` needs `gh` plus a
+`definitions/triage/repos.yaml`; `handoff` is developer-flavoured (git log +
+open issues). For an audience stated to be *not technically comfortable*,
+every one of those is a job that fails on first click.
+
+**Cut from the app, not from the company.** The `.md` command files stay in
+`templates/company-starter/.claude/commands/`, so `/handoff` and the rest
+still work in a terminal session and still appear in the Skills tree as
+readable, editable files — they just have no Run tab, because `SkillBrowser`
+matches a tree file to a registry entry and there no longer is one. That is
+the right degradation and it cost nothing to get.
+
+Deleted with them: `prefetch/repo-status`, `triage-email`, `triage-issue`,
+`triage-config`, `repo-summary` and their tests. `prefetch/check-notion`
+survives as a module because `refresh` reuses it.
+
+**Two consequences worth naming.** No command declares `bashPatterns` any
+more, so every run now gets `--disallowedTools Bash`; the two integration
+tests that proved the allowlist through `check-inbox` are gone, and
+`buildArgs`' own handling of patterns is still covered directly in
+`ai-executors.test.ts`. And the Google-accounts picker's blurb named
+`check-inbox` and `triage-email` specifically — it now describes what it
+really still does (records which accounts belong to a company; drives the
+Network map's Google edge), because a control that names commands the app no
+longer offers is the "the card lies" failure v64/v72/v74 each fixed once.
+
+### The hero clip
+
+The landing hero was a fake terminal running `claude-code --task "Analyze the
+latest launch metrics"` — a mock of something the product doesn't do. It is
+now a slot for a 60-second recording of the real loop (company file in, agent
+runs, diff appears, approve, commit lands), with the **still as the fallback
+rather than a placeholder**: the mock stays until `hero-diff.mp4` actually
+decodes a frame, at which point `onloadeddata` swaps them. No script tag, no
+state to keep in sync, and a missing file never renders as a broken player.
+The mock's content was rewritten to show a real ontology diff, so even the
+fallback tells the right story.
+
+**The clip itself is not recorded.** It needs a real headless `claude -p` run
+to completion, which this project's standing rule forbids an automated pass
+from triggering. `landing/hero-diff.README.md` carries the take list, the
+`ffmpeg` encode (`-an` matters: the clip is muted and autoplays), and the
+reminder to pick the poster frame from the diff, since that is the frame most
+visitors will only ever see.
+
+Hero, install and privacy copy also stopped naming four executors, and
+`how-to-use` stopped describing a "Runs commands with" setting that no longer
+exists.
+
+**Verified:** `tsc --noEmit`, `eslint`, `next build` all clean; 740 tests
+across 101 files pass. No live agent run was triggered, per the standing rule.
+
+## v98 (2026-08-23): making the AI route actually reachable
+
+Three runs had failed three different ways and the response so far had been to
+route around the browser agent. That isn't what was asked for. This slice takes
+the prerequisite chain seriously instead: two of its four links are checkable
+from disk, the third is not checkable but IS actionable, and none of them had a
+name on screen.
+
+```
+1. Chrome installed                                      checked since v71
+2. a profile signed in as the target Google address      checked since v93
+3. the Claude extension installed in THAT profile        checked here
+4. that profile signed in to claude.ai as the same
+   Claude account this app runs on                       not checkable — now actionable
+```
+
+**Link 3 is a directory read.** Extensions are per-profile, so a profile without
+`fcoeoabgfenejglbffodgkkbkcdhcgfn` can never be driven by `claude --chrome` no
+matter what else is true. `ChromeProfile` now carries `hasClaudeExtension`, and
+`setupGoogleImpl` refuses before spawning if the matching profile lacks it,
+naming the profile and saying that having it in another one doesn't count.
+
+**Link 4 is why `list_connected_browsers` came back empty.** The extension pairs
+by **Claude account**, not by machine — so a profile can have the extension
+installed and still report no browser at all, because it's signed in to
+claude.ai as somebody else. Nothing local can read that. What it can do is open
+claude.ai/chrome **in the right profile** and name the account it has to match,
+which is the whole of what a person needs to fix it. That is the new **Pair the
+extension** button, and it reads the account from `claude auth status` rather
+than guessing: on this machine it says `alex@example.com`.
+
+Verified against the real machine, which shows why link 3 alone would not have
+explained the failure — the extension was already in the right profile:
+
+```
+Claude Code account: alex@example.com (pro)
+
+Default     alex@personal.example        extension: yes
+Profile 2   sam@workspace.example                  extension: yes
+Profile 3   side.project@example.com  extension: no
+```
+
+So for the reported case the gate passes and the pairing button is the fix.
+v97's ordering stands — the console steps still come first, because they need
+none of this — but the AI route now has every link either enforced or named,
+instead of being discovered one lost session at a time.
+
+## v97 (2026-08-22): a readable plan, and the walkthrough where it was needed
+
+Two problems from one run, neither of them the one that was reported.
+
+**The mangled console URLs were a terminal artifact, not bad data.** The run
+showed `console.cloud.googgoogleapis.com`, `https://consoleience`, and sentences
+cut mid-word. Generating the real prompt shows every link intact — the ~4KB
+prompt was spliced in as a single argv token and the terminal redrew over it.
+The agent always received the right bytes, but a plan you cannot read is a plan
+you cannot check, and those are links a person may well click by hand. The
+prompt is written to `google-setup-prompt.md` and the session is handed a
+one-line instruction to read it, the same shape `buildVisibleRunScript` already
+uses. A test now asserts every `GOOGLE_CONSOLE_STEPS` href survives into the
+file, so a truncated link fails the suite rather than a user's afternoon.
+
+**The real blocker was that "Add another account" never offered the walkthrough.**
+`list_connected_browsers` returned empty — zero browsers, so the AI route was
+dead — and the only fallback that card rendered was `gog auth add`, which for an
+out-of-org address is precisely the command that returns
+`Error 403: org_internal`. Both routes led nowhere. That card now detects the
+case client-side (the typed domain matches none of the connected accounts) and
+renders the full six-step console walkthrough inline, naming the organisation
+the existing setup belongs to and quoting the error verbatim. Its manual command
+switches accordingly:
+
+```
+out-of-org  gog auth setup alex@personal.example --credentials <file> \
+              --services gmail,calendar --client gmail-com --login
+same-org    gog auth add third@workspace.example --services gmail,calendar
+```
+
+**The AI shortcut no longer leads.** It has now failed three distinct ways in
+real use — wrong Chrome profile, only remote browsers offered, then no browser
+connected at all — and each costs a whole session to discover. The numbered
+console steps need no extension, no pairing and no particular AI, so they come
+first and the agent button follows as "or let your AI click through them for
+you". The card also states the prerequisite chain that was never written down:
+the extension pairs by **Claude account**, so that Chrome profile must have the
+extension installed *and* be signed in to claude.ai as the same Claude account
+this app runs on. None of that is checkable from here, which is exactly why it
+belongs on screen instead of being discovered one failed session at a time.
+
+## v96 (2026-08-22): one OAuth client does not serve every account
+
+Reported from the run v95 enabled: adding a personal `@gmail.com` address to a
+machine already connected to a company Workspace opened the sign-in and
+Google refused it outright —
+
+```
+Error 403: org_internal
+gog CLI is restricted to users within its organization
+```
+
+**v95's assumption was too coarse, and this is its regression.** It reused the
+existing OAuth client whenever *any* account was connected. But a client belongs
+to one Cloud project, and that project's consent screen here is **Internal** —
+which admits only accounts inside that Workspace. A personal Gmail is
+outside it, so the reuse could never have worked. Before v95 this case took the
+full console path and would have created a project the address could use; v95
+short-circuited it into a guaranteed 403.
+
+**gog already models this properly, which the app was ignoring.** Both
+`auth setup` and `auth add` take `--client=NAME` — *"selects stored credentials +
+token bucket"* — and `auth list -j` reports a `client` per account. So clients
+coexist with separate credentials and tokens. `GoogleAccount` now carries that
+field, and `clientNameForAddress` decides: reuse the client that already serves
+this address's **domain**, otherwise derive a new name from the domain
+(`gmail.com` → `gmail-com`). On this machine:
+
+```
+connected: alex@workspace.example [client=default], sam@workspace.example [client=default]
+
+alex@personal.example      client=personal-example   NEW project — existing one untouched
+third@workspace.example     client=default     reuse (gmail,calendar,drive,docs,sheets,tasks,contacts)
+someone@acme.co             client=acme-co     NEW project — existing one untouched
+```
+
+An outside address now gets the full console job again — but scoped: the prompt
+names `org_internal` as the reason, says to create a NEW project while signed in
+as that address, and says explicitly not to reuse or modify the existing one or
+disturb the accounts already connected. The final command carries
+`--client gmail-com`, so the new credentials land in their own bucket and
+`alex@workspace.example`/`sam@workspace.example` keep working untouched.
+
+**"Enabled APIs" is now read per client, not per machine.** v95 took the union
+across every account; that is only meaningful within one project. It reads from
+the accounts on the client being reused.
+
+**A virgin machine still gets gog's own `default` client**, not an invented name
+— the first client has nothing to coexist with, and diverging there would make
+every install before this inconsistent for no gain.
+
+## v95 (2026-08-21): adding a third address is not a first-time setup
+
+Reported from real use, and correct: a machine with two Google accounts already
+connected, a third address typed with Drive ticked — and the agent was handed
+the entire six-step first-time console job, then stalled on a browser it never
+needed. There was nothing for it to do in the console.
+
+**The mistake was reading machine state off one address.** `setupGoogleImpl`
+decided "first-time setup" vs "add more apps" from whether *the target address*
+had scopes. A new address always has none, so it always got the full job. But
+the OAuth client and the enabled APIs belong to the **Cloud project**, not to an
+address: once any account is connected a client exists, and once any account
+carries a scope that API is enabled. Now derived from every connected account:
+
+```
+connected:            alex@workspace.example, sam@workspace.example
+project has enabled:  gmail, calendar, drive, docs, sheets, tasks, contacts
+
+new address + [gmail, drive]            -> NO CONSOLE — just gog auth add
+new address + [gmail, calendar, drive]  -> NO CONSOLE — just gog auth add
+new address + [gmail, slides]           -> console needed for: slides
+```
+
+**Three real cases now, instead of two guessed ones.** Nothing connected yet →
+the full first-time job, unchanged. A client exists and every ticked service is
+already enabled → **no console and no AI at all**: one `gog auth add <address>
+--services …` in a visible terminal, whose own browser sign-in the user
+approves. A client exists but some API is genuinely missing → the short job for
+exactly those pages, explicitly told not to create a project or a second client.
+
+**The middle case is also the answer to "make this work with any agent."** When
+there is nothing to click, this was never an AI task — it is one command, so it
+runs identically whether the user is on Claude, Codex, Gemini or a local model,
+and it skips the Chrome profile gate too (the consent opens in the default
+browser; gog targets the address it was given).
+
+**One conflation fixed while separating these.** `buildGoogleExpandPrompt` used
+one list for two questions — which APIs still need enabling, and what
+`--services` to request. They diverge for a new address on a set-up machine:
+nothing to enable, but the address itself has nothing granted. Splitting them
+matters in the dangerous direction, and a test pins it: a third address that
+ticked only Gmail must not be authorized for Drive just because another account
+has it.
+
+## v94 (2026-08-21): the browser the agent attaches to isn't this machine's
+
+Follow-up to v93, from a real agent run that failed. v93 fixed which Chrome
+profile Alacrán *opens*; this is about which browser the agent *attaches to*,
+and they turn out to be different problems.
+
+**What the run found.** The agent reported two connected Chrome browsers, both
+`osPlatform: Linux`, neither local to this Mac — one signed in as the wrong
+account and sitting on a password re-entry screen, the other with no Google
+session at all. It refused to click anything, which is exactly right. The cause:
+**the Claude browser extension registers connections against the Claude
+account, not the machine.** A Chrome on another computer signed into the same
+Claude account is offered as a connectable browser here. That is Claude Code's
+model, not this app's, and nothing here can pick for it.
+
+**One hypothesis from that run was wrong and is worth recording so it isn't
+retried.** The agent suggested the extension was installed in Profile 2 but not
+Default, Chrome extensions being per-profile. Checked directly: extension
+`fcoeoabgfenejglbffodgkkbkcdhcgfn` ("Claude") is present in **both** Default and
+Profile 2. Installing it again would have fixed nothing, and a pre-flight check
+for it would have returned a false green.
+
+**What this app can actually do, and now does.** Bring the matching profile's
+Chrome up itself, on the account page, immediately before spawning the agent —
+so the correct local browser is running and frontmost rather than left to
+chance. That reuses `openChromeAccountCheckImpl` rather than growing a second
+way to open Chrome. And the prompt now names the failure mode explicitly: more
+than one browser may be offered, including ones on other computers signed into
+the same Claude account; use only a local one, and stop rather than use a remote
+one. The agent worked that out by instinct this time; it should not have to.
+
+**What it cannot do, stated on the card rather than papered over.** It cannot
+choose which browser the extension attaches to. So the card now says that if you
+use Claude on more than one computer your AI may see those browsers too, that it
+is told to refuse them, and that the numbered console steps work with any AI or
+none.
+
+**On "make this work for any agent — Claude, Codex, Gemini, local models".** The
+browser route cannot be made agent-agnostic: `--chrome` is Claude Code's own
+flag and no other executor has an equivalent (v42/v61 established the same
+shape for MCP). The agent-agnostic route already exists and always has — the six
+console links plus one `gog auth setup … --credentials … --login` command are
+rendered for every executor, gated on nothing. Only the shortcut is Claude-only.
+No new mechanism was built for this, deliberately.
+
+## v93 (2026-08-21): which Chrome profile, said out loud and enforced
+
+Reported from real use: the Google setup agent kept operating a different
+Google account from the one typed into the card. Diagnosed by reading the
+machine — Chrome here has **three** profiles, each signed in as a different
+address:
+
+```
+Default     alex@personal.example     (last used)
+Profile 2   sam@workspace.example
+Profile 3   side.project@example.com
+```
+
+`open -a "Google Chrome"` opens whichever profile Chrome used last or has
+frontmost. The app named none, so on this machine it was a coin flip, and the
+only guard was a sentence in the prompt asking the model to notice the mismatch
+and stop. That is not a gate.
+
+**The premise that made it a checkbox was wrong.** `setup-google-impl.ts` said
+which account Chrome is signed in as "has no API… reading Chrome's own profile
+would be fragile and a bigger intrusion than this feature is worth". There is
+no *web* API, but Chrome writes every profile's signed-in address to
+`Local State`, a plain JSON file beside the profiles — one `readFile` away, and
+a far smaller intrusion than letting an agent operate the wrong Google account.
+New `lib/chrome-profiles.ts` reads it (macOS and Linux paths both).
+
+**Now a hard refusal, before anything spawns.** No profile signed in as the
+typed address means the run is declined with a message naming the addresses
+that *are* available, so the user can fix it without guessing. Where a profile
+does match, its directory is named in the agent's prompt, and
+`openChromeAccountCheck` opens **that** profile rather than the last-used one —
+so "Open Chrome and check" finally shows the account the user is being asked to
+confirm. On macOS that means invoking the Chrome binary directly: `open --args`
+is silently ignored when Chrome is already running, which is exactly when
+profile selection matters.
+
+**An unreadable `Local State` means "can't tell", not "no match"** — a machine
+where Chrome lives somewhere unusual falls through to the previous
+confirm-it-yourself behaviour rather than being blocked out of a setup that
+would have worked. Matching is case-insensitive, the same rule v75 pinned for
+`accountServices` lookups. The new seam is a trailing optional parameter (v46),
+so every existing call site and test was untouched.
+
+**Also answered, because the report asked it:** the agent has never used the
+Claude Code account's email. `buildGoogleSetupPrompt` splices the typed address
+into the job in four places, including the stop-if-it-doesn't-match line. Claude
+Code's own sign-in (`alex@workspace.example` here) is its API identity and nothing else —
+and it now *provably* can't leak in, since no Chrome profile is signed in as it,
+so that address is refused like any other unmatched one.
+
+**Not done, and not ours:** restricting this to "any browser with the Claude
+extension" isn't a choice this app makes. `--chrome` is Claude Code's own flag
+and drives Chrome specifically; there is no equivalent for another browser to
+select. Marked with a `ponytail:` note: the app can pick the right profile and
+refuse a wrong one, but it cannot force which window `claude --chrome` attaches
+to, so the profile is named in the prompt as well and the agent is still told to
+stop on a mismatch.
+
+## v92 (2026-08-21): the marketing site's CSS, deleted from the app
+
+A repo-wide over-engineering audit turned up two cuts and nothing else. Net -56
+lines, no dependency removable, no feature touched.
+
+**47 lines of the landing page's terminal mockup were sitting in
+`app/globals.css`** — `.mac-window`, `.mac-header`, `.mac-dots`, `.mac-dot`
+(+`.r`/`.y`/`.g`), `.mac-title`, `.mac-body`, `.terminal-line` and its two
+descendants. Every user of those classes is `landing/index.html`, which loads
+its own copies from `landing/styles.css` and `landing/cinematic.css`; the app
+has no such component and never did. `.a-glass` went with them: its comment
+still called it "the floating nav pill, shared with the landing nav", but its
+only consumer was `components/nav.tsx`, which v40 deleted when the top bar
+became the sidebar. The comment outlived the markup by 52 slices.
+
+**Verified by pixel, not by eye.** v78's rule is that a dead-CSS claim needs a
+rule-count check AND a browser probe. Screenshots of all six routes before and
+after, motion frozen (`reducedMotion: "reduce"` plus an injected
+`animation:none;transition:none`) because the staggered `a-rise` entrances and
+the ambient orbs make two runs of the same page differ every time: **0 of
+1,152,000 pixels changed on every route.** Rules 162 → 149.
+
+**`department-overrides.ts` (v89, mine) kept four exports for one consumer.**
+The precedent it cited — `components/reorderable-grid.tsx` — keeps its own
+localStorage read inline. It does now too: the module keeps `nextOverrides`,
+which is the actual rule (delete an override equal to the derived default, or a
+later pack recategorisation is pinned forever) and the only part with a test to
+reach; the read and write moved into `skill-browser.tsx`.
+
+**Everything else was checked and rejected**, recorded here so it isn't
+re-litigated: all seven prod dependencies earn their place (`tw-animate-css`
+supplies the `animate-in/out` the Radix primitives use); `cn()` is a bare
+`twMerge` delegate now that v78 took `clsx`, but ~50 of its consumers are
+`components/ui/*`, which the conventions forbid editing; `SkillAdapter` has two
+implementations, not one; the four 7-line `"use server"` files are each a real
+client-to-server boundary; `tailLines` and `COMPANY_COMMANDS_DATA_DIR` have 2
+and 7 consumers; 34 of 34 `-impl.ts` files still have their own test, so v78's
+justification for that pairing holds unchanged; and there are **zero** exports
+declared and referenced nowhere. The 49 symbols used only inside their own file
+would save 0 lines to un-export — churn, and exactly the shape of v86's
+false-positive sweep.
+
+## v91 (2026-08-21): the shipped ontology template was not valid YAML
+
+User-reported, from the packaged app: editing a company and pressing Save showed
+`Couldn't save: An error occurred in the Server Components render. The specific
+message is omitted in production builds…`. Reproduced in a real production build
+against a disposable company, where the server logs the un-redacted cause:
+
+```
+⨯ Error [YAMLParseError]: Nested mappings are not allowed in compact mappings
+  at line 19, column 12:    updated: <<TODO: YYYY-MM-DD>>
+```
+
+**The template this app scaffolds every company from has been unparseable since
+`f253aa9` (2026-08-12).** `<<TODO: hint>>` looks like a placeholder and is one to
+a human, but a `: ` inside an unquoted scalar is a nested mapping to YAML, so
+`yaml@2.9.0` refuses the file. Ten of those placeholders carried a colon; the
+bare `<<TODO>>` ones were always fine. They are quoted now.
+
+That mattered because `buildCompanyOntology` **parses** the template, to copy its
+customer/org/product domains through verbatim (v18's rule: those are copied, not
+AI-generated). So the wizard could never save for any company scaffolded in those
+nine days — the file was never written at all.
+
+**Why it read as a render error rather than a save error.** `saveCompanyOntologyImpl`
+guarded the `readFile` of that template and guarded the `commitFile` after it, but
+not the `parse` between them, and `lib/save-company-ontology.ts` is a bare
+`return saveCompanyOntologyImpl(...)` under `"use server"`. So the throw became the
+action's rejection, and Next replaced it with its generic production digest. Every
+sibling reader of a user-editable YAML file already returned a message instead
+(`parse-company-ontology.ts`, `triage-config.ts`, `google-accounts-config.ts`) —
+**this was the only unguarded YAML parse in the codebase.**
+
+**Fixing the bundled file alone would have fixed nobody who already has a company.**
+The wizard reads each company's OWN copy, and three on this machine hold a
+byte-identical broken one. So an unparseable company template now falls back to the
+app's own current copy, which both packaging scripts hard-assert into the payload
+(the v83 check) and `adopt-folder.ts` already reads at runtime. This is app-shipped
+scaffolding, not user content, so using the app's copy is the correct reading of
+what that file is for. If the fallback is unreachable too, the message names the
+company's own file and quotes the parser — never a redacted digest again.
+
+**The test that would have caught it, and the one that didn't.**
+`build-company-ontology.test.ts` was entirely green throughout, because every case
+fed it a synthetic template string. It now also reads the REAL bundled file, asserts
+it parses, and runs a whole save through it checking that a placeholder arrives as a
+`string` rather than the nested mapping YAML would make of it. Reverting the template
+turns those three red. Same rule v56 established for `TEMPLATE_MANIFEST`: drift
+between the app and the files it ships is only ever caught by reading the real ones.
+
+Also fixed here, a v89 regression this bug's reproduction exposed: a company awaiting
+setup rendered **two** solid primary buttons ("Set up your company" and "Get Started"),
+which v89's own entry claimed could not happen. `GetStartedButton` takes a `variant`
+and drops to outline while a setup wizard sits above it.
+
+## v90 (2026-08-21): the Google row's second job, said out loud
+
+Reported as "there is no section to add more Gmail accounts." The section was
+there and had been since v41 — `gog auth add <email> --services …` is the same
+command for a stored address and a new one, which is exactly why v74 made it
+one control. What was missing was any way to tell: the email field arrived
+**pre-filled with the account you already had**, under a heading that said
+"Turn on more Google apps", and the addresses above it looked like a read-out
+rather than a selector. Every part of adding a second account worked; nothing
+said it was possible.
+
+Fixed as an affordance, not a mechanism — no server action, no lib change.
+The address chips are now visibly a selector with a dashed **+ Add another
+account** on the end (clears the field, resets the picker to the v64 defaults
+rather than inheriting the previous account's ticks), and the heading follows
+the selection: "Turn on more Google apps" for a stored address, "Add another
+Google account" otherwise. Everything downstream already branched correctly on
+`stored` — first-time copy, an enabled picker, the Chrome-signed-in gate and
+the `gog auth add` fallback all appear the moment an unknown address is typed.
+
+**The passive `<Badge>` list of addresses was deleted rather than kept**: the
+row's own `detail` already reads "Connected: a@x, b@y", so the same addresses
+rendered three times in one panel, and the duplication is what made the
+interactive chips read as decoration. One list, and it is the one you can
+click.
+
+## v89 (2026-08-21): skills grouped by department, and one primary action per card
+
+Two user reports, one shape: nothing on either surface said which of many
+things mattered.
+
+**The Skills page grouped by department.** Adding the Software engineering
+pack to a company that already had others put 30-odd files into one
+alphabetical list — `analytics` next to `api-designer` — because
+`mergeAndSortSkills` sorts every entry by name and the tree grouped only by
+kind. New `lib/skills/departments.ts` derives `basename -> department` from
+`templates/packs/` and a pack's own `category` field, which already existed
+and already said "Engineering", "Marketing", "HR & People". **Derived, not
+stored, for v86's reason:** a `departments.json` a user could edit is a second
+answer to "which pack does this belong to", and two answers drift. **Keyed by
+path, never by `SkillEntry.name`** — that comes from frontmatter, which a user
+may change, and a renamed skill would silently leave its department. Kind is
+no longer a tree level; it is the row icon and the badge on the open file,
+which keeps the tree three deep instead of four in a 17rem rail.
+`GENERAL_DEPARTMENT`/`DEPARTMENT_ORDER` live in `lib/company-starter-packs.ts`,
+not beside the derivation, because that module imports `node:fs` and the tree
+is a client component — defining them twice is the drift this codebase avoids
+everywhere else.
+
+**Filing is per browser, and deletes rather than stores a no-op.** Moving a
+skill to another department writes `lib/skills/department-overrides.ts` to
+localStorage, the same call `components/reorderable-grid.tsx` already makes for
+card order and for the same reason: this is how someone likes their sidebar
+arranged, not a fact about the business. **It touches no file**, so filing a
+v81 app-managed vendored skill needs no write to something the next update
+overwrites. An override equal to the derived department is deleted rather than
+kept — a stored value that merely agreed with today's default would pin that
+skill forever, and a later pack recategorisation would read as a bug years
+later. The control is a native `<select>` in the open file's header rather
+than dragging tree rows: keyboard- and touch-reachable for free, and the only
+version that announces the feature exists at all.
+
+**The agent card given three tiers instead of one stack.** A `command-set`
+company rendered up to thirteen identical `size="sm" variant="outline"
+w-full` buttons in a single `space-y-2` column, so "Get Started" looked exactly
+like "Avatar". Now: the primary action first and solid (the setup wizard while
+a company has no ontology, Get Started once it does — never two, since the
+wizard's button disappears the moment `showSetupCompanyButton` goes false),
+conditional offers as a wrapped chip row, and the standing configuration behind
+a native `<details>`. **The disclosure is deliberately uncounted** — `AdvancedOnly`
+decides on the client whether two of its children render at all, so any number
+rendered server-side is wrong in simple mode. The card also shows its own
+`~`-shortened root path, which is what a machine with three
+similarly-named companies was missing.
+
+**Two layout rules found by looking, not by reasoning.** (a) `.bento-grid > * >
+.bento-card { height: 100% }` — the grid item is `ReorderableGrid`'s own
+draggable wrapper, which stretches, but the card inside kept its content height
+and a row of two was visibly ragged. (b) Bottom-pinned actions (`mt-auto`) were
+tried and reverted: they align only when cards hold similar amounts, and one
+card with its More open left a void through the middle of every other card —
+the same complaint the original `justify-end` body earned. Top-flow, with the
+slack falling at the bottom where it reads as empty rather than broken.
+`components/ui/*` untouched throughout; the two `variant` changes are in
+consumers.
+
+`components/company-guide.tsx` now says where the quieter actions went — per
+this repo's own rule, a change that makes a shipped doc wrong isn't finished,
+and v39's guide is a walk-through of exactly this card.
+
+## v88 (2026-08-19): the Linux buttons that reported success and did nothing
+
+Reported from a real Debian install: Open in Terminal doesn't open a terminal,
+and Set up Google for me does nothing. Both are the same defect, and it is not
+in either feature — it is in how all four launch sites read the result of
+spawning a terminal.
+
+Each one spawned the emulator, attached `child.on("error", () => {})` so an
+unhandled event couldn't take the server down, and then returned
+`started: true` with "Opened Terminal". That `error` event covers exactly one
+failure: the binary not being startable at all. It covers none of the failures
+Linux actually produces — no reachable display, no D-Bus session to hand a
+window to, an `-e` the resolved emulator rejects, a snap-confined
+gnome-terminal that can't see a script under the app's data dir. Every one of
+those **spawns fine and then exits non-zero**, having written the reason to
+stderr, which `stdio: ["ignore", "ignore", "ignore"]` threw on the floor. So
+the app said it had opened a terminal, no window existed, and nothing anywhere
+recorded why. macOS could never show it: `open -a Terminal` hands off to
+LaunchServices and exits 0 whatever happens afterwards.
+
+`launchTerminalScript` in `lib/terminal-launch-command.ts` now watches the
+launch instead of assuming it, and all four callers
+(`open-interactive-terminal-impl`, `setup-google-impl`, `sign-in-claude-impl`,
+`run-company-command-impl`) go through it — the chokepoint, not the two buttons
+that got reported. What makes the check cheap is that a terminal which opened
+does not exit, since it lives as long as its window; the one exception is
+gnome-terminal, which forks to its D-Bus server and exits 0 immediately. So a
+non-zero exit inside a short settle window is a launch failure and anything
+else is a launch, with no display probing involved, and the emulator's own
+stderr becomes the message the user reads. The settle window is a knob (800ms)
+rather than an inlined constant: a parse failure returns in well under 100ms,
+while a terminal that stays open costs the whole window before the caller hears
+"opened".
+
+**The visible-run path needed care, not the same treatment.** Its lock is
+released by the generated script's own `trap ... EXIT`, and its test asserted
+"no exit handler is registered in visible mode" to protect that. An exit
+listener now does get registered, so the test was re-pointed at the property
+the mechanism existed to defend — the launcher exits 0 immediately and the lock
+is still held — rather than at the absence of a listener. A launch that dies on
+arrival is the one case where the script never runs at all, so there the lock
+IS released and the failure is written to the run log, which is what the old
+`error`-only handler was already for.
+
+**A second silent no-op in the same slice.** `isChromeInstalled` accepts either
+`google-chrome` or `google-chrome-stable`, because distros disagree about which
+exists — but `openChromeAccountCheckImpl` hardcoded the first name and swallowed
+the ENOENT in a `.catch(() => {})`, still returning `opened: true`. A machine
+carrying only `google-chrome-stable` therefore passed the installed check and
+then did nothing when asked to open Chrome. Both now read one list.
+
+Nothing here was reproduced locally — this is a macOS dev machine, and the
+failure is only visible where it was reported. That is the reason the fix is
+"stop reporting success you didn't verify, and surface the emulator's own
+words" rather than a guess at which of the four Linux causes it is: a confident
+patch aimed at the wrong one would have looked exactly as finished.
+
+### Release note (v0.27.0): the token was replaced and still couldn't publish
+
+The secret was rotated to a fine-grained PAT and the publish step failed
+again — this time with `HTTP 403: Resource not accessible by personal access
+token` on `/releases`. Worth recording because the obvious pre-check lies:
+`gh api /repos/kwakuoseikwakye/alacran-releases` returns
+`permissions: {admin: true, push: true, ...}` **for that token**, which reads
+as "this token can write here" and does not mean that at all — the block
+reports the authenticated ACCOUNT's access to the repo, not the grants on the
+token being used. A fine-grained token needs `Contents: Read and write` on the
+target repo before releases are reachable; repo read is not enough. So v88's
+`gh auth status` guard was not sufficient either: the token authenticates
+perfectly and fails one call later. The guard now hits
+`/repos/.../releases?per_page=1`, the capability actually required, and says
+which permission is missing.
+
+Everything else went the way v88 intended. The `upload-artifact` step held the
+built `.deb` through the failure, so the release was assembled from that
+artifact rather than from a second Docker build — `Version: 0.27.0` read out of
+its control member first, since `dist/` still held the previous version's
+`Alacran.deb` under the same name.
+
+**And the pre-check itself was wrong twice, which is the real lesson.** v88
+guarded with `gh auth status`; a fine-grained token authenticates perfectly with
+no Contents access, so it passed and the publish 403'd one call later. v0.27.0's
+fix guarded with a GET on `/releases`; `Contents: read` answers that happily, so
+it passed too and only the POST was refused — the token was declared working on
+the strength of a read. There is no harmless write to probe a release with, so
+the guard is gone entirely: the workflow attempts the real publish and explains
+the failure, naming `Contents: Read and write` specifically. Same shape as the
+Linux display error being read off stderr instead of guessed from `DISPLAY` —
+a pre-check that can be satisfied by something weaker than the operation is not
+a check, it is a second thing to be wrong about. Both v0.27.0 and v0.27.1 were
+assembled from the `upload-artifact` build for this reason, which is the whole
+point of that step.
+
+**Follow-up shipped in v0.27.1.** The real Debian install returned exactly the
+error v88 was built to surface — `Invalid MIT-MAGIC-COOKIE-1 key` followed by
+`Failed to parse arguments: Cannot open display:` with nothing after the colon.
+Both halves say one thing: the server had no usable display credentials, which
+is what running it outside the desktop session does (SSH, a bare TTY, a service,
+or sudo, which strips DISPLAY and XAUTHORITY). Nothing in the app can reach a
+screen from there, so the fix is only the wording — X's phrasing is unactionable
+for this audience, and the message now names the cause and what to do, keeping
+the emulator's raw text in parentheses so the next report stays diagnosable.
+Matched on that stderr rather than pre-checked from `DISPLAY`/`WAYLAND_DISPLAY`:
+libwayland falls back to `wayland-0` when WAYLAND_DISPLAY is unset, so a
+pre-check would refuse launches that do work, and reading the failure after the
+fact cannot produce that false negative.
+
+**Published as a draft, deliberately.** v0.13.1 recorded why a release must
+never become `latest` carrying only one platform's assets: `DEB_ASSET_URL`,
+`MAC_ASSET_URL` and both landing-page buttons all read
+`releases/latest/download/<name>`, so a partial release 404s the other
+platform's in-app updater and surfaces as "Couldn't download the update. Check
+your connection" — a lie. A draft is not `latest`, and `gh release view <tag>`
+resolves a draft by its `tag_name`, so the workflow uploads into it rather than
+creating a rival release. The mac `.dmg`/`.zip` went into the draft first, the
+`.deb` joined them, and only then was it published. Verified afterwards by
+fetching all three `latest/download` URLs and matching `content-length`
+against the local files, rather than trusting the upload's own output.
+
+## v87 (2026-08-19): adopt a folder you already work in, and a tree that starts closed
+
+**A folder that already exists can become a company, in place.** Registering
+one used to mean either scaffolding a new directory or ticking `external` and
+getting a single Open in Terminal button — so a real folder full of working
+automation had no route in. The default path suggestion made it worse: it
+tracks the name until the path field is edited, and that field is hidden
+outside advanced mode (v72), so typing a name and pressing the button
+scaffolded an empty `~/Alacran/<slug>` and never touched the folder the user
+meant. `lib/adopt-folder-impl.ts` adds the manifest's files to the folder
+where it already sits, ensures a repo, and calls the same `registerCompanyImpl`
+the create flow ends with — no `kind`, so v65's finding applies unchanged and
+it lands as a full company, not a downgraded one.
+
+**A symlinked wrapper under `~/Alacran/` was designed first and rejected**,
+which is worth recording because it is the obvious shape. It fails twice.
+`resolveWithinAgentRoot` (`lib/path-guard.ts`) realpaths both sides and
+requires containment, so every guarded read or write through the link resolves
+outside the company root and is denied — the containment check would have had
+to be loosened, in the one file whose whole job is not being loose. And `git
+add -A` stores a symlink as a symlink, so Backup, the activity feed and
+commit-on-save would each cover an empty wrapper while reporting success: v64's
+exact failure shape, an advertised step that does nothing. Location was never
+the thing granting features in the first place.
+
+Additive throughout, and the never-overwrite loop was **not** written a second
+time — `copyNew` moved out of `add-company-pack.ts` into `lib/copy-new.ts` and
+is now shared by both flows that add app files to a directory someone already
+works in. Two copies of that rule drifting is how a user's own edited command
+gets clobbered by the flow that didn't get the fix. Copying is per-child rather
+than per-manifest-entry for the same reason a whole-directory skip is wrong: a
+folder with its own `.claude/commands` would otherwise be registered as a
+company holding not one command the app can run. Git is conditional — an
+existing repo gets a pathspec-scoped commit of exactly what was added, so
+uncommitted work of theirs can't be swept in; a folder with no repo gets `git
+init` and a first commit, because Backup and the activity feed have nothing to
+read otherwise.
+
+**The path field is replaced by a folder picker, not supplemented by one.**
+`lib/list-home-folders.ts` lists directories under `$HOME` with one level of
+drill-down, and the user clicks the folder instead of typing its path — the
+last technical value in this flow, and the reason it was unreachable for the
+audience v71–v75 exist for. Confined to the home subtree deliberately: it is a
+browser-reachable Server Action, and an unchecked `dir` would list any
+directory on the machine. There is no native dialog to reuse — this ships as a
+local web app, and `<input webkitdirectory>` yields relative names a Server
+Action can do nothing with. Entering or leaving the mode clears the path both
+ways, since either direction otherwise leaves a stale one behind (the
+name-derived suggestion going in, the picked folder coming out).
+
+**The Skills tree starts closed.** v73's file explorer expanded every company
+by default, which on a machine with several of them is a wall of file rows to
+scroll past before reaching the one you want; the folder row and its count
+already say what a company has. The state now keys on what is *open*, so the
+empty default is "all closed" rather than a lookup that has to remember to
+invert, and searching force-opens — a filter whose matches sit behind a closed
+chevron is a search that finds something and shows nothing. `aria-expanded`
+came with it: closed-by-default makes the state something a screen reader has
+to be told rather than infer from a glyph.
+
+**`package-linux.yml` stops throwing away a good build.** Every tag since
+v0.25.0 built the `.deb` on the one platform that can build it and then lost
+it, because the publish step's 401 failed the job with the artifact still
+sitting in `dist/` — which is why v0.25.0 and v0.26.0 were both assembled by
+hand. An `upload-artifact` step now runs before publishing, exactly as v0.13.1's
+open note proposed, so a dead token costs one click instead of a Docker
+session. The 401 is also now diagnosed rather than guessed at: `gh release
+view` exits non-zero on an auth failure exactly as it does on a missing
+release, so a bad token fell straight through to `gh release create`, 401'd
+again, and reported itself as "error checking for existing release" followed by
+gh's stock "Try authenticating with: gh auth login" — advice for a laptop,
+meaningless in a runner, and pointing at the wrong thing. A `gh auth status`
+precheck now names the secret and says what to do about it.
+
+**What this does not fix, and cannot from here:** writing to another repo needs
+a credential for that repo. No rearrangement of this workflow conjures one, so
+Linux publishing stays manual until the releases token is replaced with a
+working PAT. Publishing the `.deb` to *this* repo's own releases with the
+built-in `GITHUB_TOKEN` was considered and dropped: it would land the asset at
+a URL nothing points at, since `DEB_ASSET_URL` and both landing-page buttons
+read `alacran-releases/releases/latest/download/`, and a second download
+location that has to be remembered and undone is a worse trade than one click.
+
+### Release note (v0.27.2): the first real adopted folder couldn't finish setup
+
+Adopt a folder, open the setup wizard, press Save — "Saving…" forever, nothing
+written to the screen, no company saved. Two defects stacked, and the adoption
+above is what made the first one likely rather than exotic.
+
+`saveCompanyOntologyImpl` awaited `commitFile` unguarded, so a non-zero `git
+add`/`git commit` rejected the whole Server Action **after** company.yaml had
+already been written. An adopted folder keeps its OWN `.gitignore` — deliberately,
+per this slice — so a repo that ignores `definitions/` or `*.yaml` makes `git
+add` refuse; and a folder this app ran `git init` on has no `user.email` until
+someone sets one, which fails every commit on a fresh machine. The rule was
+already written down twice in this codebase ("a failed commit must not fail the
+update — the files are already correct on disk"); this call site, plus
+`portable-agent-file`, `install-daily-team-log` and `save-google-accounts`, never
+got it. All four fixed. **Deliberately not moved into `commitFile` itself**,
+which would have been the smaller diff: `save-skill-content-impl` reports commit
+failures to the user on purpose, and swallowing at the chokepoint would make it
+claim "Saved and committed" when it hadn't been. A chokepoint fix is only
+correct when every caller wants the same answer.
+
+The wizard then converted that rejection into a permanent spinner:
+`setPending(false)` sat after a bare `await` with no `try/finally`, so a
+rejection skipped it and the thrown message went nowhere — which is why the
+failure was silent rather than visible. Both of its handlers now clear state in
+`finally` and put the error on screen. **Fifteen other components share that
+exact shape** (`setPending(true)` … `await` … no `finally`); only the reported
+one is fixed, and the sweep is outstanding.
+
+Known consequence, worth stating plainly: if the commit is what's failing, the
+save now succeeds and `company.yaml` is simply not in git. Everything in the app
+reads from disk, so nothing is broken on the machine — but Backup won't carry
+it, and there is no warning channel on the success path to say so yet.
+
+## v86 (2026-08-19): one working agreement every agent reads, and packs a company can add
+
+Four things, one thread: a company's context should reach whichever agent runs
+it, and a company should be able to grow past the one shape it was scaffolded
+from.
+
+**`AGENTS.md` replaces `CLAUDE.md` as the working agreement.** The template's
+own §1 already said `.claude/` is one adapter for one tool and the core must
+never depend on the adapter — but the standing context itself lived under a
+vendor's filename, so of the four selectable executors only Claude Code ever
+auto-loaded it. Codex, Aider and Antigravity spawned fine and started with no
+idea what the business was, which made "bring your own agent" half-true from
+v42 onward. The file is now `AGENTS.md`, read by all four, and `CLAUDE.md` is a
+two-line pointer using Claude Code's own `@AGENTS.md` import with a plain-English
+fallback. `TEMPLATE_MANIFEST` ships both — an allowlist, so the new name had to
+be named there or it would never be copied.
+
+**Existing companies get a button, not a migration.** `addPortableAgentFileImpl`
+moves the company's own `CLAUDE.md` — user edits and all — to `AGENTS.md` and
+writes the pointer, in one pathspec-scoped commit. A rename, never a copy: two
+files both claiming to be the working agreement is precisely the drift §1
+forbids. It refuses on an existing `AGENTS.md`, on a company with no working
+agreement, and on an `external` folder. Write order is deliberate — `AGENTS.md`
+first, so a crash between the two writes leaves the agreement under both names
+rather than under neither. **The test that matters** asserts `CLAUDE_POINTER` is
+byte-identical to the real bundled template: two paths now produce that prose
+and the drift would be invisible, since both files read fine alone.
+
+**A company can hold more than one pack.** "We're a marketing company and now we
+build websites too" had no answer but hand-copying files. `addCompanyPackImpl`
+copies a second pack's commands and skills, skips anything already present
+(adding a pack is additive or it is nothing), and never touches
+`definitions/ontology/company.yaml` — a pack ships an example one only because a
+brand-new company has nothing there yet. Stamp-last on a complete install only,
+the same rule v77 established.
+
+**The bug that made multi-pack impossible, and would have shipped silently:** a
+company had ONE `.claude/skills/UPSTREAM.md`, so a second pack's tag had nothing
+of its own to be compared against — each pack in turn looked stale against the
+other's tag and the update button flip-flopped between them forever, restamping
+on every press. Stamps are now per-pack (`UPSTREAM-<pack>.md`). The legacy
+shared name is still read and never written or deleted, so it remains the stamp
+of the pack the company was scaffolded from — no migration runs, and a company
+whose files were copied in by hand heals itself on its first update.
+`isAppManagedSkillPath` had the same first-match-wins shape and was the worse
+half: it `return`ed on the first matching pack, so a second pack's skills came
+back "yours to edit" and would be overwritten by the next update anyway. Both
+loops now consider every matching pack.
+
+**Two detectors for "which packs does this company hold" became one.**
+`VENDORED_SKILL_PACKS[].markerCommand` (hand-maintained) and `listPackState`'s
+derived check were two answers to one question, and when they disagree the
+symptom is a skill judged app-owned by one caller and user-owned by the other.
+`isPackInstalled` derives it from the pack's own command files, memoized since
+both callers sit on the `force-dynamic` Agents render. **The invariant moved
+with it, and got stronger:** the old test pinned marker uniqueness across
+vendored packs; the new one pins that no command filename is shared between any
+two packs, or with the base template every company already has — which is what
+the derived check actually needs, and covers the two packs that vendor no skills.
+
+**A silent, permanent wedge, fixed at the one function both callers route
+through.** `lib/file-lock.ts` wrote `process.pid` into every lock and nothing
+ever read it, so one hard quit or crash mid-run left the file behind forever:
+every later run for that company reported "Already running" — including every
+schedule it had, unattended, with no way out but finding and deleting a file
+inside the app's data directory. `acquireLock` now collects a lock whose writer
+is gone, and `checkLockStatus` reports it as free. **The recorded pid is the
+SERVER's, not the spawned agent's, which is exactly the right proxy:** while the
+server lives only its own exit handlers touch the lock, and once it dies the lock
+is garbage by definition. It errs toward "still held" on anything ambiguous — an
+unreadable file, or EPERM from another user's pid — because a wrongly-held lock
+wedges one company until restart while a wrongly-released one starts a second
+agent CLI on top of a live run. Known ceilings, commented rather than built: pid
+reuse still reads as held (same outcome as the bug, far rarer), and a visible run
+whose bash wrapper owns the lock records the server's pid too, so restarting the
+server mid-run makes that lock collectable.
+
+**The tooling trap from v83 bit again, and is worth restating:** this shell's
+`grep` wraps `ugrep --ignore-files` and silently skips `*.test.ts`, so a
+repo-wide "unused export" sweep run during this slice reported ~35 dead exports.
+Re-run under `/usr/bin/grep`, several were live in tests only. Every dead-code
+claim needs the absolute path — including the ones that look obviously right.
+
+## v85 (2026-08-19): the Connect page as a list, not six competing cards
+
+**Six setup flows were all on screen at once.** The Connect page rendered a
+two-up grid of cards, each card carrying its tool's entire setup — console
+links, service pickers, install buttons, copyable commands — expanded and
+visible whether or not you had come to connect that tool. A user connecting
+one thing read past five other tools' instructions to find it.
+
+Rebuilt as grouped list rows: one bordered container per group (*Your AI*,
+*Accounts*, *Per company*), one row per tool, dividers between them. A row
+states the tool, one line of real state (which address is signed in, which
+accounts are connected), and either a `Connected` dot or a `Connect` chip. The
+setup unfolds only for the row you click.
+
+**`<details>`, not a state-managed accordion** — the toggle, keyboard
+support, and keeping closed content out of the tab order are all native, and
+nothing has to track which row is open. `ConnectRow` and `ConnectGroup` are
+both presentational; every body is the existing JSX moved verbatim, so the
+Google service picker, the install/repair buttons, the Keychain explainer and
+Notion's per-company list all behave exactly as they did.
+
+Layout is capped at `max-w-4xl` and centred. A list of names has no reason to
+stretch to the full width of a 1600px window, which the card grid did.
+
+**Two defects the live pass found, both invisible in the card layout:**
+
+1. A **connected GitHub row opened onto an empty panel** — its card body was
+   entirely `!live` content plus a hint excluded for `github`, so once
+   connected there was nothing left to render. It now says the one true thing
+   it has to say ("Back up a company to a private repo from that company's
+   card"), the same shape as the executor rows' line above it.
+2. Below `sm` the status label was hidden to fit the row, leaving **colour as
+   the only carrier of connected state**. Now `sr-only sm:not-sr-only`: the
+   dot is always visible, the words return at `sm`, and the label is in the
+   accessibility tree at every width.
+
+`tsc`, `eslint` and 759/759 tests clean. Live-verified at 1440px and 420px,
+rows both open and closed, against the real connected state of this machine —
+`/connect` only reads, so no repo was touched (no checkbox was clicked either;
+v66's note about page-wide selectors reaching live auto-saving controls applies
+to this page's neighbours).
+
+## v84 (2026-08-18): jobs that run overnight, with the same approval gate
+
+**Alacrán could only work while you were watching it.** Every job started with
+a click, so a weekly digest or an inbox check happened when you remembered to
+ask for one — the app was a place you went to *do* something, never a place you
+came back to and found something already done. Competing tools close that gap by
+letting agents commit on their own; this slice closes it without giving up the
+thing that makes this app what it is.
+
+**Any command whose fields are all optional can now be set to run once a day at
+a time you pick** — `orientation`, `digest`, `handoff`, `check-inbox`,
+`check-notion`, `triage-email`. A command with a required field
+(`decision`, `retro`, `define-company`, `triage-issue`) is refused by
+`isSchedulableCommand`, because a schedule with nothing to answer with would
+fail every night forever.
+
+**The scheduler calls `runCompanyCommandImpl` with no arguments and nothing
+else.** That is the whole security argument: the tool allowlist, the
+`untrustedInput` refusal on executors that can't enforce scope (v56), the
+per-company run lock, and the before-snapshot all come along byte-identically,
+because none of them know a timer is involved. `commitCompanyCommandResultImpl`
+remains the only thing in the app that ever commits.
+
+**Auto-commit exists, and is opt-in per schedule.** A checkbox next to the time
+("commit the result for me, without asking") makes that one schedule run end to
+end unattended. It is off unless ticked, ticked per schedule rather than
+globally, and **refused in code for any command carrying `untrustedInput`** —
+`check-inbox`, `check-notion`, `triage-email` always wait for a human. That
+refusal is the considered line: the tool allowlist confines *where* an
+injected prompt can write, and cannot make what it wrote true, so those are
+exactly the results where "nobody looked at it" is the entire risk. Note what
+auto-commit does *not* delegate: the agent still never commits. Alacrán diffs
+the result itself and calls the same `commitCompanyCommandResultImpl` the
+approve button calls, with the same realpath containment gate, the same
+output-location gate and the same single-file-scoped commit. The only thing
+removed is a person reading the diff first.
+
+**The completion watcher, because the spawn is detached.** `runCompanyCommandImpl`
+returns "Started" long before the agent finishes, so auto-commit needed
+something to come back later: each tick sweeps *before* firing anything new,
+and for any schedule whose last run is marked `pendingCommit`, checks that the
+run lock has dropped, reads the diff, and commits. Sweeping first is what makes
+a run that finished while the app was closed still get committed — firing
+today's run first would retake the before-snapshot and bury last night's
+result, the exact trap `run-company-command-impl.ts` already documents for
+refusals. `pendingCommit` is also what separates "the ticker started this run"
+from "the user did", so a diff you deliberately left unapproved is never swept
+up by a schedule that happens to have auto-commit on.
+
+**What actually had to be built was the *waiting*, not the running.** A run
+record already survived its run; what didn't exist was any way to find one
+again. `CompanyCommandRunner` only ever showed a result it had polled for
+itself, so an overnight diff was invisible until you clicked Run again — which
+takes a fresh `before` snapshot and destroys it, the exact failure the comment
+in `run-company-command-impl.ts` already warned about for refusals. Three
+changes make an unattended result reviewable: the runner loads an existing
+changed result on mount, `listPendingReviews` finds every unapproved result
+across every company, and the Skills tree plus the sidebar carry a dot.
+
+**The bug that had to be fixed for "pending" to mean anything:** committing a
+result left its `.run.json` behind, so a committed run still looked changed
+forever. `commitCompanyCommandResultImpl` now deletes the record after a
+successful commit — best-effort, since a commit that really happened must not
+be reported as failed over a bookkeeping file. Known and marked: for a command
+that wrote several new files, this clears the review for all of them; the
+extras are still named in the UI and still uncommitted in the repo.
+
+**Design decisions worth not re-deriving:**
+
+- **The timer lives in `instrumentation.ts`**, not in a page or a client
+  effect. Next's `register()` runs once per server process, and that process
+  is the only thing in this app that outlives a browser tab — which is what
+  makes "closed the tab, went to bed" work and "quit the app" honestly not.
+- **The trap in that file, which `next build` will not catch for you:** Next
+  compiles `instrumentation.ts` for the **edge** runtime as well, so the
+  Node-only import has to sit *inside* a positive
+  `if (process.env.NEXT_RUNTIME === "nodejs")` block, where the edge build's
+  substituted `"edge"` makes it dead code webpack drops. The early-return
+  shape (`if (... !== "nodejs") return`, import after it) leaves the import
+  outside the dead branch: `next dev` fails to build `/instrumentation` and
+  **every page 500s**, while `next build` passes clean because minification
+  removes the unreachable code before webpack ever complains. Shipped
+  wrong first, found only by curling a real dev server — `tsc`, `vitest`,
+  `eslint` and `next build` were all green over the broken version.
+- **No cron parser, no dependency.** A `"HH:MM"` string compared against
+  `localStamp(now)`, polled every 60 seconds. Zero-padded fixed-width strings
+  make clock comparison a string comparison, so no date arithmetic happens
+  anywhere in the file — and therefore no DST arithmetic either. `07:00` means
+  the user's 07:00 on both sides of a clock change.
+- **Two files, one writer each.** `schedules.json` is written only by the
+  browser, `schedules-last-run.json` only by the ticker. That removes the race
+  a shared file would have needed a lock for, which is less code, not more.
+- **`skipDate` exists because of one specific wrong behaviour:** saving "07:00"
+  at 15:00 would otherwise be due the instant you clicked Save. It records the
+  day a schedule was saved *only* when its time had already passed, so a
+  schedule saved at 15:00 for 23:00 still runs that same night.
+- **The stamp is written whether or not the run started.** Stamping only
+  successes turns a permanent refusal — wrong executor, unknown company — into
+  a retry every minute until midnight. The refusal message is kept alongside
+  the date and shown in the UI, so a schedule that can't run says so instead of
+  disappearing.
+- **The control is behind Advanced mode**, per the standing rule that a new
+  user-facing feature opts in rather than out. The *pending-review* surfaces
+  are not gated: they also fix a plain manual run, whose diff previously
+  vanished the moment you navigated away.
+- **A refusal writes nothing.** `setScheduleImpl` validates after filtering the
+  old entry out of its in-memory copy but before writing, so trying to tick
+  auto-commit on `check-inbox` leaves any schedule already saved for it exactly
+  as it was, rather than clearing it on the way to saying no.
+
+**Verified against a real server, without spawning an agent, and without
+committing anything.** The standing
+rule forbids triggering a real headless run unattended, so the live probe
+pointed `ALACRAN_DATA_DIR` at a throwaway directory and scheduled a company
+that doesn't exist: `next dev` started, the tick fired within 4 seconds, and
+`schedules-last-run.json` came back stamped `Unknown company
+"not-a-real-company"` — which is returned before the `mkdir`, before the lock
+and before any spawn, so the whole path was exercised end to end with no API
+call. The auto-commit sweep was probed the same way: a pre-seeded
+`pendingCommit` record against the same non-existent company made the sweep run
+on a real server, clear the flag and commit nothing. 759 tests (17 new), `tsc`,
+`eslint` and `next build` all clean.
+
+## v83 (2026-08-18): the packaging break that silently half-built every new company
+
+**Creating a company was broken in v0.19.0-v0.22.0 and reported success.** A new
+company got its pack overlay (skills, pack commands, a git repo) and none of the
+base skeleton — no `CLAUDE.md`, `README.md`, `.gitignore`, `.claude/commands`,
+`.claude/settings.json`, `scripts/verify.py`, and no
+`docs/templates/ontology-starter.yaml`, which `save-company-ontology-impl.ts`
+hard-depends on. Found by a repo-wide audit, not by a user.
+
+**Cause, in one line:** v77 added a literal
+`path.join(process.cwd(), "templates", "packs")` to `app/page.tsx`, Next's file
+tracing resolves that and copies `templates/packs` into `.next/standalone`, so
+`$PAYLOAD/templates` already existed when both packaging scripts ran
+`cp -R templates "$PAYLOAD/templates"` — and `cp -R src dst` NESTS when dst
+exists. The real tree landed at `templates/templates/`, hiding
+`templates/company-starter` from the path the app reads. v0.18.0 is the last
+good build; the comment claiming "standalone doesn't include these" had been
+false since v77.
+
+**Why it was silent, which is the more important half:** `copyManifestEntry`
+skips a manifest entry whose source is missing. That is right per-file (the
+manifest lists optional paths) and catastrophic for the whole directory — every
+entry was missing, so the loop copied nothing and reported success.
+`createCompanyFromTemplateImpl` now refuses up front when the template root
+itself is absent, with a message naming the path. A test pins it.
+
+**Three changes, in the order they matter:**
+
+1. `cp -R templates/. "$PAYLOAD/templates/"` in both scripts — copying the
+   CONTENTS merges whether or not tracing already made the directory.
+2. Both scripts now assert `$PAYLOAD/templates/company-starter` exists and
+   `$PAYLOAD/templates/templates` does not, and fail the build otherwise. Note
+   the guard is written as `if ... fi`, not `[ -d x ] && { exit 1; }`: under
+   `set -euo pipefail` the `&&` form aborts the build on the HAPPY path, since
+   the compound returns non-zero when the directory is correctly absent.
+3. The app-side refusal above, so a future packaging slip is loud rather than
+   silently shipping empty companies.
+
+Also folded in two cuts from the same audit, both on code this project added
+itself: `StatusDot` lost the prop it stopped reading when v78 narrowed
+`ActivityStatus` to `"done"` (3 call sites), and `ResolveWritableSkillResult`
+now extends `ResolveKnownSkillResult` instead of restating it.
+
+**Audit-integrity note worth keeping:** `grep` in this project's shell is a
+wrapper around `ugrep --ignore-files` and silently skips `*.test.ts`. Every
+"unused export" verdict produced with it — including v78's — was blind to
+test-only usage, which is how `GOOGLE_SETUP_SERVICES` got called dead when its
+own test asserts on it twice. Use `/usr/bin/grep` for any dead-code claim here.
+
+742 tests, `tsc`, `eslint` and `next build` clean.
+
+## v82 (2026-08-18): a customer-support skill, vendored from the licensed original
+
+The Customer support pack now ships the `customer-support` skill — conversational
+AI, ticket automation, sentiment analysis, omnichannel CX.
+
+**The requested source could not be used, and the content still could.** The link
+given was an aggregator repository of ~5,700 skills with no licence file — none
+at its root, none in that skill's folder, and nothing in the README. Without a
+licence there is no permission to redistribute, and this repo also redistributes
+its templates inside every `.dmg`/`.zip`/`.deb`, so it was not vendored. That
+copy also had no tag or release to pin to, its own frontmatter says `source: community` and `risk: unknown`, and it
+points at a `resources/implementation-playbook.md` that does not exist in the
+repo.
+
+A GitHub code search for its first line found 599 copies and one origin:
+**`wshobson/agents`** (MIT, 38.8k stars), at
+`plugins/customer-sales-automation/agents/customer-support.md`. That is what is
+vendored — same content, real licence, real attribution, and the aggregator's
+broken reference and invented frontmatter dropped along the way.
+
+**Two mechanism changes, both small, both forced by that upstream:**
+
+1. **Pins may now be a commit SHA, not just a tag.** `wshobson/agents` publishes
+   no tags, so this pack pins `d6837ae…` and the archive URL switches from
+   `archive/refs/tags/<tag>.tar.gz` to `archive/<sha>.tar.gz`. Nothing else
+   cares — the staleness check only ever compares two strings for equality. The
+   pack test's `v1.2.3` assertion was widened to accept either form, and the
+   update dialog shortens a SHA to 7 characters so a non-technical reader is not
+   shown 40 hex digits.
+2. **A pack may point at loose `.md` files instead of `skills/<id>/SKILL.md`.**
+   This upstream ships agent files, so the pack config gained `SRC` (path prefix
+   inside the tarball) and `SRC_FILES`, which copies `<id>.md` to
+   `<id>/SKILL.md`. The three existing packs keep the defaults and regenerate
+   byte-identical — verified by resyncing all four and confirming only the new
+   directory appeared, with `v2.10.0`, `v1.4.0` and `v0.4.16` untouched.
+
+No app code changed beyond one `VENDORED_SKILL_PACKS` entry: the update button,
+the read-only rule (v81) and the safety rules all applied to the new pack on
+their own, and the tests picked it up through `describe.each` (738 → 741). A
+real scaffold shows the skill, reads as already current, and comes back
+app-managed. `tsc`, `eslint` and `next build` clean.
+
+## v81 (2026-08-18): vendored skills are app-managed, so updates always land clean
+
+Decision from the maintainer, reversing part of v77's shape: a skill the app
+installs is **not editable in the app**. v77 protected the user by skipping
+files it could not prove it owned; v81 removes the ambiguity at the source —
+the app owns the vendored tree, replaces it wholesale on every update, and no
+longer offers to accept an edit it would later destroy.
+
+**The gate is on the write path, not the UI.** `resolveKnownSkillPath` is the
+membership check every skill read and write already routes through, so the new
+rule lives in a `resolveWritableSkillPath` wrapper beside it. Only one caller is
+a writer (`saveSkillContentImpl`) — both `skill-history-impl` functions are
+reads — so **reading the content and the history of an app-managed skill still
+works**, which matters: users should be able to see what they have. A future
+writer reaching for the more specific name gets the rule for free; a test pins
+the read paths so they cannot be broken by tightening the write one.
+
+**`isAppManagedSkillPath` reuses v77's ownership rule rather than inventing a
+second one.** A file is app-managed when it sits under `.claude/skills/<name>/`,
+the company carries a stamp, and the pack matched by its marker command ships a
+skill of that `<name>`. The stamp requirement is what keeps this honest for
+companies scaffolded before v76: they have no stamp, so nothing in their skills
+directory is claimed, and a same-named file there stays theirs to edit — exactly
+the population v77's skip logic exists for.
+
+**The UI removes the affordance rather than failing after the fact**: the Skills
+page computes the managed set server-side and `SkillBrowser` hides the Edit tab
+for those entries, showing "Kept up to date by Alacrán… copy it to a new name if
+you want your own version." Nobody types into a box whose save is going to be
+rejected. Live-verified side by side in one company: `copywriting` (vendored)
+showed Content + History and the notice, `my-own-skill` in the same directory
+kept its Edit tab and no notice.
+
+**v77's skip-on-collision logic stays.** The app is no longer a way to edit a
+vendored skill, but Open in Terminal (v38) still gives full file access, so a
+hand-written collision remains possible and must still never be overwritten.
+738 tests, `tsc`, `next build` and `eslint` clean.
+
+## v80 (2026-08-18): engineering skills, and the pack mechanism at three
+
+The Software engineering pack now ships 10 vendored skills from
+[Jeffallan/claude-skills](https://github.com/Jeffallan/claude-skills) (MIT) at
+tag `v0.4.16`, one per stage of that pack's own commands: `spec-miner`,
+`architecture-designer`, `api-designer`, `feature-forge`, `test-master`,
+`debugging-wizard`, `code-reviewer`, `security-reviewer`, `code-documenter`,
+`devops-engineer`.
+
+**The curation is the whole decision here.** Upstream's other ~57 skills are
+language, framework and vendor specialists — `rust-engineer`,
+`laravel-specialist`, `shopify-expert`, `wordpress-pro`. Each is useful to
+exactly one company, so shipping them by default would put 50 irrelevant skills
+in every engineering company; the vendored set is deliberately stack-agnostic
+and maps onto `/plan-feature`, `/write-tests`, `/debug-issue`, `/code-review`
+and `/prep-release`. A company that wants its own stack adds an id to the
+script's list.
+
+**What adding a third pack actually cost:** one case block in
+`scripts/sync-vendored-skills.sh` and one entry in `VENDORED_SKILL_PACKS`. No
+new code paths, no new tests written — v79's `describe.each` over the pack list
+picked the new pack up on its own (24 → 28 assertions), including the
+marker-uniqueness pin. `plan-feature.md` was checked against both the other
+packs and the base template before being used as the marker: a name the base
+skeleton ships would match every company on the machine.
+
+**Marketing and HR tags did not move** (`v2.10.0`, `v1.4.0`), so no existing
+company of either pack is told it is stale — the same discipline v79 established.
+
+Verified end to end against a real scaffold into a disposable directory: 10
+skills and 15 commands visible to the app's own scanner, and
+`getVendoredSkillsUpdate` returns null for the fresh company, which is the check
+that a newly created company is never offered an update it already has. 731
+tests, `tsc`, `next build` and `eslint` clean.
+
+## v79 (2026-08-17): HR skills, and one sync script for every pack
+
+The HR & People pack now ships 12 vendored skills from
+[tuanductran/hr-skills](https://github.com/tuanductran/hr-skills) (MIT) at tag
+`v1.4.0`, covering the employee lifecycle a small company actually repeats:
+`hr-recruiting`, `hr-job-description`, `hr-interviewing`, `hr-offer-management`,
+`hr-onboarding`, `hr-offboarding`, `hr-performance-management`,
+`hr-compensation-benefits`, `hr-employee-relations`, `hr-policy-management`,
+`hr-compliance`, `hr-employee-engagement`.
+
+**No new mechanism was needed, which was the point of v77.** Existing HR
+companies — including any created before today — get the "Add ready-made
+skills" button, the same stamp-based staleness check, the same refusal to
+overwrite a skill the user wrote, and the same stamp-last write. Wiring HR up
+was one entry in `VENDORED_SKILL_PACKS` and one case block in the sync script.
+
+**`scripts/sync-marketing-skills.sh` became `scripts/sync-vendored-skills.sh`**,
+a table of packs rather than a script per pack:
+`bash scripts/sync-vendored-skills.sh` syncs everything,
+`… sync-vendored-skills.sh hr-people` syncs one. A third pack is a case block
+plus a list entry — the button, the staleness check and every safety rule are
+already pack-agnostic. Two bash-3.2 traps fixed while writing it: `"${@:-$LIST}"`
+collapses the default into a single word (use `[ $# -eq 0 ] && set -- $LIST`),
+and a per-function `trap ... RETURN` was replaced by one `EXIT` trap over a
+shared temp root.
+
+**The rewrite deliberately did not move any marketing tag.** Regenerating that
+pack changed only two lines of its `UPSTREAM.md` — the title and the script
+name — leaving `Tag: v2.10.0` byte-identical, because the tag is what the update
+check compares: touching it would have told every existing marketing company it
+was stale and offered an update that changes nothing.
+
+**Curated 12 of upstream's 147.** Upstream also ships 16 skills for maintaining
+its own repo (biome, bun, turbo, typescript) under `.agents/skills/`; only
+`skills/` is vendored, so that tooling never comes along. Unlike the marketing
+set, these skills are self-contained — no shared context document to create
+first — and every name is `hr-`-prefixed, which makes a collision with a skill
+the user wrote far less likely than marketing's generic `social`/`emails`.
+
+**Tests now run over every pack in `VENDORED_SKILL_PACKS`** rather than
+marketing by name, so listing a pack is what earns it coverage. Two new
+invariants are pinned: each pack really ships the marker command the update
+check identifies it by, and **no two packs share a marker** — a shared one would
+hand one pack's skills to another pack's companies. Verified end to end against
+a real scaffold into a disposable directory: 12 skills and 14 commands visible
+to the app's own scanner. 728 tests, `tsc`, `next build` and `eslint` clean.
+
+## v78 (2026-08-17): a repo-wide cut for over-engineering
+
+A whole-tree audit for complexity, applied. **Net -479 lines and one dependency**,
+with no feature removed and no behaviour changed: 722 tests, `tsc`, `next build`
+and — for the first time — `eslint` all clean, the last of those because this
+slice also cleared 5 pre-existing warnings rather than walking past them.
+
+**The big cuts, in order:**
+
+- **-169 lines of dead CSS in `landing/styles.css`** (648 → 479), orphaned by
+  the cinematic homepage rewrite: the `board-*`, `appcard`/`appgrid`/`appnav`,
+  `hero-mockup*`, `halo` and `flow-line` families. Done in two passes, because
+  the first was too timid — a rule was only cut when *every* class in its
+  selector was dead, which left `.appcard .ln`-style rules behind. The sound
+  rule is stronger: a descendant or compound part can only match if **every**
+  class in it appears in the markup, so one dead ancestor kills the rule.
+  Verified by rule-count-per-class against the baseline (`.card` 4 → 4,
+  `.nav` 8 → 8, `.navlinks` 10 → 10) and then in a browser on two pages, where
+  every probed computed style came back identical.
+- **-88 `landing/pricing/index.html`** — no page linked to it, for a product
+  with no paid tier.
+- **-70 `scripts/jp-audit.py`** — the translation migration it checked finished
+  in v67; only CLAUDE.md and CHANGELOG mention it, both as history.
+- **-58 `components/ui/scroll-area.tsx`** — a Radix wrapper whose two consumers
+  both wanted nothing but `h-[80vh]` plus padding. Now `overflow-y-auto`. This
+  is the sanctioned kind of `components/ui/` edit: deleting an over-spec'd
+  primitive nothing needs, not restyling one (v16/v29/v63 still stand).
+- **-42 net from six byte-identical copies** of a 7-line `pathExists`/`exists`
+  helper → one `lib/path-exists.ts`.
+- **-26 the `needs-attention` branch** in the activity board, plus narrowing
+  `ActivityStatus` to `"done"`: all four adapters hardcode it, and
+  `getEffectiveAgents` maps every registered company to the generic git-log
+  adapter, so no other value can reach the UI. **`StatusDot` was kept** — it has
+  three consumers, and an earlier draft of this cut proposed deleting it after
+  grepping for the string `"needs-attention"` rather than for the component.
+- Smaller: `clsx` (its only consumer was `cn()`, and no caller uses its object
+  syntax, so `twMerge` alone does it — one dependency gone), four dead exports
+  in `lib/branding.ts`, `brandColor` and `BrandIcon`'s never-passed `title`,
+  `NetworkAccessEntry = { label: string }` → `string[]`, and the `loadBuiltins`
+  wrapper → a default parameter on `buildBuiltins`, which is what the house DI
+  convention asks for anyway.
+
+**Three findings were rejected, and why matters more than the cuts:**
+
+1. **`checkDependencies` is not duplicated work.** The claim was that
+   `ConnectStatus` already knows whether `claude` and `gog` are installed. It
+   does not: `ToolStatus` has no `installed` field, and `googleStatus` computes
+   gog presence internally and throws it away. Removing those ~70 lines would
+   have meant *adding* a field to a documented type, on the Google onboarding
+   gate.
+2. **The nine `AgentCard` `show*` props stay.** Collapsing them to
+   `isCommandSet`/`hasOntology` saves 24 lines and deletes v66's actual safety
+   property: a new company feature is off for an `external` folder by default
+   instead of needing to be excluded one at a time.
+3. **The `"use server"` + `-impl.ts` pairing stays.** It looks like 32 files of
+   delegation; **32 of 32 impls have their own test file**, and the injectable
+   seam is why.
+
+**Two process notes worth keeping.** A verifier agent left a stray
+`lib/zz-collision-probe.test.ts` in the repo during v77's review — it was
+counted in that slice's "723 tests" (really 722, corrected above), so **check
+`git status` for agent leftovers before trusting a test count**. And the audit's
+own line estimates ran high: 125 claimed for the CSS, 169 actually delivered
+after a second pass, but 70 claimed for `checkDependencies` and 0 delivered.
+
+## v77 (2026-08-17): template updates reach companies that already exist
+
+v76 shipped ten vendored skills and closed with the honest limitation that the
+template only runs at scaffold time, so every company created before it got
+nothing. With real users already on the marketing pack, that limitation was the
+feature. An "Update skills" button now appears on a company's card when the app
+ships newer vendored skills than that company has, and applies them in place.
+
+**The design decision that made this a slice instead of a project:** sync only
+what the app owns. Vendored skills are stamped (`UPSTREAM.md`, `Tag: vX.Y.Z`),
+marked do-not-hand-edit, and replaced wholesale — so updating is a *copy*, and
+no merge policy has to exist. Everything a user actually edits — their
+ontology, notes, `HANDOFF.md`, skills they wrote themselves — is never touched
+by any of this. **Standing rule for every future template change:** content you
+want existing users to receive ships inside a stamped, app-owned folder;
+content meant to be edited never syncs. Changing a file a user may have
+customized (`CLAUDE.md`, a command) is a different feature — diff-and-approve —
+and must not be smuggled into this one.
+
+**Detection has to work for companies that predate the skills**, which is the
+entire point, and those have no `UPSTREAM.md` to compare. Nothing in a company
+records which pack it came from, so `lib/vendored-skills.ts` matches it by a
+command file only that pack ships (`draft-campaign.md` for marketing) and then
+compares tags, treating "no stamp" as "behind". The button reads
+"Add ready-made skills" in that case and "Update skills" otherwise. Three small
+file reads per company and no subprocess, which is what makes it safe on a
+`force-dynamic` page (v70).
+
+**It replaces the vendored entries one by one and never the skills directory
+itself** — the user's own skills live in there, and so does `daily-team-log`
+(v20). The consequence, deliberate: a skill upstream has dropped stays in the
+company rather than being deleted, because this code cannot tell an abandoned
+vendored skill from one the user has come to depend on.
+
+**Two defects an adversarial review caught before this shipped**, both of which
+the first round of tests passed straight through:
+
+1. **A same-named hand-written skill was silently `rm -rf`'d.** The loop
+   replaced every bundled entry name without asking whether what was on disk had
+   come from this app — and for the exact population this feature exists for
+   (unstamped companies), *nothing* in `.claude/skills` did. The bundled names
+   are precisely what a marketing company's user calls their own work:
+   `copywriting`, `social`, `emails`, `cro`. The first test suite only used a
+   non-colliding `my-own-skill`, so it was green. Now: an entry that already
+   exists is only replaced when the company has a stamp proving this app put the
+   set there; otherwise it is skipped and named back to the user in the card
+   ("Kept your own social — nothing was overwritten"). **And a run with any skip
+   writes no stamp at all** — stamping a partial install would both hide the
+   button while the company lacks skills and mark the skipped name app-owned,
+   so the *next* update would delete the user's work.
+2. **The stamp was written first, stranding a half-updated company.**
+   `readdir` returns `UPSTREAM.md` before any skill (measured on the real pack),
+   so a throw partway through left the company claiming the new tag with old
+   skill bodies — and since the button compares nothing but the tag, it
+   vanished, with no way to retry until upstream cut another tag. The stamp now
+   goes last, which makes a failed run simply retryable.
+
+**The rule both share:** the stamp is a claim about what is installed, so it may
+only be written when that claim is completely true. Write it early, or write it
+over a partial result, and the app lies to itself on the next run.
+
+`commitFile` now accepts `string | string[]` (existing callers unaffected), so
+the commit is pathspec-scoped to exactly the entries written — a skill the user
+is midway through writing in the same directory can never be swept in. A failed
+commit does **not** fail the update: the files are already correct on disk and
+`.claude/` is gitignored in some real repos, the same call v61 made.
+
+**Live-verified against three disposable companies** on a throwaway port, not
+just unit tests: one with no stamp (got all ten skills, `my-own-skill`
+untouched, one commit of 45 files, clean tree), one stamped `v2.9.0` with a stub
+`copywriting` skill (replaced with the real one, tag bumped), and — after the
+review — one with a hand-written `social` skill (kept verbatim, nine skills
+added around it, no stamp written, `social` absent from the commit, and the card
+saying which skill it kept). The first two buttons disappeared on refresh once
+the tags matched; the third's stayed, correctly. **Checked before clicking
+anything:** no repo under `~/AI-Native/` has the marker command, so the button
+cannot appear on a real company's card — which is the v66 trap (a page-wide
+selector reaching a live control that writes to a real repo) closed by
+construction rather than by careful aim. `plh-triage` was confirmed untouched
+afterward. 722 tests, `tsc` and `next build` clean.
+
+**Known limitations, disclosed not fixed:** only the marketing pack vendors
+skills today (add an entry to `VENDORED_SKILL_PACKS` when a second one does);
+a user who hand-edited a vendored skill loses that edit, which `UPSTREAM.md`
+warns against and their own git history recovers; and a company still has to be
+`command-set` — an `external` folder is refused, per v66.
+
+## v76 (2026-08-17): real marketing skills in the marketing starter pack
+
+The marketing pack shipped three commands and an ontology; a new marketing
+company had no actual marketing expertise in it. It now also ships ten skills
+vendored from [coreyhaines31/marketingskills](https://github.com/coreyhaines31/marketingskills)
+(MIT) at tag `v2.10.0`: `product-marketing`, `marketing-plan`, `copywriting`,
+`content-strategy`, `seo-audit`, `analytics`, `emails`, `social`, `launch`,
+`cro`.
+
+**No application code changed.** A pack overlay is copied with a recursive
+`cp` (not through `TEMPLATE_MANIFEST`'s allowlist), and
+`genericCommandSetSkillAdapter` has scanned `<company>/.claude/skills/*/SKILL.md`
+since v11 — so the whole feature is files in `templates/packs/marketing/`. The
+edits outside that tree are a test, the pack's own description (which would
+otherwise undercount what a user gets), and the "what a pack ships" comment at
+the top of `lib/company-starter-packs.ts`.
+
+**Updating is one pinned script, not a submodule:**
+`scripts/sync-marketing-skills.sh` holds `TAG` and the curated id list, fetches
+that tag's tarball, and wipes-and-rewrites the vendored tree — so a skill
+renamed or dropped upstream disappears here too, and the diff is reviewed like
+any other commit. Nothing fetches at runtime or at install time; a scaffolded
+company gets exactly what was committed. The script fails loudly if a curated
+id has no `SKILL.md` at the pinned tag, which is what an upstream rename looks
+like (upstream renamed 17 skills in its own v1→v2).
+
+**Curated at ten of upstream's 49**, because a pack is an overlay on the base
+skeleton, not a second tree — the pack went 16K → 580K as it is. Upstream's
+`evals/` fixtures are stripped: they test upstream's skills, and shipping them
+into a user's repo is dead weight. `product-marketing` is load-bearing rather
+than merely first — it writes `.agents/product-marketing.md`, the context file
+every other skill reads, which is why the pack description now says to start
+with it. **Deliberately not wired to `definitions/ontology/company.yaml`**,
+which holds overlapping information: the skill's own job is to create that
+file, by interviewing the user or drafting from the repo, so a translation
+layer would be code standing between two things that already work.
+
+**Known limitation, disclosed not fixed:** the template runs at scaffold time
+only, so companies created before this slice get nothing. Re-syncing an
+existing company is a separate feature and isn't built.
+
+Verified against a real scaffold into a disposable `/tmp` directory (the
+sanctioned target), not just the vendored tree on disk: the app's own skill
+scanner reported all ten skills plus the pack's 13 commands, confirming
+`UPSTREAM.md` (provenance + upstream's MIT license, alongside the skills) is
+correctly not mistaken for a skill. Full suite 702 tests, `tsc` clean.
+
+## v75 (2026-08-16): four review findings in v0.17.0's own Google flow
+
+A review pass over v74 found four real defects, all shipped in the published
+v0.17.0. They share one shape — the safety argument v74 was built on
+("re-authorizing with a narrower `--services` list revokes scopes, so always
+send the union") holds only when the app actually knows what an account
+carries, and four separate paths could reach the picker without knowing.
+
+**The `gog auth status` fallback claimed connected without saying what was
+granted.** That branch runs when `gog auth list -j` fails but `auth status`
+still names an account — so scopes are genuinely unknowable there. It returned
+`accounts: [email]` and no `accountServices`, and `ConnectGoogleApps` read the
+missing entry as "new address": it offered `gog auth add` with only the
+defaults, which is precisely the narrowing this feature exists to prevent, and
+pointed the agent at the full first-time console walkthrough on a machine that
+already has an OAuth client. Fixed by making the absence *mean* unknown rather
+than none — the field is deliberately left out, not set to `{}` or `{[email]:
+[]}`, and the card now refuses to build any command for a stored address whose
+grants it can't read, saying so and pointing at Re-check.
+
+**The account read bypassed the v70 memo — in the fix whose own subject was
+Keychain popups.** `listGoogleAccounts(execFn)` passed this module's raw
+execFile, while the memo lives on `listGoogleAccounts`' own default parameter,
+so every "Set up Google for me" click added an unmemoized keyring read: a macOS
+Keychain prompt, the exact thing v70 exists to suppress, and the exact
+complaint that prompted the session. It could not be fixed by memoizing the
+shared `defaultExecFile` either — `openChromeAccountCheckImpl` uses the same
+one, and memoizing *that* turns a second "Open Chrome and check" click into a
+silent no-op. So the account read got its own DI seam defaulting to the
+memoized reader. **A test now pins it**: execFn must never see a `gog` call.
+
+**`serviceListArg` substitutes the defaults for an empty list**, so an account
+whose scopes map to no catalog service compared equal to `"gmail,calendar"` on
+both sides of the "nothing new" check — the card told someone with nothing
+connected that everything was already on, and hid both the command and the
+button. `nothingNew` is now a set comparison on ids, never on the formatted
+string. The picker's initial state had the same shape of bug: `?? DEFAULT`
+doesn't fire for `[]`, so it started empty.
+
+**The client matched addresses case-sensitively while the server used
+`.toLowerCase()`.** A case-different rendering of a stored address lost its
+grants client-side — first-time copy on screen, expand job on the server, and a
+manual command narrower than the account's real scopes. One `grantsFor` helper
+now does the lookup case-insensitively, and the account chips highlight the
+same way.
+
+**Two test-hygiene faults surfaced while fixing this, both worse than the bugs.**
+Giving the account read a real default made an existing test read the *developer's
+own* gog store: it passed on CI and failed on this machine, and raised a Keychain
+prompt to do it. Every `setupGoogleImpl` test now injects an explicit reader, with
+a named `noAccounts` helper and a comment saying why the production default must
+never be exercised in a test.
+
+Also here, from the same session: the install-repair agent is bounded with
+`--max-budget-usd` (verified real on the installed CLI; `--max-turns` does not
+exist), after a report of a gogcli repair grinding for about an hour. Safe to
+cut mid-run because success is re-probed from the OS and never read out of the
+transcript. And `KeychainNote` — the `gog auth keyring file` escape hatch — now
+renders at *every* not-connected Google stage including `install`, instead of
+only on cards a user reaches after connecting. The popup storm starts the moment
+gog lands on the machine, so it was hidden from the only person who needs it.
+
+**Still open, not fixed here:** a spend cap is not a wall-clock cap, and
+`defaultExecFile` already sets a 15-minute `timeout`, so a one-hour run should
+not have been possible at all. The likely cause is `promisify(execFile)` never
+settling because a grandchild holds the stdio pipes open past SIGTERM — which
+no cost ceiling touches, since a stalled run burns no tokens. Needs its own
+slice.
+
+## v74 (2026-08-16): let an already-connected Google account add the rest of the apps
+
+User-reported, and a direct consequence of v72: someone who connected Google
+*before* the service picker existed has gmail and calendar authorized and no
+way to reach Drive, Docs or Sheets. v72 built the picker into the paths that
+run **when Google is not connected yet** — the `client` and `account` stages
+and `gog auth add` for a *new* email. The connected card showed the marks it
+had and offered exactly one action: "Connect another email." Wrong door.
+Nothing on screen could widen an existing token, and redoing the whole
+console setup is not something this audience will do twice.
+
+**The connected card now has the same door the unconnected one does.**
+`ConnectGoogleApps` replaces `AddGoogleAccount` and serves both jobs, because
+`gog auth add <email> --services …` is *literally the same command* for both:
+on a stored account it re-authorizes with a wider list, on a new address it is
+the first authorization. Stored accounts appear as chips you click to fill the
+address; the picker preselects what that address really carries, and the
+agent button sits above the command as the one-click route.
+
+**The shorter agent job is derived from the machine, not passed in from the
+client.** `setupGoogleImpl` calls `listGoogleAccounts` (already memoized per
+v70, so usually free) and asks: does this exact address have a stored token,
+and what scopes does it carry. Non-empty → `buildGoogleExpandPrompt`, which
+drops the project/consent-screen/client/publish steps entirely (they are
+one-time and already done), lists an Enable page **only** for the services
+being added, and finishes on `gog auth add`. First-time setup is unchanged,
+byte for byte, and every existing test passes untouched.
+
+**The one real hazard, guarded in three places.** gog stores what
+`--services` asks for, so re-authorizing with a narrower list is how you would
+silently drop Gmail from an account that had it. So: the command is built from
+the **union** of granted and newly-ticked, the prompt spells out that the list
+is deliberately everything the account should end up with (an agent "helpfully"
+trimming it to the new services is the failure mode), and already-granted
+checkboxes render checked **and disabled** — nothing here can revoke a scope,
+so offering to untick one is offering a mistake.
+
+**A flaw in the first version of this change, caught by reading the real
+rendered card rather than the diff:** `grantedServices` is a union *across*
+accounts, which is right for the "available to your companies" marks and wrong
+for a picker that authorizes one address — a second account would show the
+first account's apps as already-on and unselectable, blocking the exact thing
+this slice exists to unblock. `ToolStatus.accountServices` now carries the
+per-account map alongside the union, and switching accounts resets the
+selection to that account's real grants. Verified against this machine's two
+stored accounts.
+
+**Also: the Google card is titled "Google", not "Google (Gmail & Calendar)".**
+Those are only the *defaults*. The card shows a mark per service the token
+really carries, so on a machine with seven of them the title contradicted the
+card directly underneath it.
+
+One wart removed in passing: the `client` stage rendered an address field
+inside `GoogleAutoSetup` *and* another at the bottom for the manual command,
+so the same address had to be typed twice. `GoogleAutoSetup` is now controlled
+by whichever card owns it.
+
+## v73 (2026-08-14): the Skills page as a file explorer, and a dead palette repaired
+
+Reported as "messy". Two causes, and the second one was not a layout problem
+at all.
+
+**Layout.** The page was a grid of description cards, one per skill. A company
+with 17 of them was several screens of prose with no hierarchy and nothing to
+scan by, and opening a file used a Sheet that covered the very list you were
+browsing. It is now a two-pane explorer: companies and their files on the
+left, the selected file on the right. Kinds (Skills / Commands) are
+sub-groups, companies collapse, and a search box filters across names and
+descriptions — a company with no match disappears entirely rather than leaving
+an empty folder behind. Descriptions moved off the tree to sit beside the
+content, where they are actually read. The detail pane is inline rather than a
+Sheet, so reading one file no longer hides the rest.
+
+Everything functional is reused unchanged — `SkillEditor`, `SkillHistory`,
+`CompanyCommandRunner`, and the Content/Edit/History/Run tabs (v49). Only the
+shell around them changed.
+
+**The palette.** The page was painted with five design tokens that stopped
+existing when the palette changed: `bg-shell`, `bg-shell-2`, `border-line`,
+`text-bone`, `text-dune`. None of them resolve, so those classes produced
+nothing — transparent panels, and a bare `border` falling back to
+`currentColor`, which is why the company header rendered with a text-coloured
+outline. That is why the page read as broken rather than merely dense.
+
+**The finding to reuse:** grepping for the dead *tokens* rather than fixing the
+page that was reported surfaced the same palette in `activity-board.tsx` and
+`activity-day-group.tsx`. Fixing only Skills would have left Activity live with
+the identical defect — the same shape as v68, where a symbol grep found a
+second call site the report never mentioned. `glass-edge` is a real token (13
+definitions in `globals.css`) and was left alone.
+
+Below `md` the panes stack, and selecting a file scrolls the detail pane into
+view: otherwise the file just tapped opens off-screen under a tree that can be
+17 rows long. Desktop is unaffected — `scrollIntoView` on an already-visible
+element is a no-op.
+
+Verified by screenshot at 1440px and 420px and by opening a real skill.
+
+## v72 (2026-08-14): pick which Google apps to connect, and stop hiding what's in use
+
+Two things, both from real use of v0.14.0 within hours of it shipping.
+
+**Multiple Google services, chosen by the user.** `gogcli` can authorize
+gmail, calendar, drive, docs, sheets, slides, tasks, contacts and more, but
+this app hardcoded `"gmail,calendar"` in two string constants and the marks
+shown on the card in a third array — adding a service meant editing three
+places, and nothing noticed when they drifted.
+
+`lib/google-services.ts` is now the only place a service is declared, with
+three readers: the checkbox picker on the Connect card, the `gog auth add
+--services …` command it builds, and the Cloud Console pages the browser
+agent clicks Enable on. That last one is not cosmetic — **consent fails for a
+service whose API was never enabled**, so the agent's checklist has to be the
+same list the user picked. `buildGoogleSetupPrompt` now generates one Enable
+step per chosen service instead of the fixed Gmail/Calendar pair, keeping the
+non-API steps (project, consent screen, client, publish) unchanged.
+
+**The marks are derived, not declared.** v64's rule was "keep the marks in
+sync with the scopes or the card lies." Two lists kept in sync eventually
+drift, so the card now renders whatever `gog auth list -j` really reports the
+stored accounts carry. Adding a service to the catalog needs no second edit,
+and the card cannot claim a service the token was never granted. Scope names
+are not service ids — measured on a real store rather than assumed: Docs is
+granted as `.../auth/documents` and Sheets as `.../auth/spreadsheets`, so
+matching on the id would have silently under-reported both. Live-verified
+against two real accounts (one carrying seven services the app had never
+surfaced, one carrying the narrow pair).
+
+Defaults stay Gmail + Calendar, for v64's original reason: each extra service
+is one more Enable page before consent succeeds. Extra reach is opt-in, not
+the price of connecting. Services with no real product mark in Simple Icons
+(Drive, Docs, Sheets…) are named in text rather than given an invented logo.
+
+**Simple mode must never hide something already in use.** Reported directly
+after updating: MCP connectors, Antigravity, Aider and Notion "disappeared."
+They were hidden, not removed — v71's advanced mode is off by default — but
+the default was wrong in one specific way. Hiding a thing you have not started
+using is help. Hiding a thing you already depend on is concealment, and worse,
+it removes the only control that could change it back: a company assigned to
+Aider had no visible Aider card, and no way to see or fix that without finding
+a Settings toggle nobody had mentioned.
+
+The rule is now **hidden until real, then always shown**: an AI executor card
+appears once a company is actually assigned to it (new `ToolStatus.inUse`),
+the Notion card appears once any company really has Notion configured, and a
+company's MCP button appears once that company has servers configured. Open in
+Terminal and the Network tab stay purely advanced — neither is state a user can
+be mid-way through relying on.
+
+## v71 (2026-08-14): the non-technical path — the app covers the technical part
+
+The audience changed, and with it the shape of the product. This app is for
+non-technical founders, who are **not technically
+comfortable** — so "read/manage dashboard for tools you already set up via the
+terminal" (the framing this file's own header carried since v1) is the wrong
+shape. v71 starts leaving it: the app now installs and drives the tools
+itself.
+
+Walking a clean machine through the old flow found five gates before the first
+win, each of which silently drops people: install Node by hand or the launcher
+quits; install Claude Code by hand and then "fully quit and reopen the app";
+sign in via a terminal; six Google Cloud Console pages plus a downloaded JSON
+for anything email-shaped; and type an absolute filesystem path to create a
+company. Then the two buttons that answer "what now?" — Open in Terminal (v38)
+and Get Started (v46) — put the user in a terminal, which is the one place
+this audience cannot operate.
+
+**Node is bundled** (`scripts/package-macos.sh`). Pinned v24.19.0, downloaded
+per-arch at package time and verified against nodejs.org's published
+SHASUMS256 before it enters the bundle — this binary is executed by every user
+of the shipped app. The launcher prefers `Contents/Resources/node`
+unconditionally; the user's own node is a fallback for a damaged bundle, not a
+preference. Verified rather than assumed: with `PATH=/usr/bin:/bin` and no
+system node reachable, the bundled runtime serves `/` with HTTP 200. The
+checksum earned itself immediately — a curl that timed out mid-transfer left a
+truncated tarball the cache check happily accepted, and only the checksum
+caught it. Downloads now land on a `.part` name and move on success.
+
+**Tools install from a button** (`lib/install-tool-impl.ts`). At most ONE
+verified command per tool, then the tool is read back from the OS — a package
+manager that exits non-zero after a successful install, or zero without
+putting a binary on PATH, are both real shapes (v31 established the rule for
+`launchctl`). Claude Code via `https://claude.ai/install.sh` (verified: 302 →
+`downloads.claude.ai/claude-code-releases/bootstrap.sh`, and it installs the
+NATIVE build, so it needs no Node of its own); `gh` and `gogcli` via
+Homebrew. **No command is invented for Antigravity** — its canonical installer
+was never verified against the real thing, and v64's rule is that an
+unverified third-party command must not go on screen as the step that
+completes something.
+
+**Claude Code is the repair fallback, not the installer.** Reached only from a
+button, only after a failure the user just saw. `brew install gh` is one
+deterministic line; an agent that runs a command we already know is slower,
+costs tokens, and is non-deterministic — which for this audience means an
+unreproducible support ticket. The agent earns its place on the failure
+branch, which is un-scriptable by definition (no Homebrew, unexpected arch,
+distro variance, a proxy) and is exactly where a non-technical user is stuck
+today. It reuses Claude Code's own `buildArgs`, so it gets `--allowedTools`
+with a fixed Bash allowlist and `--permission-mode manual`, never
+`--dangerously-skip-permissions`. `sudo` is absent from the allowlist AND
+forbidden in the prompt: an install needing root is the one place human aid is
+correct, since a password prompt in a headless spawn is answered by nobody.
+Claude Code is the only executor it can run on, because per v56 it is the only
+one that honours a tool scope — with a tripwire that refuses if
+`enforcesToolScope` ever flips. Success is re-probed from the machine, never
+read from the transcript; a test has the agent report "All done!" having
+installed nothing, and the result is still `ok: false`.
+
+**Real signed-in state** (`lib/claude-auth-status.ts`). `aiExecutorStatus`
+claimed login state "can't be detected without spawning the CLI" and told
+users to run a company command to find out. Simply wrong: `claude auth status`
+prints JSON with `loggedIn`/`email`/`subscriptionType`. Installed-but-signed-out
+is now its own state, because Install and Sign in are different buttons.
+
+**Google's six console pages are driven by a browser agent** (`0.6`). v64
+concluded that wall was permanent; that conclusion was about the API, not
+about automation, and this slice corrects the over-read. There is still no API
+for creating a Google OAuth client. But `claude --chrome` drives the user's
+own already-signed-in Chrome, and `gog auth setup` accepts `--credentials
+<downloaded JSON> --services gmail,calendar --login` (v0.34.1, flags verified
+against the real binary) — so the agent's deliverable is ONE artifact and
+everything after it is deterministic. Bounding it to a single verifiable file
+is what makes this robust rather than a hope. It is also the substitute for
+the gcloud path v64 rejected on cost (~500MB SDK, second sign-in); that
+rejection stands. `GOOGLE_CONSOLE_STEPS` moved out of the client component
+into a plain module (v51: a server module importing a plain value from
+`"use client"` silently gets `undefined`), so the user's checklist and the
+agent's checklist are the same array and cannot drift. Visible Terminal, not
+headless: the agent operates the user's real Google account, the console can
+interrupt with a terms or billing interstitial nobody can enumerate in
+advance, and the final `--login` opens a consent screen a human must approve.
+The prompt makes the agent verify the browser's signed-in account BEFORE
+clicking anything — setting this up on the wrong account silently connects the
+wrong mailbox and nothing downstream would notice.
+
+**Chrome's prerequisites, split by what is actually knowable.** Presence is
+checkable and is checked before any spawn (`open -Ra "Google Chrome"` resolves
+the bundle without launching it — exit 0 present, 1 absent, measured). WHICH
+account Chrome is signed in as is not: there is no API, and reading Chrome's
+profile would be fragile and a bigger intrusion than the feature is worth. So
+it gets an explicit confirmation plus a button that opens the account page in
+CHROME specifically — a user whose default browser is Safari would otherwise
+verify the wrong browser and confirm something untrue.
+
+**Advanced mode, off by default.** One `localStorage` boolean hides every
+surface that assumes terminal literacy: the Network map, MCP connectors, Open
+in Terminal, the three non-default AI executors, Notion, and the company path
+field. The default direction is the point — v66's discipline applied to
+audience instead of agent kind: a new feature is hidden from simple mode
+unless it opts in, rather than needing to be excluded one at a time. Two
+departures from the original spec, both because 0.6 now exists: Google stays
+in simple mode (the spec hid it on the grounds the console step couldn't be
+automated), and GitHub stays because `gh auth login` is a browser flow. Open
+in Terminal stays visible for `external` folders regardless — it is their only
+action (v66), and gating it would leave those cards with no buttons at all.
+
+**Get Started produces a diff instead of a terminal.** Its entire job is
+answering "I set this up, now what?", and it answered by opening a terminal.
+Simple mode now runs a new `orientation` registry command through the
+machinery every other command already uses: agent writes a note, user reads
+the diff, user approves. One registry entry and a Sheet around the existing
+`CompanyCommandRunner` — no new run/diff/commit code. The prompt is
+self-contained rather than delegating to a `.claude/commands/orientation.md`
+the company may not have (`commandFileName` is declared but read nowhere), and
+it is told to describe only what really exists and say so plainly when
+something is missing — an orientation that invents capabilities is worse than
+none. Advanced mode keeps v46's terminal session unchanged.
+
+Onboarding now states that Claude Code needs a paid Claude account
+(~$20/month). The app never said so, and a user who installs everything and
+then hits a paywall blames the app.
+
+**Investigated and rejected: Antigravity as a second browser driver.**
+Antigravity is Google's own CLI, so it looked like it could drive Chrome for
+0.6 when chosen as the executor. Verified against the real installed binary
+(`agy` 1.1.13): no browser/chrome flag, no `mcp` subcommand to attach one
+(v61's finding, still true), no plugins, and — asked directly — a tool list
+containing no navigate, click, screenshot or DevTools tool. The changelog's
+"built-in Chrome DevTools MCP server" is the Antigravity **IDE**, not the CLI;
+that distinction is what makes this look possible from outside.
+`read_url_content` is not a substitute, since the Cloud Console is an
+authenticated SPA that must be clicked through. Two general points kept: a
+vendor's own product gets no special access to that vendor's browser (browser
+control is a tool the harness implements, not an entitlement), and `agy` is
+`enforcesToolScope: false`, so even with the capability it would mean a fully
+unscoped agent operating the user's Google account — the hole v56 exists to
+close.
+
+**Findings from the branch review, fixed before merge.** A fresh install had
+no `DATA_DIR`, and both new terminal writers wrote a script into it without
+`mkdir` — so Sign in and Set up Google failed with ENOENT on precisely the
+path this slice exists to make work. v38's `open-interactive-terminal-impl`
+had the same latent bug and was fixed with them: one root cause, three
+writers. External folders could not be registered in simple mode, because the
+"existing project" checkbox stayed visible while the path field went
+advanced-only — that field now appears whenever the box is ticked, since an
+existing folder's location is the one value that cannot be defaulted. And
+installer output — written by a package manager or download server, not by us,
+arriving through a public Server Action with no size limit — was spliced
+verbatim into a prompt whose Bash allowlist includes `curl *` and `npm install
+-g *`; it is now capped and wrapped in the same nonced fence from
+`prefetch/untrusted-fence.ts` the triage commands use. Both install actions
+also indexed a typed `Record` with a client-supplied id and now fail closed.
+
+**Not verified, and deliberately left to the user:** the browser agent's real
+run (it creates a Google Cloud project and spends real tokens), the repair
+agent's real run (needs a machine without Homebrew), and the `orientation`
+command's first spawn. All three are the category CLAUDE.md's standing rule
+keeps out of unattended passes. The load-bearing unverified assumption is that
+`claude --chrome "<prompt>"` engages the Chrome integration in an interactive
+session — the flag exists on the real CLI; that combination has not been run.
+
+## v70 (2026-08-13): stop re-asking macOS for the Keychain on every page render
+
+Fixes a user-reported bug: after connecting Google, a macOS popup saying *"gog
+wants to use your confidential information stored in 'gogcli' in your
+keychain"* kept coming back — notably on every press of Re-check.
+
+**The prompt itself is not this app's bug, and can't be fixed here.** Homebrew
+ships `gog` ad-hoc / linker-signed, so its code hash changes with every
+release, and a macOS Keychain ACL binds to the writing process's Designated
+Requirement — so the grant "Always Allow" creates stops matching as soon as gog
+updates. That's [openclaw/gogcli#569](https://github.com/openclaw/gogcli/issues/569),
+opened 2026-05-09 and closed without a fix.
+
+**What this app *was* doing wrong is the frequency.** Every page is
+`force-dynamic`, and the `gog auth *` probes that read gog's keyring were
+re-run from scratch on every render of Agents (`listGoogleAccountEmails`),
+Connect, Network and the Ownership sheet — plus OnboardingWelcome's
+refresh-on-window-focus. Two separate bugs stacked on top of that:
+
+1. `googleStatus` ran `gog auth status -j` **and then** `gog auth list -j`.
+   Those read *different* Keychain items (`auth status` reports
+   `client_secret_in_keyring`; `auth list` reads the token entries), so an
+   already-connected user was being asked **twice** per render for an answer
+   one call gives. `auth list` now runs first and returns on its own when it
+   finds a stored account; `auth status` is only consulted when there is no
+   account, which is exactly when its `credentials_exists` discriminator (v64)
+   is the thing being asked for.
+2. Nothing was cached at all. New `lib/exec-memo.ts` memoizes these read-only
+   probes process-wide for 5 minutes, keyed on command + args. Failures are
+   never cached — a dismissed Keychain prompt or a one-off `which` failure must
+   not pin the answer. It is installed as the *default* `execFn` of
+   `connect-status-impl.ts` and `google-accounts.ts`, so every caller is
+   covered at once and every DI test (which injects its own `execFn`) is
+   untouched.
+
+`recheckConnectStatus()` clears the memo before reading — a separate Server
+Action rather than a `force` parameter, per the zero-extra-parameter rule, same
+shape as v51's `checkForUpdatesNow` beside the throttled banner check. Both the
+Connect page's Re-check button and OnboardingWelcome's refresh-on-focus use it:
+those are the two moments whose entire purpose is "the user just changed
+something in their terminal," where a cached answer is the wrong answer.
+
+**Measured, not asserted**, against a real production build with a logging
+shim in front of the real `gog` on `PATH`, over the same 9 page loads
+(`/`, `/network`, `/connect`, three rounds):
+
+| | `gog` spawns |
+|---|---|
+| before | **15** (9 × `auth list`, 6 × `auth status`) |
+| after | **3** (one per route, then cached) |
+
+Five plain reloads of `/connect` afterwards spawned **0**; one Re-check click
+spawned exactly **1**, confirming the button still really re-checks. The
+Connect page also gained a collapsed explainer on the Google card saying what
+the popup is, that `Always Allow` is the right button, that it can return when
+the CLI updates, and offering `gog auth keyring file` for anyone who would
+rather move the sign-in out of the Keychain entirely.
+
+**Known, disclosed behaviour change, not fixed:** a machine with a stored token
+but a deleted `credentials.json` used to land on the `client` stage and now
+reads as connected — gog will fail to refresh, and that surfaces on first use.
+Detecting it means the second Keychain prompt on every render for every
+correctly-configured user, which is the bug this ordering exists to fix.
+
+**Worth not re-deriving:** the memo is per-route, not per-process — Next.js
+bundles the server module separately for each route, so `/`, `/network` and
+`/connect` each hold their own cache. That's why the "after" number is 3 and
+not 1. It's still bounded per route rather than per render, which is the whole
+point; making it truly global would mean a shared store the framework doesn't
+hand out for free, and buys two spawns.
+
+**Also measured and worth keeping:** `gog auth list -j` returns the same
+accounts, scopes and subject under a disposable `--home`, so gog's account list
+lives in the Keychain, not on disk (there is no `config.json` until something
+writes one). There is no file-backed way to answer "is Google connected"
+without touching the keyring — which is why the fix is caching rather than
+avoidance.
+
+## v115 (2026-08-27): the constellation morphs, and the page moves sideways
+
+Requested against `dala.craftedbygc.com` as a reference: the brain, an explosion,
+a light bulb, and content that moves horizontally as you scroll — with this
+site's own copy and palette. No colour or type token changed, so there is
+nothing to mirror into `app/globals.css` for this slice.
+
+**The hero brain is now one keyframe of three.** `constellation.js` samples the
+same 2200-odd triangles against a second stroke path (a filament bulb — glass,
+screw base, coil, rays) exactly the way v114's brain is sampled, and the
+explosion between them is not a drawing at all: it is the same particles pushed
+out along their own angle, which is what lets one lerp carry brain→burst and
+burst→bulb. Field is 3600 particles now. All three states share one stage, the
+hero's right column, so the brain detonates where it stood and reassembles
+there and the copy column is never encroached on.
+
+**Keyframes are pinned to elements, not to a fraction of the page** —
+`.hband-view`'s centre and `.close`'s top — so editing copy above or below them
+cannot knock the sequence out of step, and the last mark is clamped to
+`scrollHeight - innerHeight` or the bulb finishes assembling somewhere nobody
+can scroll to.
+
+**What makes the blast read as a blast is the streaks, not the spread.** A first
+pass threw the particles into a thin shell and it read as the ambient field
+getting denser. Each triangle now drags a line back toward the origin it was
+thrown from, for the duration of the burst only. The cortex pulse — a brain's
+behaviour — flattens to full brightness as the burst takes over, or half the
+blast sits at the pulse's low ebb exactly when it should be brightest.
+
+**Two horizontal effects, not one.** `#companies` pins for 300vh while its card
+row travels ~900px sideways (the row is given a guaranteed drift either way, so
+the motion reads even on a wide screen where the four cards already fit); and
+every other band slides sideways across its own pass through the viewport,
+alternating direction down the page.
+
+**A band travels as one block, and this is the part not to undo.** The first
+version drifted each column of a `.two` against the other, which looks right in
+motion and closes the grid's 44px gap at one end of the pass — the history panel
+finished on top of its own headline. Any differential between two adjacent
+columns does this. Travel is also capped to whatever gutter the 1180px wrap
+leaves over (`min(90, (innerWidth - 1180) / 2 + 20)`), so it never pushes past
+the viewport.
+
+**The regression worth remembering: `landing/home.css` is loaded by every page
+on the site, subpages included** — its own header comment had claimed since the
+cinematic rewrite that "subpages still load /styles.css", which is false and is
+what made this look safe. The band parallax was written as `.sec > .wrap`, which
+every page shares, while the script that drives it exists only in `index.html`.
+The transform was identity everywhere else so nothing moved, but `will-change:
+transform` still promoted every content band to its own compositing layer, and
+**a composited layer drops text from subpixel to grayscale antialiasing** — on
+`/how-to-use/`, which is almost nothing but body copy, that re-rendered
+essentially every glyph on the page. Geometry was untouched (every box and the
+document height diff clean), which is exactly why it is easy to miss. **A rule
+meant for the home page alone has to be keyed to a class that page's own script
+adds** — `.wrap.px` — not to markup every page shares. The stale header comment
+is corrected rather than left to mislead the next reader.
+
+**And the check that caught it, after one that did not.** A pass testing
+horizontal overflow and stuck reveals reported all five subpages clean. What
+found it was v92's method: a full-page pixel diff, before against after, at ten
+widths from 1920 to 390, with `animation`/`transition` suppressed and `#swarm`
+hidden so the comparison is deterministic. Byte-identical on all five subpages
+at every width is the bar for a change that only intends to touch the home page;
+"no overflow" is not.
+
+Reduced motion gets one still frame and no pin, and below 1100px there is
+neither parallax nor pinned band — a single-column layout has nowhere to drift
+to. Measured at 60fps through the whole sequence (16.7ms median, 16.8ms p95,
+no dropped frames) with the trails and 3600 particles live.
+
+## v116 (2026-08-27): both shapes become solids you can turn and push on
+
+Reported against v115: the brain did not look like a human brain, the bulb was
+flat, and neither responded to the pointer. Both are now real parametric
+surfaces in three dimensions — sampled in model space with a per-particle
+outward normal, turned on the vertical axis and put through a perspective
+divide every frame.
+
+**What makes a brain legible is the gyri, and the sampling is what draws them.**
+An evenly-sampled folded ellipsoid reads as a bean no matter how the fold
+function is tuned — the displacement is far too small to see at this particle
+size. Particles are now rejection-sampled to land only where a ridge field
+crests, so the cloud sits ON the folds and draws the cortical maze as lines of
+points. **The two sine families are combined with `max`, not `+`:** summed, they
+crest only where both do and the surface breaks into disconnected islands;
+their maximum crests wherever either does, so each contributes a continuous
+meandering band and the two together read as a maze. Also carved: the
+longitudinal fissure across the top only, the Sylvian fissure rising toward the
+back, a narrower frontal lobe, a striated cerebellum and a brainstem.
+
+**Depth needs both halves or the solid reads flat.** How far a point is
+(`FOV / (FOV + z)`) is not enough on its own — the far wall of the shape shows
+straight through the near one. Each particle's normal is rotated with it and
+particles whose patch of surface faces away are dimmed hard, which is what turns
+the cloud into something with a front and a back. Suspended through the blast,
+where there is no surface to face anywhere.
+
+**The bug worth naming: canvas +y is down, model +y is up.** Everything rendered
+upside down for the first three passes — the giveaway was a thin stalk growing
+out of the top of the skull, which was the brainstem, and a bulb standing on its
+glass. One negation in the projection. Worth checking first in anything that
+projects a model space into a canvas.
+
+**The bulb is an A19, and its two constants are its whole aspect ratio** — 110mm
+tall over a 60mm envelope. The first draft made the envelope as wide as the bulb
+was tall and produced a mushroom. It is a surface of revolution off a profile
+table, with a genuine helical thread on the screw base and a coiled filament
+arcing between two lead wires.
+
+**The pointer pushes on the surface.** Everything within 175px of the cursor is
+displaced along its own stored normal, so the shape bulges where it is touched
+and settles when the pointer leaves — a physical push rather than a highlight,
+which is why the displacement is large and the brightness boost small. It is
+measured against the PREVIOUS frame's screen position: one frame of lag, against
+projecting the whole cloud twice per frame to know where the cursor is relative
+to it. The solid also leans slightly into the pointer.
+
+**Every page loads this file, so the seeding is gated** — building three
+6200-point surfaces with rejection sampling on a docs page is work nobody sees.
+Same lesson as v115's `will-change` regression, one layer down: `on` is resolved
+before any of it runs.
+
+6200 particles, still 60fps through the whole sequence (16.7ms median, 16.8ms
+p95, no dropped frames). All five subpages re-verified byte-identical to the
+pre-v115 baseline at ten widths.
+
+## v117 (2026-08-27): the brain becomes anatomy, and the cloud lights up
+
+Third report that the hero shape did not read as a brain, this time against
+`ai_agent_brain_prompt.md`, whose actual instruction is to use a real brain
+GEOMETRY rather than a procedural stand-in. That is the correct diagnosis and
+v116's folded ellipsoid was never going to satisfy it — **the identifying thing
+about a brain is its silhouette, not its folds**, and one ellipsoid has no
+frontal pole, no temporal lobe hanging under a lateral groove, no occipital
+pole and no cerebellum, however the fold function is tuned.
+
+**The shape is a metaball field now: fifteen spheres placed where the lobes
+actually sit, mirrored across the midline, fused into one implicit surface.**
+Each particle marches a ray out from the centroid, bisects onto the isosurface,
+and takes its normal from the field's own gradient, so the lobes are real lobes.
+Then the longitudinal fissure across the top, a deepened lateral sulcus on the
+temporal lobe's upper border, finer folia over the cerebellum, and a brainstem.
+
+**Three things that had to be got right, all found by looking at renders.**
+(a) **Take the OUTERMOST crossing of the isosurface, not the first** — stopping
+at the first loses everything the cerebrum hides, which is the temporal lobe
+under its overhang and the whole cerebellum. (b) **A ray that crosses nothing
+must resample, not fall through** — leaving `best` at its start value dropped
+those particles at the centroid and put a bright knot in the middle of the
+shape. (c) **`q²`, not `q³`** — a sixth-power falloff individuates every sphere
+into its own bump and the brain becomes a bunch of grapes; fourth fuses the hull
+while leaving the poles and the cerebellum distinct. Isolated small spheres also
+sit their isosurface at exactly their own radius under this falloff, which is
+why the first brainstem was invisible until its radii went up.
+
+**Model bounds are measured, not assumed.** A metaball isosurface sits well
+outside the radii that generate it and moving a lobe moves the bounds, so each
+finished keyframe is fitted into a fixed box rather than carrying a magic scale
+constant. The anatomy can now be edited without re-tuning the projection.
+
+**The cloud glows**, which is most of what the reference has and this did not:
+one pre-rendered radial sprite drawn over the solid, plus a halo on the brighter
+particles stroked from the path already built for them.
+
+**The performance work here is a lesson in measuring the right thing, and it
+invalidates the frame numbers reported in v115 and v116.** Those were end-to-end
+rAF intervals, which are vsync-quantized — under headless load they only ever
+report 16.7, 33.3 or 50ms, so two configurations that differ by 10ms can read
+identical, and one that did not change can read differently between runs. Both
+happened here: an A/B on the particle halo showed "no difference" because both
+arms were clamped at 33.3, and a config measured at 16.8 measured 33.3 twenty
+minutes later untouched. Timing the animation's own rAF callback directly
+instead gives the real figure: **4.5–5.5ms per frame at 6400 particles**, against
+a 16.7ms budget. That also correctly identified the one genuine regression —
+building a radial gradient and filling through it every frame cost 15ms, which
+is why the wash is a sprite now.
+
+All five subpages re-verified byte-identical to the pre-v115 baseline at ten
+widths.
+
+## v118 (2026-08-27): the brain becomes a network, not a shell
+
+Fourth report on the same object, and the sharpest diagnosis of the four: it
+was "a hollow shell of scattered points", where the reference draws flowing
+glowing synapses. Correct — v117 sampled the metaball's SURFACE, and a surface
+can only ever describe the outside of a thing. What was missing is the inside.
+
+**Nodes fill the volume now, and the links between them are the picture.** Each
+node is placed along a ray out from the centroid at a random fraction of the
+distance to the isosurface, weighted toward the outside — a dense cortex over
+sparser deep tracts, which is both what a brain is and the only thing that gives
+the interior legible structure. The exponent on that weighting is the whole
+control: 1 fills evenly and loses the cortex, 0 rebuilds the hollow shell this
+replaced.
+
+**Synapses are k-nearest-neighbour links drawn as curves.** Scanning only
+forward (`j > i`) halves the work AND makes a pair impossible to record twice,
+so there is no dedupe pass; nodes late in the array simply end up with fewer
+links, which reads as natural thinning rather than as a defect. **Two links per
+node, not three** — three fills the silhouette solid and the brain becomes a
+ball of yarn, two leaves tracts you can follow. The curve is bulged in SCREEN
+space off the line between its two nodes, since both ends are already projected
+and an arc that way costs one control point instead of a third projection; the
+bulge alternates sign per edge, or a bundle reads as a comb.
+
+**Pulses of light run the synapses** — a bright head with a short tail, riding
+the same curve the synapse is drawn on, jumping to another edge at the far end
+so the traffic never settles into a pattern. They are the only things on the
+canvas allowed full alpha, which is what makes them read as light travelling
+rather than as more nodes.
+
+**Two sets of links, not one.** A node's neighbours in the brain are nowhere
+near it in the bulb, so carrying one edge set through the morph would draw a
+tangle of chords across the bulb. Each shape gets its own set, faded in with the
+shape; both fade out through the blast, where a network stretched across the
+viewport reads as a mess rather than as an explosion.
+
+**Two details that only show up in a render.** The longitudinal fissure has to
+be a real gap in the VOLUME — carving it into a surface was enough before, but
+neighbour-linking will happily bridge the midline and fill the cleft with
+synapses. And a node inside the volume faces nowhere in particular, so the
+synapse pass dims on distance alone; using the surface-facing term there blinks
+whole tracts out as the shape turns.
+
+The network is far cheaper than the shell it replaces: **2.8ms per frame at
+2600 nodes**, against 4.5–5.5ms at 6400 surface particles, because ~5000 curves
+cost less than 6400 stroked triangles. Startup is unchanged at 173ms to
+interactive. All five subpages re-verified byte-identical to the pre-v115
+baseline at ten widths.
+
+## v119 (2026-08-27): both shapes traced off the reference photographs
+
+Two reference images supplied — a lateral human brain and an A-series filament
+bulb — with the instruction to match them exactly. Both shapes are now lifted
+off those photographs rather than approximated.
+
+**The brain's lateral silhouette is a traced polygon, and the solid is that
+outline given a width.** This replaces the metaball field, which four passes
+proved cannot hold the shape: thirty-odd overlapping spheres sum to inside
+almost everywhere within the hull, so the frontal pole, the temporal lobe and
+the occipital smooth into one oval no matter how the falloff is tuned — q², q³
+and q⁴ were each tried and each produced either a ball or a bunch of grapes.
+Lofting a traced outline is the opposite trade: the profile view is the
+photograph's by construction, and the only thing left to choose is how wide the
+thing is. Twenty-six points read off the photo, converted at 1.5 model units
+across the cerebrum's own length, running anticlockwise from the frontal pole
+over the vertex, down the back, forward along the temporal lobe's underside and
+up through the notch the lateral sulcus opens between the temporal and frontal
+lobes. The cerebellum is its own traced outline; the brainstem a tapered tube.
+Cross-sections close to nothing at the rim via distance-to-outline, which is
+what rounds the solid instead of extruding it flat.
+
+**The bulb is its profile table, re-measured.** 420px tall over a 240px
+envelope — 1.75, and getting that ratio wrong is what made an earlier pass a
+mushroom. Twenty-three [height, radius] pairs off the photo, plus the interior
+the photograph actually shows: a glass stem rising from the base, the press the
+wires anchor into, two support wires splaying up and outward, and the filament
+strung horizontally between their tips. The previous version had a coil arcing
+between two verticals, which is a different bulb.
+
+**The tool that ended it, after four failed passes, was looking at the geometry
+instead of the render.** `window.__probe()` prints the model's own lateral
+silhouette as text straight from the node data. It said in one line what four
+rounds of screenshots had not: length-over-height 1.25 where the photograph is
+1.5, and an outline with no temporal lobe, no cerebellum and no stem in it —
+the lobes had fused and no amount of re-rendering was going to show that. It is
+kept in the source for the same reason. **When a shape is wrong, measure the
+shape; a render only shows you that you dislike it.**
+
+2.9ms per frame, startup 179ms to interactive, all five subpages byte-identical
+to the pre-v115 baseline at ten widths.
+
+## v120 (2026-08-27): a dense cloud with a lit rim, not a line network
+
+A screenshot of the reference site itself settled what five rounds of prose
+description had not. **The shape was already right** — the outline traced in
+v119 measures 1.44 length-over-height and so does the reference's brain, to two
+decimal places. What differed was the RENDERING: the reference is a dense field
+of thousands of tiny triangles reading as one textured mass, with a bright rim
+along the silhouette and almost no visible connections. v118's correction
+brief had asked for flowing synapses, so that is what got built; the site
+itself barely draws them.
+
+**So: density up, links back.** 2600 nodes to 12000, particles smaller, 84% of
+them on the cortical sheet rather than 62%, and the synapse mesh dropped behind
+the cloud at 45% weight. Only the first 1300 nodes carry tracts at all —
+linking is O(count²/2), so letting all 12000 take part is 72 million distance
+tests at startup for a mesh dense enough to hide the cloud it sits behind.
+
+**The rim is what draws the shape.** A particle whose surface normal is
+perpendicular to the eye sits on the silhouette, and in the reference those are
+the brightest things on the canvas — they outline the form and pick out every
+gyral crest that turns away. `(1 - |n·view|)³`, cubed to keep it tight, or the
+whole cloud lights up and the effect is fog. Without it a dense cloud has no
+edge.
+
+**A performance trap worth recording, because it looks like a density problem
+and is not.** Going 9000 → 12000 nodes took the frame from 6.9ms to 33ms —
+4.8× the cost for 1.33× the work. The cause was the per-particle halo's alpha
+threshold: the new rim term pushes far more particles past it, so the count of
+haloed particles grew several times faster than the node count. Raising the
+threshold so the halo fires only on the rim itself — which is the only place
+the reference blooms — puts it back to 7.7ms at the full 12000. **A threshold on
+a value another change just shifted is not a constant.**
+
+7.7ms per frame, startup 173ms to interactive, all five subpages byte-identical
+to the pre-v115 baseline at ten widths.
+
+## v122 (2026-08-27): the overview becomes tiles, and the terminal becomes a view
+
+Three user reports in one slice, and a repo-wide audit behind them.
+
+**The Companies overview is tiles now.** It had been a grid of cards each
+carrying thirteen controls, for companies you were not working on, with an
+explorer beside it listing every company and its files — a second, denser copy
+of the same list. A card is a tile: glyph, name, path, kind badge, latest
+activity, connection line. Clicking one opens the company, which is where every
+control lives.
+
+**`AgentCard` is handed over TWICE from one props object** — `panels` with
+controls for the single-company view, `tiles` without for the grid. Sharing the
+props is the whole point: every `show*` prop is optional (v66's default-off
+safety property), so a flag supplied to one and forgotten on the other would
+vanish silently rather than fail `tsc`. v104's "verify card changes by PARITY,
+not by `tsc`" applies to the two variants as much as to the two surfaces.
+
+**The explorer only exists once a company is open** — but a SEARCH still widens
+it back to every company. Cross-company file search is the one thing v104's own
+note says this page must not lose ("searching for a file whose name you
+remember, without first remembering which company owns it"), and removing the
+overview tree would have deleted it outright.
+
+**The terminal is a view of a company, not a fourth grid column.** The dock,
+its drag grip and `--dock-w` are gone; it takes the workbench when it is what
+you are looking at, reached from the explorer exactly like a file. It holds
+**several sessions per company** now, keyed by company AND session id, capped
+at eight, with client-chosen ids validated before they name a process. The tab
+strip is restored from the server after a reload rather than remembered in the
+browser — the ptys outlive the page, so the server is the honest source.
+
+**A new tab is an assistant, not a `$` prompt.** The company's executor starts
+already told what this company is, from `buildGetStartedIntroPrompt` unchanged
+— the same briefing the Get Started button gives, so the two cannot describe
+one company two different ways, and it still costs read-everything tokens only
+when a watched path changed (v47). It runs **as the pty's own process**, argv
+straight through, never typed into a shell: a shell echoes what it is given and
+v97 is the slice that exists because a ~1.4KB prompt redraws over itself and
+reads as corruption. Here nothing echoes it because nothing types it.
+
+**Starting a session moved from GET to POST.** A GET that spawns a process is
+reachable cross-origin with no preflight — an `<iframe src>` on any page the
+user is visiting was enough, and the response being opaque to the attacker does
+not un-spawn the shell. It also makes refusals readable: EventSource surfaces
+no response body, so a session that failed to start on the stream request could
+only ever report itself as a generic connection error. Every refusal is now a
+sentence the user can act on ("Claude Code isn't installed on this computer
+yet. Open Connectors in the menu to install it").
+
+**The page header is sticky, opt-in per page.** Not on `.dash-topbar` itself:
+Settings pins its own index at `top: 6` and Activity its day headers at
+`top: 0`, and a bar above them means re-measuring both. **On mac it stops at
+`top: 34px`** — `#titlebar-drag` (v121) is a fixed `-webkit-app-region: drag`
+strip across the top 34px at the same z-index, so a header pinned to `top: 0`
+would hand its own top band to the window manager and "Add a company" would
+drag the window instead of opening the form. `.app-shell-main` already offsets
+by exactly this much; the sticky stop has to agree with it or the two line up
+only at scroll 0. **Found by merging master in before building the mac app, not
+by reading** — the two halves live in different branches.
+
+**A silently-broken CSS rule, fixed at the cause.** `.bento-grid > * > .bento-card`
+stopped matching the moment the clickable wrapper nested a level between the
+grid item and the card, so equal-height cards quietly became ragged. It is a
+descendant selector now. **A `> * >` rule is a rule that breaks on any future
+nesting and says nothing when it does.**
+
+### The audit, applied in the same slice
+
+Repo-wide over-engineering pass, net **-1401 lines** across the audited files
+and **eslint clean with zero warnings** for the first time since v78.
+
+- **`landing/styles.css` (485) and `landing/cinematic.css` (714) deleted.**
+  v112 already recorded them as "referenced by nothing — 67KB of dead
+  stylesheet, ready to delete" and left them. All six landing pages link only
+  `/home.css`; verified by serving the site and confirming every asset each
+  page requests returns 200.
+- **`components/ui/card.tsx` (92) deleted** — orphaned when v107 rebuilt
+  Settings without Cards. Regenerable with `npx shadcn add card`.
+- **`defaultExecFile` x16 consolidated** into `lib/default-exec-file.ts`. Each
+  copy carried its own `node:child_process` + `node:util` imports and an
+  `execFileAsync` const used for nothing else — the same shape v78 consolidated
+  `pathExists` out of, regrown around a different function. The seam is
+  unchanged: every caller still takes `execFn: ExecFileFn = defaultExecFile`.
+  **The two MEMOIZED defaults were deliberately left alone** — v75's rule is
+  that a memo belongs to the module whose default it is, and a shared memoized
+  exec would silently no-op the second click on any path whose job is to look
+  again. So were the `{ cwd }` and long-timeout variants, which differ in what
+  they pass, not in how they are written.
+- **`isPresent` x3 → `lib/binary-present.ts`**, including the fourth copy
+  written an hour earlier in the terminal's own assistant launch.
+- **`isDirectory` x4 → `lib/path-exists.ts`**, the home v78 made for this.
+- Dead on arrival: `AI_EXECUTOR_BLURB` (exported, referenced nowhere, not even
+  in its own file), `.terminal-live`, `StatusDot`'s own file for one `<span>`,
+  an unused `Kind` type from v105, two unused loop vars in `constellation.js`.
+
+**What was checked and is clean, so it is not re-derived:** every production
+dependency is consumed (`tw-animate-css` included — ten `animate-*` utilities
+in use), 78 of 79 app CSS classes and 156 of 157 landing ones have live
+consumers, exactly one module was imported by nothing, and the 58 "unused
+exports" are inline-used types where un-exporting saves 0 lines — v92's
+false-positive shape, still false.
+
+Verified: `tsc` clean, eslint clean, 792 tests, `next build`, all six app
+routes 200 with an empty console, and the landing hero still renders (181,594
+lit pixels) with `window.__probe()` intact.
+
+## v123 (2026-08-27): the mac update that downloaded and then hung forever
+
+Reported from the field: pressing **Update & Restart** on mac downloaded the
+update, then sat on "Update installed, restarting…" and never restarted.
+
+**Squirrel.Mac cannot update an ad-hoc-signed app, and fails silently when it
+can't.** An ad-hoc signature (`TeamIdentifier=not set`, which is what
+`scripts/after-sign.js` produces and what v110 settled on) has a designated
+requirement of a bare `cdhash` — a fingerprint of that exact binary — and
+Squirrel validates the update against the RUNNING app's requirement. Two builds
+never share a cdhash. Measured on the real bundles rather than reasoned about:
+0.35.0's requirement is `cdhash H"33f50f…"`, 0.36.0's is `cdhash H"e42741…"`,
+and `codesign --verify -R` confirms 0.36.0 fails 0.35.0's.
+
+**The silence is electron-updater's, and it is by design:**
+
+```js
+quitAndInstall() {
+  if (this.squirrelDownloadedUpdate) { this.handleUpdateDownloaded() }
+  else { this.nativeUpdater.on("update-downloaded", () => …) }   // waits
+}
+```
+
+No error, no timeout, no quit — so `install()` returned `{ ok: true }`, the page
+switched to "restarting…", and nothing ever happened. **The evidence was on
+disk the whole time:** `~/Library/Caches/alacran-desktop-mac-updater/pending/`
+held a complete `Alacran.zip` byte-exact against the published
+`latest-mac.yml`, while `~/Library/Caches/app.alacran.desktop.mac.ShipIt/` — the
+directory Squirrel's installer works in — was empty. Downloaded, never handed
+over.
+
+**electron-updater keeps the two jobs it does well** — knowing a version is out,
+and fetching + sha512-verifying the zip — **and the install is a bundle swap
+again**, which is what control-panel's own mac updater did until v109 removed it
+for Electron. v57 had already measured that shape on exactly this bundle: an
+ad-hoc-signed app launched from /Applications CAN replace its own bundle with no
+TCC "App Management" prompt, because quarantine is attached by the *downloading*
+application and nothing here goes through a browser. `installFromZip()` extracts
+with `ditto` (symlinks, xattrs and the nested signature — the same reason the
+zip is *created* with `ditto -c -k`), **refuses any bundle that fails
+`codesign --verify --deep`**, then does two renames with the old bundle parked
+so a failed second move puts it back. The failure mode being designed against is
+a machine left with no app at all.
+
+`autoInstallOnAppQuit` is now `false`. Left at its default it ALSO routes the
+download through the native updater behind a local proxy server — the step that
+fails — and then retries the doomed install on every quit.
+
+**The staging directory is deliberately not deleted:** it holds the bundle this
+process is still executing from.
+
+`scripts/verify-swap.mjs` runs the whole swap against a throwaway copy and a
+real downloaded zip. It is what proved the fix (0.35.0 → 0.36.0, signature still
+valid afterwards) and it covers the step Squirrel used to own.
+
+**Anyone already on 0.35.0 or 0.36.0 has to install this one by hand**, because
+the broken installer is the one running on their machine. From 0.37.0 onward the
+button works.
+
+**The rejected fix, so it isn't retried:** signing ad-hoc with a stable
+identifier-based designated requirement (`--requirements '=designated =>
+identifier "…"'`) does produce a requirement two builds can both satisfy — but
+re-signing a built Electron bundle that way left nested code reporting
+`nested code is modified or invalid`, against a pristine bundle that verifies
+clean. It would also do nothing for anyone already running a cdhash-signed
+build, which is everyone. A real Developer ID certificate is the actual fix for
+the signing half, and is a separate decision.
+
+## v124 (2026-08-27): Connectors paints in 34ms instead of 2.2 seconds
+
+Reported on both shells: clicking **Connectors** left the window blank for a
+noticeable beat before anything appeared.
+
+**Measured before touching anything, by timing every spawn the page makes:**
+
+```
++   9ms    363ms  gog auth list -j
++  10ms   2214ms  kiro-cli whoami --format json
++  13ms    735ms  gh api user --jq .login
++ 139ms    635ms  claude auth status
+TOTAL 2224ms over 9 spawns
+```
+
+The probes were already parallel and already memoized (v70). **One of them was
+simply slow**: `kiro-cli whoami` at 2214ms, with everything else finishing
+inside 775ms behind it. The page awaited all of them before rendering a single
+pixel, so the page cost exactly what the slowest CLI on the machine cost.
+
+**And on a default install that 2.2s buys a card the panel throws away** —
+simple mode filters Kiro out of `visibleExecutors` unless a company is actually
+assigned to it (v102). The server cannot know that: advanced mode is a
+localStorage value on the client.
+
+**So the page no longer awaits its own data.** `getConnectStatus()` moved into a
+child behind `<Suspense>`, and the shell streams immediately. Cold, on a fresh
+process: **header visible at 34ms**, real cards at 1594ms, where before nothing
+existed until 2.2s. The probes are untouched — same calls, same parallelism,
+same memo. What changed is that the page stops waiting for them.
+
+The fallback is a three-group skeleton in the shape of what is coming, so
+nothing jumps when the cards land.
+
+**Deliberately NOT fixed with a per-probe deadline**, which was the first idea
+and is wrong: this page's entire job is to say what is really connected, and a
+probe that timed out would still have to report *something*.
+`readKiroAuthStatus` treats every ambiguous signal as logged out — a timeout
+would therefore render "Installed, but not signed in yet" and send the user to
+redo a sign-in they already have. **Slow and true beats fast and wrong**; v64,
+v72 and v74 are each a slice spent undoing a card that lied.
+
+**Found while measuring, NOT fixed, and worse than the reported bug:**
+`/network` takes **~2.06s on every render, warm or cold** — it has no memoized
+exec default at all, so unlike Connectors it never gets faster on a second
+visit. Advanced-mode only. Same shape, same fix.
+
+## v125 (2026-08-27): every form is a centred modal, not a right-edge drawer
+
+Nine surfaces opened as a drawer pinned to the right edge of the window — Add a
+company, the setup wizard, the company guide, ownership, MCP servers, Get
+Started, refresh, verify, connect help. Every one of them is a form or an
+explainer, i.e. the thing you just asked for rather than an annotation on what
+is behind it, and a 36rem panel welded to one edge of a **desktop app window
+with no browser chrome** reads as a leftover from somewhere else on both shells.
+
+**One primitive changed, zero consumers.** `SheetContent`'s default `side` is
+`"center"`, and the centred branch is a box: `top-1/2 left-1/2`, translated
+back by half, `rounded-xl border`, `max-h-[calc(100dvh-4rem)]`, a 200ms
+fade+zoom instead of a 500ms slide. All nine call sites were already
+byte-identical — `className="w-full sm:max-w-xl"` and no `side` — so that
+`max-w-xl` went from capping a drawer's width to capping a modal's, which is
+the same intent, and nothing else moved. **`Sheet` was already Radix's `Dialog`
+underneath**, so this is positioning, not a new component or a new dependency.
+The four edge positions stay and still work; a drawer remains right for
+something that annotates rather than replaces.
+
+**Why the primitive and not nine classNames.** The standing rule is to fix
+styling in the token or the consumer, never in `components/ui/*`. This is v63's
+exception, for v63's reason: *where* an element is positioned is structurally
+the primitive's job, every caller routes through it, and faking a centred box
+from outside means overriding `inset-y-0 right-0 h-full` nine times with nine
+chances to drift. Not a licence for colour, spacing or width, which still
+belong in the consumer (v16, v29).
+
+**`max-h` plus the inner scroll container is the pair that matters** — v63 added
+exactly that to `AlertDialogContent`. Measured: the company guide is 736px of
+content in an 800px window and scrolls inside its own box with the close X
+pinned; at a 460px-tall window the box is 396px with a 32px gutter top and
+bottom and the X still hit-tests to itself. A centred box without `max-h` is the
+bug v63 fixed, reintroduced.
+
+**The name stays `Sheet`.** Renaming it, plus `company-ownership-sheet.tsx`,
+`mcp-servers-sheet.tsx` and every tag across nine files, is churn with no
+behaviour in it; the primitive's own docblock says what it renders instead.
+
+Verified five of the nine by measurement — Add a company, the company guide,
+View ownership, Edit company details, Add more skills — all centred on both axes
+and inside the viewport. The remaining four are the same single code path; Get
+Started and Refresh were deliberately not clicked, since both spawn a real AI
+run.
+
+**A build trap worth recording:** `next build` while `next dev` is running on
+the same checkout fails with `no-document-import-in-page` on `/404`, which
+describes nothing that is true of the source. They write the same `.next`. Stop
+the dev server first — this is the third time in this session that the two have
+clobbered each other, in three different disguises.
+
+## v126 (2026-08-27): six reports from one screenshot
+
+**1. Content no longer scrolls behind the header.** v122 made the header
+`position: sticky`, which is exactly what sticky does — the top of a panel slid
+out of sight behind the title. The shell is a viewport-height column that does
+not scroll, `.dash-content` is the only scroller (`min-height: 0` is what lets a
+flex child shrink and scroll at all), and the header is an ordinary row above it.
+Nothing overlaps, so nothing is paid for with a z-index — and the mac
+`top: 34px` sticky offset v122 needed is gone, because a header outside the
+scroller cannot reach `#titlebar-drag`. Verified on all five routes: content
+scrollable, bottom reachable, header pinned at 0, nothing landing on it, no
+horizontal overflow, and both Settings' index and Activity's day headers still
+sticky inside their own panes.
+
+**2. The modal's X was a 16x16 target.** It was never broken — a dead-centre
+click always closed it — but the button *was* the icon: `absolute top-4 right-4`
+with no padding, so a click 8px off-centre missed entirely, which is
+indistinguishable from broken. The icon is still 16px; the target is **36px**,
+with a hover background so the hit area is visible rather than guessed.
+Measured: hits at 8px and 14px off-centre now, and the click closes.
+
+**3. The transition wasn't a transition, it was two.** The overlay animated
+0.15s on `ease` and the content 0.2s, so the dim and the box finished at
+different moments and the whole thing read as a stutter. Both are 0.2s on
+`cubic-bezier(0.22, 1, 0.36, 1)` — `--ease`'s curve, written out because a
+custom property is not readable from a Tailwind arbitrary value at build time.
+
+**4. Networks was slow every single time, worse than Connectors ever was.**
+Root cause, and it is v75's rule broken at a different call site:
+`buildNetworkMap` forwarded its own **non-memoized** exec straight into
+`getConnectStatusImpl`, whose own default IS memoized — so the page opted the
+whole probe set out of the memo and re-ran `kiro-cli whoami` (2.2s) on every
+render. `/connect` answered from cache in 10ms while `/network` took 2.06s warm.
+The default is memoized now, which is one line, and the page streams like
+`/connect`. **18ms first byte, 8.7ms warm**, from 2.14s and 2.06s. Safe to
+memoize the whole module: every probe it reaches is read-only and there is no
+"Re-check" here whose job is to look again.
+
+**5. Skills can be removed.** Deleting a file has existed since v105, but a
+skill is a *directory* (`.claude/skills/<name>/SKILL.md` plus its
+`references/`) while the tree selects the file inside it — so Delete left the
+folder behind and the skill half-present. A **Remove skill** action targets the
+folder, and appears only for a real `SKILL.md`; commands are single files and
+keep the ordinary Delete. **It is offered for pack-installed skills too**, which
+is a deliberate split of v81's rule: the app refuses an *edit* it would
+overwrite, but "I don't want this skill" is the user's call, not the app's — and
+the dialog says out loud that `Update skills` will put a pack skill back.
+`skillDirOf` is pinned by five tests, because a wrong quantifier there does not
+misdraw a label, it deletes `.claude/skills` itself.
+
+**6. Advanced mode ships ON.** It defaulted off in v71-v72 so a new surface
+would opt in; the cost landed the other way. A fresh install hid the Network
+map, the terminal, MCP connectors and the executor picker from someone with no
+idea a toggle existed — and v72 is itself a slice spent undoing "features were
+removed" reports caused by that default. Absent now means on; only a stored
+`"0"` is off, so the setting still persists both ways, and the initial React
+state matches the default so the switch does not render off for a frame and
+flip. The Settings copy no longer says "leave this off".
+
+## v127 (2026-08-27): the company panel stops being a card
+
+Opening a company gave you back the same card you had just clicked, inside the
+pane, with thirteen buttons stacked down a 34rem column under a `<details>`
+labelled **More**. The identity block was the third copy of the same name and
+path on screen — the tile you clicked, the explorer's switcher, and then this.
+
+**No card.** `AgentCard` now has two shapes rather than a flag: `"tile"` for the
+overview grid (identity and status, nothing to press, because the tile *is* the
+button) and `"panel"` for the company you opened. The panel is the pane's own
+content — a masthead and hairline-separated bands, no border, no box inside a
+box.
+
+**The masthead leads with what the company has been DOING**, not with its name.
+The explorer beside it already carries name and path, and a company is a thing
+that works while nobody is watching; that sentence was 11px of small print on
+the card and is now the headline, in Sora at 19px, with a 2px ember rule down
+its left edge and the one action you probably came to press opposite it. That
+rule is the only accent in the whole panel — everything below it is bone, dune
+and hairlines.
+
+**Three bands, because there are three kinds of control**, and the headings say
+which: **Run something** spawns the AI and ends in a diff you approve, **What it
+knows** changes what the company IS, **Connections and files** is where it lives
+and what it reaches. Not a sequence, so no numbered markers. Avatar and Remove
+sit in a quiet footer at 75% opacity, destructive last.
+
+**Every control is declared ONCE** in a `controls` array with its band, and each
+shape arranges the same list — so the two layouts cannot drift, which is v104's
+verify-by-parity problem solved by construction rather than by discipline.
+
+**The blurbs are captions now, deliberately NOT the guide's `*_BLURB` prose.**
+Those run to four sentences because the guide is a reading surface; under a
+control, at 12px, in a two-column grid, that is a wall the eye skips. The guide
+still carries the full explanation one click away. A label labels, an example
+demonstrates, and nothing does double duty.
+
+**Two defects the new layout exposed, both fixed:**
+- **Ragged widths.** Six of these components wrap their trigger in a div, so
+  stretching the flex child left the button at content width — 149px beside a
+  403px one. Measured before writing the rule: every cell holds at most one
+  button and the two picker cells hold none, so `.company-action-control button
+  { width: 100% }` cannot reach a checkbox. One width, one left edge, one right.
+- **Two buttons that read as one action.** "Add more skills" (a starter pack)
+  sat beside "Add ready-made skills" (the bundled versions). The first is **Add
+  a starter pack** now, which is what it does, renamed in the guide too — an
+  action keeps the same name through the whole flow.
+
+**Caught by looking, not by measuring:** the ember rule was invisible, because a
+negative margin put it outside the panel where the new scroll container clipped
+it. Geometry said the masthead was fine; a screenshot said the accent wasn't
+there.
+
+## v128: the terminal lets you back out, and the setup form asks one question
+
+Three small corrections to flows that had a way in and no way out.
+
+**Terminal is a toggle, not a trapdoor.** Opening a company's terminals took
+the whole workbench, and the only way back to that company's own controls was
+the switcher — which drops you on the all-companies overview, i.e. you left the
+company to get back to it. `⌘J` already toggled; the button in the explorer
+only ever set it open. Now both do the same thing, and pressing Terminal again
+returns to whatever was on screen before — the company panel, or the file you
+had open.
+
+**Closing the last terminal tab hands the workbench back.** Closing tabs one by
+one used to end on an empty pane reading "No terminal open", which is a dead
+end wearing the clothes of a state. The terminal now reports that it has
+nothing left to show and the company panel returns; re-opening Terminal starts
+a fresh assistant, exactly as a first visit does.
+
+**Only one question in the setup wizard is required.** "What problem does your
+company solve?" is the one answer the AI genuinely cannot work without —
+stakeholders, the value flow and the bottleneck are context you can come back
+and fill in, and the three steps say (optional) now. Next was gated on all four,
+which turned a five-step form into a five-step interrogation for anyone who
+wanted to get started and finish the detail later. The server never required
+them; only the wizard did.
+
+## v129 (2026-08-28): company memory writes back, and the diff tells the whole truth
+
+Three changes in dependency order, all aimed at the same property: the
+company's memory should reach any model, accumulate from real work, and never
+be approved on a partial view of what changed.
+
+**Company context reaches every executor.** Claude Code auto-loads
+`CLAUDE.md` (v86's pointer at `AGENTS.md`) and discovers `.claude/commands`
+and `.claude/skills` the moment a session starts in the company folder.
+Nothing else does — Kiro reads `.kiro/skills` and nothing else — so the same
+"Open in Terminal" click handed one executor a briefed session and the other
+an agent standing in the company folder knowing nothing about the company.
+The knowledge was never Claude-specific: those files are plain markdown, and
+`.claude/` is one adapter over a portable core (v17). Only the `/name`
+shorthand is a vendor feature.
+
+`AiExecutor.autoLoadsCompanyContext` declares which executors find those files
+alone; `openInteractiveTerminalImpl` seeds `COMPANY_CONTEXT_PRIMER` for every
+one that does not. **Absence means false, and that direction is the design.**
+A new executor added to the registry without touching the field gets the
+primer — a few hundred tokens, never wrong. Declaring it the other way round
+("needsPrimer") would mean a forgotten field silently ships the blind session
+this exists to fix, and that failure is invisible: the agent still answers
+confidently, just about nothing in particular. A test pins that an executor
+which can *neither* auto-load *nor* be seeded is not registerable, because
+that combination opens blind with nothing the app can do about it. The primer
+is built from `WATCHED_PATHS`, so it cannot name a different set of files than
+the summary is derived from.
+
+Kiro's `limitations` copy was narrowed rather than deleted: it claimed the
+company's own slash commands "won't be available", which overstated a real but
+much smaller gap. The knowledge is available; the typed shortcut is not.
+
+**Sessions write back.** Company memory was read-in and never written-back —
+an hour of real work in a terminal evaporated, and only the six registry
+commands wrote anything down. "Save what we learned" on an assistant tab asks
+the agent *already in the conversation* to write
+`notes/company/sessions/<date>-<slug>.md`.
+
+The prompt is typed into the **live pty**, not handed to a fresh headless
+agent. The app really does keep 200KB of `session.backlog`, and feeding that
+to a second agent was the obvious route — it is strictly worse: ANSI-laden,
+truncated at the front, full of redrawn TUI frames rather than a transcript,
+and a second agent reading a first agent's output is exactly the injection
+shape `untrusted-fence.ts` exists for. The agent that was there already holds
+the conversation.
+
+It reuses the approval half whole. Writing `<commandId>.run.json` with a
+`before` snapshot **is** the entire contract behind
+`getCompanyCommandResultImpl`, `listPendingReviews`, the sidebar dot and
+`commitCompanyCommandResultImpl` — none of them care who wrote the file. So no
+new approval machinery exists, the note lands in the same queue a scheduled
+digest does, and nothing is auto-committed. It refuses rather than overwrite
+when an unread note is already pending: re-snapshotting would fold that note
+into `before`, after which the reader says "No changes produced." and a note
+nobody read is gone from the queue while still on disk (v32's shape, reached
+from the other direction).
+
+`CompanyCommand.requiresLiveSession` blocks such a command from both the
+scheduler and `runCompanyCommandImpl`. **This was a real defect caught before
+shipping:** `isSchedulableCommand`'s test is "no required fields", and
+`session-note` has no fields at all — so it was silently schedulable, and a
+07:00 unattended run would have asked a freshly spawned agent to describe a
+session that never happened. The honest answer ("nothing") and the dishonest
+one (an invented summary) are both worse than no note; a fabricated memory is
+the one failure a memory product cannot absorb.
+
+**The approval diff now reports what a run touched OUTSIDE its own folder.**
+Until now it showed only the expected output path. For Claude Code that is
+complete by construction — `Edit(<outputPath>/**)` makes writing elsewhere
+impossible. For an executor reporting `enforcesToolScope: false` it is not:
+the agent can touch anything in the repo, and those edits sat in the working
+tree unmentioned while the user approved a diff that looked clean. (The commit
+path was already safe — it realpath-refuses anything outside the output
+location — so strays were never *committed*; nothing ever *said* they existed.)
+
+`lib/company-commands/repo-changes.ts` diffs `git status --porcelain -z -uall`
+taken before and after the run. Git already answers "what changed", so nothing
+new is tracked. Both flags are load-bearing: `-z` survives filenames with
+spaces or newlines, and **`-uall` is what stops a run's own output being
+reported as a stray** — plain porcelain collapses an untracked directory to
+`?? notes/`, which does not start with the output path, so every fresh company
+would have flagged its own legitimate write. A test fails if it is removed.
+
+`strays: null` means "could not tell" — a record written before this shipped,
+or git unreadable — and is **never** rendered as clean. Auto-commit refuses on
+`null` as well as on a non-empty list, because unattended commit is precisely
+where treating unknown as safe costs most.
+
+**Three bugs the tests for that caught**, all of which would have shipped
+silently. (a) `lib/default-exec-file.ts` is `(command, args)` and drops a third
+`{ cwd }` argument; passing it to a cwd-taking seam type-checks fine because a
+2-arg function is assignable to a 3-arg type, and git then ran in the
+*server's* working directory — the stray list came back as control-panel's own
+modified files, for every company. `repo-changes.ts` owns a cwd-aware default
+now, as that file's own comment already prescribed. (b) The runner's mount-load
+gated on `outcome.changed`, hiding the worst case: a run that produced no
+expected output but edited other files loaded as nothing at all. (c)
+`listPendingReviews` runs in the **root layout**, so computing strays there
+added a `git status` per company to every render of every page — v70's rule.
+It opts out via `computeStrayFiles: false`; measured 1 spawn versus 0.
+
+**Cleanup in the same slice** (a repo-wide over-engineering audit found little
+else — 13 deps all consumed, 393 exports with none dead, 35/35 impls tested, 0
+orphaned components): `.card-more` deleted from `app/globals.css`, 25 lines
+orphaned when v127 stopped the company panel being a card, verified dead by
+confirming no `card-` class is ever built dynamically. `defaultReadFile`, which
+existed twice verbatim, moved into `path-exists.ts` as `readFileUtf8`.
+`registry.ts`'s comment claiming "nothing reads `commandFileName`" corrected —
+v104's workspace tree reads it twice, and that match is what decides whether a
+Run button is drawn.
+
+**Verified:** `tsc`, 838 tests, `eslint` clean, `next build`, and a live
+browser pass against a disposable `/tmp` company — the stray notice, the real
+diff and the terminal button all confirmed rendering, with the fixture and its
+registry entry removed afterwards.
+
+**Investigated, not shipped: Kimi Code as a third executor.** Installed 0.39.0
+and read its agent schema out of the real binary, cross-checked against the
+published docs, which agree: `tools` and `disallowedTools` are plain
+tool-name lists with no path field, and the docs say so outright — *"Tool
+access is binary (allowed/disallowed), not scoped to specific directories or
+files."* `Write`/`Edit`/`Bash` also require approval per call, so a headless
+run needs `--yolo`, which auto-approves everything. It would therefore enter
+as `enforcesToolScope: false`, which is exactly what the stray-file work above
+makes survivable. Its `PreToolUse` hook can deny (exit 2), but hooks are
+machine-global in `~/.kimi-code/config.toml` — the fifth instance of the
+per-machine-global-config shape after `gog`, `daily-team-log`, `codex mcp` and
+Kiro's — and on this machine Orca already manages that file. Two findings that
+would carry over for free: Kimi reads `AGENTS.md` (32 references in the binary;
+`CLAUDE.md` zero), and it reads `.mcp.json`, which `saveMcpServersImpl` already
+writes. **Not registered**, per v99: it has never been run end to end. A
+`probe-kimi.sh` exists to settle the remaining questions; Kimi Code needs a
+provider tier of ~70K tokens/minute (it sends ~66K on its first request, its
+own system prompt), which is why a free tier could not complete the run.
+
+## v130 (2026-08-28): Kimi Code, registered as beta
+
+A third executor, offered with the word "beta" attached wherever it can be
+chosen. v99's rule is "either run it, or don't offer it" — three executors were
+removed for sitting in the registry with only their `--help` verified. `beta`
+is the narrow, labelled exception to that rule, not a repeal of it: it covers
+"nobody has completed a real run from this app yet", never "we don't know
+whether it's safe". `enforcesToolScope` has to stay an honest answer, because
+that field alone decides whether a command carrying attacker-authored text runs
+at all.
+
+**`enforcesToolScope: false`, established two independent ways.** The
+agent-profile schema read out of the real 0.39.0 binary is
+`tools: array(string())` plus `disallowedTools: array(string()).optional()` —
+tool names, with no path field of any kind and no equivalent of Kiro's
+`toolsSettings.fs_write.allowedPaths`. Kimi's own documentation says the same
+in words: *"Tool access is binary (allowed/disallowed), not scoped to specific
+directories or files."* There is nowhere to put this app's `editScopePattern`.
+Worse in the same direction: `Write`/`Edit`/`Bash` require approval per call,
+so a headless run needs `--yolo` to write anything, which auto-approves
+everything — no scope, and blanket approval to reach it. This is the shape v99
+described as "the opposite of a path allowlist", now declared rather than
+hidden.
+
+The consequence is automatic and is the point: `runCompanyCommandImpl` already
+refuses any `untrustedInput` command on an executor that cannot scope, so
+`refresh` will not run on a Kimi company. What makes the other five jobs
+survivable is v129's stray-file check — the approval diff reports anything a
+run touched outside its own folder, and unattended auto-commit refuses what it
+cannot account for. **That guard was built before this entry existed, and is
+the whole reason this entry is allowed to exist.**
+
+Kimi's `PreToolUse` hook *can* block a tool call (exit code 2, or a
+`permissionDecision: "deny"` JSON reply), so a real scope is theoretically
+reachable. A scope writer was not built: hooks live only in the machine-global
+`~/.kimi-code/config.toml` — the fifth instance of the per-machine-global-config
+shape after `gog`, `daily-team-log`, `codex mcp` and Kiro's own store — and on a
+real machine another tool may already manage that file.
+
+**Flags verified by argument parsing**, which fires before any model call, so
+this much held without a live account: `-p <prompt> --output-format text
+--yolo` is accepted. `--auto` is deliberately unused — the binary refuses the
+pairing outright (*"Cannot combine --prompt with --auto"*). `login` takes no
+email, so `signInAcceptsEmail` stays absent and the card shows no address
+field.
+
+**Two measured absences, both deliberate.** There is no
+`buildInteractiveIntroArgs`: `kimi "say hi"` answers `unknown command 'say
+hi'`, so there is no positional first-message form and no flag that starts an
+interactive session seeded with one — Get Started and the built-in terminal's
+assistant tab are therefore unavailable on Kimi, and say so. And there is no
+`autoLoadsCompanyContext`: Kimi genuinely reads `AGENTS.md` unprompted (32
+references in the binary; `CLAUDE.md` appears zero times, which is v86's
+vendor-neutral filename paying off on a third engine), but it discovers skills
+in `.kimi-code/skills` and `.kimi/skills`, never `.claude/commands`. Three of
+the four files `COMPANY_CONTEXT_PRIMER` names would be missed, and the honest
+answer for a partial is to omit the flag and let the primer run.
+
+**A test was corrected rather than deleted.** v129 asserted that an executor
+which can neither auto-load company context nor be seeded *must not be
+registered*. Kimi is the case that proved that too blunt: it cannot be seeded,
+but it does read `AGENTS.md`, so it opens partially briefed rather than blind —
+and a flat ban would have excluded a usable engine on a technicality. The
+property worth keeping was never "never register one", it is "never ship one
+silently", so the rule is now that such an executor must **disclose** it in
+`limitations`, which the picker renders at the moment of choosing.
+
+`executorDisplayLabel` is the single definition of the name to show, used by
+the picker and all six Connectors card sites. The beta word appearing on one
+surface but not the other is exactly how a user ends up believing they chose
+something finished.
+
+**Also worth recording, since it shapes what users can do:** Kimi needs a paid
+plan *or* a user-supplied provider — `kimi provider catalog add <id>` imports
+from a ~300-entry models.dev catalog, so a Moonshot subscription is one funding
+route rather than a requirement. Two practical findings from trying it: Kimi's
+OpenAI wire sends `prompt_cache_key`, which strict OpenAI-compatible endpoints
+reject with a 400 (Groq does), and Kimi sends **~66,000 tokens on its first
+request** — its own system prompt, before any tools — so a provider tier below
+about 70K tokens/minute cannot run it at all.
+
+Verified: `tsc`, 840 tests, `eslint` clean, `next build`.
+
+## v131 (2026-08-28): Telegram and Slack, read into the company's memory
+
+Chat is where a company says the true things and then loses them. A new job —
+**"What did Telegram and Slack say"** (`check-messages`) — reads the last 24
+hours of the company's Telegram chats and Slack channels and writes one note to
+`notes/company/messages/<date>-messages.md`: what was discussed, what was
+actually decided and by whom, what was asked and never answered, and what the
+conversation revealed about how the business really works. It lands as a diff in
+the same approval queue as every other job, so nothing is remembered until
+someone says yes.
+
+The note goes into `notes/company/`, which means it is picked up by `/digest`'s
+weekly roll-up and read by `/refresh` as evidence when it checks whether
+`company.yaml` has drifted — without either of those being touched. This is the
+first job that brings in something the repository does not already contain.
+
+**The shape decision, and the one worth arguing with: these connectors PULL, they
+never listen and never reply.** The obvious reading of "connect Alacrán to
+Telegram and Slack" is the assistant-in-your-chat model — a bot you DM that
+answers. It was rejected, for two reasons that are really the same reason.
+
+A bot that replies has to be *reachable*, which means something listening at a
+public address, forever. Telegram's `getUpdates` and Slack's
+`conversations.history` are both plain outbound calls from this machine, made
+only when the job runs, so there is no daemon, no webhook, no tunnel and no
+relay — and the README's "no hosted service behind any of this, no server of
+ours your data could ever reach" survives intact. The reply model cannot make
+that claim, and the claim is the product.
+
+The second reason is the trust boundary. Pulling means every message body
+arrives as *data to be summarized*, which is exactly the shape the untrusted
+fence already exists for. Replying means agent output leaving for a channel
+where nobody reviewed it first — the opposite of the diff-before-anything-is-
+saved rule the rest of the app is built on.
+
+**`untrustedInput: true`, and it is not decoration here.** Message bodies are
+the largest injection surface this app has ever accepted — larger than Notion
+page titles (v116) or an email body, because anyone who can post in a channel
+can write them, at any length, with intent. The flag is what makes that
+survivable, and all three of its consequences are load-bearing: no `Bash` in
+the run, a refusal to run at all on an executor that cannot enforce an edit
+scope (so a Codex or Kimi company simply cannot run this job), and a permanent
+bar on unattended auto-commit. The whole prefetch payload — both platforms,
+including the section headers — sits inside one nonced fence, and the prompt
+instructs the agent to record an injection attempt as a line in the note rather
+than obey it. The registry test that pins which commands carry the flag was
+updated deliberately rather than relaxed.
+
+**Connecting is per company and never passes through this app.** A
+`TELEGRAM_BOT_TOKEN` (from @BotFather) or `SLACK_BOT_TOKEN` (an `xoxb-` token
+with `channels:read`, `groups:read`, `channels:history`, `groups:history`) goes
+into the company repo's own `.env`, the same trust boundary and the same file
+`NOTION_TOKEN` has used since v88. Either token alone is enough; neither is a
+refusal *before* anything spawns, carrying the exact variable names and scopes
+needed — an agent run spent writing "no messages" is an API call spent on
+nothing. The `.env` reader that had been hardcoded to Notion is now one shared
+`readCompanyEnvVar` in `lib/company-env.ts`, because two implementations of
+"read a secret out of the company's .env" is two places for that boundary to
+drift.
+
+**Three failure modes are named rather than swallowed**, each because its
+default expression is a lie:
+
+- A Telegram bot with a webhook registered answers every `getUpdates` with
+  `409 Conflict` forever. The message says the webhook is the cause and that
+  deleting it restores polling.
+- Slack answers `200 OK` with `{"ok": false, "error": "missing_scope"}`. Checking
+  the HTTP status alone would render a scope failure as an empty channel — the
+  note would report a quiet week during a loud one. The body is the check, and
+  `missing_scope` is answered with the four scopes it needs.
+- A bot in a Telegram *group* receives nothing unless privacy mode is off or it
+  is addressed directly. An empty result from a busy group is that setting, and
+  the command file says so where the user will look.
+
+One unreadable Slack channel degrades to a line and the other nine are still
+read; one dead platform does not discard what the other found — the same
+fail-soft treatment `refresh` gives Notion.
+
+**Instagram is absent, and it is not an oversight.** Meta delivers Instagram
+DMs by pushing to a public HTTPS webhook and offers no polling endpoint at all,
+so supporting it means Alacrán ships a relay someone has to host — the one
+thing the README promises it never will. It also needs a Business or Creator
+account linked to a Facebook Page, the `instagram_business_manage_messages`
+permission, and Meta App Review. X is absent for a smaller reason: it went
+pay-per-use in February 2026 (roughly $0.010 per direct-message read, with no
+free read tier), so it is metered per message rather than architecturally
+impossible. Neither is a *no forever*; both are recorded here so the question
+does not get re-opened from scratch.
+
+**Deliberate ceilings, marked in the code with their upgrade path.** The window
+is a fixed 24 hours rather than a since-last-run cursor: Telegram discards
+unconfirmed updates after about a day regardless, so a longer window would be
+honest for Slack and a lie for Telegram, and a cursor is state on disk that a
+missed day silently steps over. Slack authors appear as raw user IDs, because
+resolving them costs a `users.info` per person plus a cache, and the agent can
+still tell that two messages came from the same someone. Telegram's offset is
+deliberately never advanced — this is a read, and confirming updates would
+delete them for every other reader of that bot, including the next run of this
+job.
+
+No new dependency, no new API route, no long-running process, and no new UI:
+shipping `check-messages.md` in the company template is what draws the Run
+button and the schedule row, because v104's workspace tree already matches a
+command file to its registry entry.
+
+Verified: `tsc`, 848 tests, `eslint` clean, `next build`.
+
+## v132 (2026-08-29): the company panel becomes a list, and the terminal says it's running
+
+Two changes to the company workspace, both from watching it in use.
+
+**The action bands are a divided list instead of a grid of buttons.** Eleven
+outline buttons in a two-column grid gave every control the same weight and
+left the eye no line to travel down: eleven equally-urgent things, each with a
+caption underneath. Now one bordered container per band and one row per
+control — glyph, the control, what it does, an affordance at the far right —
+so the shape is learned once and only the middle is read after that. Built
+against a supplied design file rather than invented.
+
+**The button IS the row's title, restyled to stop looking like one.** The
+design it follows has a plain heading with a small action at the right, which
+would mean threading a short label ("Execute", "Open") through twelve
+components AND printing two names on every row — the heading and the button
+saying the same words. Flattening the real `<button>` into a heading costs
+neither, and keeps the accessible name, the focus ring and the keyboard path
+exactly as they were. `.company-action-blurb` carries the description behind a
+hairline; a dimmed chevron brightens on row hover.
+
+**Colour is per control, not per band.** Five new tone tokens
+(`--tone-blue/cyan/lime/violet/rose`) join the existing ember/success/warning,
+assigned so no two adjacent rows share one. The chip is a single rule —
+`color-mix(in srgb, currentColor 12%/26%, transparent)` — so a ninth tone is a
+token plus a class, never a third pair of values to keep in sync. Cool hues
+are a deliberate, narrow exception to the warm-only rule `KIND_BADGE_CLASS`
+follows: that rule is about a badge competing with the brand accent on a card,
+and these are 15px glyphs inside a tinted chip.
+
+**Three bugs found by running it, none by `tsc`, `eslint` or 848 tests.**
+
+1. **The row responded to the viewport, not to its own box.** The narrow-width
+   rule was a media query, but the workbench pane is ~450px inside a 900px
+   window — so a viewport breakpoint reads "wide" and squeezed the description
+   to four words a line. It is a **container query** on `.company-actions` now.
+2. **Restyling the trigger shrank its hit area to the width of its own text** —
+   114x23 inside an 862x61 row, under 5% of what the hover highlight and the
+   chevron both advertise as clickable. Every click that missed the words did
+   nothing, which is worse than the buttons it replaced. Fixed with a
+   transparent `::after` pinned to the row, giving the real `<button>` the whole
+   area: no wrapper, no click handler, no JS. The chevron and the glyph chip
+   needed `pointer-events: none` — the chevron was the one thing painting above
+   the stretched trigger, so it ate the clicks at exactly the spot it invites.
+   Safe because a row holds AT MOST ONE button; the two picker rows (Google
+   accounts, AI engine) have none, so no overlay covers their checkboxes or
+   select. **Check that still holds before adding a control that pairs a button
+   with a second interactive element in one row.**
+3. **One row stayed dead after that fix, and the reason is a specificity tie.**
+   `Set up your company` is the only control using the `default` button
+   variant, and `:is(button, a)[data-variant="default"]` (the primary-button
+   glow, ~470 lines further down this file) brings `position: relative` with
+   it — which re-anchored the stretched `::after` to the BUTTON instead of the
+   row. The first fix used `.company-action-control button`, which ties that
+   rule at (0,1,1) and loses on source order; it looked right and changed
+   nothing. The selector carries the attribute now so it wins on specificity
+   rather than on position in the file.
+
+**"running…" on the explorer's Terminal row.** A company's terminals outlive
+the page and the panel, so navigating back to the company left no sign that
+anything was still up. The row now shows an animated green `running…` in place
+of the `⌘J` hint (`running ×2…` for more than one), reusing the existing
+`?list=1` endpoint and `gutter-run` — the pulse this app already means "in
+flight" by, one pane away in the run gutter — rather than inventing a second
+vocabulary for the same idea. Green, not `--primary`: the run gutter's red
+means an agent is editing your files, and a terminal you left open is not that.
+
+**Polled, not remembered, and only while the panel is closed.** Remembering
+the count is cheaper, but the ptys outlive the page — a session ending while
+you sat on the company would leave a badge claiming `running…` forever, which
+is the "card lies" failure v64/v72/v74 each spent a slice undoing. `?list=1`
+reads an in-memory Map, so there is no subprocess and none of the cost that
+made v70 memoize the CLI probes. When the panel is open you are looking at the
+tabs themselves, so the poll stops.
+
+**A verification note worth keeping.** Opening the terminal panel auto-starts
+an assistant tab, so an automated pass that clicks it spawns a real `claude`
+process — the unattended spawn the standing rule forbids. Create sessions with
+`POST {type:"open", kind:"shell"}` against the API instead. Two were spawned
+and killed during this slice; the first "the badge won't clear" result was the
+badge telling the truth about one of them.
+
+Verified: `tsc`, 848 tests, `eslint` clean, `next build`, and a live pass
+hit-testing every row on two companies at three points each.
+
+## v133 (2026-08-30): a company writes down its own conversations
+
+Reopening the app gave the assistant the company's DESCRIPTION —
+`docs/company-summary.md` plus the ontology — and none of its HISTORY. You had
+to re-explain what you were doing. This closes that: when a conversation with a
+company's assistant finishes, Alacrán reopens it and asks that agent to write a
+short note into the company's own folder, where it waits in the approval queue
+like every other job.
+
+**Not Claude-only.** `AiExecutor` gains a `resume` capability — how to hand a
+prompt back to a finished conversation — and absence means unsupported, the same
+convention `buildInteractiveIntroArgs` uses. Verified against the real installed
+binaries, not docs: **Claude Code** resumes with `--continue`, **Kiro** with
+`chat -r` (which also has `--list-sessions`, so it can be *asked* what a
+directory holds). **Kimi carries none** — it is not installed on the machine
+this was verified against, and v99's rule is "either run it, or don't offer it".
+`claudeCodeArgs` was lifted to a module-level function so `buildArgs` and
+`resume.buildArgs` share one definition: a resumed run and a fresh one must get
+the same tool scope, and the resumed one — inheriting a conversation that had no
+allowlist at all — is the worse half to get wrong.
+
+**The measurement that made the existence check mandatory.** Asked to resume in
+a directory with NO history, neither CLI fails:
+`claude --continue -p "say ok"` answers "ok"; `kiro-cli chat -r --no-interactive
+"say ok"` answers and charges 0.04 credits. Both silently start a NEW
+conversation. So a caller trusting the resume flag would ask an agent with no
+session to describe a session and file the invention as company memory — the one
+failure this app's premise cannot absorb. `conversationFingerprint` returning
+null is the only thing standing between those two outcomes.
+
+**The bug that would have run an unattended spend loop.** Kiro's session listing
+prints a RELATIVE age ("3 seconds ago"). Hashing that output — the obvious way
+to detect "has this changed" — produces a different fingerprint on every tick,
+and a changed fingerprint is what triggers a run. That is a paid agent run every
+60 seconds, forever, on the user's own account. `stableSessionSignature` keeps
+only session ids and message counts, so the conversation moves it and the clock
+does not. Three tests pin exactly that.
+
+**Why a fingerprint at all, rather than timestamps.** The first design compared
+the newest transcript's mtime against the newest session note's mtime. That had
+its own hole — editing an old note bumped its mtime and silently suppressed the
+next catch-up — and could not work for Kiro, whose listing carries no absolute
+time. `noted-conversations.json` records what has been written down instead.
+
+**The trigger is the schedules ticker, not a pty exit hook**, and that is the
+whole reason it works. `child.onExit` covers closing a tab but NOT quitting
+Alacrán — the server dies with it, and the conversation that ended that way
+would never be written down. That is the case this exists for. A tick catches
+both, and the launch tick catches up on whatever happened while the app was shut.
+
+**Resume rather than scrape**, which v129 already argued for the live path: the
+200KB backlog is ANSI-laden, front-truncated, full of redrawn TUI frames, and a
+second agent reading a first agent's output is the exact injection shape the
+untrusted fence exists for. `--continue` hands the job back to the agent that
+was actually there. The run is scoped by the executor's own `buildArgs`, so it
+gets the same `Edit(notes/company/sessions/**)`, Bash disallowed, permission-mode
+manual as every other headless run, and `prepareExecutorScope` runs BEFORE the
+spawn with a throw aborting it — because Kiro's unknown `--agent` does not fail,
+it prints "Falling back to user specified default" and runs unscoped.
+
+**An off switch, defaulting ON.** `session-notes.json` mirrors
+`visible-run-registry`'s shape but records the opt-OUT, since the feature is the
+premise rather than an extra. The checkbox sits beside "Run commands in a
+visible Terminal window" — both answer "how should this company behave when I am
+not watching". The switch is the FIRST question `catchUpSessionNotes` asks, before
+any transcript is read or anything spawns: a filter on the result would be too
+late, because by then the money is spent.
+
+**A test-hygiene bug this slice's own tests caught**, and v75's lesson again:
+the fingerprint store had no injectable path, so the suite wrote to the
+developer's real `.data/` and the second test deduped against the first. Threaded
+now, and one test asserts the "cannot resume" path never shells out at all —
+before that it was running the real `kiro-cli`, 2.8s per run.
+
+Verified: `tsc`, 874 tests, `eslint` clean, `next build`. NOT verified end to
+end: no note produced by this path has been read yet, since that needs a real
+unattended agent run.
+
+## v134 (2026-08-30): the chat connectors become reachable, and Get Started stays in the app
+
+Two fixes, both from a user finding the app did not match what had shipped.
+
+**"we integrated telegram and some socials but i dont see it in the app".**
+Correct, and v131's fault. It shipped `check-messages` with only a template
+`.claude/commands/check-messages.md`, and template COMMAND files reach only
+companies scaffolded after they ship — `updateCompanySkillsImpl` syncs
+`.claude/skills`, never `.claude/commands` (v99 says so in its own entry).
+The workspace tree draws a Run button by matching a real file to a registry
+entry, so with no file there was no button, and the feature was unreachable on
+every company that already existed. Verified before fixing: none of the three
+companies on this machine had the file.
+
+The reasoning that let it ship was worse than the omission. v131 skipped a
+Connectors card on the grounds that "the command's refusal names the exact
+tokens and scopes, so that is the discovery path" — but a refusal is only
+reachable by running the command, and the command could not be run. Circular,
+and it made the connector invisible rather than merely undocumented.
+
+Fixed the way `RefreshOntologyButton` already documents for the identical
+cause — **two entry points for two populations**: the template file for new
+companies, a card control for everyone else. `CheckMessagesButton` costs a
+Sheet, because `CompanyCommandRunner` already owns the run button, the log
+tail, the diff, the approve step and the daily schedule. The Sheet states the
+connection setup ABOVE the runner, so the tokens and Slack scopes are readable
+without running anything first. It also gets a `buildGuideSteps` entry, since
+v39's invariant is that the guide never describes a button that is not there —
+and the converse, that a button on the card is never missing from the guide.
+
+Deliberately NOT gated on `hasOntology`, unlike `refresh`: reading chat needs
+no company description, and a company someone just created is exactly the one
+whose Slack is worth reading.
+
+**Get Started opened a terminal on the user's laptop, not the app's.** In
+advanced mode — which is ON by default since v72 — it called
+`openInteractiveTerminalWithHelp`, i.e. `open -a Terminal`. That ejects a
+non-technical user into a bare OS window they did not ask for and cannot get
+back from, which is the exact thing v106 built the in-app dock to avoid, and
+the reason that dock ships to everyone rather than hiding behind Advanced mode.
+
+The in-app terminal's assistant tab was ALREADY this button: v122 starts it
+from `buildAssistantLaunch`, seeded with `buildGetStartedIntroPrompt` — the
+same prompt this button was sending. So rather than a second implementation
+there is now one: Get Started asks the workspace to open that tab. Two paths
+that could have drifted into describing the same company two different ways
+became one path that cannot.
+
+**A DOM event, not a prop**, and the reason is structural: `AgentCard` is
+rendered on the SERVER and handed to the client workspace as an opaque node
+(v104), so there is nothing to thread a callback through. `OPEN_TERMINAL_EVENT`
+lives in a plain module rather than the client component that reads it — v51's
+rule, because a server component importing a value from a `"use client"` file
+silently gets a client reference instead of the string. The event carries the
+company id and the listener switches company BEFORE opening, so pressing Get
+Started on a company that is not currently on screen opens ITS terminal.
+
+`openInteractiveTerminalWithHelp` and its impl are now unused but kept
+deliberately: they are the only working path where the in-app pty cannot load
+at all — there is no `node-pty` prebuild for Node 18 (ABI 108), which is
+Ubuntu 24.04's own `nodejs`. The degradation is already graceful without them
+(the panel says "use Open in Terminal instead", and that button still works),
+so this is a judgement to revisit, not a guard.
+
+Verified: `tsc`, 874 tests, `eslint` clean, and a live pass — the Telegram row
+renders on a real company and its Sheet opens from the far right of the row,
+and Get Started produces an in-app xterm plus `/api/terminal` traffic with no
+OS window. The assistant session that verification started was killed
+immediately.
+
+## v135 (2026-08-31): one connection for every chat, and a gate that exists
+
+Two threads, both starting from a file that was referenced but never shipped.
+
+### The HITL gate was named 26 times and existed nowhere
+
+Ten pack commands across sales, hr-people, marketing, leadership-team and
+software-engineering told the agent to route money, contracts and publication
+through `.claude/rules/hitl-gate.md`. `TEMPLATE_MANIFEST` copies
+`.claude/commands` and `.claude/settings.json`; there is no `.claude/rules` in
+the template and never was. `draft-offer.md` instructs an agent to pause
+compensation terms at a gate that does not exist, which is worse than no gate:
+the command reads as though a check happened.
+
+Sixteen more references pointed at `definitions-touch.md`, `notes-touch.md`,
+`scope-contract.md` and `issue-first.md`, all equally absent. All five files
+exist in `template/` — the full AI-company template this repo is not — where
+they are Japanese and depend on OKF (`definitions/okf/profile.yaml`,
+`types.yaml`), which the starter has no equivalent of. Porting meant rewriting,
+so only the one with content nothing else covered was written.
+
+**The first fix was wrong in an instructive way and is worth recording.** It
+shipped `.claude/rules/hitl-gate.md` and added `.claude/rules` to the manifest
+— putting a rule about money and contracts inside the tool adapter, and then
+having `AGENTS.md` §5 point into it. `AGENTS.md` §1 forbids exactly that
+direction ("`.claude/` is one adapter for one tool. Never make the core depend
+on the adapter"), and the question that surfaced it was a user asking whether
+other models could read the new file.
+
+The gate is now **`AGENTS.md` §6**, and nothing was added to the manifest at
+all. `AGENTS.md` was already copied, is the filename every agent reads, and is
+already `@`-imported by `CLAUDE.md` — so the gate is in context before the
+first tool call rather than one pointer away, with no adapter, no import
+plumbing and one fewer file per company. Five rows (Money, Contracts,
+Irreversible operations, Publication, Credentials), named to match the
+citations verbatim, since `draft-proposal.md` says "Money and Contracts rows"
+and `investor-update.md` says "the Publication row".
+
+The other sixteen references were repointed rather than backed by new files:
+the eight about not putting personal detail in `definitions/` now point at
+`definitions/README.md`, which gained a **"Structure, not personal detail"**
+rule so the pointer is true; the two `notes-touch.md` ones point at
+`notes/README.md` and `docs/retros/README.md`, dropping their claim of an "L2
+frontmatter schema" that never existed here. `weekly-briefing.md` also cited
+`definitions/hitl/triggers/`, an eleventh absent path, now dropped.
+
+**Still open:** `scope-contract.md` (5) and `issue-first.md` (2) remain
+dangling, all in the software-engineering pack. They are engineering practice,
+so by the placement rule above they belong in that pack's portable half, not a
+pack-local `.claude/rules/`. Deliberately not decided here.
+
+### Telegram and Slack become Beeper
+
+`check-messages` held a Telegram bot token and a Slack bot token in the
+company's own `.env`, and for all that could read exactly two networks.
+Instagram was impossible by construction — Meta only delivers DMs by pushing
+to a public webhook and this app hosts nothing. v133's entry says so.
+
+[Beeper](https://www.beeper.com/) bridges WhatsApp, iMessage, Signal,
+Instagram, Messenger, X, Discord, LinkedIn, Google Messages, Telegram and
+Slack. One connection replaces both connectors and adds the nine this app was
+never going to write. A network the user adds in Beeper tomorrow appears in
+the note with no change here, because there is no per-network code left.
+
+**The first attempt did not use the CLI, because a search said there wasn't
+one.** `beeper` was not on PATH and `@beeper/cli` 404s on npm, so the draft
+called Beeper Desktop's local HTTP API directly with a hand-created token in
+`.env`. The user supplied `github.com/beeper/cli`; the package is
+`beeper-cli`, v0.6.2, and it ships prebuilt macOS and Linux binaries. **A
+negative result from two registries is not proof a tool does not exist.**
+
+Going through the CLI bought three things the direct call could not:
+
+1. **No credential anywhere.** `beeper setup` adopts Beeper Desktop's own
+   local session and the CLI keeps it, so there is no token in the company
+   repo to leak and revoking happens in Beeper. `readCompanyEnvVar`'s only
+   remaining caller is Notion.
+2. **`--read-only` is enforced by the CLI**, so a wrong flag cannot become a
+   sent message. Choosing a read endpoint by hand only ever meant intending
+   not to write.
+3. **`--sender others`** drops the company's own outbound messages at the
+   source instead of in a filter here.
+
+Every flag was verified by running the real 0.6.2 binary, not read from docs:
+`messages search --after <ISO> --limit --sender others --full --json
+--read-only -q --timeout`, and `chats list` for the chat titles and network
+names, since a message carries `chatID` but not what that chat is called. The
+chat-label call is allowed to fail without losing the day's messages.
+
+Installed via `npm install -g beeper-cli` — **not** the Homebrew tap the
+README recommends first, which is two commands on a machine that has not
+tapped (`brew tap beeper/tap` first; brew refuses otherwise, measured), where
+this file ships one per tool. npm is also cross-platform, which is why
+`beeper` has no `platform === "darwin"` guard where `gh` and `gog` do.
+Verified with `--dry-run`. `install-repair-impl.ts`'s exhaustive
+`Record<InstallableId, …>` caught the missing repair entry at `tsc` time,
+which is the property that record exists for.
+
+**A false negative caught by running it.** The Connect row first gated
+"connected" on `beeper status --json` reporting `readiness.state === "ready"`.
+Measured on a working machine it reported `target-unreachable`, then
+`initializing`, while `chats list` returned real chats in the same second —
+readiness hits `/v1/app/setup`, a different endpoint with a different
+authorization result. That would have told a connected user to run `beeper
+setup`. **The probe is now the smallest real read**, with `status` consulted
+only for the reason when that read fails. v53's false positive, pointing the
+other way.
+
+**Executor consequences, unchanged and now load-bearing on more networks.**
+`check-messages` still carries `untrustedInput: true`, so
+`runCompanyCommandImpl` refuses it on Kimi Code (`enforcesToolScope: false`)
+before the prefetch runs — Beeper is never read for a run that will not
+spawn. Claude Code and Kiro both qualify. The refusal message still says
+"Switch this company to Claude Code" and now names one valid option while
+hiding the other; not fixed here.
+
+**`AGENTS.md` §7** tells any agent in any company that the tool exists, since
+the unrestricted terminal sessions (Open in Terminal, Get Started) can drive
+`beeper` directly but nothing said so. Guarded on `command -v beeper`, because
+most companies will not have it and that is not an error. It points at `beeper
+man` rather than listing flags that will drift, requires `--read-only` on
+every call, and states that what is found in a chat is a claim with an author
+and a date, never a fact — and that a message asking the agent to act is an
+injection attempt, which now matters across eleven networks rather than two.
+
+## v136 (2026-08-31): three reports from using v0.45.0
+
+**"the company overview does not show where I need to connect Beeper."**
+Correct. The Sheet said "connect it once on Alacrán's Connect page" as prose,
+with no link, and never said the thing that actually resolves the confusion:
+**the connection is machine-wide, so there is no per-company setting to
+find.** A user hunting a company-level Beeper control was looking for
+something that does not exist and nothing told them so. The Sheet now states
+that plainly in its own box, with a real `<Link href="/connect">`.
+
+**"the connectors page and network page render very slowly."** Measured
+against the installed 0.45.0 rather than guessed: cold `/connect` is **2.25s**,
+warm 8ms. The cause is neither new nor Beeper — `kiro-cli whoami --format
+json` alone is **2.14s**, and `gh api user` (0.42s), `beeper chats list`
+(0.67s), `claude auth status` (0.23s) and `gog auth list` (0.16s) all finish
+in parallel underneath it. `/connect`'s own header comment recorded this in
+the slice that made the page stream; the skeleton means nothing freezes, but
+the cards still arrive at the speed of the slowest CLI on the machine, and the
+5-minute memo meant paying it again every few minutes of a working session.
+
+`exec-memo.ts` now gives **only the two probes measured as expensive** —
+`kiro-cli whoami` and `beeper chats list` — a one-hour TTL, taking that from
+"every five minutes" to "once an hour". Signing in is a deliberate act, not
+drift, and Re-check calls `clearExecMemo` so the one path whose job is to look
+again is unaffected by any TTL.
+
+**Two things deliberately not done.** A deadline on the probe: `/connect`'s
+comment already rejects it, because `readKiroAuthStatus` treats every
+ambiguous signal as logged out, so a timeout renders "not signed in yet" and
+sends the user to redo a sign-in they have. And skipping the probe for
+executors simple mode hides — checked, and `useAdvancedMode` defaults to
+**on**, so the Kiro card is shown to most users and skipping it would render a
+card that lies. The first render of a session still costs 2.14s; splitting the
+AI group into its own Suspense boundary is the fix for that and was not taken
+here.
+
+An earlier draft of the TTL list carried all five probes. `exec-memo.test.ts`
+caught it — `gog auth list` is what pins the generic TTL — and the list was
+cut to the two actually measured. **A list of "things that feel slow" is how a
+cache stops matching reality.**
+
+**"I clicked terminal and the AI only read me the company summary."** It did
+exactly what it was asked: `FRESH_PROMPT` says read `docs/company-summary.md`,
+introduce yourself, ask what to start with. Nothing mentioned chat, so a user
+who had just connected every network they own was introduced to a company that
+apparently could not read any of it.
+
+Both intro prompts now share one `CHAT_OFFER` clause: check `command -v
+beeper`, and if it is there, add one line offering to catch the user up or
+search for something specific. **Offered, never read unprompted** — opening a
+session must not silently pull a day of someone's private WhatsApp into a
+transcript, and the read costs a real second before the introduction appears.
+The how stays in `AGENTS.md` §7; this only makes the capability discoverable
+at the one moment the user is asking what it can do.
+
+### v136 follow-up, same day: I fixed the wrong "last convo"
+
+The report was "the AI did not read my last convo". I read that as Beeper
+messages and added a chat catch-up offer; the user meant **the previous
+terminal conversation in that company**, which is a different thing and an
+actual hole.
+
+**`notes/company/sessions/` was write-only.** "Save what we learned" has been
+writing session notes there, and nothing in the codebase ever read one back —
+`grep` for the path returns the registry entry that writes it and nothing
+else. So a user who deliberately ended one session by saving it, and opened
+the next one, met an assistant that had read the company's files and had no
+idea they had ever spoken. The saving worked; the remembering was never wired
+to anything.
+
+Both intro prompts now read the single most recent file in that folder and
+open by saying where we left off and what was still open. Most recent only: a
+session note is already a summary, the folder grows one file per session
+forever, and "where did we leave off" is a question about the last one.
+
+The chat-catch-up clause from earlier today stays — it is one sentence, it
+only offers, and it is genuinely useful right after connecting Beeper — but it
+was written for a misread report and is not what was asked for.
+
+**The dead end.** Pressing "Save what we learned" with an unreviewed note
+already pending answered: *"There's already a saved note waiting for you to
+read. Approve or discard that one first."* The refusal is correct — folding an
+unread note into a fresh `before` snapshot loses it, which is the failure the
+function's own comment describes — but it never said WHERE to approve or
+discard, and the user was left with nowhere to click. It now names Companies
+in the sidebar, where `listPendingReviews` already puts a dot, and says to
+pick the company. The test that pinned the old wording now pins the
+destination instead, which is the property that actually matters.
+
+## v137 (2026-08-31): Kiro, Kimi and Beeper get their own marks
+
+All three rendered with no mark at all: `TOOL_BRAND` is a `Partial`, so an id
+it does not carry silently gets nothing, and only Claude, Google and GitHub
+were in it.
+
+Each mark came from its vendor's own asset, per the standing rule that a
+vendor logo is never hand-drawn or approximated:
+
+- **Kimi** is in the Simple Icons dataset as `siKimi` — one line in `SPEC`.
+  Official hex is pure black, so it needs the lightened `onDark` for the same
+  reason GitHub, Notion and Anthropic do.
+- **Kiro** publishes a real SVG at `kiro.dev/icon.svg`, so this is
+  **extracted, not traced** — the vendor's own curves scaled 1200→24 with
+  `svgpath`, installed `--no-save` for the regeneration exactly like
+  `simple-icons`. Neither is a runtime dependency; `package.json` is unchanged.
+- **Beeper** ships no SVG anywhere on its site, only PNG favicons, so it took
+  v44's potrace route against the official 512px asset. `hex` is the artwork's
+  own dominant colour, sampled (167,328 px of `#394ff5`), not invented.
+
+`BrandIconData` gained an optional `fillRule`, emitted only for the marks that
+need it. Simple Icons authors its paths for the SVG default with holes wound
+to suit, so setting `evenodd` globally would change shapes that are already
+correct.
+
+**Three things a render caught that reading could not**, which is the whole
+argument for v44's compare-against-the-original step:
+
+1. Kiro's first `<path>` is the `<mask>`'s own rectangle, not the mark.
+   Including it drew a white box behind the ghost.
+2. potrace emits `transform="translate(0,512) scale(0.1,-0.1)"`, and SVG
+   applies the **rightmost** transform first. Applying them left to right
+   rendered an empty square — the same class of affine mistake v44 records.
+3. The landing sprite emitter had to carry `fill-rule` too. Adding it only to
+   the TypeScript emitter left Kiro's eyes filled solid on the marketing site
+   while looking correct in the app — a divergence nothing in the app would
+   ever have surfaced.
+
+## v138 (2026-09-01): a voice/text Q&A layer, "Ask your company"
+
+A JARVIS-style voice assistant was raised and split in two before anything was
+built: an always-on surface that acts without a review step is the same
+autonomous-action bet already rejected elsewhere in this project (see the
+Roadmap note below), but a read-only Q&A layer over a company's own memory
+needed no new trust model at all — talking about the company is already
+something `orientation`/Get Started do safely. This slice ships only that
+half.
+
+**Deliberately not a `CompanyCommand`.** Every registry command's whole shape
+is write-a-file → show-a-diff → wait-for-approval
+(`run-company-command-impl.ts`), which is right for something that changes the
+company's memory and wrong for a question that changes nothing — there is no
+diff to review, and making a voice assistant wait on manual approval before it
+can speak would defeat the point of it. New `lib/ask-company-impl.ts` spawns
+the company's configured executor **synchronously** and returns the answer
+directly (`execFile` with a 2-minute timeout, sized for a no-tools text answer
+rather than installRepairImpl's 15-minute ceiling for a real install), instead
+of the detached-spawn-plus-log-tail shape every other command uses.
+
+**Same trust tier as `orientation`, not `refresh`/`check-messages`.** The
+prompt only tells the agent to read the company's own summary/ontology/notes
+via Read/Grep/Glob — nothing external is spliced into the prompt string — so
+this carries no `untrustedInput` flag and runs on every registered executor,
+Kimi included. `editScopePattern` points at `.alacran-never-written/**`, the
+same idiom `installRepairImpl` uses for a job with nothing to write: Edit()
+takes a pattern, and this is a path that points at nothing rather than
+inventing a scope.
+
+**Ships to everyone, not Advanced-mode-only** — the v106 exception reused
+rather than the default "new feature hides behind Advanced" rule: a read-only
+ask-a-question panel is gentler than the in-app terminal, not more advanced
+than one, so `showVoiceAssistantButton` is keyed to `isCommandSet` alone, the
+same as `showCheckMessagesButton`.
+
+**The UI never assumes voice input actually works.** `components/
+voice-assistant-button.tsx` feature-detects `SpeechRecognition` /
+`webkitSpeechRecognition` for the mic button, but a typed-question fallback is
+always rendered alongside it, not only when detection fails — because
+detection can only prove the constructor exists, not that it does anything.
+Chromium's implementation calls a Google-hosted speech service the browser
+itself is credentialed for; **whether that resolves inside this app's own
+shells (Electron on Mac, WebKitGTK on Linux) has not been verified against a
+real packaged build**, and a `SpeechRecognition.onerror` during a real attempt
+is treated identically to the constructor being absent. Text-to-speech
+(`speechSynthesis`) is likewise best-effort: the answer is always shown as
+text first, and speaking it is layered on, never depended on.
+
+Verified `tsc`, the full suite (886 tests, 9 new), `eslint`, and `next build`
+clean, plus a live pass against a disposable dev-mode company confirming the
+card, the Sheet, the mic button's presence, and the text-input enable/disable
+wiring all render and behave correctly. Per the standing rule against letting
+an automated pass trigger a real headless spawn, the live pass stopped short
+of pressing "Ask" — the actual answer path (a real `claude -p` round trip) is
+left for the maintainer to try by hand, same discipline as v21/v46.
+
+**Known, disclosed limitations, not fixed here:** each question is a fresh
+one-shot spawn — no session/`resume` continuity across a follow-up question,
+the simplest thing that works; and there is no per-question spend cap (unlike
+`installRepairImpl`'s `--max-budget-usd`), because that flag is Claude-Code-
+specific and appending it blindly would corrupt Kiro's/Kimi's argv — the UI's
+own disable-while-in-flight is the only throttle today.
+
+## v139 (2026-09-01): the assistant gets its own page, and can see every company
+
+The first surface in this app that answers a question spanning companies rather
+than one inside a single company. `/assistant`: a scope picker (All companies,
+or one), the ask box, the answer. Spec:
+`docs/superpowers/specs/2026-09-01-assistant-page-design.md`.
+
+**The load-bearing decision is that cross-company context is PROMPT CONTENT,
+not `--add-dir`** — and it was made by checking the real binaries rather than
+the docs. Claude Code 2.1.252 has `--add-dir <directories...>` and Kimi 0.39.0
+has `--add-dir <dir>`, but **Kiro 2.20.2 has no multi-directory flag at all**:
+absent from `chat --help`, absent from `--help-all`, and zero hits for
+`add-dir` across 300,423 strings in its binary (`--all-cwds` modifies
+`--list-sessions`; `--repo` requires `--cloud`, which sends work off the
+machine). A flag-based design would have made the flagship cross-company
+feature Claude-only, which is the exact executor lock-in this app exists to
+avoid. Three more reasons it would have been wrong anyway: the v8 spec's own
+live test proves `--add-dir` only ADDS access and never narrows it (it is a
+grant, not a sandbox); a test already pins its absence on one spawn path; and
+Kiro's edit scope is a file at `<cwd>/.kiro/agents`, so two companies means two
+candidate scope files and one discoverable — structurally one company per
+session even before the missing flag.
+
+**Prompt content is this project's own precedent, not a new idea.** CLAUDE.md
+records the prefetch seam existing *because* "the spawned session's `cwd` is
+the company's own root with no `--add-dir`", and `prefetch/types.ts` states the
+contract — "Prefetch may read outside it; the spawned agent may not."
+`prefetch/messages.ts` already reads Beeper Desktop, entirely outside any
+company root. All three executors take the prompt as one argv string, so this
+is the only mechanism that behaves identically on all of them.
+
+**Breadth and depth are a dropdown, not a router.** "All companies" calls the
+new `askAllCompaniesImpl`; picking one calls v138's `askCompanyImpl`
+**unchanged**, which spawns scoped into that company and can read its real
+files. No classifier, and no second spawn whose only job is to route the first.
+
+**The tier that earns the feature is the one for companies with nothing
+written down.** `gatherAllCompanies` takes the first of
+`docs/company-summary.md` → `definitions/ontology/company.yaml` →
+name-only. That third tier is not defensive padding: the summary is written
+only when Get Started runs, and it was **absent on 2 of the 3 real companies on
+this machine**. It is carried into the prompt and labelled, so the model says
+"no description written yet" instead of inferring a business from a folder
+name — an invented company being the one failure this app's premise cannot
+absorb. Over the total budget, later companies degrade to name-only rather than
+being dropped, because dropping them lets the assistant answer "you have four
+companies" on a machine with nine.
+
+**Spawns in an empty app-owned directory**, never a company root: everything
+the model needs is already in the prompt, so an empty cwd is the honest form of
+"answer only from what I gave you". Edit scope is the same
+`.alacran-never-written/**` null-scope idiom `askCompanyImpl` and
+`installRepairImpl` use. Read-only end to end, so no diff, no approval, and
+deliberately **not** a `CompanyCommand`.
+
+**Executor choice for a question belonging to no company:** if every company
+agrees on one, use it; a mixed machine takes the default. A user who moved
+everything to Kiro must not have a cross-company question silently answered by
+Claude Code — on a machine without `claude` installed the default would not
+even spawn.
+
+**The ceiling, marked in the source:** `notes/company/messages/` (Beeper chat
+from eleven networks) stays out of the gather. Adding it would make this
+`untrustedInput`, and the refusal would then block it on Kimi
+(`enforcesToolScope: false`) — executor neutrality breaking from the inside,
+via a change that looks like a feature.
+
+**A real hydration bug, found in the browser and latent since v138.**
+`canListen` was computed during render from `getSpeechRecognition()`, so the
+server (no `window`) rendered no mic button and the client rendered one.
+Invisible in v138 because a Radix Sheet only mounts its content on open, which
+never server-renders — a permanent page hits it on first paint. Same shape as
+v107's `getActivityDetail` bug, which the old Sheet also hid. Now `false` on
+the server and corrected in an effect, the pattern `advanced-only.tsx` already
+documents, so the one-frame flash is in the direction of *less*.
+
+**Nav is six items in advanced mode again, and that is safe** — verified rather
+than assumed. The `app/globals.css` note recording that six items put
+destinations off-screen predates the `max-width: 560px` rule that clips labels
+to icons-only (296px); the labelled strip therefore only ever renders between
+561px and 640px, where six items' 541px fits. The comment now says so, because
+a stale measurement is worse than none. **The network map was deliberately NOT
+embedded on the assistant page** despite the spec floating it: `buildNetworkMap`
+probes `gog`/`gh`, and v70's rule is that a `force-dynamic` page calls a CLI on
+every render — there the cost was a macOS Keychain dialog, not CPU, and this is
+a page meant to be opened constantly. `/network` is untouched.
+
+Refactor in passing: `lib/speech.ts` and `components/use-voice-ask.ts` now hold
+the speech detection and the ask state machine, and `components/ask-panel.tsx`
+the shared UI — one phase machine for both surfaces rather than two copies
+drifting apart. 25 new tests (911 total), `tsc`/`eslint`/`next build` clean,
+live-verified in a browser. Per the standing rule, the live pass stopped short
+of submitting a question — the answer path is a real executor spawn.
+
+## v140 (2026-09-01): the assistant page becomes the voice HUD from the design
+
+Recreated `design_handoff_ai_assistant/` — a three-column voice stage: reactive
+orb, live status header, nine-language speech in, spoken English out, and a
+transcript rail. v139's plain form is gone; `components/assistant-workspace.tsx`
+was deleted rather than left orphaned.
+
+**The design was authored against this app's own palette, which decided most of
+it.** Ten of its thirteen hexes are already tokens — `#0c0708`, `#f1e9e5`,
+`#16100f`, `#241a19`, `#a08d87`, `#ff2e43`, `#ffab3d`, `#130e0d` are
+`--background`/`--foreground`/`--card`/`--border`/`--muted-foreground`/
+`--primary`/`--warning`/`--surface-explorer` — so those are used, not
+re-hardcoded. The three that had no home (`#100b0a` rails, `#6f5f5a` a third
+text tier below `--muted-foreground`, `#1a1211` grid) turn out to exist in
+`landing/home.css` as `--rail` and `--dust`: **the design is drawn against the
+LANDING palette, so adding them closes a v29 mirroring gap rather than
+inventing anything.** New tokens are deliberately un-themed for light mode, on
+the `--terminal-bg` precedent — a voice HUD is a dark stage in every tool that
+has one, and the orb is a red bloom that only exists against near-black.
+
+**The design's own left rail was NOT rebuilt: `.app-sidebar` already is it, to
+the pixel** — 88px (`--nav-w`), padding `14px 8px 12px`, gap 2px, 19px icons,
+active at `--primary` 13% with an `::before` accent bar. Rebuilding it would
+have been a second nav to keep in sync forever.
+
+**Two findings that changed what shipped.** (a) **Sora 400 was added and then
+reverted.** The design declares `400 20px/1.45 Sora` for the caption, but the
+design file imports Sora at 600/700/800 only — so its own reference render
+resolves that 400 to **600** (CSS font matching: 400 tries 500, then below,
+then above). Loading a real 400 would have made our caption render *lighter*
+than the design it is meant to match. Matching the render beats matching the
+declaration, and `app/layout.tsx` now says so where the next person would
+otherwise "fix" it. (b) **JetBrains Mono is loaded but wired only to this page**
+(`--asst-mono`), not to `--typeface-mono`. Repointing that is a real
+improvement — the landing has had JetBrains Mono since the cinematic rewrite,
+so the app is the half out of sync — but it restyles 14 existing surfaces AND
+the in-app terminal, which reads `--typeface-mono` directly at
+`terminal-workspace.tsx:75`. An app-wide re-skin belongs in its own slice, not
+smuggled in with a page.
+
+**`sweep` and `dashDrift` were not ported.** Both are defined in the design's
+`<style>` block and used by nothing in either the authored or the standalone
+file (checked, not assumed) — implementing an unused animation is work nobody
+sees.
+
+**Responsiveness is invented, because the design has none.** It is authored at
+one wide size; at 900px its header pills wrap *inside themselves* and the fixed
+420px orb clips. Added: one `--orb-scale` that scales the whole stage (every
+ring, gyro and tick radius is a fixed px off that 420, so scaling is one
+property where re-deriving eleven radii per breakpoint is eleven chances to get
+one wrong), the kicker then the title dropping out of the header before the
+pills can wrap, and the transcript rail turning into a drawer under the stage
+at ≤1024px rather than squeezing the orb.
+
+**The bug only a measurement found:** the orb sat **59px right** of the caption
+it is meant to sit above at every scale below 1. `place-items: center` does not
+centre a grid item WIDER than its track — and the orb always is, because
+transforms do not affect layout, so it lays out from the start edge and then
+scales about its own middle. 59px is exactly `(420 - 302) / 2`. Invisible at
+scale 1, which is why the desktop screenshot looked right. Now centred by
+`translate(-50%, -50%) scale()`, which resolves against the unscaled box and
+lands correctly at every scale.
+
+**Behaviour.** `askCompanyImpl`/`askAllCompaniesImpl` gained an optional
+`spokenLanguage`: when the speaker picked a non-English language the prompt
+asks for a `{english, reply}` envelope so the rail can show `heard: …`, and
+`asEnvelopeResult` **degrades to the raw text when the model ignores the JSON
+instruction** — an answer that arrived is worth more than a translation that
+did not. English keeps the plain-text path, one less thing to parse.
+
+**The orb is never driven from render state**, which the design's own notes
+insist on: every frame writes `height`/`opacity` on 72 tick elements plus
+transforms on the glow and core through refs. Routing that through `setState`
+would re-render the tree 60×/second and stutter the moment a transcript line
+lands. `prefers-reduced-motion` kills the idle shimmer and every decorative
+spin, but the meter still responds while listening or speaking — there it is
+feedback about a live device, not decoration.
+
+Verified live at 1440/900/560px: 72 ticks with 8 amber (every 9th), caption
+`400 20px/29px` Sora, 340px rail, orb offset 0 and zero horizontal overflow at
+every breakpoint, and the mobile bottom nav clearing the page at 717px against
+a page ending at 688px. 920 tests, `tsc`/`eslint`/`next build` clean. The live
+pass again stopped short of submitting a question — that is a real spawn.
+
+## v141 (2026-09-01): the assistant is introduced, and told how to behave
+
+The assistant page went straight to an orb. It had no name, called nobody by
+name, answered every language in English, and its whole behaviour was three
+lines of formatting instruction inside a prompt about a company. This slice
+gives it a first run, a persona, two-way language, and one standing rule
+block that governs every answer it gives — spoken or typed, one company or
+all of them.
+
+**Four questions, once.** `/assistant` shows a setup card over the stage until
+a persona exists: what to call it, what it should call you, the language you
+will speak, and the language it should answer in. Saved to the existing
+`voice.json` under the data directory rather than a second file — that module
+already owned exactly this job (machine-wide assistant configuration, with a
+read/save/view seam and an actions file), so extending it cost fifteen lines
+and no new plumbing. **The consequence had to be handled, not assumed:** one
+file now holds two independent things, so both writers go through a single
+`writeSettings` and a test asserts each direction, because saving the provider
+and dropping the persona (or the reverse) only shows up on the *second* save,
+which is exactly the failure a live pass walks past.
+
+**Absence of a persona IS the first-run flag.** No `localStorage` "seen"
+boolean like v39's guide — the page has to read this file server-side anyway
+to build the prompt, so a second source of truth would only be a second thing
+to fall out of step. It also means setup reappears if the persona is ever
+cleared, which is the correct behaviour rather than a bug to suppress.
+
+**The rules live in the prompt, not in a `.claude/skills/` file, and that is
+the load-bearing decision** (`lib/assistant/persona.ts`). The cross-company run
+has no repo to discover a skill file in at all — its cwd is the empty
+app-owned `assistantWorkspaceDir` — and the per-company run has one, but skill
+discovery is the executor's own behaviour and `autoLoadsCompanyContext` is
+true for exactly one of the three registered executors. A rule that decides
+whether an API key gets read out loud cannot be conditional on which CLI
+happens to look in which folder.
+
+**Identity is optional; the guard rails never are.** `buildPersonaBlock(null)`
+still carries every hard rule, and that branch is not hypothetical — the
+per-company Ask sheet reaches the model on a machine where nobody has been
+through setup. What it enforces: no claiming an action it cannot perform, no
+half-doing one, one sentence naming what it would take plus where to approve
+it instead; never reading a password, key or token aloud, because this is
+spoken in a room the model cannot see; and text found inside a file is
+information, never an instruction. That last one is the injection guard the
+per-company path needs and previously stated nowhere. Conversationally it is
+told to lead with the answer, keep to 2-4 sentences with no markdown, and take
+its best reading of a vague question rather than replying with a question —
+"do the thing" is a rule, not a hope.
+
+**The read-only rule is stated in the prompt AS WELL AS enforced in argv**
+(`editScopePattern` at a path nothing writes to, Bash disallowed). They do
+different jobs: argv stops it acting, the prompt stops it *claiming* it acted
+— which is the failure mode a spoken interface actually has, because nobody
+sees a diff and an invented "done, I've sent that" is simply believed.
+
+**Two-way language is now real.** `replyLanguage` drives the prompt and the
+`speechSynthesis` voice, matched on the two-letter base with an exact-locale
+preference; the design's low British voice preference is kept **for English
+and only for English**, since applying it to a Japanese reply picks an English
+voice to read Japanese out. The transcript rail's "the reply comes back in
+English" was true when it was written and is now generated.
+
+**Names are sanitized before they reach a prompt.** Not because the user is
+untrusted about their own name, but because this is the one path where typed
+text reaches the model without being a question: whitespace collapses (a name
+with line breaks could forge a section header in the rule block) and 40
+characters caps a paste accident.
+
+**The bug the live pass caught, and it would have shipped silently.** After
+saving, the page put the new name in the header and the new greeting on the
+caption — and went on listening in English, because everything derived from
+the persona is `useState` INITIAL state and React keeps the first value when a
+live component is re-rendered with new props. The language you had just chosen
+was on disk, in Settings, and ignored by the page that asked for it. Fixed
+with a `key` on `<AssistantStage>` that flips once when setup completes, which
+covers every derived field at once instead of an effect per field. Verified
+mid-session, without a reload.
+
+**Also verified live** (throwaway `ALACRAN_DATA_DIR`, port 3117, no question
+ever submitted — that is a real spawn): the file lands `0600`; the reply
+language follows the spoken one until you pick one on purpose; an empty form
+is refused rather than dismissing setup forever; the space bar does NOT open a
+microphone under the setup card (the core is behind it, the key handler was
+not); and Settings › Assistant reopens the same form with the saved values.
+952 tests, `tsc`/`eslint`/`next build` clean.
+
+**Not built, and named rather than quietly dropped: the assistant still cannot
+DO anything.** "Approve and then execute" is a different feature from
+"propose and stop" — it needs the run → diff → approve → commit machinery the
+registry commands already have, and the standing decision recorded in
+CLAUDE.md is that autonomous action waits on every registered executor
+enforcing tool scope the way Claude Code does. This slice makes the assistant
+behave correctly *within* read-only, and say so honestly at the edge, instead
+of pretending past it.
+
+## v142 (2026-09-01): the Deepgram key that was never wrong
+
+A real report, one release after Deepgram shipped: pasting a valid key and
+pressing the orb answered **"Deepgram rejected that key. Check it in
+Settings."** The key was correct. There was no way to find that out from
+inside the app, and the only move the message left was re-pasting the same
+key.
+
+**Root-caused by asking Deepgram rather than reading the code twice.** The
+same key, in the same minute:
+
+    GET  /v1/projects            -> 200   (valid key, account reachable)
+    POST /v1/auth/grant          -> 403   {"err_code":"FORBIDDEN",
+                                            "err_msg":"Insufficient permissions."}
+    GET  /v1/projects/{id}/keys  -> 403   "...does not have the required scope"
+
+The key can transcribe. What it cannot do is **mint the short-lived pass** the
+app swaps it for — which is a privileged operation, because a grant is a
+credential. The key had been created with restricted rights.
+
+**The fix is one branch: stop collapsing 401 and 403.** They are different
+problems with different fixes, and sharing a message turned a five-second
+console change into a dead end. 401 now says the key wasn't recognised; 403
+says the key is valid but isn't allowed to start a listening session, and to
+create one with Owner or Admin rights instead.
+
+**The old comment was half right and that half is kept.** "Deepgram's error
+bodies are not a stable contract, so they are not parsed or shown" is true —
+this same account returned `err_code`/`err_msg` from the grant endpoint and
+`category`/`message`/`details` from the keys endpoint within a minute, so
+nothing is parsed here still. But the STATUS is a stable contract, and it
+already carried the distinction the message was throwing away. Not parsing a
+body is not a reason to discard the status code.
+
+**`providers.ts`'s `keyHint` now names the kind of key to create**, because
+this failure is invisible until you speak: a low-rights key is the right
+length, the console accepts it, the Settings page says "saved", and the only
+symptom arrives at the microphone. Telling someone which key to make costs one
+sentence at the point of making it; letting them find out costs an evening.
+
+**Deliberately not built:** a permission pre-flight when the key is saved. It
+would be a network call on every paste to answer a question one status code
+already answers at the only moment it matters. Add it if a second person hits
+this.
+
+## v143 (2026-09-02): the microphone that was never open
+
+Reported: speaking to the assistant did nothing — no reaction from the orb, no
+words on screen, no error. Typing worked. Four separate faults, each one
+silent, each one producing that same symptom.
+
+**The root cause is in the Electron shell, and it is two gates rather than
+one.** `electron/main.js` had no permission handling of any kind: no
+`session.setPermissionRequestHandler`, and — the load-bearing one on macOS — no
+`systemPreferences.askForMediaAccess("microphone")`. Electron does NOT raise
+the macOS TCC prompt by itself, so the app never appeared under Privacy &
+Security › Microphone at all. Separately, `after-sign.js` signs with
+`--options runtime`, and under the hardened runtime audio input requires
+`com.apple.security.device.audio-input`, which `entitlements.mac.plist` did not
+carry. **The failure shape is what made this expensive:** `getUserMedia`
+RESOLVES under both conditions and hands back a stream of pure silence. The
+page believes it holds a live microphone, the meter reads zero, no audio
+reaches Deepgram, and nothing anywhere reports an error.
+
+**The interim confidence gate was hiding the live transcript.** Interim results
+below 0.6 were discarded, and an interim is provisional by definition — it
+exists to be shown and replaced. Measured on real speech through the real
+socket, interims climb 0.93 → 0.98 → 0.99, so that bar passed clean audio and
+blocked precisely the marginal audio a speaker most needs to see in order to
+know they are being misheard. Deleted. The final bar stays at 0.5, because a
+final is what gets ASKED and asking the wrong question is worse than asking
+none — but a final below it is now surfaced through `onUnclear` instead of
+vanishing.
+
+**A rejected socket closes without ever firing `onerror`.** There was no
+`onclose` handler, so Deepgram refusing the handshake produced an orb that
+listened forever. It now reports the close code and reason.
+
+**Two of the nine languages in the picker were dead on arrival**, found while
+verifying the rest. Measured one at a time against the real streaming socket,
+not read off a docs page: `hi-IN` is refused by every model (`hi` is accepted),
+and Arabic is refused outright by `nova-2-general` while `nova-3` accepts it.
+The model is now `nova-3` — the only one that serves all nine — with a one-entry
+rewrite table for `hi-IN`. Both are pinned by tests.
+
+**The sample rate is negotiated rather than assumed.** The socket URL used to
+hardcode 16000 to match what the client asks its AudioContext for, but a
+request is not a guarantee — Chromium honours it (verified), WebKitGTK on the
+Linux build is free to hand back the hardware's rate instead. The grant is now
+minted from inside the capture module once the graph's real rate is known, so
+the number that opens the socket and the number the worklet produces cannot
+differ. Same class of unfalsifiable failure as everything else here: audio
+flows, transcripts come back empty, nothing errors.
+
+**What the user actually sees now.** A live input meter under the orb while
+listening, driven by the analyser the orb already reads — transform-only, off
+the rAF loop, no re-render. Every interim transcript on screen as it is spoken,
+dimmed with a caret so a provisional line never reads as the finished question.
+And a flat-zero channel for four seconds says so in words: "No sound is
+reaching the microphone", naming the input device and the privacy setting.
+
+**Verified live, not reasoned about.** Chromium driven with
+`--use-file-for-fake-audio-capture` against the real page and the real Deepgram
+account: the grant goes out as `["en-US",16000]`, the caption fills in
+progressively as the sentence arrives, and the meter animates. A second run
+with a silent fake device produces the dead-microphone message after four
+seconds. The agent call was blocked at the network layer in both runs, so no
+`claude -p` was ever spawned — the standing rule about unattended real spawns.
+957 tests, `tsc`/`eslint` clean.
+
+## v144 (2026-09-02): a voice that stays put, and one you chose
+
+Reported alongside v143: the assistant's voice kept changing between answers.
+It was never random — it was two separate sources of non-determinism, and the
+fix for both is the same function.
+
+**`getVoices()` returns an empty array until the engine populates it**, which
+it does asynchronously after load. So the first answer of a session chose from
+an empty list, matched nothing, left `utterance.voice` unset and got whatever
+the browser considered default; every later answer chose from a full list and
+got Daniel. One session, two voices, no code path that looked wrong when read.
+
+**The fallback then ended at `matches[0]` on the raw `getVoices()` order**,
+which no engine promises to keep stable. Same machine, same settings,
+different voice — pinned now by a test that runs every permutation of a voice
+list through `pickVoice` and asserts one answer.
+
+**`lib/speech.ts` gained the whole voice story**, so the assistant and the
+settings preview cannot disagree about what "your voice" means:
+`subscribeToVoices` (fires immediately when the list is already warm, because
+`voiceschanged` has usually already been and gone by the time a component
+mounts), `voicesForLanguage` (matches on the language subtag, so an `en-GB`
+voice still serves `en-US`, and sorts by name so both the list and any
+fallback taken from it are stable), and `pickVoice` — every branch
+deterministic, ending at an explicit `undefined` rather than a guess when
+nothing can read the language.
+
+**The choice itself is `persona.voiceURI`**, stored in the same `voice.json`
+the rest of the persona already lives in — no new file, no new action, no
+migration: absent means "choose automatically", which is exactly what every
+persona written before today meant. A URI rather than a name, because names
+are not unique across engines and are localised on some platforms.
+
+**An explicit choice wins outright, including over the reply language.**
+Someone who picked a voice meant it, and silently overriding it when the reply
+language moves is how a setting stops being believed. A saved voice that no
+longer exists — a different machine, an OS update — falls back rather than
+going silent.
+
+**The picker ships with a preview**, which is not decoration: choosing between
+"Albert", "Bad News" and "Bahh" by name alone is guesswork, and the preview is
+three lines that speak the assistant's own greeting in the highlighted voice.
+It lists voices for the reply language, falling back to every installed voice
+on a machine whose voices are all for other languages — an empty select reads
+as a broken control rather than as "nothing here speaks Portuguese".
+
+**Verified live**: 42 voices listed against a real engine, "Choose
+automatically" first, a selection saved and still selected after a reload, and
+the persona on disk carrying `voiceURI`. 965 tests, `tsc`/`eslint`/`next
+build` clean.
+
+## v145 (2026-09-02): the installer window gets a design
+
+The macOS `.dmg` had been shipping electron-builder's default layout since the
+Electron move — a plain Finder window, no background, no instruction, the app
+and an Applications alias sitting on grey. For an audience the whole v71 push
+defined as "not technically comfortable", the first thing they see was the one
+screen nobody had designed.
+
+**It is now a 660×460 window in the app's own venom-night palette**: the
+scorpion mark and wordmark up top, a solid box holding the app, a dashed box
+waiting for it, an arrow between them, and one line of instruction. The
+solid-versus-dashed contrast is the actual instruction — it says which way to
+drag without depending on the caption being read.
+
+**Generated, never hand-drawn** (`scripts/generate-dmg-background.py` in the
+mac repo), which is the rule this project already applies to the logo and for
+the same reason: the script's geometry constants and `electron-builder.json`'s
+`dmg` block describe one picture from two sides. Finder draws the icons and
+the script draws what sits behind them, so `ICON_Y` and the two X positions
+must equal `dmg.contents` exactly. Art nudged in an image editor is a silent
+way for those to drift apart. It renders 1x and 2x and combines them with
+`tiffutil -cathidpicheck` into the HiDPI TIFF macOS picks per display — that
+flag refuses the pair unless the second is exactly twice the first, which is
+what catches a geometry edit applied to only one.
+
+**Two findings worth not rediscovering.**
+
+(a) **Finder draws a label under every icon and it cannot be moved.** Boxes
+sized to the icon alone got "Alacran" and "Applications" painted across their
+bottom edges — found by compositing the real icons onto the real background at
+the configured positions, not by reading the config. The boxes now contain the
+icon-and-label group and are centred on it.
+
+(b) **`codesign`'s entitlements parser rejects XML comments that `plutil
+-lint` accepts.** A comment added beside v143's new microphone entitlement
+failed the whole build with `AMFIUnserializeXML: syntax error near line 13`,
+surfaced only as an `execFileSync` stack trace under `afterSign`. The plist is
+comment-free now and `after-sign.js` carries the explanations, with the trap
+written down in both that file and the mac repo's README.
+
+**Verified on the mounted volume rather than in the config**: window 660×460,
+icons at 180,250 and 480,250, icon size 128, and `background.tiff` really
+present in `.background/`. The window itself was opened and inspected through
+Finder — `screencapture` is gated behind Screen Recording permission on this
+machine, so the visual check was a composite of the real icons at the real
+coordinates.
+
+## v146 (2026-09-02): the microphone an update took away, and one dark room
+
+Two reports from the same page. Both are v143's own findings arriving a build
+later, from the other side.
+
+**Anyone who installed Alacrán before v143 could not get the microphone back,
+and no button in the app could help them.** v143 added
+`askForMediaAccess("microphone")` and the audio-input entitlement, which fixed
+every install from that build onward. It cannot fix an install from before it:
+**macOS files its answer against the bundle's code signature, and this app is
+ad-hoc signed** (`identity: null`, which is what v110 settled on), so an
+update — which replaces the whole bundle — leaves a record behind that no
+longer describes the app asking. From then on `askForMediaAccess` never
+prompts again; it only repeats the filed answer. Relaunching does not help,
+and neither does re-downloading, because the record survives both.
+
+**The filed answer is either "denied" or the worse one.** v143's expensive
+finding was that `getUserMedia` RESOLVES over a dead channel and hands back
+pure silence — the page believes it holds a live microphone, the meter reads
+zero, nothing errors. A stale `granted` produces exactly that, which is why
+**the new button is not gated on a status read**: `getMediaAccessStatus` is the
+thing that is lying, so consulting it would hide the button from precisely the
+people it exists for. It is offered whenever the mac shell is there.
+
+`tccutil reset Microphone <bundle id>` deletes the record, and that is the one
+thing that turns the next ask back into a real prompt — the shell's
+`wireMicrophoneReset` resets, asks, and then reads the result back rather than
+trusting the ask (v31's rule). **The bundle id is read out of the running
+bundle's own `Info.plist`, never hardcoded**: `tccutil reset Microphone` with
+no id resets every app on the machine, and an id duplicated from
+`electron-builder.json`'s `appId` would drift and make the button a silent
+no-op — the same unfalsifiable shape as everything else in this corner.
+
+**System Settings is offered for a refusal and withheld from the other
+outcome.** After a reset that did not re-prompt the status is
+`not-determined`, and in that state the app is in no Privacy list at all, so
+sending someone there is sending them to an empty page. That case asks for a
+relaunch instead. `micResetMessage` is a pure function with the three branches
+pinned by a test, because the wrong branch is a dead end rather than a wrong
+colour.
+
+**The light theme's assistant page was half dark and half light, and the dark
+half was carrying the light half's text.** `globals.css`'s `--asst-*` block
+has claimed since v140 that the stage is "deliberately NOT themed to the light
+palette" — one dark room, the honest reading of a design that has no light
+variant (`design_handoff_ai_assistant/README.md` specifies `#0c0708`
+throughout). **Pinning those five values was never enough to produce it.**
+Everything beside them reads the shared palette, and the shared palette flips:
+a near-black rail and header with dark `--foreground` text on top of them,
+which is text you cannot read rather than a design choice. The pin lives on
+`:root[data-theme="light"] .asst-root` now, beside the stage's own CSS, and the
+`:root` comment says so instead of claiming a result it only half delivered.
+
+**Scoped to `.asst-root` on purpose:** `PersonaForm` shares the
+`.asst-setup-*` rules and its other home is the Settings page, which must keep
+following the theme. Verified — no `.asst-root` there, its fields stay
+dark-on-white.
+
+**The four `--field*` tokens are in that pin, and finding out why took a
+computed-style probe rather than a reading.** The global
+`:is(input, textarea, select):not(…)` rule near the top of the file carries six
+attribute selectors' worth of specificity, so it outranks both `.asst-pill` and
+`.asst-setup-field input` and paints `var(--field)` whatever they say. On the
+light theme `--field` is deliberately inverted to `#ffffff` (a tray, not a
+trough), which is how the two header selects came out as white lozenges with
+bone text inside them. **A token a rule wins by specificity does not appear in
+that rule's own declaration** — pin the palette, then check what the cascade
+actually painted.
+
+Verified against a real production build in both themes: the stage one
+coherent dark room with the sidebar still light beside it, the header pills
+back on `#100b0b`, and the button clicked through to its message. 977 tests,
+`tsc`/`eslint`/`next build` clean.
+
+## v147 (2026-09-02): the assistant was speaking in a joke voice
+
+Reported as "the AI voices are really bad — can't you find better ones?" The
+second half of that question turned out not to need answering. The app was
+reading every answer aloud in **Albert**, one of macOS's comedy voices.
+
+**How a gimmick voice became the default, and why nothing could catch it.**
+`voicesForLanguage` sorts by name for determinism — a real fix, from v144's
+changing-voice bug. `pickVoice` then took the first exact-locale match off
+that sorted list. macOS ships 28 `en-US` voices and **19 of them are sound
+effects** (Bells, Boing, Bubbles, Cellos, Organ, Trinoids, Wobble, Zarvox…),
+every one reporting `lang: "en-US"` exactly like Samantha does. Alphabetically
+first of all 28 is Albert. The Web Speech API exposes **no quality field**, so
+there was nothing to sort on and nothing to assert against.
+
+Measured rather than reasoned about: running the old algorithm against this
+machine's real 42-voice list returns `Albert`; the engine's own
+`default` is `Samantha`. The old chain checked exact-locale **before**
+`default`, so the platform's own opinion of its best voice lost to a
+croaking joke.
+
+**Ranked on the only signal the API gives, which is the name.**
+`(Enhanced)`/`(Premium)` — Apple's downloadable neural voices — score highest,
+then vendor-hosted engines (`Google US English`, `… (Natural)`), then the
+engine's `default`, then an exact locale match; the 19 novelty names score
+-1000 and the 1990s MacinTalk generation (Fred, Ralph, Kathy, Junior…) -10.
+**Deprioritised, never filtered:** Zarvox stays pickable for anyone who wants
+it, and on a machine whose only English voice is a novelty one, speaking in it
+still beats silence. The picker is sorted by the same function, so the top of
+the list and "Choose automatically" cannot disagree.
+
+**Ranking alone would have fixed nobody, which is v91's rule again.** The
+reporting machine had `voiceURI: "Albert"` saved as the user's own choice —
+put there by a picker that pre-selected it, not by anyone choosing it. A saved
+novelty voice is now treated as a form nobody changed rather than a
+preference, so every existing install heals with no visit to Settings. This is
+a deliberate exception to "an explicit choice wins outright" (v144) and the
+only one: a non-novelty pick still survives a better-ranked voice appearing.
+The form clears it too, so the control stops claiming an effect it no longer
+has — a select reading "Albert" while Samantha speaks is worse than either.
+
+**The answer to "find better ones" is a download, not a vendor.** Apple's
+Premium and Enhanced voices are free, fully offline, and simply not installed
+by default — none were on this machine, which is why the best available voice
+was a 2010 compact one. The picker now says so and deep-links to Accessibility
+settings, reusing the shell's existing `shell.openExternal` path for non-local
+URLs, so no new IPC exists for it.
+
+**Deepgram Aura was probed and deliberately not used.** The saved key returns
+200 from `POST /v1/speak` with real audio, so it would work — but spoken
+replies currently never leave the machine, and routing them through a paid API
+would put the assistant's own answers (company information) on the network to
+buy quality the platform gives away offline. `VOICE_PROVIDERS.deepgram.tts`
+stays `false`, and its comment stays true. Worth revisiting only for someone
+who wants a good voice without the download.
+
+**A hydration mismatch was introduced and caught in the live pass**, not by
+`tsc`, `eslint`, `vitest` or `next build` — all four stayed green. The new
+"install better voices" hint read `navigator.userAgent` during render, so the
+server rendered no hint and the client rendered one (React #418). Moved into
+an effect, the same rule `hasEngine` and `canListen` already follow and the
+third time this file's family has hit it. 985 tests.
+
+## v148 (2026-09-02): the memory that stopped writing, and said nothing
+
+Asked whether the app remembers the last session in a company, because a new
+assistant tab "was always reading just the company summary and beeper". It
+does remember, the mechanism is sound, and it had been **frozen on every
+company since 2026-08-30** by a guard that was doing its job in the wrong
+place.
+
+**What was measured, not reasoned about.** Running the real writeback against
+the real data with a stubbed spawn returned, for all three registered
+companies: *"The last note from this company is still waiting for you."*
+`noted-conversations.json` and `company-runs/` were both frozen at
+`2026-08-30 22:13` while the Claude transcripts ran to that same afternoon —
+three days of work wrote nothing back.
+
+**The bug is an ordering one.** `prepareSessionNote` refused while a previous
+note was unapproved, correctly reasoning that a fresh `before` snapshot would
+fold the unread note into the new baseline and drop it out of the approval
+queue. The conclusion was wrong: that refusal returns BEFORE
+`setNotedFingerprint`, so the 60-second tick in `instrumentation.ts` retried,
+refused, and recorded nothing — forever — and `catchUpSessionNotes` keeps only
+`outcome.started`, so the sentence explaining it was thrown away every minute
+for three days.
+
+**Keeping the old snapshot protects the unread note just as well.** `before`
+means "the folder before the notes nobody has approved", and that is the same
+instant whether one note or three have landed since — re-snapshotting is the
+only operation that can lose information. So an unapproved note is now a
+reason to KEEP the baseline rather than to refuse: the record is left
+untouched, the pending diff grows, and one approval commits all of it. The
+one hazard this opens is two notes on the same day picking the same
+`<today>-<slug>`, so that path — and only that path — appends a line telling
+the agent not to overwrite an existing file.
+
+**The test that pinned the refusal was pinning the wrong thing.** It asserted
+`ok === false` and the wording of the message; what it was really protecting
+was `record.before`. It now asserts the second note proceeds, that the prompt
+carries the don't-overwrite line, and that `before` is unchanged — the
+invariant, not the mechanism.
+
+**And the failure now has somewhere to appear.** New
+`session-note-status.json` records the last non-quiet outcome per company —
+its own file, one writer, the same split v84 made between `schedules.json` and
+`schedules-last-run.json`, so a background tick never rewrites a user's own
+setting. `SessionNotesToggle` reads it: "Last written up Sep 2, 6:40 pm", or
+the failure and its reason in destructive red. The two ordinary outcomes
+("nothing said", "nothing new said") are marked `quiet` and deliberately not
+recorded — they are what almost every tick returns, and writing them would
+rewrite the file for every company every minute and bury the one line worth
+reading. A throw is now reported with its reason too, instead of becoming
+`message: ""` and then being dropped.
+
+**v75 bit again, from the writing side this time.** Giving
+`catchUpSessionNotes` a defaulted `recordStatus` made three already-passing
+tests write fake agent ids (`a`, `on`, `b`) into the developer's own
+`.data/session-note-status.json` — green, and polluting. Every call in that
+file now injects a collector. **A defaulted writer added to a function whose
+tests already pass is silently a test that writes to real state.**
+
+Two related findings worth keeping, neither fixed here. `plh-engineering`'s
+note was committed yet still blocked, because its `session-note.run.json`
+survived the commit — v84 deletes that "best-effort" and here it did not.
+And two of three companies get the STALE intro prompt, which asks the agent
+to read every skill file and WRITE the summary before it reaches "then check
+`notes/company/sessions/`" — the last-session instruction is the third job in
+one seeded message. On the one FRESH company the whole chain demonstrably
+worked: that transcript opened with "left off", "still open" and the note's
+own date. 992 tests.
+
+## v149 (2026-09-04): the note that kept writing itself
+
+Reported directly: opening the app on another machine burned through a whole
+Claude Code 5-hour session in under a minute. v148, four days earlier, fixed
+this same feature's opposite failure — refusing forever instead of firing
+forever. This is the other half, in the mechanism v148 left alone.
+
+**The loop.** `instrumentation.ts`'s 60-second ticker asks, for every company
+with Session notes on (default ON, no opt-in), "is there a finished
+conversation nobody's written down yet?" — answered by hashing the newest
+`.jsonl` transcript's mtime under `~/.claude/projects/<company>/`. If so, it
+resumes that conversation headlessly (`claude --continue -p "write it up"`)
+and records the fingerprint it checked as "noted," immediately, right after
+spawning. The bug: `--continue` appends its own turn to that exact
+transcript, advancing its mtime — so the fingerprint just recorded is stale
+the instant the run starts, and the very next tick sees "new" content again.
+Forever. Once per company, every 60 seconds, each `--continue` reprocessing a
+transcript that only ever grows. The ticker also fires immediately on
+launch, not only on the interval, so a machine with real conversation
+history already sitting in several companies' project directories kicks this
+off for every one of them the moment the app starts.
+
+**The fix is about WHEN the fingerprint gets taken, not whether it does.**
+`writeSessionNoteFromLastConversation` now records it after the resumed
+process exits, recomputed fresh at that moment — what gets stored is the
+conversation as it actually looks once this run's own turn has landed, so the
+next tick only fires on a conversation that happened after that, never on
+this one's own echo. A second gap came with moving the write later: this
+path had no run-lock the way a scheduled command does, so a `--continue`
+outliving one 60-second tick would have let a second tick start a second
+concurrent resume of the same conversation before the first one's fingerprint
+even landed — an in-memory per-company "already writing that up" guard closes
+that too.
+
+**Verified without spending a cent of anyone's real usage**, per the standing
+rule against triggering a real headless completion in an automated pass: two
+new tests fake the spawn rather than running `claude`, and the one that
+reproduces the bug models it precisely — the fake bumps the fake transcript's
+mtime as a side effect of the process *starting*, independent of whether
+anything here is listening for it to finish, because the old code registered
+no `"exit"` listener at all. Checked against the pre-fix code directly (not
+assumed): that exact test fails there — `second.started` comes back `true`,
+the loop reproduced on demand — and passes against the fix, 3 runs straight
+with no flakiness. 994 tests.
+
+## v150 (2026-09-04): fallback circuit-breaker on auto-session-note fingerprint save
+
+Follow-up to v149's session-note loop fix.
+
+When the recomputed fingerprint save fails or returns null in `settle()`,
+the previous `.catch(() => {})` silently swallowed the error and dropped the
+write. This left the company un-noted in `noted-conversations.json`, causing
+subsequent ticks to repeatedly re-trigger `claude --continue`.
+
+Fix: added a circuit-breaker fallback. If `conversationFingerprint` rejects
+or resolves to null after the child process exits, `settle()` falls back to
+storing the pre-spawn fingerprint (`fingerprint`), ensuring the session is
+marked as processed and preventing infinite repeat invocations.
+
+## v151 (2026-09-04): Google Antigravity CLI executor
+
+### What's new for you (feature, v0.51.0)
+
+You can now pick Google Antigravity as the AI that does a company's work.
+
+- It appears wherever you choose an AI for a company, and on the Connectors page so you can see whether it is installed on this machine.
+- It is marked as a beta option, and it is deliberately not offered for the jobs that need the AI kept strictly inside one company's folder.
+
+Registered Google Antigravity CLI (`agy`) as an AI executor across the application,
+making it available in the Connect page under AI Agents, company executor
+pickers, and the network graph.
+
+- `AiExecutorId` union and `AI_EXECUTORS` in `lib/ai-executors.ts` include
+  `google-antigravity` (`binaryName: "agy"`, `installHint`, `installLink`,
+  `beta: true`, `enforcesToolScope: false`, `buildArgs`, `buildInteractiveIntroArgs`,
+  `limitations`).
+- Registered brand icon mapping in `components/connect-panel.tsx` (`google-antigravity`).
+- Added network ownership label in `lib/ownership/summarize-network-access.ts`
+  and short label in `components/network-graph.tsx`.
+- Safety boundary preserved: `enforcesToolScope: false` prevents untrustedInput
+  commands (like `refresh`) from running on Antigravity without folder containment.
+- No auto-session-note resume block: prevents background resume loops.
+- 998 tests passing across 124 test suites.
+
+## v152 (2026-09-04): Voice assistant multi-agent support & company logo file uploads
+
+### What's new for you (feature, v0.52.0)
+
+Choose which AI powers the voice assistant, and give every company its own logo.
+
+- The voice assistant is no longer tied to one AI. Pick Claude Code, Kiro, Kimi or Google Antigravity, and your choice is remembered next time.
+- A company logo can now be uploaded from your computer or dragged onto its card, instead of only pasting in a web address.
+- Large images are shrunk automatically so the app stays quick, and a new logo shows up everywhere that company appears straight away.
+
+Two major features:
+
+1. **Multi-Agent Voice Assistant**:
+   - The voice assistant is no longer restricted to Claude Code. Users can now choose which AI agent powers their voice assistant: Claude Code, Kiro, Kimi, or Google Antigravity.
+   - Built with persistent client-side storage, intuitive selector pills, and agent-specific execution paths.
+
+2. **Company Logo File Uploads**:
+   - Added direct file upload and drag-and-drop support for company logos across the application.
+   - Accepts PNG, JPEG, WebP, SVG, GIF, AVIF, and ICO files.
+   - Includes client-side downscaling via offscreen canvas for raster images (max 384×384px) to keep payloads lightweight (< 100KB) and preserve PNG transparency, while preserving vector SVGs intact.
+   - Provides live preview, click-to-upload avatar circle, instant save, one-click removal, and URL input toggle fallback.
+   - Reflects updated logos immediately across the entire workspace (overview tiles, company panel, and workspace explorer switcher).
+
+- All 125 test suites passing (1,013 tests), tsc and next build clean.
+- Version bump: 0.51.0 -> 0.52.0.
+
+## v153 (2026-09-04): Seamless hands-free voice flow, 2s pause tolerance & prompt latency fix
+
+### What's new for you (improvement, v0.53.0)
+
+The voice assistant starts listening on its own, and waits while you think.
+
+- If you have already allowed the microphone, it begins listening the moment the page opens. There is no button to press first.
+- Pausing in the middle of a sentence no longer cuts you off. It waits about two seconds before deciding you have finished.
+- After it answers it starts listening again by itself, so you can keep talking back and forth. Press Escape or Stop to end the conversation.
+- Answers now start coming back immediately instead of sitting still for three seconds first.
+
+Comprehensive fixes to the AI assistant voice flow for natural, continuous hands-free interaction:
+
+1. **Hands-Free Auto-Listening**:
+   - Automatically begins listening on page mount whenever microphone permissions have already been granted (`navigator.permissions.query({ name: "microphone" })`), without requiring the user to click the microphone button.
+   - Listens to permission state transitions (`permission.onchange`) to activate immediately once granted.
+
+2. **Natural Pause Tolerance (2-Second Buffer)**:
+   - Prevented premature cutoff when users pause briefly mid-sentence (< 2 seconds).
+   - Switched browser speech recognition to `continuous = true` with live transcript accumulation and a 2000ms debounce silence timer before finalizing speech submission.
+   - Aligned Deepgram streaming endpointing from 500ms to 2000ms with debounced transcript finalization.
+
+3. **Eliminated 3-Second Prompt Latency Hang**:
+   - Fixed `execFile` implementation in `askCompanyImpl` and `askAllCompaniesImpl` to explicitly close `cp.stdin?.end()`. Previously, `claude -p` lingered for 3 seconds waiting on stdin ("Warning: no stdin data received in 3s"). Closing stdin immediately dropped execution start time to instant.
+
+4. **Continuous Multi-Turn Voice Loop**:
+   - Automatically resumes listening 400ms after the assistant finishes speaking its spoken answer (`utterance.onend`), enabling a seamless back-and-forth conversational loop.
+   - User can cleanly exit the conversational loop at any time via Escape or the Stop button.
+
+- All 125 test suites passing (1,013 tests), tsc and next build clean.
+- Version bump: 0.52.0 -> 0.53.0.
+
+## v154 (2026-09-05): Cross-company assistant intelligence & action queue specification
+
+Formulated comprehensive architectural design specification (`docs/superpowers/specs/2026-09-05-cross-company-assistant-intelligence-and-action-queue-design.md`) spanning slices v154–v156 to evolve the multi-company voice and text assistant into an executive co-pilot:
+
+1. **Real-Time Operational Pulse (Pillar 1)**: Extends `gatherAllCompanies` to ingest the handoff tail from `HANDOFF.md` or `notes/company/sessions/`, git working tree status, and pending human gate review counts per company.
+2. **Proactive Morning Briefing (Pillar 2)**: Synthesizes cross-company pulse into a spoken standup briefing on first daily mount when transcript lines are empty.
+3. **Smart Two-Tier Retrieval (Pillar 3)**: Solves the 60,000-character prompt budget cap with shallow broadcast context for general companies and deep focal context for targeted companies.
+4. **Cross-Company Synthesis & Pattern Reuse (Pillar 4)**: Enables borrowing architecture decision records (`docs/decisions/`) and pattern recommendations across company repos.
+5. **Action Proposals & Queueing (Pillar 5)**: Establishes the `<action_proposal>` structured envelope protocol and interactive `ActionProposalCard` UI, allowing users to queue background headless jobs (`runCompanyCommandImpl`) via voice or click, with full human-in-the-loop git diff review safety.
+
+## v155 (2026-09-05): Action Proposals & Execution Cards
+
+### What's new for you (feature, v0.54.0)
+
+Ask the assistant to do a job and it hands you a card to approve first.
+
+- When you ask for real work — a decision write-up, a digest, a retro — it offers a card naming exactly which company and which job it would run.
+- Nothing runs until you press Run, and you still review the changes before any of them are saved.
+- The card sits in the conversation while the assistant carries on talking to you normally.
+
+Delivered Phase 2 of the cross-company assistant intelligence evolution:
+
+1. **Structured `<action_proposal>` Envelope Protocol (`lib/assistant/action-envelope.ts`)**:
+   - Built a robust envelope extractor (`parseActionProposal`) that separates machine-executable action schemas from natural spoken dialogue.
+   - Handles embedded JSON, markdown code fences, case-insensitive XML tags, and malformed JSON recovery without breaking spoken audio synthesis.
+
+2. **Command Proposal Instructions (`lib/assistant/persona.ts`)**:
+   - Instructs the AI assistant to emit `<action_proposal>` blocks when users request work (e.g. `/decision`, `/digest`, `/retro`, `/refresh`, `/orientation`), while preserving ironclad safety rules that prevent unreviewed direct execution.
+
+3. **Interactive `ActionProposalCard` Component (`components/assistant/action-proposal-card.tsx`)**:
+   - Designed a high-polish dark glassmorphic card for the conversation stream rendering target company badge, command slug, parameter inspector, and execution controls.
+   - Includes **[ Run in Background ]** dispatch wired to server action `runCompanyCommand` (`runCompanyCommandImpl`), providing live state updates (`running`, `queued`, `error`, `dismissed`).
+   - Integrated into `AssistantStage` transcript view, ensuring spoken synthesis reads only conversational speech while the action card is mounted alongside.
+
+- 126 test suites passing (1,027 tests), `tsc --noEmit` clean with 0 errors.
+
+## v156 (2026-09-05): Two-Tier Intent Routing & Cross-Company Decision Synthesis
+
+### What's new for you (feature, v0.54.0)
+
+The assistant can answer across all your companies at once, and spot what one can borrow from another.
+
+- Ask a broad question and it takes in every company you have registered. Ask about one in particular and it goes deep on that one instead.
+- It reads the decisions each company has already written down, and suggests the ones worth reusing elsewhere.
+- It stays fast however many companies you add.
+
+Delivered Phase 3 of the cross-company assistant intelligence evolution, completing all 5 pillars:
+
+1. **Two-Tier Intent Routing (`lib/assistant/intent-router.ts`)**:
+   - Implemented `detectFocalCompanies(question, contexts)` to distinguish broad portfolio-level inquiries from targeted single- or multi-company queries.
+   - Preserves prompt budget by applying shallow Tier-1 summaries (<=160 chars) plus operational pulse for non-focal companies, while retaining full deep context for focal companies.
+   - Guaranteed prompt character ceiling stays well within limits (< 60,000 chars) regardless of how many companies are registered.
+
+2. **Cross-Company Decision Indexing & Pattern Borrowing (`lib/assistant/gather-all-companies.ts` & `lib/assistant/persona.ts`)**:
+   - Implemented `gatherCrossCompanyDecisions(agents)` to scan `docs/decisions/*.md` across all company repositories and extract decision titles and slugs.
+   - Injected recent architectural decisions into the prompt context via `formatCompanyContext`.
+   - Updated persona instructions directing the co-pilot to actively identify and suggest proven architecture patterns, RFC decisions, and solutions across peer companies on the machine.
+
+3. **Prompt Builder & Query Pipeline Integration (`lib/assistant/ask-all-companies-impl.ts`)**:
+   - Wired focal company routing and decision gathering into `askAllCompaniesImpl`.
+   - Maintained full executor neutrality (Claude Code, Kimi, Kiro, Google Antigravity `agy`) with no file system or tool scope violations.
+
+- All 127 test suites passing (1,038 tests), `tsc --noEmit` clean with 0 errors, `python3 scripts/verify.py` green.
+
+## v157 (2026-09-05): Live running agent indicator on company cards
+
+### What's new for you (feature, v0.54.0)
+
+A company's card now tells you when an AI is working on it right now.
+
+- A pulsing green marker appears on the card, and on the company's own page, whenever an AI agent or a terminal is running for it.
+- It appears the instant a session starts or finishes, and it is still correct after you refresh the page.
+
+Added live visual running-state indicators on company cards (both overview grid tiles and focused masthead panels) whenever an AI agent or terminal session is running for that company:
+
+1. **Terminal Sessions Status API & In-Memory Introspection (`lib/terminal/sessions.ts`)**:
+   - Introduced `CompanyTerminalStatus` model (`{ running: boolean, hasAiAgent: boolean, count: number, labels: string[] }`).
+   - Added `getCompanyTerminalStatus(agentId: string)`: inspects in-memory pty sessions, determining whether any active process has `kind === "ai"` (AI assistant agent) or shell sessions, and aggregates total process count.
+   - Added `getAllCompaniesTerminalStatus()`: instant aggregation across all registered companies.
+   - Added test helpers `_clearSessionsForTest` and `_setSessionForTest`.
+
+2. **Dedicated Fast HTTP Status Endpoint (`app/api/terminal-status/route.ts`)**:
+   - Created `GET /api/terminal-status` returning `{ statusByAgent }` via `getAllCompaniesTerminalStatus()`.
+   - In-memory 0ms response latency for background client-side polling and reconnect synchronization.
+
+3. **Real-Time Client-Side Event Bus (`lib/terminal-panel-event.ts`, `components/terminal-workspace.tsx`, `components/workspace.tsx`)**:
+   - Exported `TERMINAL_STATUS_CHANGED_EVENT = "alacran-terminal-status-changed"`.
+   - `TerminalWorkspace` dispatches the event immediately upon tab creation, spawn, and tab closure.
+   - `Workspace` listens to update the sidebar active terminals list in real-time.
+
+4. **Live Badge & Callout UI Component (`components/agent-terminal-status.tsx`, `components/agent-card.tsx`, `app/page.tsx`)**:
+   - Created `AgentTerminalStatus` supporting three layout modes: `"badge"` (compact status badge for headers), `"callout"` (prominent banner for card body), and `"panel"` (masthead status for focused company view).
+   - Shows an animated pulsing emerald beacon dot with `<Terminal />` icon and label: `"Agent running in terminal"` (or `"Terminal active"` for shell tabs), appending process count if multiple sessions are open.
+   - Subscribes to the client event bus for 0ms immediate UI updates, with a 3-second background polling fallback.
+   - Server-side pre-rendered in `app/page.tsx` for zero initial layout shift and zero flicker on page refresh.
+
+- 128 test suites passing (1,043 tests), `tsc --noEmit` clean with 0 errors, `python3 scripts/verify.py` green.
+
+## v158 (2026-09-05): Interactive Changelog & What's New modal for app updates
+
+### What's new for you (feature, v0.54.0)
+
+A What's New window, so you can see what each update actually changed.
+
+- Open it from the version number at the bottom of the menu, from the update banner, or from Settings.
+- Search the list, or narrow it to new features, improvements or fixes.
+- Install a waiting update and restart the app without leaving the window.
+
+Added an aesthetic, responsive Changelog and release notes modal popup that opens when the user clicks "Update app" or checks for updates across the application:
+
+1. **Changelog Parser & Ingestion Engine (`lib/updates/parse-changelog.ts`, `lib/updates/changelog-feed.ts`)**:
+   - Built a structured parser that converts raw markdown from `CHANGELOG.md` into strongly-typed slices with version tags, dates, titles, summaries, feature highlights, and automatic category inference (`feature`, `improvement`, `fix`, `core`).
+   - Slices are sorted newest-first by numerical version (`v158 > v157 > ... > v1`).
+   - Built `getChangelogFeedImpl`: blends local changelog history with remote GitHub release notes (`body`) from `fetchLatestReleaseDetailsImpl`, comparing current and latest versions.
+   - Added REST endpoint `GET /api/changelog` (`app/api/changelog/route.ts`) and server action `getChangelogFeed()` (`lib/updates/update-actions.ts`).
+
+2. **Decoupled Global Event Trigger (`lib/updates/changelog-event.ts`)**:
+   - Exported `ALACRAN_OPEN_CHANGELOG_EVENT = "alacran-open-changelog"` and `openChangelogModal(detail?)`.
+   - Allows any component across the UI to open the modal with optional category preselection or version highlight.
+
+3. **Aesthetic & Responsive Changelog Modal (`components/changelog-modal.tsx`, `components/ui/dialog.tsx`)**:
+   - Designed a dark glassmorphic dialog with an emerald/cyan glowing top accent, `<Sparkles />` icon badge, and version progression pill (`v{current}` ➔ `v{latest}`).
+   - Search input and category filter tabs (`All`, `Features`, `Improvements`, `Fixes`) with live counts.
+   - Scrollable timeline rendering slice cards with category badges, release dates, titles, summaries, and bulleted highlights.
+   - Includes GitHub release notes callout banner when remote release data is available.
+   - Interactive action footer:
+     - Real-time update state machine (`idle`, `updating`, `restarting`, `error`) with live download progress percentage on macOS desktop (`desktop.onProgress`).
+     - One-click **[ Update & Restart ]** button that runs electron-updater (on macOS desktop) or pkexec `.deb` installer (on Linux), plus direct links to GitHub releases.
+
+4. **Wired Across All Update Touchpoints**:
+   - **Update Banner (`components/update-banner.tsx`)**: Added **[ Update app ]** and **[ What's new ]** buttons that pop up the Changelog modal.
+   - **Settings Panel (`components/settings-panel.tsx`)**: Added **[ Update app ]** button on update availability and a **[ View Changelog ]** button to view release notes anytime even when up to date.
+   - **Desktop Sidebar (`components/sidebar.tsx`)**: Made the bottom `v{APP_VERSION}` pill interactive; clicking opens the Changelog modal.
+   - **Layout Root (`app/layout.tsx`)**: Mounted global `<ChangelogModal />` listener.
+
+- 132 test suites passing (1,054 tests, +11 new tests), `tsc --noEmit` clean with 0 errors, `python3 scripts/verify.py` green.
+
+## v159 (2026-09-05): AI Assistant page lifecycle muting & light mode theme adaptation
+
+### What's new for you (fix, v0.55.0)
+
+The assistant stops talking when you leave its page, and it now reads properly in light mode.
+
+- Switching to another tab or another page cuts off the microphone and the voice immediately, instead of leaving it talking to an empty room.
+- Coming back starts it listening again, if you had already allowed the microphone.
+- The assistant page follows light mode now, rather than staying dark on its own.
+
+Resolved background audio leakage and light mode theming across the voice assistant interface (`/assistant`):
+
+1. **Page Lifecycle Muting & Auto-Listening (`components/assistant/assistant-stage.tsx`)**:
+   - Added `isMountedRef` and `isPageVisibleRef` to monitor component lifecycle and tab visibility.
+   - Added `muteAndStop`: immediately halts speech synthesis (`cancelSpeech()`), Web Speech recognition, Deepgram WebSocket streaming (`captureRef.current?.stop()`), releases MediaStream tracks, and resets mode to `idle` upon tab hide (`document.visibilityState === "hidden"`), route departure, or `pagehide`.
+   - Suppressed delayed speech replies if a background query resolves after leaving the page.
+   - Automatically re-initiates listening upon returning to `/assistant` if microphone access was previously granted.
+
+2. **Full Light Mode Theme Support (`app/globals.css`, `components/assistant/action-proposal-card.tsx`)**:
+   - Removed the forced dark override `:root[data-theme="light"] .asst-root` in `app/globals.css`.
+   - Added light theme tokens (`--asst-rail`, `--asst-dim`, `--asst-grid`, `--asst-core-hi`, `--asst-core-lo`) to `:root[data-theme="light"]`.
+   - Polished light theme styles for orb core, radial glows, gyroscopes, select dropdowns, and setup modal.
+   - Updated `ActionProposalCard` to adapt seamlessly between light and dark modes using theme tokens.
+
+- 132 test suites passing (1,054 tests), `tsc --noEmit` clean with 0 errors, `python3 scripts/verify.py` green.
+
+## v160 (2026-09-05): AI voice assistant end-to-end latency optimizations
+
+### What's new for you (improvement, v0.55.0)
+
+The voice assistant answers noticeably faster.
+
+- It works out that you have finished speaking a full second sooner.
+- It starts saying the first sentence while it is still working out the rest, so you hear an answer in about a second and a half.
+- You can watch the answer arrive as it is written, and stopping it takes effect straight away.
+
+Substantially reduced end-to-end response latency across speech-to-text, LLM execution, and text-to-speech:
+
+1. **Silence Pause Detection Tuning (1000ms)**:
+   - Reduced Deepgram socket endpointing timeout from 2000ms to 1000ms in `lib/voice/deepgram-grant-impl.ts`.
+   - Reduced Deepgram interim speech finalize debounce from 2000ms to 1000ms in `lib/voice/deepgram-capture.ts`.
+   - Reduced Web Speech recognition silence debounce from 2000ms to 1000ms in `components/assistant/assistant-stage.tsx`.
+   - Saves 1.0 second of dead silence after user speech finishes.
+
+2. **Zero-Tool Single-Company Context Preloading (`lib/ask-company-impl.ts`)**:
+   - Implemented `gatherSingleCompanyContext`: pre-reads summary, ontology, handoff, recent session notes, and recent decisions in Node (< 5ms).
+   - Injected context directly into `buildAskCompanyPrompt`, instructing the agent to answer immediately in 1 turn without issuing Read/Grep/Glob tool calls unless details are missing. Eliminates 2–4 sequential agent tool round-trips over the network (cutting 8–15s).
+
+3. **Real-Time Streaming API Route (`app/api/assistant/stream/route.ts`)**:
+   - Created Server-Sent Events (SSE) streaming API route `POST /api/assistant/stream` with same-origin host verification, `application/json` enforcement, and process spawning with `stdio: ["ignore", "pipe", "pipe"]` to eliminate the 3-second stdin timeout wait.
+   - Added `AbortController` cancellation that terminates the spawned CLI process immediately if the user cancels or disconnects.
+
+4. **Live Caption Streaming & Sentence-Chunked TTS (`components/assistant/assistant-stage.tsx`)**:
+   - Updated `ask()` to read from `/api/assistant/stream`. Live speech text streams into captions in real time, switching status to "Responding…".
+   - Completed sentences (`[.!?]\s+`) are immediately dispatched to `window.speechSynthesis.speak(utterance)`. Native browser speech queueing starts playback on sentence 1 (~1.5s time-to-first-voice) while remaining sentences stream in parallel.
+   - Real-time action proposal stripping: prevents `<action_proposal>` XML from appearing in speech or captions while streaming; parses cleanly into `ActionProposalCard` upon completion.
+   - Safely falls back to server actions if streaming fails before speech begins.
+
+- 133 test suites passing (1,060 tests), `tsc --noEmit` clean with 0 errors, `python3 scripts/verify.py` green.
+
+
+## v161 (2026-09-06): sidebar order, and the X that closed nothing
+
+### What's new for you (fix, v0.56.0)
+
+The X now closes every pop-up window.
+
+- Confirmation boxes — removing a company, backing up to GitHub, installing a starter pack, deleting a file — had no X at all. They do now, and it stays in the corner even when the box is long enough to scroll.
+- The X is the same size in every window, so it is as easy to hit in one as in another.
+- Clicking the version number at the bottom of the menu opens this What's New window. It had quietly stopped responding to clicks.
+- Pop-up windows now appear in front of the menu instead of behind it.
+- The menu itself is in a more sensible order: Companies, Assistant, Connectors, Activity, Settings.
+
+Reported as "re-arrange the sidebar" plus "the X button for closing the modals
+does not work — look thoroughly". The second half was three separate defects in
+`components/ui/*`, found by hit-testing every modal in a running app rather than
+by reading for them.
+
+1. **Nav order (`components/sidebar.tsx`)**: Companies, Assistant, Connectors,
+   Networks, Activity, Settings. `NETWORK_ITEM` and the splice that forced it
+   in front of Settings are gone — Networks is an entry in `NAV` carrying
+   `advancedOnly: true`, filtered out in simple mode. One list, in the order it
+   renders.
+
+2. **`AlertDialogContent` had no close button at all** (`components/ui/alert-dialog.tsx`).
+   Nine confirmations route through it — Add a starter pack, Install
+   daily-team-log, Back up to GitHub, Remove a company, delete a file, three
+   commit confirmations — and none rendered one. Radix's AlertDialog also
+   declines to dismiss on an outside click, by design, so the only ways out were
+   Escape and a footer button that a 642px-tall dialog puts below the fold.
+   Aiming at the corner where every other modal's X lives and having nothing
+   happen is exactly what the report describes.
+
+   The X is an `AlertDialogPrimitive.Cancel` — semantically the footer's Cancel,
+   never the destructive action — and it is **first in the DOM on purpose**:
+   Radix hands initial focus to whichever Cancel registers the shared
+   `cancelRef` last, so putting the icon first leaves that to the footer's real
+   Cancel button. Verified: focus still lands on "Cancel". Painting is
+   unaffected, since an absolutely positioned box always paints over in-flow
+   siblings regardless of source order.
+
+3. **That same box scrolled itself**, so a pinned X was impossible on precisely
+   the long dialogs that need one. `overflow-y-auto` moved off the content onto
+   an inner `grid min-h-0 … overflow-y-auto` wrapper (which also carries the
+   `gap-4` it was spacing), same shape `SheetContent` has had since v63.
+   `min-h-0` is load-bearing: a grid item's automatic minimum otherwise keeps it
+   at full content height and the dialog overflows the viewport instead of
+   scrolling.
+
+4. **`DialogContent`'s X was a 24px target** (a 16px icon plus `p-1`) while
+   Sheet's is 36px — and `sheet.tsx`'s own comment already records that this
+   exact thing "read as broken". Now the same 36px target and hover plate, so
+   two buttons that look identical are aimed at identically.
+
+5. **The What's New modal had no working trigger.** `.sidebar-version` still
+   carried `pointer-events: none` from when it was a `<span>`; v158 made it the
+   button that opens the changelog and the rule stayed, so the pointer fell
+   through to `.app-sidebar`. Nothing overlaps it — the rule was never needed.
+
+6. **The modal layer moved z-50 → z-70.** `.app-sidebar` and `.app-bottom-nav`
+   are z-60, so the rail painted *over* an open modal. Radix's own
+   pointer-events lockout kept the clicks correct, so this only ever looked
+   wrong — but the rail and a modal are not allowed to argue about who is in
+   front. Still above the mac drag strip (z-40); the note beside `#titlebar-drag`
+   was updated so it does not keep naming z-50.
+
+**And the build was broken before any of this, on clean `master`.**
+`next build` died with `TypeError: generate is not a function` — reproduced with
+the changes stashed, and then in an **empty directory with no `next.config` at
+all**, which is what ruled the repo out. The cause is a leaked environment
+variable: a standalone Next server exports `__NEXT_PRIVATE_STANDALONE_CONFIG`
+for its own process, `loadConfig` short-circuits on it and `JSON.parse`s the
+value, and **JSON has no functions** — so `generateBuildId`, the only
+function-valued entry in Next's own `defaultConfig`, comes back `undefined`.
+Setting `generateBuildId` in `next.config.ts` does *not* help, because that
+branch returns before the config file is ever read.
+
+`dev`, `build` and `start` now clear `__NEXT_PRIVATE_STANDALONE_CONFIG` and
+`__NEXT_PRIVATE_ORIGIN` in `package.json`. It goes in the scripts rather than in
+a developer's shell because **both packaging pipelines run `npm run build`** —
+`scripts/package-linux.sh:58` and the macOS shell's
+`build-app-payload.sh` — so a packager launched from a shell that has ever run
+the packaged app inherits the same dead build.
+
+- 133 test suites passing (1,060 tests), `tsc --noEmit` clean, `next build`
+  clean, eslint 0 errors, `python3 scripts/verify.py` green. All 8 modals
+  reachable from a company panel verified open/close by X in a real browser,
+  including a 460px-tall window where the tall AlertDialog scrolls and the X
+  stays pinned and hittable.
+
+## v162 (2026-09-06): CI can publish the .deb again
+
+Not a code change to the app — a credential fix plus the two documents that had
+been describing the broken state as permanent.
+
+The releases token carried **`Contents: read`**, which passes every check
+that does not actually publish, so `package-linux.yml` built, tested and signed
+a perfectly good `.deb` and then returned `HTTP 403: Resource not accessible by
+personal access token` on the final step. It had done that since 2026-08-18,
+which is why v0.29.0 through v0.55.0 were assembled by hand.
+
+Replaced with a fine-grained PAT scoped to `alacran-releases` **alone**, with
+**Contents: Read and write** and nothing else — `gh release view`/`create`/
+`upload` are all Contents operations, so Actions, Administration and Workflows
+would have been access granted for no benefit. Verified by re-running the
+workflow against the already-published `v0.56.0` tag: test → build → sign →
+publish, all green.
+
+**The check that re-run made necessary, and the rule from it.** A re-run
+rebuilds the `.deb`, so its bytes change — 21,186,738 → 21,185,470 here, from
+embedded timestamps alone. The signature is regenerated in the same run so the
+pair stays valid, but a new binary beside a stale signature is refused by every
+installed copy while looking like a successful release. So the published `.deb`
+was downloaded and verified against the published `.sig`, using the public key
+read out of the shipped `electron/main.js` rather than a copy of it. **Verify
+the artifacts that are actually on the release, not the green tick.**
+
+Two documents corrected rather than left to be re-derived:
+
+- `.github/workflows/package-linux.yml`'s `upload-artifact` step was marked
+  `ponytail: temporary, until the releases token is rotated`. It is
+  **permanent** now, and the comment says why: it is what let v0.56.0 ship on
+  the day the token was still wrong (`gh run download` recovered the signed
+  `.deb` for a manual upload), it costs one upload, and the failure it insures
+  against is not hypothetical — it is what this repo did for thirty releases.
+  Deleting a safety net because the thing it catches currently works is how it
+  fails to exist the day the token expires.
+
+- `CLAUDE.md`'s Standing release rule said the tag push "is NOT the Linux
+  publish". It is again. The passage now records **a 403 is a permissions
+  refusal; an expired token gives 401** — the one distinction that separates
+  "wrong scope" from "dead token" without guessing — and that on the
+  fine-grained token page "Read and write" is a per-permission dropdown value
+  rather than a global toggle, with Metadata: Read switching itself on.
+
+Two adjacent claims in the same rule were wrong and were fixed while there: the
+"rename on upload" note (CI's own build step emits `Alacran.deb` now, and the
+run artifact carries that name — the rename is only needed on the local Docker
+route), and step 5's "all three" macOS assets, which is **five** — the two
+`.sig` files became mandatory when `electron/main.js` started refusing
+unverifiable updates, and `npm run package` writes them to `dist/` and then
+leaves them behind. Step 5 now points at `scripts/release-mac.sh`, which exists
+to refuse a release whose signatures do not verify.
+
+## v163 (2026-09-07): the What's New window was showing engineering notes
+
+Reported as "just show descriptive new updates added, don't show all files and
+non-related things to the user". The What's New window scraped this file's
+prose, and this file says of itself, four lines from the top, that it is kept
+"in the detail it was written in rather than compressed into release notes".
+So a non-technical founder opening it read `components/sidebar.tsx`, "the modal
+layer moved z-50 → z-70", "a 24px target (a 16px icon plus `p-1`)", and — top
+of the list — v162, a CI credential fix whose own first line is "Not a code
+change to the app".
+
+### What's new for you (fix, v0.57.0)
+
+What's New now shows what changed for you, in plain language.
+
+- Every entry is written for someone using the app, not for whoever built it. No file names, no code, no jargon.
+- Updates that changed nothing you can see — a build fix, an internal tidy-up — are left out entirely rather than padding the list.
+- Each entry carries the version you actually installed, instead of an internal number that appears nowhere else.
+
+**Nothing is inferred any more.** Each entry carries an authored
+`### What's new for you (<category>[, v<release>])` block and the parser
+returns that block and nothing else. Five of the six defects were the same
+defect — guessing which sentences were meant for a user — and no amount of
+better scraping fixes it:
+
+1. **File paths, CSS and identifiers reached the screen** because highlights
+   were whole source bullets. `lib/ask-company-impl.ts`,
+   `app/api/assistant/stream/route.ts` and `.sidebar-version` were all live in
+   the modal on `master`.
+
+2. **Internal-only slices were shown**, because every section became an entry.
+   An entry with no authored block is now skipped, so **the default is
+   invisible rather than leaked** — v162 (a token scope), v154 (a design spec)
+   and v150 (a follow-up to a follow-up) correctly do not appear.
+
+3. **Highlights were cut at source line breaks**, because each line became its
+   own highlight. v161's first read "Companies, Assistant, Connectors," and
+   stopped. The block parser accumulates whole paragraphs and whole bullets, so
+   where the author wrapped at 80 columns has no effect on what renders.
+
+4. **`inferCategory` was keyword guesswork and demonstrably wrong.** It tested
+   `fix` first against the entire section text, so v160 — "latency
+   optimizations", an improvement by any reading — came out `fix` because the
+   word "fix" appears somewhere in its body. Deleted, not tuned: the category
+   is declared in the block heading. `core` is gone from the union with it; it
+   was the fallthrough of a guess and had no filter tab in the UI.
+
+5. **Two numbering schemes sat side by side.** The header compared
+   `v0.55.0 → v0.56.0` while every row below it was labelled v160, v161, v162
+   — slice numbers, which this file's own header calls internal and which no
+   user has ever seen. `ChangelogItem.version` is now the release the user
+   installed, declared in the block; the slice number survives as `id`, a React
+   key that is never rendered. Where a slice's release is genuinely not known
+   yet the pill is simply absent, which is why `version` is optional.
+
+**A second parallel release-notes file was considered and rejected** — v86's
+rule, "a second copy of the same prose is drift you cannot see", applies
+exactly: a separate file would fall out of date silently and nothing would
+catch it. One source, marked up.
+
+Backfilled the block for v151–v161 (ten entries, deliberately skipping the
+three that changed nothing a user can see), so the window has real content
+without waiting for the next slice. The release each one shipped in was read
+out of `package.json` at the commit that introduced the entry, not guessed.
+
+The invariant is pinned against the real `CHANGELOG.md`, not a fixture: a test
+walks every entry the parser returns from the shipped file and fails on a
+backtick, a `path/with/slashes.ts`, a `.css-class`, "tsc", "eslint" or a test
+count. A block written in engineering voice fails the suite rather than
+reaching a user.
+
+**Not bumped:** `package.json` is still 0.56.0, so this entry's own block omits
+its release version — the number it will ship in is the maintainer's to set.
+
+- 133 test suites (1,067 tests, +7), `tsc --noEmit` clean, `next build` clean,
+  eslint 0 errors and the 2 pre-existing warnings.
+
+## v164 (2026-09-07): the folder picker is the real one now
+
+Reported as "when adding a company in the form where users select already have
+a folder, let the app use the users laptop folder picker so they can select and
+browse through where they need to add or locate their folder."
+
+### What's new for you (feature, v0.57.0)
+
+Adding a folder you already work in now opens your Mac's own folder chooser.
+
+- Press Browse and pick any folder on your computer, the same way you would in any other app — including one you make right there in the dialog.
+- The list of folders inside your home folder is still there, so nothing is lost if the chooser isn't available.
+- Cancelling the chooser leaves the form exactly as it was.
+
+**Why this could not have been done in the page.** Web code cannot obtain an
+absolute filesystem path — `showDirectoryPicker()` returns a handle carrying no
+path, and `<input type="file" webkitdirectory>` reports names *relative to* the
+folder chosen, never that folder's own location. `adoptFolder` needs a real
+absolute path, so the answer can only come from a process that can ask the OS.
+That is `dialog.showOpenDialog` in the mac shell's main process, and nothing
+else today. This is the same reasoning `lib/list-home-folders.ts` already
+carried in its own header — the in-app browser exists *because* there was no
+native dialog to call. It stays, as the fallback, unchanged.
+
+**The gate is the bridge's own presence, never a platform string.** The button
+renders only when `window.alacran?.dialog?.pickDirectory` actually exists.
+Gating on `shell === "mac"` would have been wrong in a way that only shows up in
+the field: control-panel updates independently of the shell around it, so a user
+on a mac bundle built before this bridge existed still reports `"mac"` and has
+no dialog to call — they would have got a button that does nothing. With the
+capability gate they simply keep today's flow until they take the next packaged
+build.
+
+**Linux was deliberately left on the in-app browser.** `scripts/webview-linux.py`
+has no JS bridge at all — no `user_content_manager`, no
+`register_script_message_handler`, nothing — so a native picker there means
+building the whole bridge plus a GTK `FileChooserDialog` first, and none of it
+can be exercised on this macOS dev machine. The capability gate makes that a
+non-event rather than a regression: `desktopFolderPicker()` is null there, the
+button does not render, and the folder list is the whole flow exactly as it was
+yesterday. Same for a plain browser and `next dev`.
+
+**One code path, not two.** The dialog's result goes through the same
+`pickFolder(fullPath, folderName)` the in-app list already calls, so the name
+autofill, `getCompanyPathStatus` and the adoption confirmation cannot tell the
+two routes apart. The path is untrusted input crossing a process boundary and
+is validated server-side by `adoptFolderImpl`'s existing `isDirectory` check —
+which is also what a typed path gets, and which was not weakened. Nothing new
+is reachable from the server's side of the boundary either: `adoptFolder` is a
+Server Action that has always accepted an arbitrary path from its caller.
+
+**Cancellation and double-open are the same answer.** `{ path: null }` means
+"nothing was chosen" whether the user dismissed the sheet or the main process
+refused a second concurrent dialog (`showOpenDialog` will happily stack sheets,
+so an in-flight flag in `wireFolderPicker` refuses the overlap). The page treats
+both as a no-op — no error, no empty-path write. The button is also disabled
+while a dialog is open, which is UX, not the guarantee; the guarantee is in the
+main process, where it cannot be bypassed by a stale renderer.
+
+Files: the macOS shell's `electron/main.js` (`wireFolderPicker`) and
+`electron/preload.js` (`dialog.pickDirectory`); here,
+`lib/desktop-folder-picker.ts` (new, modelled on `lib/voice/desktop-mic.ts`),
+the `window.alacran` interface in `lib/updates/desktop-updater.ts`, and
+`components/add-company-form.tsx`.
+
+**The mac half reaches users only on the next packaged the macOS shell
+build.** Merging this changes nothing for anyone running the current bundle —
+the bridge lives in the shell, not in the payload the shell serves.
+
+**Not bumped:** `package.json` is still 0.56.0, so this entry's block omits its
+release version — the number it ships in is the maintainer's to set.
+
+- 134 test suites (1,076 tests, +9), `tsc --noEmit` clean, `next build` clean,
+  eslint 0 errors and 4 pre-existing warnings.
+
+## v165 (2026-09-07): the assistant said "did not catch that" when it had no ears
+
+Reported by a user who updated from an older build, approved the microphone,
+quit and reopened the app, and still could not talk to the assistant.
+
+### What's new for you (fix, v0.57.0)
+
+The assistant now tells you the truth when it cannot hear you.
+
+- In the desktop app, the built-in speech engine never worked — it opened your
+  microphone and returned nothing. It used to say "Did not catch that", as if
+  you had mumbled. It now says the window has no speech engine and points you
+  at Deepgram or at typing.
+- "Microphone blocked" and "no speech engine" are finally different messages.
+  They were the same one, which meant being sent to check a microphone that was
+  already working perfectly.
+- Once a speech engine has proved it does not work, the assistant stops
+  offering it for the rest of the session instead of failing the same way every
+  time you press.
+
+**Not the v146 permission bug.** That one is about the OS prompt never
+appearing; here it appeared and was approved. The shell's plumbing is correct —
+`setPermissionRequestHandler` and `setPermissionCheckHandler` both scoped to
+`media` on a local origin, `askForMediaAccess` called, the page on
+`http://127.0.0.1`, which is a secure context.
+
+**Measured, closing the question v138 left open.** In Electron 42.10.1 — the
+framework version the packaged app embeds — with the microphone granted:
+`webkitSpeechRecognition` is a function, `onstart` and `onaudiostart` fire, so
+**the microphone really opens**, and then `onerror` arrives with
+`error: "network"`. Chromium ships the whole API surface and the Google
+speech-service URL in the binary; Electron ships no key for it. So the
+constructor existing proves nothing, and `hasEngine` was a truthiness check on
+it.
+
+**Presence is not capability — the third time in this repo**, after v53's
+`which claude` succeeding on a machine with only the desktop app and v135's
+`beeper status` reporting unreachable while `chats list` returned real chats in
+the same second. `classifySpeechError` sorts the one error string the Web Speech
+API gives us into four real classes and `speechFailureMessage` gives each its
+own copy and next step. **`not-allowed` and `service-not-allowed` are one
+hyphen apart and mean opposite things** — the user refused the microphone,
+versus the machine has no speech service — and sharing one message is what
+turned this into a dead end. Same rule v142 wrote for Deepgram's 401 vs 403.
+
+`markSpeechEngineBroken()` records a use-time failure for the life of the page,
+so `getSpeechRecognition()` stops handing out a constructor already proved dead
+and every surface that copes with an absent engine copes with a dead one for
+free. Wired through both voice surfaces, not just the assistant page. The
+browser provider stays and `DEFAULT_VOICE_PROVIDER` is unchanged: it works in a
+real browser tab, which is a supported way to run this app, and switching the
+default would push every user toward a key they have to pay for.
+
+**A coverage loss caught while verifying, and the shape to watch for.**
+Rewriting `lib/speech.test.ts` around the new classification dropped v147's
+`pickVoice` / `voicesForLanguage` / `isNoveltyVoice` coverage — and the suite
+stayed green at exactly the same total, because 16 new tests replaced 16 old
+ones. Those tests are what hold the macOS joke-voice bug shut (`Albert` is
+first alphabetically out of 28 en-US voices and was being picked), so losing
+them silently reopens a bug a real user reported. Restored, with a comment
+saying why they are there. **A test total that does not move is not evidence
+that coverage did not.**
+
+- 134 test suites passing (1,092 tests: +16 new, +16 restored), `tsc --noEmit`
+  clean, `npm run build` clean, eslint 0 errors, `python3 scripts/verify.py`
+  green.
+
+## v166 (2026-09-10): the OS shell — cockpit, brain, tasks, comms, and briefing dashboard
+
+### What's new for you (feature, v0.58.0)
+
+Alacrán is now an operating system for running your company, organized around an icon rail, a morning briefing dashboard, and durable company intelligence.
+
+- In a company workspace, the interface becomes a cockpit OS shell with a persistent icon rail and grouped navigation panel keeping every department, agent, and setting one click away.
+- Your company dashboard opens with a morning briefing synthesizing overnight agent runs, pending reviews, and recent messages into clear sentences beside live department cards.
+- Explore your company knowledge in the Brain as an interactive force-directed graph, track knowledge flow across a five-stage truth lifecycle, and review facts before they are recorded.
+- Review and approve draft emails, financial commitments, and outward messages on a dedicated Tasks and Gate board before anything leaves your machine.
+- Read incoming messages across connected chat networks, email sweeps, and Notion updates in a safe, read-only Comms inbox.
+- The assistant lives in an expandable right-hand dock that smoothly shifts the main workspace rather than obscuring your active view.
+- Press ⌘K or Ctrl+K anywhere to open the command palette and quickly jump to companies, departments, agents, or tools.
+
+**A cockpit OS shell scoped to one company at a time.** Replaced the six-destination
+dashboard with a scoped cockpit shell under `/c/[companyId]/*`. Legacy paths (`/activity`,
+`/skills`, `/assistant`, `/connect`, `/network`, `/settings`) redirect smoothly via
+`lib/os/active-company.ts` with cookie-backed company resolution during SSR. The new shell
+is composed of a fixed icon rail (`components/os/rail.tsx`), a collapsible grouped subnav
+(`components/os/subnav.tsx`), an assistant dock (`components/os/assistant-dock.tsx`),
+and a ⌘K command palette (`components/os/command-palette.tsx`).
+
+**The Brain (`/c/[companyId]/brain`).** Added interactive company knowledge intelligence
+spanning three tabs with a persistent review rail:
+- Force-directed knowledge graph rendered via SVG and `d3-force`, mapping entities
+  and relationships directly from canonical `definitions/ontology/company.yaml`.
+- Five-stage lifecycle board (Source → Signal → Claim → Fact → Memory) reading existing
+  `notes/company/`, digests, pending reviews, and ontology definitions without introducing
+  a separate database.
+- Gated review rail allowing human review, inline diff inspection, and promotion of
+  uncommitted claims into `definitions/ontology/company.yaml`.
+
+**Operations & Feeds.**
+- Morning briefing dashboard (`app/c/[companyId]/dashboard/page.tsx`) composing human-readable
+  synthesis of recent activity, pending gate items, and comms into natural prose lines, paired
+  with container-query responsive department cards.
+- First-class Tasks board (`app/c/[companyId]/tasks/page.tsx`) surfacing the human-in-the-loop
+  gate queue with inline diffs for approvals.
+- Safe read-only Comms feed (`app/c/[companyId]/comms/page.tsx`) consolidating external chat
+  sweeps, email checks, and Notion checks.
+- Dedicated Agents roster (`app/c/[companyId]/agents/page.tsx`) displaying available skills
+  and execution state.
+
+**Design system and data discipline.**
+- JetBrains Mono wired as the data tier (`--typeface-mono`) across KPIs, tables, and status pills.
+- Spacing density tightened across data views with flat 4px radii on data cards and tables.
+- All file reads wrapped in mtime-keyed in-process memoization (`lib/os/file-memo.ts`).
+- Canonical 3-domain ontology validated on exit with Zod (`lib/os/ontology/schema.ts`).
+- Release 1 writes no unsolicited files into any company directory, maintaining the pure
+  file-backed architecture and "no fake green" honesty.
+
+- 145 test suites passing (1,168 tests, +76), `npm run lint` clean, `npm run build` clean.
+
+## v167 (2026-09-10): departments & records — funnel, finances, schemas, and metrics
+
+### What's new for you (feature, v0.59.0)
+
+Alacrán now includes dedicated Funnel and Finances department surfaces with tabbed views and file-backed records.
+
+- Track deals, pipeline value, and stage progression in the Funnel department with live win rates and average deal sizes.
+- Monitor cash balance, income, expenses, and category activity in the Finances department.
+- Each department provides an Overview hero visualization, an interactive Records table with search and filtering, and a Settings tab showing sources and owning agents.
+- All department data is backed by plain text files in your company repository with strict validation and instant caching.
+
+**Department surfaces and file-backed records layer (Release 2).** Built the
+department template and operational data architecture specified in
+`docs/superpowers/specs/2026-09-09-alacran-os-shell-design.md`:
+
+**Data layer (`records/`).** Added the top-level `records/` tree to `AGENTS.md` §3
+for machine-maintained operational data, distinct from durable business facts in
+`definitions/`. Defined strict Zod schemas on exit (`lib/os/schemas/funnel.ts`,
+`lib/os/schemas/finances.ts`) for `Lead`, `FunnelStage`, `Transaction`, and
+`FinancialCategory`. Bad data fails loud with field paths rather than silently
+rendering empty graphs.
+
+**Records reader (`lib/os/records/read.ts`).** Pure reading functions
+(`readLeads`, `readFunnelStages`, `readTransactions`, `readFinancialCategories`)
+wrapped in mtime-keyed in-process memoization (`lib/os/file-memo.ts`). No page
+touches the filesystem directly. Unconfigured repositories render honest empty
+states without placeholder data.
+
+**Department Template & Routes.**
+- Built shared tabbed department components under `components/os/department/*`:
+  `DepartmentShell`, `ConnectorStatusStrip`, `FunnelHero`, `FinancesHero`,
+  `RecordsTable`, and `DepartmentSettings`.
+- Delivered routes `/c/[companyId]/funnel` and `/c/[companyId]/finances` with
+  URL-addressable tabs (`Overview`, `Records`, `Settings`).
+- Computed pure business metrics in `lib/os/departments/metrics.ts` (pipeline
+  value, active deals, win rate, deal size, net balance, and category breakdowns).
+
+**Navigation & Dashboard Wiring.**
+- Added `funnel` and `finances` to `NAV_GROUPS` under `departments` in `lib/os/nav.ts`,
+  registering `Filter` and `DollarSign` in `components/os/icons.ts`.
+- Retargeted dashboard department cards to read real record counts and link to
+  their department pages, preserving `Social` and `Content` for Release 3.
+
+- 149 test suites passing (1,187 tests, +19), `npm run lint` clean, `npm run build` clean.
+
+## v168 (2026-09-10): social and content departments — audience tracking, publication pipeline, and complete dashboard wiring
+
+### What's new for you (feature, v0.60.0)
+
+Alacrán now features dedicated Social and Content department surfaces with audience analytics, publication pipelines, and full dashboard integration.
+
+- Track audience reach, followers, and profiles across all connected social channels in the Social department.
+- Manage upcoming articles, newsletters, and announcements across publishing stages in the Content department.
+- Search and filter records with fast instant search and inspect provenance details for every item.
+- All five core departments are now fully operational on your dashboard with zero unconfigured placeholders.
+
+**Social and Content departments (Release 3).** Completed the third and final
+slice of the Alacrán OS Shell department rebuild as specified in
+`docs/superpowers/specs/2026-09-09-alacran-os-shell-design.md`:
+
+**Data schemas (`lib/os/schemas/social.ts`, `lib/os/schemas/content.ts`).**
+Defined strict Zod schemas with TypeScript types for `SocialAccount`,
+`SocialSnapshot`, and `ContentItem`. Covers platform types, status pipelines,
+channels, authors, and provenance metadata.
+
+**Records reader & metrics (`lib/os/records/read.ts`, `lib/os/departments/metrics.ts`).**
+Added `readSocialAccounts`, `readSocialSnapshots`, and `readContentItems` with
+mtime memoization and safe fallback defaults. Implemented pure business metric
+calculators `calculateSocialMetrics` and `calculateContentMetrics`.
+
+**Department views & routes.**
+- Created `SocialHero` and `ContentHero` components displaying high-level stats,
+  audience footprint, pipeline progression bars, and distribution channels.
+- Delivered URL-addressable routes `/c/[companyId]/social` and
+  `/c/[companyId]/content` using `DepartmentShell` and generic `RecordsTable`.
+
+**Navigation & Dashboard Completion.**
+- Registered `social` (`Share2`) and `content` (`FileText`) in `NAV_GROUPS`
+  (`lib/os/nav.ts`) and icon map (`components/os/icons.ts`).
+- Updated dashboard tile aggregation (`app/c/[companyId]/dashboard/page.tsx`) to
+  read social and content record counts, clearing `NOT_BUILT_DEPARTMENTS`.
+
+- 151 test suites passing (1,200 tests, +13), `npm run lint` clean, `npm run build` clean.
+
+## v169 (2026-09-10): unified connectors board — department integrations, guided setup, and live status detection
+
+### What's new for you (feature, v0.60.0)
+
+The Connectors page is now a unified Integrations Board connecting all AI assistants, accounts, and department services in one place.
+
+- View real-time status across CRM & Sales (Attio, HubSpot), Finances (Stripe, Mercury, QuickBooks), Social & Audience (X, LinkedIn, YouTube, Bluesky), and Content (Ghost, Substack).
+- Follow step-by-step setup guides with one-click copyable CLI commands, environment variables, and company secret file paths.
+- Navigate directly to the departments powered by each connector and view per-company credential status.
+- Re-check connection status on demand to instantly verify CLI logins or newly added API tokens.
+
+**Department Integrations on `/system/connectors`.** Expanded the `/system/connectors` page
+into the full Integrations Board called for in the Alacrán OS Shell design spec:
+- Declarative catalog (`DEPARTMENT_CONNECTOR_CATALOG`) and multi-company status resolution (`resolveAllDepartmentConnectors`) in `lib/os/departments/connectors.ts`.
+- Integrated department connectors into `getConnectStatusImpl` (`lib/connect/connect-status-impl.ts`).
+- Interactive grouped cards (`ConnectGroup`, `ConnectRow`, `DepartmentConnectorCard`) in `components/connect-panel.tsx` with department pills, CLI commands, and company status indicators.
+- 154 test suites passing (1,225 tests, +4), `npm run lint` clean, `npm run build` clean.
+
+## v170 (2026-09-14): dynamic company departments reflection, responsive AI assistant drawer, and zero-latency sidebar navigation
+
+### What's new for you (feature, v0.62.0)
+
+Moving between companies is now instant, departments come from your own company details and records instead of examples, and the assistant has a redesigned look.
+
+- Switching between tabs and departments in the sidebar is now instantaneous with zero lag, optimistic active selection, and fast-loading visual skeletons.
+- Departments you add to your company details now show up everywhere they belong, with no placeholder entries.
+- The AI assistant slide-out dock has been redesigned into a responsive full-height conversational drawer with pinned bottom composer, inline close button, and an executive 60fps Neural Audio Waveform visualizer.
+- The sales page shows your company details in a tidy window you can copy from, instead of a long block of text.
+- Reorganized workspace navigation placing "Companies" at the top of the sidebar and "Company Info & Settings" directly above Terminal for intuitive discoverability.
+
+**Dynamic Department Reflection (`lib/os/departments/registry.ts`).** Built dynamic department projection linking `definitions/ontology/company.yaml` and `records/` across Knowledge Core (`/brain`) and Org & Gates (`/org`). Derived real human stakeholders from ontology roles, mapped workflow tasks from value flows, and eliminated hardcoded mock personas.
+
+**AI Assistant Drawer Overhaul (`components/assistant/*`, `components/os/assistant-dock.tsx`).** Replaced heavy 3D particle orb with an executive 60fps Neural Audio Waveform & Status HUD. Converted cramped 2-column layout into a single, unified full-height drawer (`clamp(560px, 48vw, 1080px)`) with inline close control and pinned bottom input bar.
+
+**Instant Navigation & Performance (`components/os/sidebar.tsx`, `app/c/[companyId]/loading.tsx`).**
+- Added `loading.tsx` instant loading states with responsive FounderOS pulsing skeletons across all company routes, eliminating App Router navigation stalls.
+- Implemented synchronous optimistic active selection (`pendingSlug`) in the sidebar with snappy `duration-75` transitions and micro-pulse progress indicators.
+- Added ahead-of-time hover and focus route prefetching (`router.prefetch(href)`).
+- Added in-flight deduplication and 15s cache for connector status checks, and localized decision gathering in Knowledge Core.
+
+- 240 test suites passing (1,643 tests), `npm run lint` clean, `npm run build` clean.
+
+## v171 (2026-09-14): assistant drawer stacking fix and token-efficient multi-company operational intelligence
+
+### What's new for you (feature, v0.63.0)
+
+The AI assistant now opens smoothly over the top navigation bar without getting covered, and understands live business metrics across all your companies while saving prompt tokens.
+
+- The assistant drawer now paints cleanly above the top navigation bar and window drag handles, keeping model selectors, scopes, and close buttons fully accessible.
+- Opening the assistant now smoothly glides the main content workspace aside so viewports never overlap or crowd.
+- The assistant now has instant awareness of live department records: cash balances and ledger activity, active sales pipeline value, audience growth across connected social platforms, and editorial content pipelines.
+- Repetitive command and tool instructions are automatically stripped before prompting the AI, saving users 70–80% of prompt tokens on every interaction without losing any business memory.
+- Cross-company decision searches now index milestone retrospectives alongside architecture choices.
+
+**Assistant Stacking & Layout Fix (`app/globals.css`, `components/os/assistant-dock.tsx`).** Raised the assistant drawer to `z-index: 50` and controls to `z-index: 51` so header controls sit above the sticky Topbar (`z-30`) and Mac `#titlebar-drag` strip (`z-40`). Repaired `.app-shell-main` `margin-right` binding to read `var(--dock-w, 0px)` directly, restoring smooth canvas shifting when the dock opens. Added a custom window listener for `alacran:conductor-toggle` to reliably toggle the dock from the Topbar Bot icon.
+
+**Live Operations & Token-Efficient Knowledge Ingestion (`lib/assistant/gather-all-companies.ts`, `lib/ask-company-impl.ts`).**
+- Added `readOperations` to ingest live records across finances, funnel leads, social accounts/snapshots, and content items into high-density single-line operational digests (~30-40 tokens per company).
+- Added `distillCompanySummary` to eliminate verbose capability catalog tables from `docs/company-summary.md`, cutting prompt token consumption by ~1,000+ tokens per company on each turn.
+- Indexed milestone retrospectives (`docs/retros/`) in `gatherCrossCompanyDecisions` and wired decisions into `app/api/assistant/stream/route.ts`.
+
+## v222 (2026-10-02): Kimi's background jobs start again
+
+### What's new for you (fix, v0.85.0)
+Kimi can run Alacrán's background jobs and answer in Ask again.
+- Before this, every one of them stopped at once with an error from Kimi, before doing anything.
+
+**What was wrong.** `AI_EXECUTORS.kimi.buildArgs` sent `kimi -p <prompt> --output-format text --yolo`. Kimi 0.39.0 refuses that combination at startup ("Cannot combine --prompt with --yolo."), so every headless Kimi run failed: the one-click jobs, scheduled jobs and Ask.
+
+**Fix, from Kimi's own documentation.** Read with Agent Reach's web reader (Jina) from the Kimi Code CLI reference, `kimi-command`, "Flag Conflict Rules": "`--prompt` cannot be used with `--yolo`, `--auto`, or `--plan` — non-interactive mode uses `auto` permission by default." So `-p` is already unattended and no permission flag is passed. The approval level is unchanged in kind (`auto`, Never Ask, approves every tool call), which is why `enforcesToolScope` stays false and untrusted-input commands still refuse on Kimi.
+
+**Verified.** The real 0.39.0 binary, given the new arguments, passes its argument check and reaches Kimi's service (here it answers `403 Your current subscription does not have access to Kimi Code`, an account limit); given the old ones, it stops with the flag conflict. A test now fails if Kimi's headless arguments ever pair `-p` with `--yolo`, `-y`, `--auto`, `--plan`, `--yes` or `--auto-approve`.
+
+**Not verified.** A completed Kimi run producing an answer or a diff: the account on this machine has no Kimi Code access.
+
+**Considered and not done: an opening message for Kimi in the terminal.** Kimi has no way to start an interactive session with a first message. `--agent-file` looked like a route, but the same docs (customization/agents) say an agent file's body *is* the system prompt and replaces the default one, so using it to carry shared knowledge or the Outlook note would strip Kimi's own instructions. Kimi in the terminal still opens blank and says so.
+
+## v221 (2026-10-02): the Outlook launcher is written at start-up, never by a status read
+
+No "What's new" block: nothing changes for a user beyond the command staying correct after an app update.
+
+**What was wrong.** v220 put `ensureOutlookLauncher()` inside the Outlook status read (`connect-status-impl.ts`) and inside the terminal's connected-tools note. Both are readers that many tests reach through their real defaults (`get-company-ownership-impl`, `connect-status-impl`, `build-network-map`, `intro-command`), so running the suite wrote `~/.local/bin/alacran-outlook` into the developer's real home, pointing at the worktree the tests ran in. When that worktree was removed, every AI on the machine had a dead `alacran-outlook`: Codex reported `MODULE_NOT_FOUND`. This is `AGENTS.md`'s rule that a defaulted writer added to a function whose tests already pass is silently a test that writes to real state, broken a second time.
+
+**Fix.** Status reads are read-only again. The launcher is written once per app launch (`instrumentation.ts`), which is also what repoints it after an update or move, and when a sign-in starts (`startOutlookSignIn`). The three test files that reach the Outlook status also mock it, so they never run the real command either. Verified by running the whole suite with `HOME` set to an empty folder: 377 files, 2,749 tests passed, and nothing was written under that folder's `.local/bin`.
+
+**Proved on real AIs (against a planted, fake sign-in, so no real mail call).** Given the exact note a terminal assistant receives, Antigravity and Codex each found `alacran-outlook` on their own PATH, ran it, tried to send a test email, got back the draft, and reported that nothing was sent. Codex was run with the 0.159.3 build the ChatGPT app installs; the npm-installed 0.158.0 on PATH refuses the configured model (`gpt-6.1-sol is not supported when using Codex with a ChatGPT account`), so Alacrán's own Codex jobs fail on this machine until that copy is updated. Kimi could not be tested: the account answers `403 Your current subscription does not have access to Kimi Code`. Kimi 0.39.0 also refuses `--prompt` together with `--yolo`, which is exactly what `AI_EXECUTORS.kimi.buildArgs` sends, so every headless Kimi job fails on that version; not fixed here, because a fix needs a Kimi account to test against.
+
+## v220 (2026-10-02): Outlook mail and calendar for every AI
+
+### What's new for you (feature, v0.85.0)
+Outlook is now a connected tool, and every AI you use can reach it once you sign in.
+- On Connected tools, press Connect on Outlook, then Sign in with Microsoft. A short code appears. Open Microsoft's own page, type the code and approve. Nothing is typed into Alacrán and there is nothing to set up first.
+- Once connected, Claude Code, Kiro, Kimi, Codex and Antigravity can all read and search your mail, see your calendar, send mail, reply and add events, with the same reach Google has.
+- Anything that goes out to other people (sending, replying, inviting guests) is shown to you as a draft first and only goes once you say so.
+- Works with personal Outlook.com accounts and with work or school accounts. Some organisations need an administrator to approve the sign-in.
+- You can sign out from the same place, and the AIs lose access straight away.
+
+**Why.** The maintainer asked for an Outlook connector available to all AI agents, with read and send, the same privilege as `gog` for Google. Only Claude Code and Kiro can use MCP connectors here (`mcpConfigPath` is null for Kimi, Codex and Antigravity), so reaching all five means a command line tool every AI can run, as `gog` is. There is no Microsoft equivalent that needs no setup: the maintained CLI (PnP `m365`) requires each user to register an Entra app, which is the wall Google had, and the community `ms365-cli` is one person's project with an unchecked installer holding a token to a mailbox. So the app ships its own small command.
+
+**What shipped.**
+- **`alacran-outlook`** (`templates/tools/outlook-cli.mjs`): one dependency-free Node file using Microsoft Graph. Commands: `auth login|status|logout`, `mail list|search|get|send|reply`, `calendar list|create`. Results are JSON, `--plain` gives tab-separated rows. Sign-in is the OAuth device-code flow with Microsoft's own public client for command-line tools (`ALACRAN_OUTLOOK_CLIENT_ID` replaces it with an app of your own). Scopes: `Mail.ReadWrite Mail.Send Calendars.ReadWrite offline_access User.Read`, the Outlook counterpart of what `gog` holds for Gmail and Calendar. The token is stored at `~/.config/alacran/outlook/token.json` mode 0600 and is never printed.
+- **Safety the command enforces itself,** because the callers are often agents reading mail strangers wrote. `mail send`, `mail reply` and `calendar create` with guests return a DRAFT and send nothing until `--confirm` is added; the help text and the terminal note tell agents never to add it on their own. Every result carrying mail or calendar text is labelled as written by other people. A search term is quoted so a stray `"` cannot break out of it. This is the Publication row of `AGENTS.md` §6 made into code, in the one place every AI passes through.
+- **Reaching every AI** (`lib/outlook/outlook.ts`): a launcher at `~/.local/bin/alacran-outlook` (already on the PATH the packaged apps give every AI) that runs the shipped script with the app's own node. It is written when the Connected tools page loads or a sign-in starts, rewritten if the app moves, and never replaces a file somebody else put under that name. An assistant opened in the terminal is also told about it in its opening message (`lib/outlook/connected-tools.ts`, a new trailing seam on `buildAssistantLaunch`), only when Outlook is connected, so a company without it sends exactly what it sent before.
+- **The page** (`components/os/connectors/outlook-setup.tsx`, `lib/outlook/actions.ts`): shows the code and a link to Microsoft's page, and asks every few seconds whether it was approved (honouring Microsoft's `slow_down`), then reports the account. Server actions return `{ ok, message }` rather than throwing. The device code is validated before it reaches the command's arguments. Outlook is in the catalog, the Connect status (`ConnectStatus.outlook`) and the connector statuses.
+
+**Decisions worth knowing.**
+- **Read and send, like gog,** as asked. Sending is gated by a draft step rather than withheld.
+- **The default client is Microsoft's own tool client, not an Alacrán registration.** It needs no app registration from anyone, and works for personal accounts. Its cost: some organisations block it or require admin approval for the Mail.Send and Calendars.ReadWrite scopes, and the command says so when Graph answers 403. Registering an Alacrán app would give a branded consent screen but would put a real Microsoft registration under the maintainer's name; not done.
+- **Windows is not covered.** The launcher is a POSIX shell script in `~/.local/bin`, like the rest of the app's tooling.
+
+**Tests.** `outlook-cli.test.ts` (25, against a fake network: sign-in, token renewal and revocation, 0600 token file, no token in any output, search quoting, draft-until-confirm for send, reply and guest invitations, UTC calendar, plain output), `outlook.test.ts` (11: launcher written, unchanged, moved, never overwriting another's file; status; sign-in; code validation), `connected-tools.test.ts` (3), and two cases on the terminal opening message.
+
+**Verified live.** Against Microsoft's real endpoint: the command requested a device code and got a real code and `login.microsoft.com/device`. On an isolated dev server (fresh worktree, scratch HOME and data dir, stub `claude`): the Outlook card appears with a CLI badge; Connect, Sign in with Microsoft showed a real code and link and wrote the launcher into the scratch HOME, which ran and reported not connected; with a stored sign-in planted, an assistant opened in the terminal was told Outlook is connected as that account, how to run it, and to wait for approval before sending, and the card moved to the connected group.
+
+**Not verified.** A full sign-in with a real Microsoft account, and therefore any real mail, calendar or send call (the Graph calls are tested against a fake only); how a locked-down work tenant responds; Kimi, Codex and Antigravity actually running the command (only Claude Code's opening message was inspected, and Kimi takes no opening message, so it learns of the command only if told to run `alacran-outlook --help`); the packaged mac and Linux apps, where the launcher uses the bundled node; token renewal after days.
+
+## v219 (2026-10-02): shared knowledge stays current in the terminal
+
+### What's new for you (improvement, v0.85.0)
+An assistant open in the terminal now keeps up with what other companies share with it, instead of only knowing what was shared when it started.
+- If a company you share with writes a new decision or updates its summary, the terminal assistant can see the change without being reopened.
+- A string you add or cut shows up in an already-open assistant too. Cutting stops it being offered straight away.
+- The assistant is told where to look again, and to do that before answering anything that depends on another company.
+
+**Why.** After v218 a terminal assistant received shared knowledge once, in its opening message, and a session can run for hours. The maintainer asked for the terminal to stay current mid-session. The terminal assistant runs in its own company's folder with no way to read another company's files (cross-company context is prompt content, never `--add-dir`: Kiro has no such flag), and an interactive CLI cannot be handed new text mid-conversation without typing into it for the person, which this app never does. The one thing every AI can do again later is read a file in its own folder, so that is the mechanism.
+
+**What shipped.**
+- **`state/shared-knowledge.md`** in the receiving company's folder (`lib/sharing/shared-file.ts`): the same fenced block the opening message carries, behind a marker line holding a hash of the content. `state/` is where this repo keeps generated output (`AGENTS.md` §3) and the company template already ignores `state/*`; the file is also added to the clone's `.git/info/exclude`, which is local and commits nothing, for a company that predates that line. It is written only when the content changed, deleted when nothing is shared, and never replaces or removes a file the person wrote under that name: only a file carrying the marker is ever touched.
+- **When it is rewritten.** Immediately after a string is made, narrowed or cut (`lib/sharing/actions-impl.ts`), when a terminal assistant opens, and every minute on the app's own ticker (`instrumentation.ts` calling `syncAllSharedKnowledge`). The ticker reads a few small files and writes only on a change: no AI run and no subprocess unless a file is actually written.
+- **The opening message** (`sharedKnowledgeForTerminal`) gains one paragraph naming the file and telling the assistant to re-read it before answering anything that depends on another company. It is only added when the file is really there, so an assistant is never pointed at a file that is not ours. Ask is unchanged: it already reads fresh on every question.
+- **Refactor.** `buildSharedKnowledgeBlock` is split into `buildSharedSections` (what is shared) and `wrapSharedBlock` (the framing), so two reads can be compared for a change; behaviour of the block is unchanged. `listLiveLinksImpl` moved to `lib/sharing/live.ts` and is still re-exported from `actions-impl.ts`.
+
+**Decisions worth knowing.**
+- **v218's "nothing is copied" now has a footnote.** The shared text is written into the receiving company's `state/` as a derived, git-ignored file. It is never part of what anyone commits, but it is on that disk while a string exists. Cutting a string deletes it.
+- **A cut cannot reach into an assistant that has already read the text.** It stops being offered at once and the file is gone, but what a running assistant loaded earlier is in its own memory until that session ends.
+- **Kimi still gets nothing in the terminal.** It opens blank, so it is never told about the file. This was the other option offered ("cover every AI") and was not chosen; it is still open.
+- **Up to a minute of lag** between the sharing company writing something and the file changing, when the change was not made through a string. That is the ticker's interval.
+
+**Tests.** `shared-file.test.ts` (7: written once and marked, excluded from git once, unchanged when nothing changed, rewritten when the source changes, removed on cut, a person's own file never touched, never throws), `shared-sync.test.ts` (4: written at the moment of a string, rewritten on a narrower scope, refreshed by the timer, deleted on cut), and `shared-for-company.test.ts` (4: the pointer appears only when the file is there).
+
+**Verified live,** on an isolated dev server (fresh worktree, scratch data dir, stub `claude`) with two scratch companies and a string between them: the launch tick wrote Beta Co's file, git ignored it, and the sharing company got no file; opening a terminal assistant for Beta Co started it with the block and the paragraph naming the file; with that session still open, changing the sharing company's summary updated the file within a minute; removing the string deleted the file.
+
+**Not verified.** A real assistant actually re-reading the file when asked a question that depends on another company (the stub never answers); Kimi; the packaged mac and Linux apps; a company whose `.git` is a worktree file or that is not a git repo (the exclude is skipped and the template's `state/*` line is relied on).
+
+## v218 (2026-10-02): companies can share knowledge, drawn as strings
+
+### What's new for you (feature, v0.85.0)
+Companies can now share what they know with each other, and you do it by drawing a string between them.
+- On the Companies page, drag from the Share handle on one company onto another. Or click the handle and pick a company from the list.
+- Before anything is shared you see exactly what the other company's assistants will be able to read, counted from the real files, and you confirm.
+- The string is one way: the arrow points at the company that receives. Draw a second string the other way for both to share.
+- By default a string shares the company summary, recent decisions and definitions. You can narrow that, or cut the string, by clicking it. Cutting stops the sharing straight away.
+- Notes, anything from chats, records such as money and leads, and passwords are never shared. There is no switch for them.
+- When a company has knowledge shared with it, its assistants can use it when you Ask or open an assistant in the terminal, and say which company it came from.
+
+**Why.** The maintainer wanted companies to share knowledge visually: point at company A, drag to make a string, connect it to another company. Decided with the maintainer: one-way strings; what flows is the summary, decisions and definitions (never notes, chat-derived text, records or credentials); the receiving company reads A's files live and nothing is copied; dropping a string asks first. Drag from a handle on the tile rather than from the tile itself, because dragging a tile already reorders the grid.
+
+**What shipped.**
+- **Storage (`lib/sharing/links.ts`, `model.ts`).** `company-links.json` in the data directory, one entry per string `{ id, from, to, scope, createdAt }`. Machine-local on purpose: a string names two companies by this install's ids, and writing that into a company's repo would put a dangling reference in the portable core. Both ends are checked against the registry on create; self, duplicates, unknown or `external` companies, and a scope with nothing on are refused; a damaged file reads as empty and entries that cannot be trusted are dropped. `listLiveLinksImpl` hides strings whose company has since been removed, so they neither draw nor share.
+- **What may be read (`lib/sharing/shared-context.ts`).** Only three fixed places, behind three switches: `docs/company-summary.md`, the newest three `docs/decisions/*.md` (README excluded) and `definitions/ontology/company.yaml`. There is no code path to notes, chat notes, records or `secrets/`; a test plants a chat note, a ledger and a secret next to real content and asserts none appears. Per string 4,500 characters and per company 10,000 in total, and nothing is added when no string points at a company, so a company without strings sends exactly what it sent before (pinned by tests).
+- **The fence.** The block is wrapped in the same nonced untrusted fence the triage commands use, although the files are the person's own: a decision can quote an email, and the receiving assistant can edit. It tells the reader to say which company a fact came from and that it cannot change it.
+- **Consumers.** `askCompanyImpl` appends the block after the company's own memory (new trailing seam `sharedKnowledgeFn`), and `buildAssistantLaunch` appends it to each terminal assistant's opening message (new trailing seam too). Both go through `sharedKnowledgeFor`, which never throws: knowledge from another company is a bonus on an answer that must still arrive. The cross-company Assistant is unchanged, since it already reads every company.
+- **Actions (`lib/sharing/actions.ts`, `actions-impl.ts`).** `previewConnection` (reads, writes nothing), `connectCompanies`, `updateShareScope`, `cutShareLink`, each returning `{ ok, message }` rather than a thrown error. The confirmation dialog is the approval for the gated step ("access changes hands"); the action only carries it out.
+- **The canvas (`components/os/company-strings.tsx`, `share-confirm-dialog.tsx`, `lib/sharing/string-geometry.ts`).** An SVG layer over the tile grid, measured from the real tiles (re-measured on resize and when tiles move) and with pointer events only on a string, so tiles stay clickable. Strings between stacked tiles bulge out past the right edges, because the gap between tiles is too short to read as a string and a string to the third tile would otherwise cross the second. A click on the handle with no drag opens a list of companies, which is also the keyboard route; a hidden list of buttons mirrors the drawn strings for screen readers. `ReorderableGrid` stops the tile starting its own drag while a string is being drawn, and releasing a drag over its own tile does not open the company.
+
+**Decisions worth knowing.**
+- Shown in simple mode. `AGENTS.md` says new features hide there by default; this one is visual and non-technical, and it only appears once two companies exist. One flag to hide it if wanted.
+- The terminal assistant only receives it when its AI can take an opening message; one that cannot (the "opening message" gap `ExecutorGapNote` already describes, Kimi today) opens blank as before and does not see shared knowledge in the terminal. Ask is unaffected.
+- A string's scope can be narrowed after the fact but never to nothing; that is what cutting is for.
+
+**Tests.** `lib/sharing`: links (7), shared context (8), actions (3), geometry (8). Ask and the terminal intro each gained a test that the block arrives after the company's own memory and that nothing changes without a string.
+
+**Verified live,** on an isolated dev server (fresh worktree, scratch data dir, `ALACRAN_DISABLE_BUILTINS=1`, stub `claude`) with two scratch companies: dragging from Scratch Co's handle onto Beta Co showed the confirmation with real counts (summary 58 characters, one decision, definitions 33), and confirming drew the arrow and saved the string; narrowing a switch in the popover was saved to the file; cutting emptied the file and Beta's block; the handle click opened the company list; releasing a drag over its own tile opened nothing. Run against the real files, Beta's block carried Scratch Co's summary, decision and definitions and nothing from its chat note, and Scratch Co received nothing.
+
+**Not verified.** An actual assistant reading the block and naming its source (the stub never answers); the packaged mac and Linux apps; phone width and touch dragging; a company list long enough that strings cross several tiles; the Companies page when the grid is more than one column wide.
+
+## v217 (2026-10-02): workspaces in the terminal
+
+### What's new for you (feature, v0.85.0)
+The Terminal now has workspaces: separate sets of assistants and command lines, each with its own name.
+- Press "New workspace", give it a name, and pick which AI it uses. It starts on your company's AI, and you can choose another one from the list.
+- Switch between workspaces from the list beside the Grid and Focus buttons. Everything already open stays in "Main".
+- "Edit workspace" changes a workspace's name or its AI. A new AI applies to assistants you open from then on; ones already running keep theirs. A workspace you no longer need can be deleted once it has no terminals open.
+- Each workspace works the way the terminal always has: open assistants and command lines in Grid or Focus, up to eight in each workspace.
+- Your workspaces are remembered for each company.
+
+**Why.** The maintainer asked for "add new workspace" to come back to the terminal, working as follows: a new workspace defaults to the company's chosen AI or lets the person change it on the form; it can be edited (name and AI); its button sits before Grid; it behaves like the existing terminal (several assistants, Grid or Focus). There was no earlier workspace code in this repo's history, so this is new rather than a revert. Decided with the maintainer: a switcher (one workspace on screen at a time), persisted per company, existing terminals in a default workspace, eight terminals per workspace, and a workspace's name and AI both editable.
+
+**What shipped.**
+- **Storage (`lib/terminal/workspaces.ts`, `workspace-model.ts`).** `terminal-workspaces.json` in the data directory, one entry list per company, read-modify-write with no lock (one person, one machine). `Main` always exists and comes first; only a rename of it is stored. A workspace stores an optional `executorId`; absent means "follow the company's AI", live. A stored AI that is no longer registered is dropped on read, so the workspace falls back to the company's instead of failing to launch. Names are 1 to 40 characters; at most 12 workspaces per company.
+- **Which tab is in which workspace** rides on the live session (`TerminalSession.workspaceId`, returned by `?list=1`), not in the file, so it lives and dies with the process like the tab itself. A session with no workspace (a run, a take-over, anything from before) is filed under Main.
+- **Route (`app/api/terminal/[agentId]/route.ts`).** `open` takes `workspace`; an unknown one is refused (409) rather than quietly filed under Main. A workspace that names an AI is launched through `buildAssistantLaunch` with a resolver for that AI, so `intro-command.ts` did not change. New POST types `workspace-create`, `workspace-update` (name and AI), `workspace-delete`; the AI is validated against `AI_EXECUTORS` server-side, never taken from the page. Delete is refused while the workspace holds live terminals (it would orphan processes) and always for Main. The probe also returns the company's `executorId` for the form's first option.
+- **Page (`components/terminal-workspace.tsx`, `terminal-workspace-dialog.tsx`).** A native `<select>` switcher, "Edit workspace" and "New workspace" buttons, all before the Grid/Focus pair. Every tab stays mounted and only the active workspace's are shown, as before. Tab names are numbered per workspace. ⌘1 to ⌘8 reach the visible workspace. Creating a workspace opens one assistant in it (a command line where assistants are not offered), the same thing Main does when empty. Closing a tab moves focus to a neighbour in the same workspace. The "workbench goes back" rule still fires only when nothing is open anywhere.
+
+**Decisions worth knowing.**
+- Grid/Focus stays one setting for the whole terminal, not one per workspace.
+- **The cap of eight is per workspace** (`MAX_SESSIONS_PER_WORKSPACE`, replacing `MAX_SESSIONS_PER_COMPANY`), enforced in `openSession` and in the route, so a full workspace refuses (429, with a sentence that suggests a new workspace) while another still opens. A company is therefore bounded by workspaces times eight (12 x 8 = 96 processes), not eight. Unattended runs and take-overs live in Main, so they count against Main's eight, and their messages say "in the main workspace".
+- Run cards and taken-over runs live in Main; taking one over switches to Main.
+- The edit form changes the AI too (`updateWorkspace`). It applies to assistants opened afterwards; an assistant already running keeps the AI it started with, and the form says so. Choosing "this company's AI" returns a workspace to following the company. Main has no AI choice in the form, because its AI is the company's, set where that is set.
+
+**Tests.** `workspaces.test.ts` (8: Main always present, per-company persistence, AI and name validation, the cap, rename, delete, damaged file), route tests for opening under a workspace's own AI, following the company's AI, a command line in a workspace and an unknown workspace, and a sessions test for `workspaceId` in the listing. Added: `updateWorkspace` (rename, change or clear the AI, refuse an unknown AI, Main keeps no AI), `countSessions` per workspace, and a route test that a full workspace refuses while another opens. Full suite: 367 files, 2,663 passed and 1 skipped; eslint clean on the touched files.
+
+**Verified live,** on an isolated dev server (fresh worktree, scratch data dir, `ALACRAN_DISABLE_BUILTINS=1`, stub `claude`/`kimi`/`kiro-cli` first on PATH) against a scratch company: a workspace pinned to Kimi opened Kimi Code while Main opened Claude Code; two assistants side by side in Grid in one workspace, numbered 1 and 2; creating a workspace from the form with Kimi chosen switched to it and opened an assistant; rename persisted across a reload and the page came back in the same workspace; deleting an empty workspace fell back to Main; deleting while terminals were live was refused. After the edit form shipped: it opened with the current name and AI, saving "Support" with Kiro made the next assistant in that workspace open as Kiro, and via the API a workspace stopped at eight terminals (the ninth open returned 429) while Main still opened one.
+
+**Not verified.** Real assistants (the check used stubs); the packaged mac and Linux apps; narrow phone width (the button text hides below the `sm` breakpoint like its neighbours, and the switcher is not tested there); a restart of the app with terminals open, which empties the live tabs while keeping the workspaces.
+
+**Known dev-only quirk.** In `next dev` a hot reload of the terminal route resets the in-memory session list, so open terminals vanish from the list until the page opens new ones. It did so twice during the live check. It is the existing per-route module state behaviour (see the note in `app/api/terminal/[agentId]/route.ts`), not specific to workspaces.
+
+## v216 (2026-10-02): the Files tab leaves the sidebar
+
+### What's new for you (improvement, v0.85.0)
+The Files tab is no longer in the sidebar.
+- It was part of the Developer group, which only shows in advanced mode.
+- Terminal is now the first item in that group.
+
+**Why.** The maintainer asked for the Files tab to be disabled in the sidebar. Removed the Files entry from the Developer group in `lib/os/nav.ts` rather than hiding it with a flag, since nothing else reads it.
+
+**What changed.**
+- `lib/os/nav.ts`: the `files` item is gone. The Developer group has six items.
+- `components/os/shell.tsx`: the phone nav labels its first Developer tab "More". That label was keyed to the `files` slug, so it now follows `terminal`, the new first item. Without this the tab would have been labelled "Terminal" instead of "More".
+- `lib/os/nav.test.ts`, `components/os/sidebar.test.ts`: expectations follow the removal (item lists, the count of 6, the mobile tab list, and a nested-route example that used a `files` path).
+
+**Not removed.** The `/c/<id>/files` route and page still exist and still work by URL. Nothing in the nav reaches them now. `activeItem` returns null on that route, so no sidebar item is highlighted there. `components/os/brain/memory-list.tsx` still has a comment saying a thing "lives in Files".
+
+**Verified.** `lib/os` and `components/os` suites: 129 files, 763 tests passed. `tsc --noEmit` prints the same 110 error lines before and after the change, none in the touched files. Not looked at in a running app.
+
+## v215 (2026-10-01): wake the Assistant with a double clap
+
+### What's new for you (feature, v0.84.0)
+You can now start the Assistant listening by clapping twice, instead of pressing the core.
+- Turn it on under Preferences, in Voice, with "Wake with a double clap". It is off until you do, and it only works while "Use the microphone" is on.
+- It applies after you stop the microphone, or after you type a question instead of talking: the Assistant then says "Waiting for a double clap", and two claps start it listening again.
+- While it waits, the microphone stays open and your computer's microphone light stays on. Nothing is recorded or sent anywhere; the Assistant only measures how loud the room is until it hears the claps.
+- It lets go of the microphone when you switch it off, when you turn the microphone off, or when the window is hidden.
+- A single clap, someone talking, or a steady noise such as a fan will not wake it.
+
+**Why.** Raised by the maintainer after asking whether a third-party repository could replace the voice assistant. It could not: that project is a Windows-only double-clap launcher (Spotify, Chrome, an ElevenLabs welcome line) with no speech recognition or conversation, no licence, and a third-party voice service this app has already refused (v147). The clap trigger was the one idea that fit, so it was written here from scratch, with no dependency and no code from that project.
+
+**What shipped.**
+- **Detector (`lib/voice/clap-detector.ts`).** Pure, over loudness readings and a clock, so it is tested with plain numbers. A clap is a spike above `max(0.04, 6 x the room's own noise floor)` that ends within 150 ms; two of them 120 to 700 ms apart wake it once, then it ignores everything for 1.5 s. The floor follows the room quickly when quiet and barely during a spike. Ten tests, and each of four deliberate weakenings of the code (no duration limit, no minimum gap, no absolute minimum, no lockout) makes one fail.
+- **Microphone side (`components/assistant/use-clap-listener.ts`).** Holds the stream only while `active` and the page is visible, measures RMS every 20 ms, and releases the stream, audio graph and timer on cleanup, including when cleanup races the microphone opening. Echo cancellation, noise suppression and auto gain are off, because all three exist to remove exactly a clap.
+- **Wiring (`components/assistant/assistant-stage.tsx`).** The stage mirrors its manual-stop flag into state (all eight writes), and the listener is active only when clap wake and the microphone are both on, the Assistant is idle and was stopped by the person, and setup is done. A clap clears the stop and starts listening through the existing `startListening`, so nothing about capture changes.
+- **Preferences (`components/settings-panel.tsx`, `lib/voice/clap-preference.ts`).** A second switch under the microphone one, per machine in localStorage like it, disabled with "Turn on the microphone first" until that one is on. README's privacy list now names the exception.
+
+**Verified.** Full suite: 366 files, 2,646 tests passed, 1 skipped; `npm run build` exits 0; lint and `tsc` clean on every touched file. Live, on the production build with a throwaway data dir and a synthetic microphone that plays scripted audio into the app's real hook: Stop opened one clap listener with all three audio processors off and the stage's own stream was released; one clap and 600 ms of loud speech-like sound did not wake it; two claps 300 ms apart did (a fresh listening stream opened, the clap one was released, the waiting line cleared); hiding the tab, switching clap wake off, and switching the microphone off each left no stream open; the Preferences row is disabled until the microphone is on and its toggle persists.
+
+**Not verified.** A real microphone and a real hand clap: the thresholds were tuned on synthetic signals only, so a real room and real gain will probably want them nudged (`DEFAULT_CLAP_OPTIONS`). Whether macOS keeps delivering audio to a window that is covered but not hidden. The packaged mac and Linux apps, and whether their shells let the audio context resume with no recent click (the Assistant only goes to sleep after a click or a typed question, so it should). False wakes from sharp speech sounds in a quiet room (the cost is only that listening starts, and Stop undoes it).
+
+**Left open.** A sensitivity control, if real use shows the defaults are wrong for some microphones.
+
+## v214 (2026-10-01): ready-made skills work in every AI too
+
+### What's new for you (improvement, v0.83.0)
+The ready-made skills that come with a starter pack now work in Codex, Kimi and Antigravity, not only in Claude Code.
+- New companies get them in the shared place every AI reads, with a copy kept for Claude Code and Kiro.
+- Adding a starter pack, or updating its skills, puts them in the same place.
+- A company made earlier shows a new button, "Let any AI use these skills", on its card when its skills are up to date but still only visible to Claude Code. It moves them; nothing is lost and the change is saved so you can undo it.
+- A skill you changed by hand is never moved or overwritten, and the card tells you which one it kept.
+- Each company now holds three copies of its ready-made skills (one shared, one for Claude Code, one for Kiro), so its folder is a little larger.
+
+**Why.** Plan C of the portable-commands work. After v213 a new company's commands reached every agent, but its pack skills (marketing 10, hr-people 12, software-engineering 10, customer-support 1) still lived in `.claude/skills`, which only Claude Code reads, so a Codex user on the Marketing pack had three commands and none of the ten skills they lean on. Brief: `docs/superpowers/specs/2026-10-01-portable-pack-skills-design.md` (git-ignored). The Kimi question the parent spec left open (does it load a flat stamp file inside `.agents/skills`?) is designed away rather than answered: stamps now live in `.agents/vendored/`, outside every skills folder.
+
+**What shipped (three commits).**
+- **Library (`lib/vendored-skills.ts`, `lib/update-company-skills-impl.ts`, `lib/add-company-pack.ts`).** `packSkillsSource` returns a pack's skills and stamp from the shared layout, falling back to the legacy `.claude/skills`, so the file move could land on its own. Update and add-pack write to `.agents/skills`, run `syncAgentSkills`, and write the stamp last at `.agents/vendored/UPSTREAM-<pack>.md`. The old app-owned `.claude/skills/<name>` is removed first unless it already carries the generated marker. `isAppManagedSkillPath` claims both locations, so a vendored skill stays read-only in the shared folder and in the generated copies. `getVendoredSkillsUpdate` reads the new stamp, then the per-pack legacy one, then the shared legacy one, and reports `movesLocation: true` when the tag is current but a bundled skill is still only in `.claude/skills`. Commits go through `committablePaths`, so an ignored generated path cannot fail the whole commit.
+- **Edited copies are kept.** On a layout-only move the old folder should equal the bundled one; if its hash differs somebody edited it, so it is skipped and no stamp is written. On a tag bump the update still replaces, as it always did, because the old content cannot be told from an edit. A generated copy somebody edited after the move is never overwritten (sync reports it as a conflict).
+- **Readers.** The Skills catalog and the department mapping look in the pack's `.agents/skills` first. `UpdateSkillsButton` and its card blurb say "move" instead of "update" for a layout-only change.
+- **Data move (`templates/packs/*`).** 272 pure renames across the four packs, no content change, plus `scripts/sync-vendored-skills.sh` writing the new locations. A test now fails if a loose file sits beside the skill folders or a pack still ships `.claude/skills`.
+
+**Changed tests, on purpose.** Tests that read the real packs follow the move (`company-starter-packs`, `company-inventory`, `create-company-from-template-impl`, `add-company-pack`), and the update tests that asserted `.claude/skills` and the old stamp path now assert the shared folder, the generated copy and the new stamp. `vendored-skills.test.ts` passes unchanged, with new cases added.
+
+**Verified.** Full suite alone: 365 files, 2,636 tests passed, 1 skipped. `npm run build` exits 0 after a real `npm ci`. `scripts/sync-vendored-skills.sh` re-run for all four packs reproduces the committed tree byte for byte (`git status` empty). A real-git scaffold from the Marketing pack has 29 shared skills (16 starter and 3 pack commands, 10 pack skills), 29 generated copies each for Claude Code and Kiro, the stamp only in `.agents/vendored/`, nothing loose in the skills folder, one clean commit, and its own `verify.py` passes. A company built on the v213 layout (pack source from `310d98b`) was migrated with the real update code: shared skills, generated copies, new stamp, legacy stamp left alone, clean tree. Live, on the production build with a throwaway data dir and a stub `claude`: the unmigrated company showed "Let any AI use these skills" and the dialog, Move committed the change and the button disappeared, each skill is listed once, and `cro` shows no Edit tab and the "Kept up to date by Alacrán" notice.
+
+**Not verified.** Kimi at all, and interactive `/name` in any agent; Windows; the packaged app; a real-git scaffold for the other three packs (the suite scaffolds all four against the real packs with a fake git); the migration on hr-people, software-engineering or customer-support (marketing only); a user who edited an app-owned skill in place and then takes a newer tag (the update replaces it, as before).
+
+**Still open.** Whether v213 and v214 ship together or v213 alone. The "Let any AI run these commands" button's placement, now only relevant to companies created before v213.
+
+## v213 (2026-10-01): a new company's commands work in every AI from the start
+
+### What's new for you (improvement, v0.83.0)
+A company you create now starts with its commands in the shared place every AI can read, so you no longer have to press a button first.
+- This covers the General starter and every starter pack, and a folder you bring in as a company.
+- Claude Code and Kiro get their own copy automatically, and Codex, Kimi and Antigravity read the shared one.
+- Adding a pack to a company that has already moved its commands puts the new commands in the same place.
+- A command you moved still shows its Run button in the workspace.
+- Ready-made skills that come with a pack, such as the marketing skills, still work in Claude Code only for now.
+- Your own commands in a folder you bring in are left exactly where they were.
+
+**Why.** Plan B of the portable-commands work (v212 was Plan A). The shipped template and packs carry their commands flat in `.claude/commands`, so a company created for Codex, Kiro, Kimi or Antigravity started with commands its agent could not see, and the fix was a button under Advanced settings that a non-technical owner may never open. Brief: `docs/superpowers/specs/2026-10-01-portable-templates-design.md` (git-ignored). GitHub Issue #24.
+
+**What shipped.**
+- **One mover (`lib/portable-skills.ts`).** The write half of `addPortableSkillsImpl` is now `movePortableSkills(root, plan)`: copy, prove every copy exists, generate the Claude Code and Kiro folders, then remove the flat files (and the emptied `.claude/commands`). The button and the scaffold both call it, so they cannot disagree about what "moved" means. Also exported: `addCommandsAsSharedSkills` and `committablePaths`.
+- **Scaffold (`lib/create-company-from-template-impl.ts`).** After the template and pack are copied and before the first `git add -A`, the commands move to `.agents/skills`. Not best-effort: a failure fails the scaffold, because a half-moved company is worse than none. Template and pack source trees are unchanged; the conversion happens at scaffold time.
+- **Adding a pack (`lib/add-company-pack.ts`).** A company with any shared skill gets the pack's commands as shared skills, then a sync. A company that has not moved stays flat, so nothing is half-migrated. A name already held, as a shared skill or a flat file, is never overwritten. Generated copies are filtered through `committablePaths` so one ignored path cannot fail the whole commit.
+- **Adopting a folder (`lib/adopt-folder-impl.ts`).** The app's commands go straight into the shared folder. The folder's own flat commands are not touched.
+- **Run tab and tick (`components/workspace.tsx`, `lib/company-commands/command-file-name.ts`).** The workspace matched a command to its registry entry only by a path ending `/commands/<file>.md`, so a moved command lost its Run tab and gutter tick. `commandFileNameOf` recognises `.agents/skills/<name>/SKILL.md` as well. This already affected any company that had used the v212 button.
+
+**Deliberately not done.** The vendored pack skills (`.claude/skills`, stamped, replaced wholesale on update) stay where they are, so on a new company they still reach Claude Code only. Moving them changes the ownership and update model (`sync-vendored-skills.sh`, `getVendoredSkillsUpdate`, `isAppManagedSkillPath`, `updateCompanySkillsImpl`) and depends on the unmeasured Kimi question, so it is its own slice.
+
+**Changed tests, on purpose.** `create-company-from-template-impl.test.ts` and `adopt-folder-impl.test.ts` asserted flat files in a scaffolded or adopted company; they now assert the shared layout. `portable-skills*.test.ts` and `vendored-skills.test.ts` pass unchanged.
+
+**Verified.** Full suite alone, in a clean worktree: 365 files, 2,621 tests passed, 1 skipped. A real scaffold from the Marketing pack with real git: 19 shared skills tracked (16 starter, 3 pack), `.agents/mirror.json` tracked, nothing under `.claude/commands`, clean status after the commit, and the company's own `scripts/verify.py` passes. Every shipped pack is scaffolded for real in the test suite, with the stamped pack skills and pack detection checked. `npm run build` is clean after a real `npm ci`. A live pass on the production build (`next start`, throwaway data dir, stub `claude` first on PATH, built-ins disabled) with the Marketing-pack company above: the file tree lists its 16 starter commands once each, the six that have a registry entry (`check-messages`, `decision`, `define-company`, `digest`, `refresh`, `retro`) carry their "Never run" tick, and opening `digest` (now `.agents/skills/digest/SKILL.md`) shows the Run tab beside Read, Edit and History. Run itself was not pressed, and the stub `claude` was never invoked.
+
+**Not verified.** Interactive `/name` in any agent; Kimi at all; Windows; the packaged app. The company picker page logged React error #418 (a hydration mismatch) on first load of the production build; it is not on a path this slice touches, but it was not compared against `master`.
+
+**Still open.** Plan C (vendored pack skills and their stamps). Whether the button should stay under Advanced settings now that new companies do not need it. Which `template/` is the real one: the parent spec describes the root repo's `template/` (15 commands), but the scaffold reads `control-panel/templates/company-starter` (16).
+
+## v212 (2026-10-01): any AI you use can run your company's commands
+
+### What's new for you (feature, v0.82.0)
+The commands you set up in Alacrán can now be run from Claude Code, Codex, Kiro, Kimi or Antigravity, not only from Claude Code.
+- A new button, "Let any AI run these commands", moves a company's commands to a shared place that Codex, Kimi and Antigravity read, and gives Claude Code and Kiro their own copy. You will find it under Advanced settings on Company profile.
+- Before you agree, the window lists which commands will move and which will stay where they are.
+- The move is saved as one change you can undo, and the old commands are removed only once the new copies are in place.
+- Anything you wrote or edited yourself is never overwritten. Ready-made skills that Alacrán keeps up to date stay where they are for now.
+- In Codex you run a command by putting a dollar sign before its name, because Codex has no custom slash commands. Alacrán now tells each AI how to run commands in its own way.
+- When you save a change to a shared command on the Skills page, each AI's copy is updated for you.
+
+**Why.** Company commands lived in `.claude/commands`, a folder only Claude Code reads, so the other four registered tools never saw them. The maintainer reported it ("most of the commands only relate to Claude Code"). It undercuts the pitch that a company's procedures outlive the model that reads them. Design: `docs/superpowers/specs/2026-09-30-portable-agent-commands-design.md` (git-ignored; section 8 holds the measurements). This is Plan A of two.
+
+**Measured first (headless, one real prompt per agent; the model had to find the skill itself).**
+- Claude Code and Kiro did NOT read `.agents/skills`.
+- Codex and Antigravity DID, including through a symlink.
+- Claude Code, Codex, Kiro and Antigravity accepted extra frontmatter keys and the generated-copy marker comment.
+- Kimi could not be run (not signed in: "No model configured… /login"), so it is unmeasured.
+
+**What shipped.**
+- **Shared source, generated copies (`lib/skills/sync-agent-skills.ts`).** `.agents/skills/<name>/SKILL.md` is the source. Copies go to `.claude/skills` and `.kiro/skills` with the marker `<!-- generated from .agents/skills/<name>: edit there, not here -->`, tracked by SHA-256 in `.agents/mirror.json`. Sync never overwrites a hand-written or edited copy. A mirror reached through a symlinked parent is refused (`escapesRoot` realpath guard).
+- **The move (`lib/portable-skills.ts`, `lib/add-portable-skills.ts`, `components/portable-skills-button.tsx`, `showPortableSkillsButton` in `lib/agent-card-flags.ts` and `components/agent-card.tsx`).** Modelled on `portable-agent-file.ts`. Preview first, then one commit. Only paths git will accept are committed (`git ls-files` / `check-ignore`); the result carries a `committed` flag.
+- **Pack detection (`lib/vendored-skills.ts`).** `ownCommandNames` and `isPackInstalled` count `.agents/skills`, so a moved company still looks like it holds its pack.
+- **Readers use the shared folder.** Company inventory, generic command set, the OS skills catalog (each skill listed once), watched paths in `lib/company-summary.ts`, and job prompts via `commandDoc` in `lib/company-commands/registry.ts`.
+- **Invocation wording (`lib/skills/invocation.ts`).** `/name` for Claude Code, Kiro and Antigravity; `/skill:name` for Kimi; `$name` for Codex. `buildCompanyContextPrimer(inventory, executorId?)` uses it.
+- **Kept current.** Opening a terminal syncs first (`lib/open-interactive-terminal-impl.ts`). Saving a shared skill syncs and commits together, and falls back to committing the edit alone when git refuses the copies (`lib/save-skill-content-impl.ts`).
+
+**Review.** A fresh whole-branch reviewer found eight Important issues; all were fixed test-first before merge. They covered writes through linked folders, an edited copy hidden from the Skills page, a commit that could fail silently, and a dialog that did not list what would move. Real-git tests (`lib/portable-skills.git.test.ts`) cover the commit paths a fake git cannot.
+
+**Verified.** Full suite on merged `master` (merge `e17234e`): 364 files, 2,609 tests passed, 1 skipped. One earlier run showed four timeouts that were only lint running alongside; run alone it was clean. A live pass on an isolated preview with a stubbed AI and a throwaway company showed the button, the move and the resulting copies.
+
+**Not verified.** Typing `/name` in an interactive session of any agent (probes were headless); Kimi at all; Windows paths; the packaged app.
+
+**Left open (Plan B, not written).**
+- Shipped templates and packs still carry `.claude/commands`, so a new company starts on the old layout until the button is used. Pack skills are left in `.claude/skills` by the move.
+- Whether Kimi loads a flat `.md` stamp file inside `.agents/skills`; needs a signed-in Kimi.
+- The button sits under Advanced settings, which a non-technical person may never open.
+- Minor review findings were deferred and are in the plan ledger, not fixed here.
+- A comment about Antigravity's skills folder was dropped from `lib/ai-executors.ts` before the merge, because another session had uncommitted edits to that file.
+
+## v211 (2026-09-30): Alacrán shows what it knows, and what is new this week
+
+### What's new for you (feature, v0.82.0)
+Alacrán now shows you what it knows about your business, in plain sentences, and what has been added this week.
+- Home has a "What Alacrán knows" card: what was newly saved this week, such as a decision or a note from a work session, with a link to everything.
+- The page that used to be called Brain is now "What Alacrán knows". It opens on a plain list of facts, decisions and notes, newest first, with this week's marked as new. It is in the main menu instead of hidden under Developer, and the old map is one click away.
+- A drafted company profile now reads as plain sentences in Approvals, such as "Your business: ..." and "Biggest bottleneck: ...", instead of raw lines.
+- The last step of "You ask, Alacrán drafts, You approve" now reads "Alacrán remembers it".
+- Only what you have approved counts as known: a draft still waiting for your approval is never listed.
+- If your company folder sits inside a larger project, its notes and decisions are found too.
+
+**Why.** The case for Alacrán over a chat that forgets is that the company's memory is plain files you own, in git, readable by any AI. The app never said so: Brain sat under the Developer group, which simple mode hides, so a non-technical person could not reach it. The maintainer asked honestly why such a person would pick Alacrán over Codex, Claude or Antigravity; the answer was to make the memory the visible value. Design: `docs/superpowers/specs/2026-09-30-memory-front-door-design.md`.
+
+**What shipped.**
+- **Memory core (`lib/os/memory-items.ts`).** `listMemoryItems`, `thisWeek`, `pickForCard`, `weekSummary`, `kindOf`. Only committed memory counts: paths come from git, and a tracked file with a pending edit is read as `git show HEAD:./path`. `git log --relative` makes a company folder nested in a larger repo work (a reviewer found it listing nothing; fixed, with `lib/os/memory-items.git.test.ts` on real git).
+- **Home card (`components/os/dashboard/memory-card.tsx`)** with `lib/os/ago.ts` for "N days ago" wording.
+- **Brain page (`app/c/[companyId]/brain/page.tsx`).** List first (`components/os/brain/memory-list.tsx`, `brain-view-switch.tsx`); the map is at `?view=map`. `lib/os/nav.ts` moves Brain to the Company group as "What Alacrán knows". `lib/assistant/app-map.ts` carried the old name and was fixed after the full suite caught it.
+- **Approvals.** `describeProfile` in `lib/company-commands/profile-preview.ts` turns a profile draft into sentences; `previewText` in `components/os/tasks-board.tsx` uses it.
+- **Loop.** The fourth beat in `lib/os/loop.ts` reads "Alacrán remembers it".
+
+**Measured, not built (phase 2).** A 3D brain was specified for later and spiked on throwaway data. The dark theme read as a brain; the light theme read as a scatter plot; mapping recency to latitude bunched the newest nodes at the top. Recommendation: an opt-in third view on the same items, lazy-loaded, with the list as the accessible equivalent. Nothing from the spike was kept.
+
+**Verified.** Merged into `master` at `ed5adf3`; the full suite on the later merged `master` passed (364 files, 2,609 tests, 1 skipped). Live pass on an isolated preview with a stubbed AI: the card, the list, the map link and the sidebar.
+
+**Not verified.** A real AI-written company profile; the packaged app; a screen reader.
+
+**Left open.** Deferred minors: the newest-commits limit (`-n300`) counts commits, not files; the view switch's aria-label still says "Brain view"; `ago()` says "1 minute ago" for anything under a minute; the map still shows two tab rows; a statement is the first paragraph rather than one sentence.
+
+## v210 (2026-09-30): the website gets a Markdown copy of every page and an `llms.txt`, so an AI agent can read the docs
+
+Not a user-visible app change (the site is not shipped in the app), so there is no `### What's new for you` block. Not deployed: publishing the site is a gate row, and this only produces files.
+
+**Why.** The site has a concept page (`/docs`) and a six-step overview (`/how-to-use`), each one styled HTML file. An agent fetching them gets navigation, icons and markup around the text, and there was no index to start from. The plan is a real getting-started section written for people and agents alike; this slice is the cheap first step that helps agents immediately and gives the later pages somewhere to land.
+
+**What changed (`landing/build-md.py`, new).** A stdlib-only script, run by hand like `build-chrome.py` and `build-departments.py`. It derives from each page's `<main>`: a Markdown twin at the same address with `.md` added (`/docs` becomes `/docs.md`, `/departments/finances` becomes `/departments/finances.md`), plus `/llms.txt` (a grouped index with each page's title and description) and `/llms-full.txt` (every page in one file). Derived rather than hand-written so the twin cannot drift from the page. The home page is left out on purpose: it is the pitch, and `llms.txt` is the entry point. Re-running with no page edits changes nothing.
+
+**The Getting started page (`landing/getting-started/index.html`, new; `/getting-started`).** A seven-step first-run walkthrough written against the app as of 0.81.0, not from memory: the onboarding steps (Goal, Trust, AI, Create), the wizard's four questions and its two closing buttons, Approvals' "Review & approve", "Ask for changes" and "Discard", the High risk chip and why it is there, the per-platform install commands, and a troubleshooting list. It also has a "For AI agents" block: read `AGENTS.md`, then `definitions/ontology/company.yaml`, treat `<<TODO>>` as unknown, and stop at the five gate kinds. Built from `how-to-use`'s header and footer plus a new `<main>`, so it shares the site's chrome. A "Get started" link was added to the nav of every page (the v2 pages by hand, `build-chrome.py`'s `LINKS` for the rest), to `sitemap.xml`, and to `llms.txt` via `build-md.py`. `subpage-v2.css` gained a rule for command blocks and one that lets guide columns shrink, because a long command made the page 24px wider than a 390px phone.
+
+**Wording fixed (README and `/how-to-use`).** Found while reading the app for the new page, each checked against source. README: the default company folder is `~/Alacran/`, not `~/AI-Native/`; Alacrán registers five AI tools (Claude Code, Kiro, Kimi Code, Codex CLI, Google Antigravity), not "only Claude Code", and the "removed in v99" paragraph is gone; Node is bundled on Mac and pulled in by the `.deb` on Linux; a company no longer needs `.claude` to be registered (v65); the flow step names the company's AI tool. `/how-to-use`: Approvals says "Review & approve", "Ask for changes" and "Discard", not "Keep it"; the AI-switching line lists the real tools instead of "Gemini, or custom models". The remaining mismatches were fixed in a second pass: the README's jobs bullet now says three you pick plus five more, eight commands in all; the flow diagram's node reads "Your AI tool"; `/how-to-use` names the Create step and the "Add a company" sheet's "New Company" tab; `/docs` drops "(beta)" from Codex (nothing in the app calls it beta) and uses the same tool names; and `AGENTS.md` now says five executors, with the false "both are pinned by a test" claim removed, since no test pins either count.
+
+**Verified.** `python3 landing/test_landing.py` passes. The generated files contain no em-dashes and no HTML entities. The new page was opened in a real browser at 1280px and 390px: every section reveals, the console shows no warnings or errors, and after the CSS fix there is no horizontal scroll at 390px. Not verified: the page's claims about the installed app were read from source, not clicked through in a built 0.81.0 app; the Linux `apt` line and a Mac Intel path were not run.
+
+**Still open.**
+- Nothing links the twins from the pages themselves. A `<link rel="alternate" type="text/markdown">` in each head would let a crawler find them without `llms.txt`.
+- The generated files are committed output. Re-run `build-md.py` after editing any page, or the twin goes stale.
+- Task guides and reference pages are not written; the four page types in the decision record are only started (getting started, and the existing concepts page).
+- Command blocks have no copy button. The shared copy script in `build-chrome.py` is not loaded by the v2 pages.
+
+## v209 (2026-09-29): a new person is shown where to start, how Alacrán works, and one real draft to try
+
+### What's new for you (feature, v0.81.0)
+Alacrán now shows a new person where to start and how it works, and walks them through one real draft on their own business.
+- Home leads with one clear next step: describe your business, then let Alacrán prepare a first draft for you to read.
+- A short line, "You ask, Alacrán drafts, You approve, It's saved", shows where you are on Home, in Approvals and on Ask.
+- On the last step of "Tell Alacrán about your business", choose "Let Alacrán write it up" to get a draft waiting in Approvals, or "Save my answers as they are" to keep your words straight away.
+- Before you review a drafted company profile, Alacrán explains why Approvals marks it "High risk": it holds your core facts, so it deserves a careful read.
+- Approvals now explains itself when it is empty, and has a button that takes you to Ask.
+- After your first approval, Home and Approvals tell you it is saved.
+- If a first draft finishes without leaving anything to review (your AI was busy, signed out or out of usage), Home now says so and lets you try again.
+- A new company's Home no longer lists its own setup as something that happened.
+- "I know how this works" hides the guide whenever you don't need it.
+
+**Why.** A non-technical person opening the app saw seven destinations and nothing that said how they connect. The one thing the app does, in four beats (you ask, Alacrán drafts, you approve, it is saved), was never stated after onboarding. The goal chosen in onboarding did nothing on Home (its only reader, `FirstTaskCard`, was never rendered after the 2026-09-24 Home redesign), a brand-new Home said "You're all caught up", Recent listed the scaffold's own commit, and the wizard's AI path showed a raw diff and "Confirm & commit" in a second approval screen. The design is in `docs/superpowers/specs/2026-09-29-first-run-guided-loop-design.md`, the plan beside it, the decision in `docs/decisions/2026-09-29-first-run-guided-loop.md`.
+
+**What shipped, in engineering terms.**
+- `lib/os/first-run.ts` decides what Home leads with (`firstRunStage`: `connect-ai`, `describe`, `review`, `first-draft`, `done`) from facts read off disk on every render: AI connected, profile answered (`profileAnsweredFrom`: the wizard's saved answers, NOT "company.yaml exists", because a starter pack ships an example one), drafts waiting, a run in flight (`checkRunLockStatus`), and `first-run.json` in the company's run-data directory (`firstSavedAt`, `dismissedAt`; `lib/os/first-run-state.ts`, dismissed by `dismissFirstRunGuide`). No stage depends on browser storage. `homeFocus` guarantees a waiting approval is never swallowed by the guide's own state, including when the AI has disconnected.
+- The marker is written by an injected `afterCommit` hook on `commitCompanyCommandResultImpl`, passed only by the two server actions a person's Approve goes through (`commitCompanyCommandResult`, `batchCommitSafeReviews`). Scheduled auto-commits pass nothing, the hook is never defaulted (so a test that commits cannot write app state), and it can never turn a saved approval into a reported failure.
+- `genericGitLogActivityAdapter` drops the scaffold's own commit (`INITIAL_COMMIT_MESSAGE`, now shared with the scaffold) for every "what happened" feed at once. Home and Approvals share one `approvalTitle` (Home adopted Approvals' wording, and both learned `define-company` and `orientation`).
+- The wizard's last step is `SetupReviewActions`: "Let Alacrán write it up" (disabled with a "Connect your AI first" link when the AI is not ready, via a new `aiReady` prop the Company profile page computes) and "Save my answers as they are" (no AI needed). `DefineCompanyAiDraft` now only starts the `define-company` run, polls, and hands off to Approvals (`DefineCompanyDraftView`); its raw path and diff, "Confirm & commit" and the "generic entities" fallback are deleted, so a first approval happens on the one screen the person will meet forever. Its `useRef` guard against a Strict Mode double spawn is kept.
+- The first-run goal plumbing is deleted because nothing read it: `lib/os/activation.ts`, `FirstTaskCard`, the `?welcome=1&goal=` redirect, and five `firstSaved` writes. The goal still selects the starter pack. The four-beat strip is `lib/os/loop.ts` and `components/os/loop-strip.tsx` (an ordered list; the current beat is bold and underlined and carries `aria-current`, so it is never colour alone).
+- **Fixed after a fresh whole-branch review** (three defects on the path the feature exists to teach, each test-first). (1) `FirstRunHeroView` now renders the wizard in every stage and only hides it outside `describe`. `AutoRefresh` (root layout) re-renders Home every 15 seconds, and the stage becomes `review` the moment a draft run takes the run lock, so a wizard rendered only for `describe` was unmounted mid-draft, taking its open dialog and the hand-off with it; the dialog is portaled, so hiding the wrapper leaves an open dialog alone. (2) `runEndedEmpty`, plus a `FirstRunHero` that remembers it started or saw a run: a first draft that ends with nothing to review now says so, keeps its button and shows the run's log tail behind a fold, instead of quietly offering the same paid button again. (3) Home takes its stage from `firstRunStage` only for `command-set` companies; an `external` folder is `done` from the start, per the v66 rule that a new company feature is off for external folders by default. Also from the review: the drafting copy promises no duration, the saved notices no longer say the note "will be used" (nothing reads an orientation note back), and a test scaffolds a company from every real starter pack and asserts none counts as already described.
+
+**Deviations from the spec** (all recorded at the top of the plan). No `PAGE_GUIDE` registry: four pages already open with a plain sentence and only Approvals lacked one, so it got its sentence inline. No status-chip vocabulary (it had no consumer) and no goal-based composer chips. Added instead: a 30-minute "saved" notice driven by `firstSavedAt`. Tests are a static view plus a thin client container per interactive piece, because this repo has no jsdom. Two additions came out of execution: an element-tree test for Home itself (the whole stage-to-screen mapping and Review Focus 5 live there), and, after the live pass, one sentence in the wizard's hand-off explaining the "High risk" label, per the plan (the classifier is untouched). The "saved" notices are generic ("Saved. Alacrán keeps it in your company's files.") and link nowhere, where the spec had "Saved to Company profile" with a link, because where an approval lands varies with what was drafted (D6, found during execution and recorded only after the review). And the plan's claim that only two states are knowable was wrong: a run that ended with nothing is a third, and the hero now says so.
+
+**Verified.** Full suite 350 files and 2498 tests passing, 1 skipped (baseline on `master`: 334 and 2405); each review fix was re-broken on purpose and its own test failed (the wizard-slot tests, `runEndedEmpty`, the empty-run message, the external-company test); lint 0 errors, and none of its 22 warnings is in a changed file; `next build` clean; no new type diagnostics against the baseline; the repo-root `scripts/verify.py` passes. Live pass in a fresh worktree on its own port, with a scratch data directory, built-ins disabled and a throwaway company under `/tmp` (isolation checked before use and again after a restart): onboarding through Home; the describe, first-draft, review and done stages; dismiss and its return; both single and batch approval writing the marker, and the known-file route a real profile draft takes; a waiting approval with the AI disconnected (Kimi made genuinely missing by narrowing the server's `PATH`); the wizard's not-ready branch; the empty and populated Approvals; Ask; light and dark; a 640px viewport as the 200% equivalent with no horizontal scroll; keyboard focus rings; a console free of errors and warnings. The paid draft run was started twice and stopped at once each time, and exactly one process spawned (the Strict Mode guard held). Found and fixed on the way: the separator before the current step inherited the underline. A second live pass after the review fixes, on the same isolation, with a stand-in for the headless AI run so nothing was spent (exactly one process spawned each time, in the throwaway company): from the Home hero, the wizard's dialog stayed open when Home changed to "preparing your draft" and after the run ended, and Home went back to the questions; a first draft that ended with nothing said so, offered what happened behind a fold and kept its button, and said nothing before any attempt or while the run was going; a folder added as an existing project got no guide ("Everything is clear."), nothing was written into it, and the console stayed free of errors and warnings.
+
+**Not verified.** A draft run to completion (by rule), so the wizard's "Your draft is ready" hand-off after a real AI-written profile has never been seen live (its wording is tested, and the dialog is now known to survive the run); a real AI-written company profile (the profile fixture was hand-edited); the native desktop app; a screen reader; real browser zoom.
+
+**Known limitation, left for a follow-up.** For a company-profile draft, Approvals' "Readable preview" and the confirmation dialog both show the raw YAML, and the card carries a red "High risk" chip. That is how Approvals already treated that file; this slice now sends first-time users there, softened only by the hand-off copy. The fix is a plain-language rendering of profile drafts in Approvals (the wizard's own review step is the model). Also noticed and not touched:
+- `AiSetupCard` says "installed but not signed in", with no button, for an AI whose tool is missing and which has no installer entry.
+- A run's record outlives the run on purpose, and "waiting" only means the file now differs from the record's snapshot. So after a draft that ended with nothing, "Save my answers as they are" turns that stale record into a waiting review titled "Save your company profile" although Alacrán prepared nothing (seen live; opening or approving it was not tried). Fixing it changes when a record stops counting for every command, so it is its own slice.
+- The `orientation` prompt tells the AI to read whole skill and command directories, against the Cost rule in `AGENTS.md`. This slice makes it the first paid run of anyone who saves their answers directly. Measured: 16 files (37 KB) in the general starter, and the marketing, HR and software-engineering packs add another 379 to 496 KB (48 to 155 files) on top. The follow-up is to hand it `lib/skills/company-inventory.ts`'s list instead.
+- Recent still lists the app's own commit subjects ("Run /orientation via AI-Native control panel") after a first approval.
+
+## v208 (2026-09-29): softer company list and profile, one-click AI switching, a calmer Brain, and Files opens Files again
+
+### What's new for you (improvement, v0.80.0)
+Your company list and Company profile are easier to scan, switching a company's AI takes one click, the Brain is easier to read, and the Files page opens Files again.
+- Each company now sits in its own soft tile with space around it, instead of a row between two lines.
+- Point at a tile, or tab to it, and it lifts slightly, shows a coloured edge, and its "Open" label fills in.
+- On Company profile, each answer sits in its own soft panel, and Privacy and Advanced settings do too, with no lines between them.
+- On Company profile, "Your AI" shows each AI as a tile with whether it's ready, needs signing in, or isn't installed. Click one to switch.
+- Home shows "Running on ..." under the greeting. Click it to switch that company's AI without leaving Home.
+- The Brain page is bigger and easier to read: names are larger, the map fills the space, and it holds still until you point at it.
+- The Brain page uses plainer words: "Company brain", "Map" and "Flow", "Highlight", "Teams" and "People". Empty rows are hidden.
+- The Brain's Flow view now matches the rest of the app: light, with plain column names, and the list of people and tools sits beside it instead of covering it.
+- A team's card in the Brain speaks plainly: it says who the AI lead is (or that none is assigned) and what the team does, and only shows the check-in button when there is an AI lead to ask.
+- Files in the Developer menu shows that company's files again. It was sending you to Brain.
+
+**Company picker (`app/globals.css`).** `.workspace-grid`'s `border-top` and
+each row's `border-bottom` are gone. Rows are `--card` tiles at 70% with
+`--radius-data`, a 10px gap, and `::before` for the accent bar and `::after`
+for the "Open →" pill (arrow only under 680px). Hover and `:focus-within`
+share one rule set, so keyboard focus gets the same lift plus a 2px outline.
+`prefers-reduced-motion` turns off the transitions and the lift. Not looked at
+in a running app yet.
+
+**Company profile (`app/globals.css`).** Removed the privacy panel's
+`border-block`, Advanced's `border-top`, the last section tab's `border-top`
+and, on narrow screens, the section bar's `border-bottom`. Answers are
+`--surface` panels (`--r-panel`), "Your AI" is tinted with `--accent`,
+Privacy is a `--surface-2` well, Advanced is a panel whose summary is 44px tall.
+The company panel inside Advanced draws its own hairlines (`.company-band-title::after`,
+`.company-footer`); those are switched off only under `.company-info-advanced`,
+so the Files view keeps them. The vertical rule beside the section list stays.
+Not looked at in a running app yet.
+
+**AI switching (`components/ai-executor-picker.tsx`, `components/os/dashboard/ai-chip.tsx`).**
+The dropdown became a `radiogroup` of tiles, one per registered executor, with
+a check and an accent ring on the chosen one. Readiness is three words from
+`readinessOf` (`lib/executor-readiness.ts`) over the existing per-executor
+`ToolStatus`; when the chosen AI isn't ready the picker says so and links to
+Connected tools. Company profile reads all statuses at render
+(`aiExecutorStatusesImpl`). Home does NOT: each status is a CLI probe on a
+`force-dynamic` page, so the chip loads them through the `getAiReadiness`
+server action when its menu opens, and the page keeps its single existing
+check. `setAiExecutor` is unchanged. Skipped: "use for all companies" (changes
+every company at once) and per-tile capability notes.
+
+**Brain (`components/os/brain/*`, `lib/os/brain/memory-core.ts`).**
+Labels were 8.5–10px monospace; graph labels are now 12–13px in the page font
+and the panels' 9–11.5px text is `text-xs` (12px) with no uppercase tracking.
+Team labels swing outward from the core like board seats and every label gets a
+`.kg-halo` outline in the canvas colour. The home camera frames the nodes that
+exist (`fitRect`, pad 90, at most 1.7x) instead of the whole 880x600 stage, so
+a small company no longer draws in a third of the canvas. The ambient loop
+(orbit, sparks, pulses) now stops after 5s without input instead of dropping to
+every third frame; the grid drift, core glow, dashed flow and note drift are
+paused until the pointer is over the graph. The key hides kinds with no nodes,
+and the directory hides empty groups, with a message when all are empty.
+Renamed: G-Brain to Company brain, Radial/Neural to Map/Flow, Lens to Highlight,
+Pillars/Humans/SOP tasks to Teams/People/Procedures. `fit-rect.test.ts` is new;
+`brain-graph-view.test.ts` pinned the old words and now pins the new ones.
+Checked in a browser against a throwaway company: home, a focused team, and the
+Flow view. **Left alone, and worth a slice:** Flow is dark navy with headers like
+"HL 1 · WORKERS" and "OUTPUT · OBSIDIAN" and the directory box sits over it; the
+focused-team card still says "Paperclip", "heartbeat" and "board seat".
+
+**Flow and team card (`neural-graph.tsx`, `neural-layout.ts`, `knowledge-detail.tsx`).**
+Flow was a navy canvas with green and red strands, monospace upper-case labels,
+sparklines, a glow and a shimmer animation, and its directory was an absolute
+overlay on the graph. It now draws on `--surface` in one neutral strand colour,
+still and quiet, with the directory as a sibling column (`min-[821px]`).
+Lane names are `Tools`, `People and AI agents`, `Facts and procedures`,
+`Teams`, `Company notes` (layer 2 holds definitions, decisions and records as
+well as tasks, so "Procedures" alone was wrong); each header is placed over its
+column with `LAYER_X` and an empty lane gets none. Text is sized in drawing
+units from a measured scale so it stays 12-13px on screen at any width. The
+three left columns are labelled when they hold 16 nodes or fewer. `.kg-halo`
+moved to `globals.css` because Flow does not mount the Map's style block.
+`HeadDetailCard` lost "board seat", "Paperclip board", "Run heartbeat on the
+board", "presides over" and "SOPs": it says AI lead, team lead, "Ask for a
+check-in" and "What this team does". The check-in button now renders only when
+a lead exists (it was permanently disabled otherwise). The board-agent card
+says "Company board" and "AI agent" and keeps the Paperclip name once. Checked in
+a browser. **Still open:** a focused team stacks four back/close controls, and
+the columns are placed at fixed x, so a company with no tools leaves the left
+half of Flow empty.
+
+**Files route (`app/c/[companyId]/files/page.tsx`, `lib/os/active-company.ts`).**
+The page was a bare `redirect` to `/c/<id>/brain` ("Files view disabled in
+favor of Git-backed Knowledge Core"), and the legacy `/files` map pointed at
+`brain` as well. Both now go to Files: the page mounts `WorkspaceView` with
+`initialCompanyId`, which `workspace-view.tsx` and `workspace.tsx` were still
+built for. `active-company.test.ts` expectation updated to match. Tests not run:
+this checkout has no `node_modules`.
+
+## v207 (2026-09-28): a calmer Preferences page, and a Search button that opens
+
+### What's new for you (fix, v0.79.1)
+Preferences is easier to read, and the Search button at the top right now opens when you click it.
+- The section bar on Preferences stays put right under the top bar as you scroll.
+- Each Preferences section sits in its own soft panel, with no lines between settings.
+- Clicking a section name takes you to it without the heading hiding under the bar.
+- Clicking Search at the top right opens the jump-to menu. Before, only ⌘K did.
+
+**Sticky offset.** Since v205 moved the toolbar out of `#app-scroll`, the
+scroller carries `padding-top: var(--toolbar-h)`, and a sticky offset is
+measured inside that padding. `.preferences-toolbar`'s `top: var(--toolbar-h)`
+therefore stuck it 52px low, with the page scrolling through the gap above it.
+`top: 0` puts it flush at 52px, measured in the running app. It was the only
+sticky rule using `--toolbar-h`.
+
+**Panels instead of rules.** Six sources of horizontal lines, found by probing
+computed borders: the bar's bottom border, `Section`'s `border-b`, every
+`.native-setting-row`, two `border-t` separators, and the global
+`.dash-content .rounded-lg.border.bg-card` override that flattens cards into
+lines. All are now scoped away under `.preferences-content`. Sections are
+`--surface` panels with `--r-panel` radius, notes are `--surface-2` wells, and
+the bar ends in a 16px fade. `scroll-margin-top: 124px` puts an anchor jump
+16px clear of the bar's bottom edge (108px), measured for three sections;
+`scroll-mt-6` left the heading under the bar.
+
+**Search.** The toolbar button dispatched `alacran:palette` and
+`CommandPalette` only listened for ⌘K, so a click did nothing. It now listens
+for the event. `topbar.test.ts` reads the palette's source and fails if the
+listener goes; exporting the constant alone proved nothing reads it.
+
+## v206 (2026-09-28): Alacrán keeps working after you close the Mac window, and terminal buttons say what they do
+
+### What's new for you (improvement, v0.79.0)
+Closing the window on a Mac no longer stops Alacrán, and the buttons on each terminal now say what they do.
+- On a Mac, closing the window keeps Alacrán running in the background, so scheduled jobs and open terminals carry on. Click the Dock icon to bring it back. Quit from the Dock or with Cmd+Q to stop it.
+- Each terminal in the grid shows "Save what we learned" and "Focus" as words, not small icons, and hovering either explains what it does.
+- "Save what we learned" keeps its words on narrow windows too.
+
+**Mac shell (the macOS shell's `electron/main.js`).** The window's `close`
+event now hides it unless `before-quit` has set `quitting`, and `activate`
+shows the hidden window again. `window-all-closed` no longer quits. A server
+crash now calls `app.quit()` instead of `mainWindow.close()`, because close
+only hides now and would leave the app in the Dock over a dead server. Cmd+Q
+still quits: Electron fires the same `before-quit` for it as for Dock › Quit,
+and there is no reliable way to tell them apart. Linux's WebKitGTK shell is
+untouched. Not verified by a human double-click yet.
+
+**Terminal slot head (`components/terminal-workspace.tsx`).** The grid slot's
+Save and Focus buttons move from the 18px icon-only `terminal-tab-close` to the
+labelled `terminal-add` style, with tooltips saying what each does. The Focus
+view's "Save what we learned" drops `hidden sm:inline`. The close ✕ stays an
+icon.
+
+## v205 (2026-09-28): a draggable window, a full-size terminal, a microphone switch, and every AI on equal terms
+
+### What's new for you (feature, v0.78.0)
+The Mac window drags again, the terminal fills the screen, and every AI you can pick says plainly what it can't do.
+- You can move the Mac window by its top bar again.
+- The terminal page is the terminal: no heading, edge to edge, right under the top bar.
+- "Save what we learned" is on every assistant terminal, in the grid as well as one at a time.
+- The sidebar shows a small green spinner while a terminal is running, instead of a label.
+- The microphone is off until you turn it on under Preferences › Voice. Alacrán only asks macOS for it then, never at launch.
+- The assistant knows the app around it: what each page is for, how drafts and approvals work, which page you are on, and a short view of your other companies.
+- Replies still waiting in Communications now show in the assistant's picture of each company.
+- Every AI is listed by its plain name. Where one can't do a job, a one-line note says so on that job, before you press it.
+- Kimi can open an assistant terminal tab; it starts blank for you to type into.
+
+**The drag bug.** `181875a` moved the toolbar inside `#app-scroll` so the page
+could slide under it. Electron ignores `-webkit-app-region` on anything inside
+a scrolling element, so the Mac window had no drag handle at all. The toolbar
+is now an absolutely positioned sibling of the scroller inside a relative
+wrapper, and `#app-scroll` reserves `--toolbar-h` of top padding, so the glass
+effect is unchanged. `topbar.test.ts` fails if `<Topbar` ever lands after
+`id="app-scroll"` in `app/layout.tsx` again. Not verified by a human
+double-click yet, which is the only verdict AGENTS.md accepts for the Mac shell.
+
+**Terminal page.** `TerminalPersist` lost its heading block and status badge;
+`.terminal-page` fills the scroller's content box and the pane flexes to it.
+The "New agent" buttons and `NewAgentSheet` mount are gone from the workspace
+(the component file stays). `SlotHeader` carries the save button for `ai`
+tabs, so grid mode has it too. The sidebar uses a new `spinner` layout of
+`AgentTerminalStatus`.
+
+**Microphone.** `lib/voice/mic-preference.ts` holds a per-machine localStorage
+switch, default off. With it off the stage never opens the microphone — not on
+mount, a visit, or the space bar. Turning it on calls `requestMicAccess`, which
+uses the shell's new `mic.ask` bridge (the macOS shell: `mic:ask`, and
+`grantMicrophoneAccess` no longer calls `askForMediaAccess` at launch) or the
+browser prompt. The reported crash was never reproduced — no crash report
+exists on the machine — so this removes the two unasked-for microphone opens
+rather than a proven cause.
+
+**Assistant context.** `lib/assistant/app-map.ts` describes each page and the
+draft-then-approve flow and names the page the question came from (the stage
+now posts `page`). One-company questions get the other companies through
+`formatCompanyContext(..., { briefOnly: true })`. `readPulse` counts inquiry
+cards still `pending` or `approved`. About 2.5KB more per question.
+
+**Every AI on equal terms.** The `beta` flag, `executorDisplayLabel` and the
+`limitations` paragraphs are removed at the owner's request. In their place,
+`lib/executor-capabilities.ts` derives a one-line note per function from the
+executor's own fields, and `ExecutorGapNote` shows it on that function. What
+was measured against the installed CLIs (Kimi 0.39.0, Codex 0.158.0,
+Antigravity 1.2.11, Kiro 2.21.0) and left as a note rather than wired:
+- no path-scoped edit on Kimi, Codex (`--sandbox workspace-write` is the whole
+  folder) or Antigravity, so untrusted-input jobs and revisions stay refused;
+- no session listing on those three, and their resume flags start a new
+  conversation when there is none (the v149 shape), so no automatic notes;
+- MCP config is machine-global for Codex and Antigravity and absent for Kimi;
+- Antigravity has no sign-in command; only Claude Code drives a browser.
+An executor that cannot enforce a tool scope now answers the Assistant from
+the empty assistant workspace (`askCwdFor`), with the context in the prompt,
+so an auto-approving CLI has no company files in reach.
+**This drops AGENTS.md's "say beta where it is chosen" disclosure** for
+executors not run end to end; the owner chose it, and the note system covers
+what each one cannot do but not that it is unproven.
+
+## v204 (2026-09-28): a calmer window with a glass sidebar
+
+### What's new for you (feature, v0.77.0)
+Alacrán has a calmer, lighter look, with a see-through sidebar on the Mac.
+- Everything you use sits in a sidebar on the left, with your company at the top. Nothing hides under "More" any more.
+- Choose Light, Dark or System in Preferences. System follows your computer, even while Alacrán is open.
+- Main buttons are plain white or black. Red now only marks things that are waiting for you.
+- The ask box on Home grows as you type, and your question goes straight to the assistant.
+- Headings read in plain words, without all-caps labels or blinking cursors.
+- Menus open out of the button you pressed, pages blend into each other, and an approved item flies into your Approvals count. All of it switches off if your computer is set to reduce motion.
+- The Brain page no longer shows an error for a new company, and Company profile no longer counts the starter's blank answers as filled in.
+
+The design decision is the parent repo's
+`docs/decisions/2026-09-28-glass-frame-sidebar.md`, which supersedes the frame
+part of v194's native command canvas: the frame is glass, the content is solid.
+
+**Themes.** The six skins collapse to a dark base `:root` and one
+`:root[data-theme="light"]` override, chosen as System (the default), Light or
+Dark (`lib/theme.ts`). Every stored value from an older release maps to the
+nearer theme, the pre-paint script is generated from the same table, and it
+keeps listening to the OS so System follows a switch. The main colour is
+neutral; the brand red is `--brand`/`--marker`/`--focus`, for the mark, focus
+rings and "needs you" markers only. `::selection` moved to a brand tint: a
+neutral primary had made selected text white on white. The system font
+replaces Sora/Inter for UI; monospace stays for code, diffs and the terminal.
+Three radii (`--r-control` 8px, `--r-panel` 14px, `--r-pill`).
+
+**Frame.** The dormant `Sidebar` is mounted again as the frame: the company
+switcher (moved out of the top bar), every destination from `lib/os/nav.ts`
+— whose advanced group is now "Developer" and holds every page the old strip
+and its More menu reached — and Preferences at the foot, with one highlight
+that glides to the selection. The top bar becomes a slim toolbar sticky inside
+the scroll container (`#app-scroll`): back, forward, the page's name once its
+heading scrolls away, search and the assistant; it turns to glass when the
+page slides under it and is the drag handle on a Mac. `PageHeader` lost its
+tracked-caps eyebrow, uppercase title and blinking cursor, which calms the
+fourteen older pages using it.
+
+**Mac.** The macOS shell (branch `feat/glass-frame`) gives the window
+`vibrancy: "sidebar"` and a transparent background, and a one-way
+`appearance.set` bridge member pins `nativeTheme.themeSource` to the page's
+choice, because the material otherwise follows macOS and a Dark app on a Light
+Mac would draw light glass under light text. The page's transparency keys on
+`data-vibrancy` — stamped only when that bridge member exists — never on
+`data-shell="mac"`, so a newer page inside an older shell keeps a solid
+sidebar.
+
+**Motion** lives in `components/os/motion.ts`: menus grow from their trigger,
+sidebar navigation blends through `document.startViewTransition` (held 1.5s at
+most), an approved card flies into `[data-approvals-badge]` after the save, and
+`Thinking` replaces the spinner. Everything is skipped under reduced motion.
+
+**Also fixed in this slice.** The Brain graph drew an edge to a worker that
+was never added (`emp:operator` for a new company's unowned step), which
+d3-force rejects, crashing `/brain`; the Ask page's box sat in a grid column
+built for a removed icon; the toolbar showed URL slugs ("dashboard", "tasks").
+
+**Still open.** Native vibrancy is only verifiable in a packaged build, by a
+person double-clicking it. About 120 component files still use `font-mono`,
+`uppercase` or `tracking-*` on advanced pages. The landing site has not been
+mirrored, and AGENTS.md's one-brand rule now says so.
+
+## v203 (2026-09-26): quicker to move around the agent grid, clearer to review
+
+### What's new for you (improvement, v0.76.0)
+Moving between agents is quicker, and what they did is easier to read.
+- Press ⌘1 to ⌘8 to jump to a pane, ⌘↵ to switch between grid and focus, and Esc to go back to the grid.
+- When an agent finishes while you're looking at something else, you get a notification that it's ready for review, where notifications are allowed.
+- An agent's summary reads as plain sentences, without the formatting symbols it wrote them with.
+- If an agent changed nothing, you can dismiss it in one click.
+- Very large or non-text files say so, instead of filling the screen.
+- With nothing open, the terminal says what you can start and offers the buttons to do it.
+
+Plan 5 of the parallel agent grid: polish over Plans 1–4. Pane shortcuts come
+from a pure `slotKeyAction` and only act while the terminal page is visible.
+The finish notification fires on a running → needs-review change while the
+page is hidden, and permission is asked on the first agent start. Closing the
+last tab keeps any agent cards, and the empty state hides the slot container.
+The file preview refuses files over 200 KB or containing NUL bytes. Take-over
+exits with no edits keep the run's reason, and run labels drop the
+"Agent · " prefix.
+
+## v202 (2026-09-26): agents you can hand a task to and review, side by side
+
+### What's new for you (feature, v0.76.0)
+Hand a task to an agent, get on with something else, and decide what to keep when it's done.
+- New agent (in Advanced mode) takes a task in plain words. The agent works on its own copy of your company, so nothing it changes reaches your files until you keep it.
+- See up to eight terminals and agents at once in a grid, or one at a time in focus. Switching never loses what's on screen.
+- Each agent shows whether it's working, stopped or waiting for your review, and how long it has taken.
+- When an agent finishes you see what it said it did, and you can look at every change before deciding.
+- Keep the changes, ask the agent for changes in plain words, take over and finish the job yourself, or throw its work away. You're always asked first.
+- Keep never overwrites your own unsaved edits. If the work clashes with a change made since the agent started, you're told which file, and nothing changes.
+
+Plan 4 of the parallel agent grid: the UI over Plans 1–3.
+
+- **One container for every slot.** Every session, and every finished run
+  whose session is gone, is a slot in the same container in a stable order.
+  Grid versus focus is only CSS (`.terminal-pane--grid` with an inline grid
+  template from `gridFor`), because moving an xterm to another parent remounts
+  it, and a remounted xterm is blank: the stream only carries what comes next.
+- **The review strip** (`components/agent-run-review.tsx`) shows the agent's own
+  final message as a quotation, then View changes (a right-hand drawer with a
+  per-file before/after from `GET ?run=&file=`, limited to files in that run's
+  change list), Keep changes, Ask for changes, Take over, and Discard.
+  - Discard goes through an AlertDialog that names the files and any ignored
+    files. It's the Irreversible row of AGENTS.md §6, and the click is the
+    approval.
+  - Files that change how tools run (`.claude/`, `.mcp.json`, `.husky/`,
+    lefthook, pre-commit, `.gitattributes`) are named before Keep.
+- **Take over** (`takeOverImpl`) opens an interactive `claude --continue` in the
+  run's worktree through a new `openSession` `onExit` hook. When the person
+  closes it, their edits are committed on the run's branch and the run goes
+  back to review.
+  - While they drive, Keep, Discard, Ask and a second Take over are refused.
+  - It has the same guard as Ask against agent-written AI settings.
+  - `interactiveResumeArgs` is a new required executor field. Only Claude Code
+    has one.
+- **Status is an edge and a word**, never colour alone:
+  - Working has a slow pulse, which reduced motion stops.
+  - Needs your review and Interrupted use the warning colour.
+  - Stopped uses the destructive colour.
+  - You're driving uses the success colour.
+  - An `aria-live` region announces status changes, never terminal output.
+- **New agent is advanced-only**, per the rule that a new feature starts hidden
+  in simple mode. Existing runs always show.
+- Run state comes from polling `?runs=1` every 3s while the page is visible.
+- **Live check** in a browser (production build, scratch data dir, a disposable
+  `/tmp` company):
+  - the New agent form and a live streaming pane;
+  - Grid ↔ Focus with the shell's text surviving each switch;
+  - the strip and drawer with the diff;
+  - Discard's confirm, where Cancel changed nothing;
+  - after a server restart, the run returns as a card slot with its strip;
+  - Keep refused on a conflict with the file named and the company untouched,
+    then Keep after the conflict was reverted.
+- **Not run live:** Take over and Ask for changes, because either would start a
+  real agent session. Unit tests cover them.
+- **Safety note:** the one real run finished on its own, about 10s in, before
+  the Stop click. That's against the rule that a check must never let a real
+  headless run complete. It was a one-line task in the scratch company, and no
+  real repo was touched.
+
+## v201 (2026-09-26): keep, discard, or send back an agent's work (API only for now)
+
+Plan 3 of the parallel agent grid. A finished run can now be landed. The
+review card, the confirm dialog in front of Discard and Take over are Plan 4,
+so there's no What's new block yet: `POST /api/terminal/<id>` with
+`{type: "keep-run" | "discard-run" | "ask-run", run}` is the way in, plus
+`GET ?runs=1` and `GET ?run=<id>&changes=1` for the cards' data.
+
+- **Keep never leaves the company half-merged**:
+  - It builds the keep commit before touching anything. `git merge-tree
+    --write-tree` gives the merged tree, or the conflicting files, which are
+    then reported with nothing touched. `commit-tree` makes the two-parent
+    commit from that tree.
+  - A signing failure or a missing identity therefore happens while the company
+    is still untouched.
+  - The company then fast-forwards to that commit (`--ff-only
+    --no-autostash`). A fast-forward is all-or-nothing and never leaves
+    MERGE_HEAD. git refuses it before writing anything when it would overwrite
+    your unsaved edits, and names the files.
+  - `merge.autostash` can't quietly stash those edits instead.
+  - No hook runs (`core.hooksPath=/dev/null`), during the merge or during the
+    cleanup after it, because by then the folder holds files the agent wrote.
+  - It only merges into the branch the run started from (or one that has moved
+    on from it) while the folder is on a branch. Anything else would bring in
+    commits the card never listed.
+- **Keep and Discard take one lock per company folder** (`withRootLock`). This
+  answers the spec's open question: the app had no shared git lock, and git's
+  own `index.lock` still refuses any other writer.
+- **One action per run at a time.** Keep, Discard and Ask claim the run before
+  their first await, so a double click, or a Keep racing an Ask, can't act on
+  the same worktree twice.
+- **Discard** removes the run's worktree and branch. It's the Irreversible row
+  of AGENTS.md §6: the confirm dialog Plan 4 puts in front of it is the
+  approval, and the API only carries it out.
+- **Ignored files are named, never lost silently.** An agent that follows the
+  company's own rules writes generated output to `state/`, which git ignores:
+  - `?run=<id>&changes=1` lists them next to the changes;
+  - Keep says they weren't kept;
+  - Discard says they were thrown away.
+- **Ask for changes** resumes the same conversation (`claude --continue`) in the
+  same worktree and the same tab, which shows only the new part of the log
+  under an "Asked for changes" divider.
+  - It uses the executor recorded on the run, since only the CLI holding a
+    conversation can continue it.
+  - The file count still includes the first pass, because it's measured from
+    the commit the run began on.
+  - A restart judges only the current pass. The record keeps where that pass's
+    output starts in the log, so an earlier pass's success can't make an
+    interrupted one look finished.
+  - It refuses a run that changed its own AI settings (`.claude/`,
+    `.mcp.json`). A resumed run is a new process that loads that folder's hooks
+    and MCP servers as it starts, so otherwise it would run code the agent
+    wrote as you. `--disallowedTools Bash` does nothing to stop that.
+  - `streamingResumeArgs` is a new required field on every executor. Only
+    Claude Code has one.
+- The final `result` text is saved as the run's `summary`, for the card.
+
+**Live check**, on a disposable `/tmp` company with the production build and a
+scratch `ALACRAN_DATA_DIR`:
+- Two real runs were each stopped by closing their tab right after their first
+  edit, so neither ran to completion.
+- Keep put the first run's edit on the company's `master` under
+  "Keep agent run: Say hello" and removed its branch and worktree.
+- Discard left the company's `HEAD` unchanged and removed the second run.
+- The check found the message "1 file … are now in", now fixed.
+- **Not run live:** Ask for changes, because it would start a second real agent
+  turn. Unit tests cover it.
+- A flaky pair of tests turned out to be the harness sleeping 400ms for an async
+  settle. The watcher now hands its tick's promise to the scheduler, so tests
+  await it.
+
+## v200 (2026-09-25): the engine for unattended agents (not reachable from the UI yet)
+
+Plan 2 of the parallel agent grid: a company can run an agent that works on
+its own and reports as it goes. Nothing user-facing starts one yet — the
+New-agent sheet is Plan 4, and Keep/Discard is Plan 3 — so this entry has no
+What's new block. `POST /api/terminal/<id>` with `{type: "start-run", task}`
+is the only way in.
+
+- **Its own worktree, its own branch** (`lib/agent-runs/worktree.ts`):
+  `alacran/agent/<runId>` from the company's last commit, under the app's data
+  dir, never the company folder. The response reports `dirty` when the company
+  has unsaved edits the agent won't see.
+- **Headless and scoped** (`streamingRunArgs`, a new required field on every
+  executor): Claude Code runs `-p` with the usual `--allowedTools` scope,
+  `Edit(**)` inside its worktree and no Bash, streaming `stream-json --verbose`.
+  Kiro, Kimi, Codex and Antigravity are `null` and refused by name — none of
+  their streaming modes has been run end to end.
+- **A read-only tab** (`run-engine.ts`, `registerSession`): the run's log is
+  tailed, turned into a short feed ("Reading notes.md", "✎ Editing
+  pricing.md", failed tool calls), and served as a terminal session of kind
+  `run`, so it rides v198's single stream and flow control unchanged — pausing
+  a run is just not reading its log for a while.
+- **Settling**: when the process is gone, everything in the worktree is
+  committed on its branch ("Agent: <title>") in every case, including a failed
+  run, and the record moves to `needs-review`, `no-changes` or `failed` with a
+  reason. Closing the tab stops the agent ("Stopped before it finished"); the
+  60-minute limit stops it too. Every kill and every reattach first checks
+  with `ps` that the pid is still the agent — the right program AND started
+  within seconds of the run, because the program name alone matches the user's
+  own interactive `claude` and every MCP server under `~/.claude`.
+- **The app's commit can't be turned against it**: it commits with the git dir
+  recorded at start (never the worktree's agent-writable `.git` file), with
+  `core.hooksPath=/dev/null`, `core.fsmonitor=false` and `--no-verify`, so no
+  hook or config the agent could have written runs as the user. The file count
+  is what the branch changed since the run began, not only its last commit.
+- **After a restart** (`reconcileRunsImpl`, run on the first terminal request):
+  a live run gets its tab back (and is stopped at once if it is past the time
+  limit); a dead one is settled from its log's result, or as `interrupted`; a
+  pid the OS has since reused fails the start-time check and is never touched.
+  Both first requests of a page wait for this, so a live run's tab is not
+  missed.
+
+**Live check**, on a disposable company under `/tmp` with the production build
+and `ALACRAN_DATA_DIR` pointed at a scratch folder: a real run started, streamed
+"Started · … / Reading … / ✎ Editing notes.md", and was stopped by closing its
+tab after a few seconds (never run to completion). It settled as `failed` /
+"Stopped before it finished", with the one edited file committed on its branch
+and the company's `master` untouched. **It found a bug the unit tests could
+not:** on macOS `/tmp` is `/private/tmp`, Claude reports resolved paths, so the
+feed printed full paths. The formatter now matches every name the worktree goes
+by. **Not yet verified live:** reconcile after a real restart (unit-tested with
+a fake process table).
+
+## v199 (2026-09-25): Content & social — Alacrán drafts posts, you approve each one
+
+### What's new for you (feature, v0.76.0)
+Alacrán can now draft Instagram posts for you, and you approve each one before it goes anywhere.
+- Open Records, then Content & social, and ask for posts about anything — Alacrán writes the caption, hashtags and a picture description in your company's voice.
+- Each post arrives as its own card. Approve it, ask for changes, or discard it.
+- Approved posts are ready to post: copy the caption and post it yourself.
+- Mark a post as posted and Alacrán remembers it, so later posts match your voice and don't repeat themselves.
+- Designing the picture in Canva automatically is coming next; for now you make the picture yourself.
+
+Ships as a text-only fallback: `lib/content-social/canva-tools.ts` carries empty
+Canva facts (tool names, image hosts, the deny list) until a human runs step
+zero, so `make-posts` never declares `mcpTools` and the department page shows
+"For now you make the picture yourself" instead of a Canva connect control.
+Every post file is written with `image_status: none`, and each such card says
+"Make the picture in Canva, then post it with this caption." with an Open in
+Canva link (to canva.com) that also copies the caption and hashtags.
+
+The generic mechanism this leans on is `CompanyCommand.mcpTools` — exact MCP
+tool names a command may call — paired with a new, required
+`AiExecutor.supportsMcpToolAllowlist` field on every registered executor
+(`true` only for Claude Code; `false` for Kiro, Kimi, Codex and Google
+Antigravity). The field is required on the type, so a sixth executor does not
+compile until it answers the question too — the same discipline as the rest of
+this app's per-executor surfaces. When a
+command declares `mcpTools` and the resolved executor can't honour an
+allowlist, `runCompanyCommandImpl` refuses the run before it spawns anything,
+with the message steering the owner to switch that company to Claude Code.
+`make-posts` also sets `untrustedInput: true`, because the job calls an outside
+service (Canva) whose responses enter the AI's context, and the registry
+already requires the flag on any job that reaches outside content. It is set
+even in today's text-only fallback, which makes no Canva calls, so the guard is
+already in place the day the Canva tools are filled in. It costs little: it
+refuses executors without a tool scope (the department page shows "Make posts
+needs Claude Code for now" instead of the form on one) and refuses unattended
+auto-commit, and every post is approved by hand anyway.
+
+Two runner fixes make a batch of posts reviewable one card at a time. A second
+Make posts while earlier posts are still waiting reuses the waiting run's
+`before` baseline instead of re-snapshotting, which would have folded the
+unapproved posts into `before` and shown them as ready to post (the v148 rule:
+re-snapshotting is the only lossy operation). And Ask for changes on a
+`new-file-in-dir` command accepts any waiting file directly inside the output
+folder whose text still matches, not only the alphabetically first one, with
+the edit scoped to that one file.
+
+Discarding one waiting post is a new per-file path,
+`discardCompanyCommandFileImpl`, separate from the existing whole-run discard.
+It refuses anything that isn't a plain regular file directly inside the
+command's output folder (an `lstat` check rejects a symlink or a directory,
+and a realpath comparison rejects anything outside `notes/content/posts/`),
+then unlinks exactly the file name it was given. After the unlink it recomputes
+"remaining new files" by re-reading the directory and filtering out both the
+run's original `before` snapshot and anything that isn't a safe post file
+name — the same `isSafePostFileName` filter the existing whole-run commit path
+in `commit-company-command-result-impl.ts` now applies to its own "remaining"
+count. Before this, a stray `.DS_Store` or an editor swap file dropped into
+that folder by something other than the run would have kept the run record
+alive forever, since neither count previously excluded non-post entries.
+
+Reading a post's state is now defensive by construction. `parsePost` reads
+frontmatter and section text out of parsed YAML rather than assuming the file
+matches the format the prompt asked for, and `listPosts` catches a read
+failure per file: an unreadable post becomes a card with "This post couldn't
+be read" instead of throwing and taking the rest of the list down with it.
+
+`savePostImageImpl` (unused today, since no Canva image ever has a URL to
+fetch, but exercised by its own tests against a fake server) fetches only
+`https://` URLs whose hostname is in the step-zero-measured allowlist, and
+re-checks that allowlist after *each* redirect hop (manual redirect handling,
+capped at 3 hops) rather than trusting the first URL and blindly following
+wherever a redirect points. A `content-length` header over 15 MB is rejected
+before any bytes are read, and the body is still streamed with a running byte
+count in case the header lied or is absent, aborting the moment the real total
+crosses 15 MB. A successful fetch is saved under `notes/content/images/` and
+committed with the existing single-file-scoped `commitFile` helper.
+
+Mark as posted (`markPostPostedImpl`) writes whatever is missing — the entry
+in `records/content/items.yaml`, and the post file's own frontmatter
+(`status: published`, `posted_on`) — then makes one commit scoped to those two
+paths. Pressing it again after an interrupted attempt finishes the job: it
+re-adds a missing entry, re-marks the post, or commits whatever of the two was
+left uncommitted, and reports "Already marked as posted." only when both are in
+place and committed.
+
+The department page (`app/c/[companyId]/content-social/page.tsx`) ships
+without an `advancedOnly` flag — a deliberate owner decision, not an
+oversight, on the same "hidden until real, then always shown" logic as the
+rest of this app's simple-mode gating: a business owner has a word for
+"posts," and hiding the page behind Advanced would remove the only way to
+reach a post someone already asked Alacrán to draft. It stays reachable from
+the full content list via a "See your full content list" link, so records
+written before this page existed, or written directly to
+`records/content/items.yaml`, don't become a dead end.
+
+One gap intentionally left open: the company template's own
+`scripts/verify.py` (`templates/company-starter/scripts/verify.py`, which every
+new company gets) has no connector-gate check. The parent repo's
+`scripts/verify.py` has one (`check_connector_gate`: every gated connector
+write tool must be in `.claude/settings.json`'s `permissions.deny`); the
+template's copy does not, so a company that drops a connector's deny rule by
+hand isn't caught. Nothing checks the
+`mcpTools`/`supportsMcpToolAllowlist` pairing either, beyond the required field
+on the type and the runner's own refusal. Noted as a follow-up for whoever
+ships Task 0b or the next connector-adjacent slice, not fixed here.
+
+Also unchanged on purpose: existing companies' own `.claude/settings.json`
+files are not touched by this slice. The `mcpTools` allowlist is enforced by
+this app's own runner (`runCompanyCommandImpl`), not by anything written into
+a company's settings file, so no migration was needed and none was run.
+
+## v198 (2026-09-25): a terminal that keeps up with eight sessions at once
+
+### What's new for you (improvement, v0.76.0)
+The terminal stays quick to type in and switch between, even with several busy terminals open.
+- Typing no longer lags when other terminals are printing a lot at the same time.
+- Switching between terminal tabs is instant, and a tab you come back to is exactly as you left it.
+- Terminals draw faster, so long output scrolls more smoothly.
+
+Plan 1 of the parallel agent grid (the grid itself, headless agent runs in
+their own worktrees, and review cards are Plans 2–5). The terminal's transport
+was the ceiling: one `EventSource` per tab, one `fetch` per keystroke, a
+200KB backlog rebuilt by string concatenation on every pty chunk, only the
+active tab mounted, and xterm's DOM renderer.
+
+- **One SSE stream per company page** (`lib/terminal/company-stream.ts`,
+  `GET /api/terminal/<id>?stream=all`, frames `{s, d}`). The app is served over
+  HTTP/1.1, where Chromium allows six connections per host, so a sixth tab used
+  to stall — and every keystroke POST queued behind it. The per-session
+  `?session=` GET is gone.
+- **Ordered, batched input** (`input-queue.ts`, `type: "input-batch"`): one POST
+  in flight, keystrokes typed meanwhile coalesce per session. Order is
+  guaranteed by the single in-flight request, so there are no sequence numbers.
+- **Output coalescing** (`coalesce.ts`): leading edge, then at most one frame
+  per 16ms or per 32KB.
+- **Backlog as a chunk ring** (`backlog.ts`), amortised O(1) per chunk.
+- **Client hub** (`stream-hub.ts`): holds output that arrives before its pane
+  mounts, and resets every pane on an EventSource reconnect so the replayed
+  backlog is not drawn twice.
+- **`@xterm/addon-webgl` 0.19.0**, falling back to the DOM renderer on context
+  loss; every tab stays mounted and hidden rather than disposed, and a hidden
+  (0×0) host is never fitted, which would have told the pty it was 2 columns wide.
+- **Ack-based flow control** (added after the live check failed — see below):
+  the client acknowledges characters once xterm has parsed them
+  (`term.write(d, done)`, `type: "ack"`), and a session more than 100k
+  characters behind is `pty.pause()`d until the page is back under 5k
+  (`holdOutput`/`releaseOutput`, counted per session so two windows compose).
+  This is VS Code's scheme. A stream-backpressure version was tried first and
+  measured only halfway there, because the queue that grows is inside the
+  browser — seven xterm write buffers parsing on one main thread — and only
+  the client knows how far behind it is.
+
+**Measured** on a production build in Chrome, seven tabs running
+`yes "$(printf '%.0s─' {1..120})"` and an eighth being typed into, 30
+human-paced keystrokes per run:
+
+| | echo p50 | echo p95 |
+| --- | --- | --- |
+| no flood | 7.7ms | 15.2ms |
+| flood, before flow control | 53ms | 202ms |
+| flood, stream backpressure | 22ms | 75ms |
+| flood, ack flow control | 16ms | 25.4ms |
+
+No main-thread task over 50ms in any flood run.
+**Still open, measured and not fixed:** under that same seven-pane flood,
+scrolling a 3,000-line pane runs at 49 fps (60 when quiet) and a tab switch
+takes ~100ms (two frames when quiet). The remaining cost is the browser parsing
+~5M characters a second across seven xterms. The fix belongs with the grid
+(Plan 4), where every pane is visible: give unfocused panes a smaller ack
+budget. The reconnect reset is covered by a unit test only — ptys do not
+survive a server restart, so there is nothing live to replay.
+
+## v197 (2026-09-25): switch a company's AI from its profile, and a cleaner, more honest Company profile and Preferences
+
+### What's new for you (improvement, v0.76.0)
+Choosing which AI works for a company is now one of the first things on its profile, and the page around it is simpler.
+- Company profile now opens with "Your AI", where you can switch the AI that answers your questions and does the work for that company. It used to be hidden behind Advanced mode.
+- An Edit company details button sits at the top of Company profile, and the details below it read as plain text instead of boxes that looked typeable.
+- Get Started, "What did the chats say", "Ask your company" and a second Edit button were removed from the company's settings, so each thing appears once.
+- The walkthrough no longer pops up by itself; open it from "What else can I do here?".
+- The privacy notes now say exactly what happens: your files stay on this computer, and the relevant part is sent to your AI when you ask something.
+- Preferences lists every theme to pick from, names its sections plainly, and the top bar shows your company and the page instead of "system".
+
+**Why the AI picker moved.** `AiExecutorPicker` was an `advancedControls` row in
+`AgentCard`, and the card itself sits inside Company profile's collapsed
+`<details id="advanced">`, so in simple mode there was no way to change a
+company's executor at all — while `ask-company-impl.ts` resolves the executor
+per company (`resolveAiExecutorForAgent`), so that hidden setting is the one
+every per-company question runs on. It is now a section on
+`app/c/[companyId]/agents/page.tsx`, gated on `showAiExecutorPicker` (i.e.
+`isCommandSet`) and shown in both modes. Preferences' own setting was relabelled
+"AI for the Assistant": it only feeds the voice assistant and the cross-company
+ask (`ask-all-companies-impl.ts`), which its old wording did not say.
+
+**Removed from the card panel, at the owner's request.** The masthead (latest
+activity, repeated by Home's Recent list since v196), Get Started,
+`CheckMessagesButton`, `VoiceAssistantButton`, and the edit-wizard row. **This
+knowingly bends "simple mode must never hide something already in use" for
+the chat check:** it stays reachable as the `check-messages` command under
+Automations, which is advanced-only. `CompanyGuide` is passed
+`showGetStartedButton={false}`/`showCheckMessagesButton={false}` so it keeps
+v39's invariant of never explaining a button that is not on screen, and gained
+`showTrigger` so Company profile's `CompanyGuideLink` is the one way in. Its
+first-visit auto-open and `GUIDE_SEEN_KEY` are gone, and so is the Preferences
+reset that cleared that key.
+
+**Wording that was not true.** Help & about claimed the app "runs entirely on
+your own machine — no … phone-home", and Company profile said company
+information "stays local". Every question sends a budgeted slice of company
+memory to the configured executor, so both now say so; per the private-repo
+note in `AGENTS.md`, promises about what leaves the machine have to be exact.
+`resolveTopbarBreadcrumbs` now labels `/system/*` pages ("Preferences",
+"Connected tools") under the active company rather than "system · settings";
+the page is "Company profile" in every place it is named; `ThemeToggle` takes
+`inline` for Preferences, which listed a palette icon as "Pick dark or light"
+over six themes.
+
+## v196 (2026-09-25): a plain simple-mode menu, a Home that shows what happened
+
+### What's new for you (improvement, v0.76.0)
+In simple mode the menu now uses everyday words, and Home shows what actually happened.
+- The company menu in simple mode is Home, Ask Alacrán, Approvals, Records, Company profile, Connected tools and Preferences. Technical tools stay in Advanced mode.
+- Home puts the Ask box at the top and lists the last few things that happened in your company, with their dates.
+- Home greets you for the time of day instead of always saying good morning.
+
+`workspaceShortcuts()` in `components/os/topbar.tsx` builds the simple-mode
+strip from `visibleGroups(false)` in `lib/os/nav.ts`, which already held the
+plain list; the v194 strip had hardcoded its own and ignored simple mode.
+Advanced mode keeps the v194/v195 strip unchanged. Decision and rejected
+alternatives: `docs/decisions/2026-09-25-simple-mode-menu-from-nav.md` in the
+parent repo. Home's "Recent" had been three fixed links; it now reads the
+company's activity adapter (timestamps are Unix seconds — the first draft
+rendered them as January 1970), strips conventional-commit prefixes
+(`lib/os/dashboard/home-copy.ts`), and the greeting is computed from the local
+server clock.
+
+## v195 (2026-09-24): resilient company navigation
+
+### What's new for you (fix, v0.75.0)
+Company pages are safer to open and the tools you use are easier to reach.
+- Company Info now opens safely for older or partially structured company files instead of taking down the page.
+- Company Info and Preferences section tabs follow the section you choose instead of remaining stuck on the first item.
+- A compact company shortcut strip keeps Home, Approvals, Company Info, Departments, Brain, Terminal, and Preferences one click away; less-used tools live under More.
+
+## v194 (2026-09-24): native command canvas
+
+### What's new for you (improvement, v0.74.0)
+Alacrán now feels like a focused desktop workspace instead of a crowded dashboard.
+- A compact app toolbar replaces the permanent sidebar and keeps search, company switching, history, appearance, and the assistant close at hand.
+- Home focuses on the next decision and recent work instead of a grid of metrics.
+- Company Info, Approvals, Connected Tools, and Preferences use calmer, task-focused layouts with clearer labels for non-technical users.
+- The interface uses a restrained graphite palette, system typography, consistent icons, and one Alacrán coral accent instead of rainbow decoration.
+- The company picker is now a simple recent-companies list rather than a card dashboard.
+
+## v193 (2026-09-24): first-time workflow improvements
+
+### What's new for you (improvement, v0.73.0)
+Find your work and review changes with more confidence.
+- Ask for changes now lets you describe a correction while keeping the previous draft.
+- Questions started in a company use that company by default.
+- Records brings your leads, money records, and content ideas together.
+- Setup drafts and conversation text stay available when you return on the same device.
+- Approval screens use readable previews and keep additional documents waiting for their own review.
+
+Implementation: revision requests archive the proposal and preserve the original run baseline. Revision edits are restricted to the existing document and require an executor with tool scope enforcement. Review writes share the run lock; the main approval screen passes expected text to reject stale approvals. Home derives risk from the same classifier as Approvals. Workflow background controls receive supported IDs from the server registry. Company scope is passed to the assistant explicitly; restored conversation text excludes executable proposals to prevent replay. Company-local browser storage holds setup drafts and activation progress. Technical profile navigation is gated by AdvancedOnly.
+
+Verification: the earlier complete Vitest run passed 1,979 tests. The final expanded run passed 1,978 of 1,981 tests, with three five-second timeouts; focused reruns cleared the command-runner and pack-installation timeouts, while the unchanged Doctor remediation test timed out again. Targeted workflow tests and lint passed. Root verification passes. Type checking has pre-existing test-file errors reproduced against an untouched HEAD snapshot; no new diagnostics were found. Home, Records, readable approvals, and revision feedback were inspected in an isolated Chrome preview using disposable data. The final keyboard-focus recheck was blocked by browser automation timeout. The preview was stopped and removed. Native packaging and real AI revisions were not tested; no release was published.
+
+## v192 (2026-09-23): a sharper memory that costs far fewer tokens
+
+### What's new for you (improvement, v0.72.0)
+Alacrán remembers your company better while using much less of your AI plan.
+- Each question now sends a short, focused summary of your company instead of whole files, often over 90% less.
+- Notes and decisions that match your question are found on your computer first, so answers use what's relevant.
+- Questions like "what's my pipeline?", "how much cash?" or "what's waiting for me?" are answered instantly on your computer, with no AI used.
+- Each answer shows roughly how much it sent to your AI.
+- Session notes skip very short conversations and use a cheaper model, and weekly digests do too.
+
+The memory work behind the non-technical review: the brain remembers more
+usefully and spends less of the user's plan doing it.
+
+**Budgeted memory.** `gatherSingleCompanyContext` pasted whole files into
+every question — HANDOFF.md in full (this repo's is ~104 KB) plus the newest
+session note and three decisions, uncapped. It now builds tiers under
+`MEMORY_BUDGET_CHARS` (12,000): the company card with a staleness note past 60
+days, the latest HANDOFF entry, the newest session note trimmed, the latest
+digest, notes matching the question, live numbers, then short decision/retro
+excerpts. Measured on this repo for one question: 109,765 characters (~27,400
+tokens) before, 8,172 (~2,000) after. The stream route sends a `meta` event and
+the answer shows "sent ~2.0k tokens to your AI" (an estimate, characters / 4).
+
+**Local search and answers.** `findRelevantNotes` is plain term counting over
+notes, digests, decisions and retros — no index, no tokens. `answerLocally`
+answers short factual status questions (pipeline, cash, what's waiting,
+recent decisions) from records with no AI call, in both assistant paths;
+anything asking for judgement falls through. English typed questions only.
+
+**Cheaper upkeep.** `AiExecutor.routineModelArgs` is a new required field
+(Claude Code: `--model haiku`; the rest null until verified). The session-note
+resume and `routine` commands (digest) append it. Conversations under 16 KB of
+transcript are not written up. **Not yet run end to end:** the haiku alias
+needs one real note run before release.
+
+**Keeping it true.** The refresh prompt now requires `# source: <file>, <date>`
+on every changed or added fact. The company card was deliberately not moved to
+an AI-generated summary: it is built deterministically, which costs nothing.
+
+**Not done:** replacing `--continue` note-writing with a condensed transcript
+extract (per-executor transcript formats; needs its own design), and
+embedding search (keyword search first; add embeddings only if it falls short).
+
+## v191 (2026-09-23): setup, connections and plans in plain words
+
+### What's new for you (improvement, v0.71.0)
+Describing your business, connecting tools and planning ahead are simpler and more honest.
+- "Tell me about your business" asks five plain questions with everyday examples, and closing it by accident no longer loses what you typed.
+- Connections opens with the three tools that matter first, and a pasted key now says "Key saved" rather than claiming to be connected.
+- You can add milestones to your Roadmap straight from the page.
+- Settings has a "Copy details for support" button, and on a Mac you can have Alacrán open when you log in, so scheduled jobs keep running.
+- If the Mac app can't start, it now says so instead of showing a blank window.
+
+The second half of the non-technical review (v190 was the first).
+
+**Setup wizard.** Rewritten for a business owner: "Tell me about <company>",
+steps What you do / Who's involved / How work flows / What's hardest / Check &
+save, catering examples instead of "autonomous AI engineering teams" and "CI
+verification", the body font for the user's own sentences, and "Save" instead
+of "Save & Compile Context". Closing the dialog keeps the draft; only a
+successful save clears it.
+
+**Connections.** `connectionCatalog` never reports an API-key tool as
+connected: nothing tests a key against its vendor, so the most it can say is
+"Key saved" (Notion included — its status is key presence too). The board
+leads with Set up first (Claude, Google, chats), then Your tools, then All
+tools; the MCP / API Keys / CLI Bridges tabs and the raw key-file editor are
+Advanced only.
+
+**Roadmap** gains `appendMilestone` / `createMilestoneAction` and an Add a
+milestone form, the same write-and-commit path as v182's quick-add; only the
+file's `milestones` list is touched. **Personas** is relabelled as example
+businesses — nothing links to it and it has no actions.
+
+**Help and startup.** Settings' About is Help & about, with copy-details
+(version, system, mode, page; nothing about companies). Launch at login goes
+through a new `window.alacran.login` bridge in the macOS shell — shown only
+when the shell publishes it, so it needs that shell's matching release. The
+mac shell now waits up to 40s for its server and then shows "Alacrán couldn't
+start" and quits, instead of a window on a dead page. **Neither mac change has
+had a human launch test yet**, which AGENTS.md requires before either counts
+as verified.
+
+**Honesty.** The setup trust step no longer says the AI gets "not your entire
+workspace" or that money/contract/publishing actions "require your approval"
+(AGENTS.md: nothing enforces that row); it says what the code does. The
+changelog test now also rejects zod / schema / atomically / stderr / stdout /
+ontology in user-facing text, after v182's "validated with Zod schemas and
+atomically committed to Git" reached the What's New window.
+
+**Still open:** the mac shell asks for the microphone at launch, before any
+window (its comment explains why the call is needed at all; moving it to first
+use needs a design and a real-hardware test), and the starter packs' example
+company.yaml question from v190.
+
+## v190 (2026-09-23): a new user's first question gets an answer
+
+### What's new for you (improvement, v0.71.0)
+Setting up Alacrán and asking your first question is clearer, and the app no longer says things that aren't true.
+- If the AI isn't installed or signed in, the app now says so in plain words and shows the button that fixes it, on Home and in the assistant, instead of a technical error.
+- Setup leads with "Install it for me", and says up front that Claude Code needs a paid Claude plan.
+- Your first question is answered: it's no longer lost behind the assistant's setup questions, which you can now skip.
+- The quick "add a lead", "log money" and "add a content idea" shortcuts open empty forms. They used to fill in made-up examples that could be saved as real.
+- Wording across setup, Home, the briefing and approvals is plainer, and the sidebar no longer shows a status light that was always green.
+
+Walked end to end as a new user on a fresh install with no AI tool on the PATH
+(an isolated dev instance: empty `HOME`, `ALACRAN_DATA_DIR`,
+`ALACRAN_DISABLE_BUILTINS`), before and after. The review behind this is the
+2026-09-16 non-technical audits plus what that walk found.
+
+**Failures in words.** `explainAssistantFailure` (lib/assistant/clean-stderr.ts)
+turns the four failures people hit — not installed (`ENOENT`), signed out,
+usage limit, offline — into a sentence with the fix, at all three assistant
+paths (per-company, all companies, the stream route). A background job that
+never started now says why instead of "No changes produced.", read from the
+last lines of its log only, so a digest that mentions a network error is not
+mistaken for one. Unrecognised text passes through.
+
+**Status that lied.** The sidebar's "4/4 systems live" was a hardcoded
+fallback (`liveConnectors` was never passed by any caller) — deleted. The
+setup rail ticked any step you had passed, so a skipped AI step wore a green
+check. Home called the profile ready whenever company.yaml parsed, which the
+starter pack's example file always does; it now means the file is anything
+but a pack's untouched example (`isUntouchedStarterExample`), so a company
+described by the wizard, the define-company job or by hand all count.
+
+**Invented data.** The Ask page's three shortcuts staged hardcoded records (an
+Acme Corporation lead at $12,000, a $145 hosting bill, an article about AI
+operating systems) that "Commit to Records" wrote straight into the user's
+files; they open the department add forms now. Those forms pre-filled a
+$5,000 "outbound" lead and a $100 "Software" charge; they start empty.
+
+**The first question.** Enter on the Ask page only copied the text into the
+dock's own box; it is sent now, held through first-run setup and sent when
+setup is saved (which now has a Skip). `text-os-accent-foreground` had no
+theme token, so the user's own bubble and the send button rendered blank. A
+typed question no longer reopens the mic after the answer. The auto-send is
+deferred a tick and cancelled on cleanup: React's development double-mount
+otherwise sent it twice and the unmount aborted the first, leaving "Thinking…".
+
+**Simple mode.** `useAdvancedMode` starts off rather than on, so a simple-mode
+user no longer sees Terminal and Diagnostics until hydration; the ⌘K palette
+filters by mode (`forMode`) — it is built on the server, which can't see it.
+Still open: on the very first load of a brand-new install the sidebar hydrates
+before onboarding seeds simple mode, so the technical items can show for that
+gap once.
+
+**Open for product:** every starter pack copies an example company.yaml into
+the new company, so a catering business's memory starts out saying its
+customers are "Board Members, Investors & Executive Leadership". The AI reads
+that file. Not changed here — it changes what the packs provide — but it
+breaks the "never invent a fact" rule and needs a decision.
+
+## v189 (2026-09-23): opening a company page no longer starts an agent, and Stripe stops claiming a key that isn't the company's
+
+### What's new for you (fix, v0.70.1)
+Opening a company no longer quietly starts an AI assistant in the background.
+- The assistant now starts only when you open the Terminal page yourself, so browsing Home or Finances uses none of your AI plan.
+- The terminal badge says "Terminal open" for a plain command line and "Agent running" only when an assistant is actually running.
+- Finances no longer shows Stripe as live for a company that has no Stripe key of its own. A key set for the whole computer is shown as "machine key".
+
+Both came from screenshots of a fictional demo company taken for the landing
+page, where every screen showed "Agent running" and Finances showed
+"Stripe · LIVE" for a company with no Stripe account.
+
+**The badge was telling the truth; the bug was underneath it.**
+`TerminalPersist` lives in the company layout so a terminal survives
+navigation, and it mounted `TerminalWorkspace` on every `/c/[companyId]/*`
+page, hidden at zero height. The workspace's mount effect opens an assistant
+session when none is running (`openTab(assistantOk ? "ai" : "shell")`), so a
+visit to Home spawned a real executor with the ~1.4KB introduction prompt,
+invisibly, on the user's own plan. It now mounts on the first visit to
+`/terminal` and stays mounted from then on, which keeps the persistence it was
+built for. Verified against an isolated dev instance (`HOME` and
+`ALACRAN_DATA_DIR` pointed at a throwaway demo): `/api/terminal-status` is
+empty after visiting Home and Finances, where before it listed a session. The
+`/terminal` path itself was not exercised live, because it starts a real
+agent run. The badge layout also hardcoded "Agent running" while computing
+"Terminal active" beside it; it now follows `hasAiAgent`.
+
+**Stripe: the machine-default rule, applied to Finances.** This machine
+exports `STRIPE_SECRET_KEY`, and `resolveConnectorStatus` treats any
+environment key as `connected`, so every company's Finances page called
+Stripe live on the maintainer's account. `lib/os/connectors/statuses.ts`
+already says "machine default" for exactly this case; the department
+connectors never did. `DepartmentConnector` gains `source: "company" |
+"machine"` (company only when `secrets/<id>.*` exists), and the finances
+adapter shows `live` only for a company-sourced key, exposing
+`machineDefault`/`stripeMachineDefault` so the cockpit can say "machine key"
+instead. The content, social and comms pages read the same connectors and
+still colour a machine key green; they are the next to convert.
+
+## v188 (2026-09-22): the salvage step stops blocking the publish it exists to rescue
+
+No user-facing change — a CI fix, so no What's-new block.
+
+**`.github/workflows/package-linux.yml` gains `continue-on-error: true` on the
+artifact step.** Publishing v0.70.0, `Alacran.deb` built and signed cleanly and
+was then never published: `actions/upload-artifact` failed with "Artifact
+storage quota has been hit", a failed step fails the job, and
+`Publish to alacran-releases` was skipped. The release went out with the five
+macOS assets and no Linux ones — the precise failure v69 wrote the
+"never publish a release that is missing one" rule about, produced by the step
+added to make that rule survivable.
+
+That step is a salvage copy for when the PUBLISH fails (it is how v0.56.0
+shipped through the broken-token period). A rescue path that can cause the
+casualty it rescues is worse than not having one, and the quota is a shared
+account-level resource that recalculates every 6-12 hours, so this would
+recur unpredictably on any release. It stays — v69's reasoning for keeping it
+is untouched — but it can no longer take the publish down with it.
+
+## v187 (2026-09-22): the assistant stops quoting its own console at you
+
+### What's new for you (fix, v0.70.0)
+
+When the assistant can't answer, it now says why in a sentence instead of pasting a page of console output.
+
+- A failed question used to come back as the raw output of the tool underneath — banners, session ids, token counts, stdin warnings — with the one useful line buried somewhere inside it. Only the actual message is shown now.
+- Codex can be used as your assistant in a folder that isn't a git repository. It refused to start in one, which is exactly what the cross-company assistant's own workspace is.
+
+**`lib/assistant/clean-stderr.ts`.** Executor stderr carries diagnostics that
+are not errors: `Reading additional input from stdin`, the Codex banner and its
+`workdir:`/`model:`/`sandbox:` block, `tokens used`, bare digit-group lines, hook
+traces and the echoed user turn. All three callers — the streaming route,
+`askCompanyImpl` and `askAllCompaniesImpl` — used `stderr.trim()` as the message,
+so a failure showed the noise and hid the cause. Each now cleans first and keeps
+the raw text only as a last resort, so nothing is ever swallowed to silence.
+
+**`--skip-git-repo-check` on Codex's `buildArgs`.** `assistantWorkspaceDir` is a
+plain directory with no repo in it — deliberately, it is scratch space — and
+`codex exec` refuses to run in one. Pinned by a test asserting the whole argv,
+since this is the flag most likely to be dropped in a future edit.
+
+**Found uncommitted in the working tree at the start of this session**, green
+against the full suite, and committed as its own slice rather than folded into
+the release bump — a shipped change with no changelog entry is a change no user
+is ever told about.
+
+## v186 (2026-09-22): a new company is born with its connectors gated
+
+### What's new for you (improvement, v0.70.0)
+
+Every new company now starts with its connected accounts unable to send, share, delete or sign on their own.
+
+- The starter template carries the same protection the app's own repo does: an assistant can draft an email, a calendar invite or a signature request, but it cannot send one. Reading your inbox, calendar and files still works exactly as before.
+- This closes a difference that was invisible from the outside. Connecting Google through the command-line tool gave you a read-only guarantee the tool itself enforced; connecting it as a native connector gave you the same inbox with send and delete attached and nothing enforcing anything.
+
+**`templates/company-starter/.claude/settings.json` gains the §6 deny list.**
+The parent repo's own decision record is
+`docs/decisions/2026-09-22-connector-write-gate.md`; this slice is only the
+half that makes a *new* company inherit it. `permissions.deny` is the right
+home rather than argv because Claude Code reads it whatever started the
+session — an assistant tab, a headless run, or a `claude` the user opened in
+the folder themselves — and that last one is the case `claudeCodeArgs`'
+allowlist can never reach.
+
+Reads stay allowed deliberately. The gate fires on the step, not the topic.
+
+## v185 (2026-09-22): the memory stopped writing itself while you were still talking
+
+### What's new for you (fix, v0.70.0)
+
+Alacrán no longer writes up a conversation while you are still having it.
+
+- Session notes are written when a conversation ends, not while it is running. Until now one long sitting could produce a new note every minute — ten near-identical files across three days from a single unbroken conversation — and the same request kept arriving in the assistant tab mid-sentence.
+- A conversation you are still in is left alone until the tab closes. One you are running in your own terminal is left alone until it has been quiet for ten minutes.
+- This mattered more than the clutter suggested: the weekly digest reads that folder as the record of what happened, and a run of repeated notes made three quiet days look like three busy ones.
+
+**Nothing ever checked whether the conversation was over
+(`lib/terminal/auto-session-note.ts`).** The 60-second ticker is named for the
+LAST conversation, but the only questions it asked were "has anything been
+said" and "have I written this exact transcript down already". `--continue`
+resumes the most recent transcript in the directory, which during a live
+sitting is the one the user is typing into — so the note prompt landed in their
+open session, and because every turn they then took bumped the fingerprint, the
+next tick saw "new" and did it again, at 60-second cadence, for as long as
+somebody kept using the app.
+
+Measured in the parent repo: ten notes under `notes/company/sessions/` dated
+2026-09-18 to 2026-09-20, one with substance and nine ritual, the same prompt
+arriving word-for-word across three calendar dates. A session that declined to
+write another got the identical prompt back on the next tick, because a
+refusal in chat reaches nothing that decides whether to ask.
+
+**This is the fourth pass over the same function and the first about the
+human.** v148 fixed a refusal that froze the feature, v149 fixed the run
+recording its own pre-spawn fingerprint, v150 added the circuit breaker when
+that recompute fails. Each one fixed a way the run echoed ITSELF. None of them
+asked whether the conversation had ended, which is the question the feature's
+own name assumes has been answered.
+
+Two guards, because there are two ways to be live and neither covers the
+other. `hasLiveAssistant` (already in `sessions.ts`, already used by
+`intro-command.ts`) answers it for a tab this app opened. A `claude` started
+from a real terminal is in no session registry at all, so for that one the
+transcript's own mtime has to answer — idle for ten minutes, not merely
+unchanged, since an unchanged fingerprint one second after the last turn means
+the user is mid-sentence rather than finished.
+
+*ponytail:* the mtime half reads the Claude store, the only one exposing an
+absolute clock — an executor whose fingerprint comes from a session LISTING has
+no absolute time in it, which is why that fingerprint is a hash and not a
+timestamp. Those keep the live-tab guard and nothing more, leaving one gap: a
+Kiro run started outside the app. Give that listing an absolute time and this
+collapses to a single rule for both.
+
+**The regression test v149 left behind needed an explicit clock, not a new
+assertion.** It bumps the transcript to *now* to model `--continue` appending
+its own turn, so the new idle guard would have refused its second call and the
+test would have gone on passing while testing nothing. It now takes an
+hour-later clock, which keeps the fingerprint check as the thing that refuses
+it. Three tests added: a live tab is left alone, a warm transcript with no tab
+open is left alone, and — the one that matters — a conversation that HAS gone
+quiet is still written up, so a change that simply stopped writing notes cannot
+pass. 1,945 tests.
+
+## v184 (2026-09-19): executive morning briefing and audio habit loop
+
+### What's new for you (feature, v0.69.0)
+Alacrán now greets you with an executive morning briefing on your company dashboard, complete with one-click audio playback.
+- Executive Morning Briefing synthesizes open approvals, active pipeline value, cleared cash balance, and team priorities into an actionable summary.
+- One-click audio player uses native speech synthesis with play and pause controls, animated waveform visualization, and playback speed toggles.
+- Deep links on key metrics let you jump immediately to pending approvals, funnel leads, or financial records.
+- Spoken briefing transcript can be toggled on demand to read along or review action items at a glance.
+
+## v183 (2026-09-19): actionable intelligence and pre-flight shield
+
+### What's new for you (feature, v0.68.0)
+Ask Alacrán can now stage actionable record proposals directly in canvas, backed by an automated pre-flight shield that protects your workspace.
+- When you ask the assistant, it can suggest new leads, expenses and content items for you to review and save.
+- Action Starters on Ask Alacrán let you quickly stage operational records in your workspace with one click.
+- Pre-flight runtime shield automatically verifies that your workspace is clean, tool dependencies are available, and no stale locks block execution before starting tasks.
+- Action cards provide immediate confirmation and direct navigation jump links to department cockpits.
+
+## v182 (2026-09-19): direct record creation and smart gate approvals
+
+### What's new for you (feature, v0.67.0)
+You can now create operational records and change status values directly in the app, with smart risk ratings and one-click approvals for safe routine updates.
+- Quick-add modal dialogs let you create new leads, log financial transactions, and add content items directly from department tables.
+- Interactive status steppers in table rows let you advance lead stages, clear transactions, and update content statuses with immediate feedback and rollback protection.
+- Every new record is checked before it is saved, and saved on its own so it can be undone.
+- Approvals now sort changes by risk: routine ones (summaries and notes) and ones to check carefully (money, agreements, or your company details).
+- One-click "Approve All Safe" button allows you to batch approve routine session summaries and digests with a single tap.
+- Each change shows what was added and removed, with a plain summary and the full detail one click away.
+
+## v181 (2026-09-19): faster navigation and resilient Preferences
+
+### What's new for you (fix, v0.66.0)
+Moving around Alacrán is now faster, and Preferences no longer fails when your computer exposes only part of its voice system.
+- The sidebar prepares only the destination you are actually opening instead of loading every screen in the background.
+- Connection checks are reused during normal navigation, while Re-check still requests fresh results whenever you choose it.
+- Preferences remains usable even when an embedded browser cannot report live voice changes.
+
+## v180 (2026-09-19): first-run setup that starts with the user's goal
+
+### What's new for you (improvement, v0.66.0)
+New users can now set up Alacrán without already understanding agents, company folders, or connectors.
+- Setup begins with what you want help accomplishing and chooses a suitable starting workspace for you.
+- A plain-language trust step explains what stays local and which important actions always wait for approval.
+- AI setup is guided separately, while optional business connections are left until they become useful.
+- Company creation reuses your chosen goal instead of asking you to choose from the full template catalogue again.
+- Your new workspace opens with a goal-specific first action, so you know exactly what to do next.
+
+The fresh-install journey now reuses the real company templates, dependency checks, sign-in flow, Human Gate, and creation actions. Existing users and the normal advanced Add Company flow keep their full controls. An isolated preview switch can suppress developer-only sample companies during first-run QA without moving or changing real company folders.
+
+## v179 (2026-09-18): a calmer home for decisions, next steps, and company health
+
+### What's new for you (improvement, v0.66.0)
+Alacrán now opens on a focused, user-first home that shows what needs your attention without making you learn the system first.
+- The main navigation is shorter and clearer: Home, Ask Alacrán, and Approvals lead, while technical tools live under More.
+- On phones, Home, Ask, Approvals, Company, and More remain directly reachable in the bottom bar.
+- Pending changes are explained in everyday language, with the technical details still available when you want them.
+- Next best actions and company health turn setup gaps into useful, direct steps.
+- Privacy language now says plainly what stays on your computer and when your chosen AI provider is involved.
+- Ask Alacrán now has its own focused workspace, with outcome-based starting points that open the real assistant with your request ready to send.
+
+The redesign follows the selected compact desktop direction while retaining the existing company context, assistant, connectors, diagnostics, terminal, and approval safeguards.
+
+## v178 (2026-09-18): each company can use its own accounts
+
+### What's new for you (feature, v0.66.0)
+
+Each company can now have its own Stripe, Slack, Notion, and inbox instead of every company sharing the one set up on this computer.
+
+- Open a company's own page and you can give it its own Stripe, Slack, Notion, or inbox account, separate from every other company.
+- A company you haven't given its own account to keeps using your computer's default — and the screen now says plainly which one it's using, so you're never guessing.
+- The Notion connection badge was showing "Connected" on every company whether or not a token actually existed anywhere. Fixed.
+- A company's own account lives on this computer only. If you ever restore that company somewhere else, it falls back to that computer's default until you set it again — the screen that shows your backups now says so.
+
+**The company-first credential resolver (`lib/credentials/resolve.ts`).** The per-company credential store already existed — the `api-connect` skill has been writing a company's own `.env` for a while — but nothing in this app ever read it; every badge, every check, every connector answered from the one machine-wide `.env.local`. `resolveCredential(agentRootPath, key)` is the new single chokepoint: read the company's own `.env` first (via `parseEnvFile`, the same parser `.env.local` already used, so `export ` prefixes and quoted values behave identically in both files), fall back to the machine file when the company's is absent, unreadable, or has the key present but empty, and report `source: "company" | "machine" | "unset"` either way. `agentRootPath: null` skips the company read entirely — the system Connections page, which has no one company to ask, uses exactly that. A small `CREDENTIAL_ALIASES` table resolves `NOTION_API_KEY` against the vendor's own `NOTION_TOKEN` name too, so a company `.env` written by hand under either name still works.
+
+**The live bug this closes (`lib/os/connectors/statuses.ts`).** `readNotionToken` is `async`; the badge check called it inside `Boolean(...)` with no `await`. `Boolean(Promise)` is always `true` — the Notion badge has read "Connected" on every install this app has ever shipped, including v0.65.0, whether or not a token existed anywhere on the machine. First fix (this session) extracted and awaited a standalone helper; once the company-first resolver landed, that helper was replaced entirely by a real per-company `resolveCredential(agentRootPath, "NOTION_API_KEY")` check, which also closes the narrower bug the standalone helper still had — it answered "does *any* company have a token", which would have shown company B's Notion connection as company A's.
+
+**Connector badges answer per company (`allConnectorStatuses`).** Now takes `agentRootPath: string | null` as its first argument. Its cache was a single module-level slot — correct when only one company's status was ever computed, and silently wrong the moment two companies' pages could be open in the same server process, because the second company's request would have served the first's memoized answer. It's a `Map` now, keyed by `agentRootPath ?? "__machine__"`. Four checks were rewired to resolve through the credential resolver instead of reading `.env.local` directly: **payments** (Stripe, PayPal, Square, Whop — each resolved individually, reduced to one overall `source` for the row), **Slack**, **Notion**, and the primary **inbox** pair. Everything else (GitHub, Google, Beeper, WhatsApp, the LLM provider, calendar, every CRM/ads/social stub) is untouched and still reads the machine environment directly — none of those have a per-company concept yet.
+
+**The payments reduction is deliberately conservative.** A company can have its own Stripe key and an inherited PayPal default at the same time; `paymentsStatus` reduces several processors' sources to one badge. `reducePaymentsSource` makes "machine" win if *any* contributing processor resolved from the machine, even when another processor in the same row is the company's own — so "Stripe, PayPal configured" never reads as fully-this-company's when one leg of it isn't. The first version of this reduction had it backwards (company won if any processor was company-scoped), which would have hidden the exact inherited-default case the "— machine default" wording exists to warn about; caught in review and fixed before merge. Under-warning costs a charge on the wrong account, so the reduction always leans toward saying "machine default."
+
+**Writing a company's own credential (`lib/save-company-credential-impl.ts`, `lib/save-company-credential.ts`).** A company can now write one credential to its own `.env`: `upsertCompanyEnvText` rewrites a single `KEY=value` line and preserves everything else in the file (an empty value deletes the line), the key is validated against the exact charset `parseEnvFile` already enforces on read (shared as `ENV_KEY_PATTERN`, one pattern rather than two copies that could drift), and the value is rejected if it contains a newline — both checked before any file touches disk, so a malformed key or value can't smuggle a second variable into the file. The write always happens at mode `0600` and is `chmod`'d to `0600` even when the file already existed, since `writeFile`'s `mode` option only applies to file creation and a hand-edited or older `.env` could otherwise stay world-readable forever. A read failure that isn't "the file doesn't exist yet" (permission denied, for instance) refuses the whole write rather than treating it as an empty file and overwriting every other credential already in it. This writer never calls `commitFile` — a company's own credential is never committed to that company's git history.
+
+**A machine-level pool of known MCP servers (`lib/mcp-pool.ts`).** Server name and URL, no secrets, seeded from the existing `MCP_PRESETS` on first read and persisted to `dataPath("mcp-pool.json")` after that. Adding an entry validates the name and URL with the same checks the per-company MCP writer already used. A pool a user has deliberately emptied stays empty on the next read rather than resurrecting the six presets — the first version re-seeded whenever the stored array was empty, which meant a future "remove everything" action would have silently undone itself the moment anyone re-opened the page; fixed to seed only when the file is missing or fails to parse, never when it parses to a legitimately empty array.
+
+**Per-company assistant persona (`definitions/integrations/assistant.yaml`, `lib/assistant/company-persona.ts`, `lib/assistant/resolve-persona.ts`).** A company can carry its own assistant name and language, mirroring the shape `google.yaml` already uses for per-company Google accounts, with the machine's own persona (`voice.json`) staying the default when a company has none of its own. `resolvePersona(agentRootPath)` is company-first with the same `"company" | "machine" | "unset"` shape as the credential resolver, and it's a small dependency-free tree — a company-only leaf, a machine-only leaf, and one module that statically imports both — rather than the two mutual dynamic imports an earlier version of this landed with, which worked but would have been fragile under a different bundler. It now reaches every place a persona is read: the two ask paths (per-company and cross-company), the streaming assistant route (previously resolved once before branching on scope, so a company's own persona never reached the actual streaming UI), and the company page layout itself (previously always machine-only, which meant a company with its own persona but no machine persona at all would have hit the first-run setup wizard on its own page). The voice API key stays machine-only throughout — only the name and language move per company.
+
+**Connections stops depending on an invisible cookie (`app/system/connectors/page.tsx`, `lib/connect/connect-actions.ts`).** This page is `scope: "system"` in the nav, but was calling `allConnectorStatuses` and `readMcpServers` scoped to whichever company the topbar's active-company cookie happened to name — a system-wide page silently rendering one company's state, invisible unless you'd noticed which company was selected when you opened it. It now resolves connector statuses machine-wide (`allConnectorStatuses(null)`) and reads the machine MCP pool (`readMcpPool()`) unconditionally; the client-side "Re-check" action had the identical bug in a separate code path and got the identical fix.
+
+**A data-loss bug caught before it shipped.** The Connections page's own "+Enable MCP" button called `saveMcpServers(activeCompanyId, next)` — a full replace of that company's `.mcp.json`, not a merge. Once the page above started feeding it the machine pool instead of a company's real server list, the next click on that button would have silently overwritten a company's actual MCP configuration with "pool plus or minus one entry," scoped to whichever company the same invisible cookie named. Caught while tracing what the display fix would do downstream, before merging it: the write path is removed entirely. The modal is now read-only — pool membership only — with a pointer to Company Info & Settings, which already has the correct place to turn a server on for one specific company with an explicit company id and no cookie involved.
+
+**Simple-mode visibility for the new credential rows is dynamic, not static (`components/agent-card.tsx`).** The three new rows (Stripe, Slack, Notion) and the inbox picker sit in a company's own wiring band, renamed from "Connections and files" to "What this company uses." A first version put all three unconditionally in simple mode, which this repo's own rule (a new feature defaults hidden in simple mode) says is wrong; wrapping them all in `AdvancedOnly` instead would have broken the opposite rule (simple mode must never hide something already in use) for a company that had already given one of them its own key. The fix satisfies both without an exception carved into either: each row is Advanced-only until `resolveCredential`'s `source` reports `"company"` for it, and always shown from then on.
+
+## v177 (2026-09-16): Codex registered, MCP belongs to the company, and a guessed endpoint deleted
+
+### What's new for you (fix, v0.65.0)
+
+Connecting a tool now works for whichever AI agent your company is set to, and Alacrán won't invent an address it hasn't checked.
+
+- Adding a tool used to report success no matter which AI agent your company runs, and two of the four agents never picked it up. It now tells you by name which agents will actually get the tool, and refuses instead of pretending when none of them would.
+- Two tools (Linear and Sentry) offered a connection whose address nobody had ever verified — Alacrán was guessing it from the tool's name and saving the guess into your company. Both are removed until their real address is checked.
+- If a page fails, you now get a page that says so with a way back, instead of a blank screen with an error code.
+- **Codex CLI joins Claude Code, Kiro, Kimi and Antigravity as an agent you can pick for a company.** It's marked beta: its settings were checked against the real program on this computer, but no complete job has been run through it from the app yet.
+
+**Codex CLI registered (`lib/ai-executors.ts`).** Measured against the installed
+codex-cli 0.147.0 rather than its docs, the standard the other four were held
+to — argument errors fire before any model call, so `codex exec --sandbox
+bogus-value` answering "[possible values: read-only, workspace-write,
+danger-full-access]" verifies the flag without spending a request.
+
+- `enforcesToolScope: **false**`, and it is the field that matters. `-s/--sandbox`
+  is a coarse MODE, not a path pattern: there is no equivalent of Claude's
+  `--allowedTools Edit(<glob>)` and nothing taking a list of permitted bash
+  commands, so `editScopePattern` and `bashPatterns` would be silently
+  discarded. `runCompanyCommandImpl` therefore refuses `untrustedInput`
+  commands on Codex, which is correct rather than a gap.
+- `mcpConfigPath: null` — `codex mcp add` takes no scope flag and config
+  resolves from `~/.codex/config.toml`. v99 recorded this; re-measured here and
+  still true at 0.147.0.
+- **No `autoLoadsCompanyContext`, and no `resume`.** The binary carries 55
+  references to `AGENTS.md` against 1 for `CLAUDE.md` — v86's move to a
+  vendor-neutral filename is what makes Codex read this repo's working agreement
+  at all — but `.claude/commands` and `.claude/skills` appear zero times each
+  while `.codex/skills` appears three. Same partial as Kimi, same answer: let
+  the primer run. Resume is omitted because this registry requires a resumable
+  executor to also say how to tell whether there is anything to resume, and
+  Codex's behaviour on an empty history has not been measured.
+- `beta: true`. Registered, not yet run end to end from this app — v99's narrow
+  labelled exception, not a repeal of "either run it, or don't offer it".
+
+**The rule from this same slice caught the additions immediately.** Registering a
+fifth executor failed `tsc` in `summarize-network-access.ts`,
+`components/network-graph.tsx` and `install-repair-impl.ts` — three total
+`Record<AiExecutorId, …>` / `Record<InstallableId, …>` tables that cannot compile
+until somebody answers for the new agent — and failed
+`connect-status-impl.test.ts`'s "gives every registered AI executor its own card".
+That is exactly the behaviour the rule was written for, observed on its first
+use. `statuses.ts`, `install-tool-impl.ts` and the connectors catalog were NOT
+guarded and had to be found by hand; they are the ones still to convert.
+
+**The agent is the driver, so an MCP server belongs to the COMPANY
+(`lib/ai-executors.ts`, `lib/save-mcp-servers-impl.ts`).** A company picks its
+executor from a dropdown and can change it whenever it likes, so a server wired
+up under Claude Code has to still be there after switching to Kimi.
+`saveMcpServersImpl` documented itself as writing "every registered executor's
+config path" and looped over a hardcoded `[MCP_SERVERS_RELATIVE_PATH,
+KIRO_MCP_SERVERS_RELATIVE_PATH]` — accurate when two executors were registered,
+silently wrong from the day Kimi and Antigravity joined them. Those companies
+pressed "+ Enable MCP", got a success message naming two files, and their own
+agent read neither.
+
+`AiExecutor` now carries `mcpConfigPath: string | null` — **required** so it
+cannot be forgotten, **nullable** so "this CLI has no project-scoped MCP config"
+is a measured answer rather than an unfilled field. The writer derives its paths
+from `AI_EXECUTORS`, the modal names the agents rather than the filenames
+(`MCP_READER_LABELS`), and the save refuses outright when no registered executor
+reads one at all. Kimi and Antigravity declare `null`: neither was measured on a
+machine with them installed, and the two real paths came from the installed
+binaries rather than their docs, so a guess would not have met the same bar.
+
+**The measurement that produced the standing rule.** Four surfaces answer a
+question per executor. Only one covers all four executors —
+`summarize-network-access.ts`, and it is the only one whose table is a total
+`Record<AiExecutorId, string>`, which fails `tsc` until a new executor is
+answered for. `statuses.ts` covers three, `install-tool-impl.ts` two,
+`save-mcp-servers-impl.ts` two. The type is what keeps these honest, not
+diligence — now written into `AGENTS.md` as a standing rule, with the two
+remaining surfaces named as the next to convert.
+
+**The guessed MCP endpoint (`components/os/connectors/mcp-setup-modal.tsx`).**
+`entry.mcpUrl || \`https://mcp.${entry.slug}.com/mcp\`` wrote an unverified host
+into a company's `.mcp.json` and reported success. `linear` and `sentry` shipped
+declaring `mechanism: "mcp"` with no URL, so both were guesses. This is not a
+broken link: a host that does not exist today can be registered by someone else
+tomorrow, and an MCP server hands the agent its tool definitions. The fallback is
+deleted, both entries removed, and `catalog.test.ts` now fails on any MCP entry
+without a declared `mcpUrl` — the guard `lib/mcp-presets.ts` already had and the
+catalog bypassed.
+
+**Error boundaries (`app/error.tsx`, `app/not-found.tsx`, `app/global-error.tsx`).**
+45 pages, zero boundaries, and 21 files calling `notFound()`. In the packaged
+shell there is no URL bar, so Next's default "Application error" screen is a dead
+end whose only exit is quitting. Verified against a running production server
+rather than a build: the 404 returns a real 404 with the app shell intact, and a
+deliberately throwing route renders the boundary with its digest matching the
+server log. `global-error.tsx` inlines the app's own token VALUES read out of
+`globals.css`, because the layout that supplies them is the thing that failed.
+
+## v176 (2026-09-16): finishing v175 — the summary that stayed silent, and the button that did not ask
+
+A same-day re-audit of `2026-09-16-non-technical-ux-edge-cases.md` walked the
+working tree after v173–v175 and found five things wrong with what had just
+shipped. All five were real; four were mine from the hour before.
+
+### What's new for you (fix, v0.65.0)
+
+The plain-English summary above a set of changes now works on your company's own details, and throwing a draft away asks first.
+
+- Changing one fact about your business used to be summarised as "Rewrites some text, same number of lines." It now names what changed and where — "Changes customer › segments › name: was …, now …".
+- **Discard** asks "Throw this away?" before it does anything. It was the only button in the app that could destroy work without a confirmation, sitting next to Keep, which had one.
+- If a run also changed files outside the one it was meant to write, Discard now says so and stops, instead of reporting success while those files sit there.
+- Keep and Discard now clear the "1 change is waiting" line and the sidebar dot straight away, rather than when you next move around.
+- Setting up now shows a **Sign in** button on the step that requires being signed in, and says plainly that Google is optional.
+
+**The summary was tested against a shape no file has
+(`lib/company-commands/change-summary.ts`).** `summariseChange` read `key: value`
+at column zero. Every key in a real `company.yaml` is nested under
+`meta:`/`customer:`/`org:`/`product:`, so a `refresh` that changed one fact
+returned "Rewrites some text, same number of lines." — silent on the exact case
+the summary exists for. Seven tests were green because the fixture invented
+`bottleneck: chasing invoices`, a flat key present in no file in this repo. The
+suite now reads the shipped `templates/packs/marketing/.../company.yaml`, which
+is what this repo's own rule about synthetic fixtures has said since the
+scaffold shipped invalid YAML for weeks. Keys carry their parent path, so two
+`name:` fields under different parents no longer collide — pinned by a test that
+fails when the path is dropped, which the first version of this fix did not
+catch. Markdown bullets are no longer counted as records: a three-bullet digest
+read "Adds 3 entries".
+
+**The destructive button was the one that did not ask
+(`components/os/tasks-board.tsx`, `company-command-runner.tsx`).** Keep opened a
+confirm dialog; Discard deleted the agent's output on a single click with no
+undo, side by side. Discard now asks "Throw this away?" and names the file it
+will revert. The runner's own dialog still read "Commit this result?" /
+"Confirm & commit" under buttons labelled Keep and Discard; it now matches.
+
+**Discard claimed an undo it had not performed
+(`discard-company-command-result-impl.ts`).** It restored `outputPath` only, so
+stray edits elsewhere — displayed directly above the button — stayed on disk
+while the message said "Discarded". `beforeDirty` holds names, not contents, so
+those cannot be reverted, only reported: Discard now refuses and names them.
+Null still means "could not be established" rather than "none", the same
+distinction `computeStrays` keeps.
+
+**Neither button refreshed the server-rendered pending count.** `listPendingReviews`
+runs in the root layout, so removing the card locally left the sidebar dot and
+the dashboard's "1 change is waiting" line until the next navigation —
+contradicting v175's own release note. Both paths now call `router.refresh()`.
+
+**Onboarding required a state it offered no way to reach
+(`components/onboarding-welcome.tsx`).** v174 gated Continue on Claude being
+signed in — correct — but `ConnectRow` renders only `guidance.command`/`link`,
+both empty for installed-but-signed-out, and never the `steps` text that says
+"Press Sign in". The only route out was a link that left onboarding. `SignInButton`
+is now exported from `connect-panel.tsx` and rendered on the step that gates on
+it, from the same `needsSignIn` flag the full Connect page uses. The step title
+was "Sign in to your accounts" — plural — with Google beside it in red; it now
+says "Sign in to Claude" and marks Google optional.
+
+**And the seed did not tell the open page (`lib/advanced-mode.ts`).** v174 wrote
+`"0"` without dispatching `ADVANCED_MODE_EVENT`, and child effects run before the
+parent's — so the first "create my first company" form rendered in advanced
+shape, path field and all, until something remounted it.
+
+## v175 (2026-09-16): a spoken fact can be written down, and a draft can be refused
+
+### What's new for you (feature, v0.65.0)
+
+Tell the assistant something about your business and it can now write it down — and you can say no to anything it drafts.
+
+- Mention a customer, an enquiry, a sale, a payment or something you published, and the assistant offers to record it. Your own words go into the draft, so you don't have to fill in a form first.
+- Every draft now has a **Discard** button beside **Keep**. Discard puts the file back exactly as it was and clears it from your list. Until now the only choices were to approve it or leave it waiting forever.
+- Above every set of changes there is now a plain sentence or two saying what they are — "Adds 1 entry", "Changes bottleneck: was …, now …" — so you can decide without reading the coloured text underneath.
+
+**The department syncs could not receive a spoken fact
+(`lib/os/departments/commands.ts`).** All four took `fields: []`, so they could
+only reconcile what was ALREADY written under `notes/` — and the assistant is
+read-only, so "add a lead for Kofi, 2,000 cedis" had nowhere to land: the
+proposed run scanned the notes folder, found no Kofi, and honestly reported no
+changes. Each now takes an optional `details` field carried into the prompt,
+framed as something the operator said rather than as instructions, with the
+command's own gate rule kept underneath where dictation cannot displace it.
+Optional keeps them schedulable.
+
+**The assistant was never told those commands exist (`lib/assistant/persona.ts`).**
+They have been in `getCompanyCommand` and runnable through `runCompanyCommand`
+since they shipped, while the persona advertised only `digest`, `decision`,
+`retro`, `refresh` and `orientation` — so a caterer asking to record a customer
+could be offered a weekly digest, an architecture decision record or a
+retrospective, and nothing else. The four are now listed, with an instruction to
+put the person's own words in `details` and to say plainly that it is a draft.
+
+**There was no way to say no (`lib/company-commands/discard-company-command-result-impl.ts`).**
+Cancel on the confirm dialog left the run record in place, so the item stayed
+pending forever and the sidebar dot never cleared — on an app whose whole safety
+story is that a human approves every gated action. A gate you can only ever
+agree with is not a gate; it teaches people to approve without reading. Discard
+uses the `before` snapshot the runner already takes, so it needs no new
+bookkeeping: a `known-file` goes back to the text it held or is deleted if it
+did not exist, and a `new-file-in-dir` loses exactly the names that were not
+there before. Never `git checkout`, which would also throw away anything else
+the user had in flight in that file. Containment is the commit path's, unchanged
+— a tampered run record must not turn "discard" into "delete anything you name",
+which a test pins by pointing one at `HANDOFF.md`.
+
+**A diff is not consent (`lib/company-commands/change-summary.ts`).** Asking
+someone who cannot read YAML to approve a 200-line rewrite gets a blind approval
+or no approval, and the first is worse than no gate. `summariseChange` renders
+above every diff in both places one appears. Deliberately not a YAML parse: the
+text is whatever an agent wrote and may not be valid YAML at all — which is one
+of the things the reader is being asked to catch — so a parser would throw
+exactly when the summary matters most. Line shapes are enough, and are wrong
+visibly rather than silently.
+
+**A test that pinned the mechanism, not the invariant.** "All department
+commands are schedulable (zero required fields)" asserted `fields.length === 0`.
+Adding an optional field broke a test whose own name said it should not; it now
+asserts nothing is required, which is what `isSchedulableCommand` actually
+tests.
+
+## v174 (2026-09-16): four one-line gaps between a new user and their first win
+
+### What's new for you (improvement, v0.65.0)
+
+A new install now opens in the simpler mode, with a sidebar you can read in one look.
+
+- The first time you set Alacrán up, it starts in the mode built for people who would rather click buttons and read notes than use a terminal. You can switch it any time in Settings, and if you have already chosen a mode, nothing changes for you.
+- The sidebar in that mode now shows six places instead of twenty-one. Everything else is still there when you turn on Advanced, and your departments are one click away on the dashboard.
+- Setting up Google is no longer required to finish setup. It asks for the one thing that actually matters — that Claude is installed and signed in.
+- The button at the top of the dashboard said "Terminal" and went to Tasks. It says Tasks now.
+
+**Simple mode is seeded on a fresh install, not made the default
+(`lib/advanced-mode.ts`).** Advanced mode was on whenever the key was absent, so
+the mode built for a non-technical first run was off on every install that
+needed it — Get Started opened an xterm running the Claude Code TUI, the exact
+ejection simple mode exists to avoid. Flipping the default back was not the fix:
+v71–v72 shipped it off and v72 was a slice spent undoing "features were removed"
+reports from people who never knew a toggle existed. The distinction is not the
+default but *who is asking*, so `seedSimpleModeForFreshInstall` writes `"0"` once
+from the onboarding screen — which renders only when zero companies are
+registered. An existing user never reaches it and keeps advanced; an explicit
+choice in either direction is never overwritten.
+
+**`advancedOnly` was built and never wired (`lib/os/nav.ts`).** The field and the
+filter in `visibleGroups` have both existed since simple mode shipped, and not
+one nav item set it — so simple mode still rendered all 21 destinations, under
+labels like *Value Pipeline*, *Knowledge Core*, *Org & Gate* and *Distribution*.
+Fifteen items now carry the flag, leaving Companies, Dashboard, Company Info,
+Tasks, Connectors and Settings. The five departments are hidden from the sidebar
+and **not** from the product: each is a dashboard tile linking straight through,
+which is what keeps this inside the standing rule that hiding a card must never
+remove the only control reaching it. When records can be written from the UI
+rather than only by an agent, this should become dynamic — show a department
+once it holds anything — rather than a static flag.
+
+**Onboarding gated Continue on Google (`components/onboarding-welcome.tsx`).**
+Passing step 2 meant installing Homebrew, creating an OAuth client across six
+Cloud Console pages and downloading a JSON; the only way past was a small grey
+"Skip for now". It now gates on Claude being signed in, which `connected` on an
+AI executor already means — `connect-status-impl.ts` probes `claude auth status`
+— so this also closes the case where the app reported "Ready" off `which claude`
+and the first job then hung on a login prompt inside a terminal.
+
+**A button whose label named a third place (`dashboard/page.tsx`).** It read
+"Terminal", carried a ⌘K keycap, and linked to `/tasks` — and ⌘K opens the
+command palette, so all three disagreed. Label matches destination; the keycap
+is gone.
+
+**Not in this slice, and both bigger than it.** There is still no write path
+under `lib/os/records/` — no `writeFile` anywhere — so four of five departments
+render a ledger the user cannot add to. And there is no discard for a pending
+review: Cancel leaves it pending forever and the sidebar dot never clears, in
+both modes. Those are the two that decide whether any of the above matters.
+
+## v173 (2026-09-16): one introduction per company, per agent
+
+### What's new for you (improvement, v0.65.0)
+
+Opening a second assistant no longer makes you sit through the same introduction again.
+
+- The first assistant you open for a company still reads its summary, says what it can help you run, and reminds you where you left off. Every assistant you open after that comes up ready to work instead of repeating all of it.
+- Switch a company to a different AI agent and the new one introduces itself once, the same way. You get the briefing whenever it is genuinely a new agent, and never when it isn't.
+- If anything about your company changed since the summary was written, the next assistant rewrites it and introduces itself properly, however many tabs you have open. A short opening is never worth an out-of-date description of your business.
+- Close every assistant tab and the next one introduces itself again, since that is a new sitting.
+
+**The briefing is per (company, executor), not per company (`lib/terminal/sessions.ts`).**
+Every assistant tab was seeded with the same opening message, so opening four for
+one company paid the summary read, the session-note read and the `command -v
+beeper` probe four times and printed the same greeting four times — on an app
+whose pitch is permanent memory. The executor is a per-company setting the user
+changes from a picker (`ai-executor-registry.ts`), so keying "have we met" on
+the company alone would have handed the first Kiro tab after three Claude ones a
+silent session that knew nothing about the company it was standing in.
+`hasLiveAssistant(agentId, executorId)` answers the pair. Live sessions are the
+record deliberately — no file, nothing to keep in sync, and closing every tab
+re-arms the introduction, which is the right answer rather than a gap.
+
+**Staleness outranks the greeting (`lib/company-summary.ts`).** The returning
+prompt replaces `FRESH_PROMPT` and nothing else. `buildStalePrompt` is the only
+thing in the app that rewrites `docs/company-summary.md`, and the in-app terminal
+auto-opens an assistant whose pty outlives the page — so gating it on "no tab is
+live" would have frozen that file for the whole app session: install a skill pack
+at 10am and every later tab, plus `ask-company-impl.ts` and
+`assistant/gather-all-companies.ts`, keeps describing the business from the old
+summary until every tab is closed. Routing through the freshness check also means
+the returning prompt can only ever name a summary just proved current, so the
+missing-file and half-written cases land on the branch that fixes them instead of
+on an agent told to read a file that isn't there.
+
+**What a returning tab is told depends on `autoLoadsCompanyContext`.** Claude Code
+finds `CLAUDE.md` → `AGENTS.md` by itself, so its returning tab reads nothing at
+all. Kiro, Kimi and Antigravity go looking for their own vendor folder and find no
+company, so "read nothing" would be the exact blindness `buildCompanyContextPrimer`
+exists to prevent; they get the one already-written summary file, never the skill
+inventory. Reusing that field rather than adding a second flag keeps the two lists
+from drifting. The session-note recap is deliberately on neither branch: a second
+tab is a parallel task in the same sitting, and the most recent note describes the
+*previous* session, not what the first tab is doing now.
+
+**Five mutations the first round of tests did not catch, and now do.** A review
+pass deleted `executorId: assistant.executorId` from the route and ran the suite:
+242 files, 1,681 tests, all green, and `tsc` silent because the field is optional
+— the feature's one wire, uncovered, because `sessions.test.ts` reaches the map
+through `_setSessionForTest` and `intro-command.test.ts` injects its own
+`hasLiveAssistantFn`. It also rewrote the returning prompt to its literal inverse
+("Introduce yourself briefly, summarise what this company does, and recap the last
+session") and stayed green, because the assertion was `toMatch(/introduc/i)`,
+which matches the negation and the instruction equally. Now: a route test pins the
+wiring, a real `/bin/cat` pty pins that `openSession` stores what `hasLiveAssistant`
+reads (mocks cannot check that link, and a skipped test would report it covered on
+the machines where it isn't), the prompt assertions pin the negation, the
+claude-code branch is asserted as an equality rather than two absences (an empty
+prompt passed both), and the shell fixture carries an executor id so the
+`kind === "ai"` guard is actually exercised. 1,688 tests.
+
+**One wording fix worth naming.** The returning prompt said "that one file and
+nothing else" with no time bound, on the branch that exists precisely for CLIs
+that follow instructions literally — so a first request like "what's still open
+in HANDOFF.md?" read as forbidden. Every sibling prompt scopes its restriction
+(FRESH_PROMPT to *re*-reading, the primer to "what I ask next", the write ban to
+"yet"); this one now does too.
+
+**Known and left alone:** two opens that overlap both read `hasLiveAssistant`
+before either registers its session, so both get briefed. Unlocked deliberately —
+the failure is one extra greeting, which is what shipped before this, and a lock
+around a pty spawn costs more than it saves.
+
+## v172 (2026-09-15): one request guard for every route handler, a cheaper assistant start, and a smaller project guide
+
+### What's new for you (fix, v0.64.0)
+
+Alacrán is now closed off from the web pages you have open, the assistant starts far more cheaply, and a panel that reported work no agent had done is gone.
+
+- A web page you visit can no longer reach Alacrán running on your own computer. Every request the app answers must now come from the app's own window and be addressed to this machine — closing a route that let an outside page write into your company notes or change your saved connection keys without you seeing it.
+- Opening an assistant tab no longer reads every skill and command file in your company before it says hello. On a company carrying one skill pack that was about half a megabyte of reading each time; the app now prepares a short summary itself, so the assistant starts sooner and costs a fraction of the tokens.
+- The conductor broadcast panel is gone. It showed an acknowledgement from every agent, but nothing was ever sent and no agent ever answered.
+- Picked up two security fixes published for the web framework this app is built on.
+
+**One shared request guard on every route handler (`lib/http/local-request.ts`).**
+Server actions get CSRF protection from Next; route handlers get none. Two of the
+nine implemented that check themselves; the other seven had none at all, leaving
+`/api/keys`, `/api/connections/connect`, `/api/skills/[slug]` and
+`/api/brain/dump` writable by any page the user happened to have open —
+`Request.json()` parses a body whatever its content-type, so a `text/plain` post
+is a CORS *simple* request that lands with no preflight to fail. The two that did
+check compared `Origin` against `Host`, which a rebound domain satisfies on both
+sides, so the terminal's POST — which writes into a real shell — was reachable
+from a page served off an attacker domain pointed at 127.0.0.1. `refuseNonLocal`
+pins Host to a loopback literal on every method, and requires Origin plus a JSON
+content-type on writes. GET stays exempt from the Origin half deliberately: a
+same-origin `EventSource` and the skill-download navigation both send none.
+
+**The brain-dump path is resolved from the registry (`app/api/brain/dump/route.ts`).**
+`companyRoot` arrived as an unvalidated path in the request body and went straight
+to `mkdir -p <root>/notes` plus an append underneath it. The stray directory is
+the smaller half: `notes/` is read back into agent context by `/digest` and
+`/refresh`, so choosing the root was a way to put instructions in front of the
+company's own agent — the nonced fence covers text the app knows is untrusted and
+deliberately does not cover the company's own notes.
+
+**The seeded terminal prompts carry an inventory (`lib/skills/company-inventory.ts`).**
+Both prompts told the agent to read "every skill or command file under
+`.claude/skills/` and `.claude/commands/`". Measured against the bundled
+templates that is 37KB for a bare scaffold and ~530KB once one pack is installed
+(marketing 496KB, hr-people 489KB) — roughly 133k tokens before the assistant
+says hello, paid again on every open until the agent successfully writes the
+summary back, which a tab closed early never does. Each file's frontmatter name
+and description is exactly what the prompt asks for, so the app reads it via the
+scanners that already existed and hands over the list: base scaffold 36,801B →
+2,595B, marketing 495,988B → 2,883B, hr-people 489,112B → 3,655B. Entries are
+never dropped, only long descriptions clipped. The fresh path never scans at all,
+which a test pins.
+
+**The unreachable agent broadcast removed.** `POST /api/agents/broadcast`
+synthesised a reply for every active agent without contacting anything, and its
+only caller was rendered by nothing but its own test. Deleted rather than wired
+up — real fan-out is a feature and wants its own slice; what could not stay is a
+surface reporting work no agent did.
+
+**Dependencies and bind address.** next 15.5.21 → 15.5.25 closes both criticals
+(AVIF Image Optimization RCE, the Windows RCE) and the sharp/libvips highs. What
+remains is dev and build tooling only — vitest, vite, esbuild and postcss under
+Next — each needing a major bump that does not belong in a patch. `next dev` and
+`next start` now pass `-H 127.0.0.1`; they bound every interface by default,
+which put a route that writes into a PTY on the LAN, and the Origin check is a
+browser rule that a non-browser client simply writes around.
+
+**The project guide is `AGENTS.md` now, and 206KB smaller.** The running
+per-slice summary moved into this file (see the appendix below) and the guide was
+renamed, with `CLAUDE.md` left as the same 230-byte pointer this app writes into
+a user's company. It had auto-loaded ~51,500 tokens into every session started in
+this directory, for exactly one of the four executors it registers.
+
+## Appendix: the running summary moved out of CLAUDE.md (2026-09-15)
+
+`CLAUDE.md` is the standing project context — conventions, safety rules and
+workflow — and its own header says the chronological record belongs here. Its
+"Current state" section had nonetheless grown to 2,168 lines (146KB of a 206KB
+file), which Claude Code auto-loads into every session started in this
+directory: about 51,500 tokens before a word is typed.
+
+It is moved here rather than deleted, because it is **not** a duplicate of the
+entries above. Every slice it discusses has a `## vNN` entry — that was checked
+before the move — but this prose was written independently, and a shingle
+comparison put 50 of its 59 distilled rules and traps in this file for the
+first time. The transferable rules are indexed in `CLAUDE.md` under "Rules the
+slices established"; this is the full reasoning behind each one.
+
+Nothing below is edited. It is verbatim as it stood at the move, so a heading
+here is deliberately not `## vNN:` — `parse-changelog.ts` must keep ignoring
+all of it, and the What's New modal must never show a line of it.
+
+**Shipped: v1–v69** (see `CHANGELOG.md` for the full per-slice changelog —
+that file, not this line, is the authority on the next free slice number;
+v61 was nearly built as "v58" because this line said v39 while the changelog
+was already at v60).
+**v23–v25 (Day 1 of the launch push) began productizing the app:** built-in
+agents are now existence-gated (`lib/builtin-agents.ts`'s
+`buildBuiltins`), the company template is a committed in-repo snapshot
+(`templates/company-starter/`, sourced by `create-company-from-template.ts`
+instead of `~/AI-Native/...`), and an empty install shows an
+`OnboardingWelcome` with `checkDependencies()` (claude + gog) detection.
+The 3-slice visual/UX pass (v14–v16) is complete. v17 added
+create-a-company-from-template — "Add a company" can now scaffold a
+brand-new company directory from `ai-company-starter-main`'s generic
+parts (via an explicit manifest, `lib/company-template-manifest.ts`),
+`git init` it, and register it, instead of only registering an
+already-existing directory. v18 added a guided, non-technical
+company-context setup wizard (`components/company-setup-wizard.tsx`) —
+a step-by-step form (business domain, stakeholders, value flow,
+bottleneck, plain-language review) that fills in a freshly-scaffolded
+company's `definitions/ontology/company.yaml`, replacing the need to run
+`/define-company` in a terminal. It ships only the structured-fields
+half of `/define-company`: the `customer`/`org`/`product` domain
+entities are copied verbatim from the company's own
+`docs/templates/ontology-starter.yaml`, not AI-generated. v19
+investigated what "integrations setup" actually means today and found
+it's much narrower than it sounds: `email-pipeline-agent`'s email
+connection is a `gog` CLI tool authenticated at the OS level (not
+something this dashboard could "set up"), and a fresh v17-scaffolded
+company has no workflow that would even consume a connected integration
+yet. So v19 shipped only a read-only "Integrations" status line on every
+agent card (`lib/get-integration-status.ts`) — `email-pipeline-agent` shows
+its real, already-configured email account, every other agent honestly
+shows "none configured yet." **No OAuth, no credential storage, no
+"connect X" flow exists anywhere in this app** — new connections still
+go through `ai-company-starter-main`'s existing `api-connect` Claude
+Code skill, which this dashboard deliberately does not duplicate. v20
+investigated the roadmap's "guided command/workflow discovery, possibly
+formalizing a plugin concept" and found discovery was already fully
+solved (since v11's `genericCommandSetSkillAdapter`), and that a general
+plugin-packaging format has no existing mechanism anywhere in this
+ecosystem to build on — every real workflow is bespoke to its own repo,
+and designing one from scratch would be a bigger effort than v17–v19
+combined for a population of examples deliberately kept at one. So v20
+hand-built a one-off installer for exactly one already-portable
+workflow instead: `plh-ops`'s `daily-team-log` skill
+(`lib/install-daily-team-log-impl.ts`) — copies its generic `gather.py`
+extractor verbatim, regenerates its `SKILL.md`/`Setup.md` to point at
+the installing company's own repo instead of the upstream shared one (the
+originals hardcode an owner/repo slug and per-teammate folder names), and
+commits the result. **Known, disclosed limitation:** `gather.py`'s
+config is a fixed, global, per-machine path
+(`~/.claude/daily-team-log/config.json`), so only one company's copy can
+be actively bootstrapped per machine at a time — documented in the
+installed `SKILL.md` itself, not fixed in v20. v21 investigated the
+roadmap's remaining "AI-generated ontology entities via a connected
+agent" thread (deferred since v18) and found `lib/company-commands
+/registry.ts`'s `define-company` command — built in v8, before v18's
+wizard existed — already spawns a headless `claude -p` session that
+does exactly this reasoning; it was just hardcoded to
+`ai-company-starter-main` in four places. v21 generalized
+`run-company-command-impl.ts` and the status/log-tail/result/commit
+wrappers to accept a target `agentId` (resolved via
+`getEffectiveAgents()`, same security boundary as everywhere else) and
+fixed a real, previously-latent bug along the way: the run-lock/
+run-result/log files were keyed only by command id in one shared
+directory, so a second company running `define-company` would have
+silently clobbered a first company's unconfirmed result —
+`COMPANY_COMMANDS_DATA_DIR` is now scoped per agent. Scope stayed
+narrow: only `define-company` is generalized (`digest`/`decision`/
+`retro`/`handoff` still only run through the existing, unchanged
+Skills-page Run tab), and the one new entry point is a "Let AI draft
+tailored entities" step inside v18's wizard
+(`components/define-company-ai-draft.tsx`), spawning `define-company`
+with the wizard's own answers and showing the AI's diff before
+confirming. (v17's design also established the agent-agnostic principle
+still in force: the portable core is
+`definitions/`/`docs/decisions/`/`docs/retros/`/`notes/` — plain data;
+`.claude/*` is one Claude-Code-specific adapter on top of it, not the
+core itself.) v22 investigated the last roadmap thread (a fresh company
+having a real integration worth connecting) and found two things prior
+slices missed: `harness-engineering` (named "core" since v17, never
+examined) is a clone of a third-party methodology-thesis repo, not
+functional infrastructure; and `email-pipeline-agent`'s "email connection"
+is actually a call into `gog` (gogcli) — a real, already-installed,
+general-purpose Google API CLI (Gmail/Calendar/Drive/…) with its own
+OAuth store. So "connect an integration" was never missing (`gog` +
+the generic `api-connect` skill already solve it); the gap was that no
+template command *consumed* one. v22 added exactly one: `check-inbox`,
+a strictly read-only "summarize unread mail" command
+(`gog -a auto gmail search`/`get` → `notes/company/email-checks/`,
+never send/label/archive/read-body). Two machinery changes:
+`CompanyCommand` gained an optional `bashPatterns` field so a command
+can get narrowly-scoped `Bash(gog ...)` access instead of v8's blanket
+`--disallowedTools "Bash"` (the 5 existing commands omit it and spawn
+byte-identically — reusing v9's scoped-Bash approach); and the
+Skills-page "Run" tab, gated to `ai-company-starter-main` only since
+v21, now opens to any `command-set` company (running against that
+company's own repo). The `check-inbox.md` file was added to the
+`ai-company-starter-main` template (a commit in THAT repo, not the
+control-panel branch) so new companies inherit it via v17's
+whole-folder copy. **Known, disclosed limitation:** `gog`'s auth store
+is global per-machine and `check-inbox` uses `-a auto`, so only one
+company can have its own connected account active at a time — same
+shape as v20's limitation, documented not fixed. See
+`...v22-check-inbox-design.md`. v31 gave the `email-pipeline-agent` card an
+on/off control for its launchd schedule (`com.example.email-pipeline`) —
+before this slice the dashboard could start a poll (v2) and observe it,
+but stopping the recurring 5-minute schedule needed `launchctl unload`
+in a terminal. New `lib/scheduled-job/` decides success by reading the
+job's actual state back via `checkLaunchdJob()` rather than trusting
+`launchctl`'s exit code — live verification found a redundant `unload`
+exits 0 while reporting failure on stderr (macOS 26.2), so exit code
+can't be trusted even in the apparent-success case; a thrown error is
+still handled defensively for failure modes that were never actually
+observed. Bespoke to one agent id, like v2/v9/v19.
+**Same-day follow-up made "off" persistent:** a bare `unload` was found to
+write no disable override at all (label absent from `launchctl
+print-disabled gui/$UID`, macOS 26.2), so the shipped "off" had nothing
+backing it across a logout or reboot. Stop and Start now use `-w` in both
+directions (`unload -w` / `load -w`). Because only `launchctl enable` had
+ever been proven to clear that override, `load -w` doing the same was
+measured — not assumed — before any code changed: two independent
+round-trips against a disposable job (macOS 26.2, build 25C56) both
+cleared the override and reloaded the job. A second exit-code lie, on the
+opposite verb from the one already documented, surfaced during that
+measurement: a bare `load` while the override is set silently no-ops
+*and* exits 0 (stderr-only `Load failed: 5: Input/output error`).
+**Documented trap:** `email-pipeline-agent`'s own `install.sh` uses a bare
+`load`, so re-running it while this toggle is off will appear to succeed
+without actually starting the job — only this toggle's own Start path
+clears the override. That repo can't be modified by this project, so it's
+a caveat, not a fix.
+
+**This whole daemon surface was removed from the app in v68** — the card,
+the poll trigger, the schedule toggle, the launchd helpers and the
+built-in itself. Everything above is kept as the record of what was built
+and what was measured about `launchctl`'s exit codes, not as a
+description of code that still exists. The daemon repo itself is
+untouched on disk and still runs on its own; this app simply no longer
+knows about it.
+
+v32 added two more read-only commands, `triage-email` and
+`triage-issue`, and the machinery neither could exist without: a
+per-command **prefetch seam** (`lib/company-commands/prefetch/`) that
+runs control-panel-side, before any agent spawns, and can refuse —
+aborting the run with no spawn at all. This exists because the spawned
+session's `cwd` is the company's own root with no `--add-dir`; it
+cannot read a product repo to route a request into, so the control
+panel has to gather that context itself. Config
+(`definitions/triage/senders.yaml` and `definitions/triage/repos.yaml`,
+in the company's own repo) is fail-closed — missing or empty means
+accept nothing — and isn't editable from the dashboard, since
+`lib/resolve-known-skill.ts`'s membership check only recognizes
+discovered skill/command files, not arbitrary `definitions/` data.
+Every `gog` call carries `--readonly --gmail-no-send`; the email body
+fetch adds `--wrap-untrusted`. Issue *filing* is deliberately deferred
+to v33, behind its own confirmation gate on top of the existing
+diff-and-commit one — the same reasoning that kept `create-epic` out of
+v8.
+
+v34 added a per-company "Ownership Dashboard" — a "View ownership" button
+on every real company's card opens a Sheet showing where its data lives
+(local root path, copyable), which AI provider runs its commands, what's
+connected, whether it's backed up, and a synthesized "external network
+access" summary — composed from signals that already existed
+(`getCompanyRemoteImpl`, `getIntegrationStatus`, `getAiExecutorIdForAgent`)
+rather than tracking anything new. Deliberately non-committal about
+Aider: its model backend (cloud or local) is the user's own config,
+invisible to this app, so its network-access line says that rather than
+guessing. A final whole-branch review caught a real spec-level flaw
+before merge: `getIntegrationStatus` only ever reports a real connection
+for `email-pipeline-agent`, which isn't a `command-set` agent and can never
+open this Sheet — so the Integrations section and the Google
+network-access line were structurally dead code for every company that
+could actually reach them. Fixed by falling back to the machine-wide
+Google connection (`getConnectStatusImpl`) when no per-company
+integration exists.
+
+v35 added a per-company setting — set in the company-setup wizard,
+editable afterward — that makes every command for that company run in a
+real, visible macOS Terminal window instead of headless, with a pre-run
+gate (shows the exact prompt, waits for Enter, or Ctrl-C to abort) before
+the agent runs at all, and an offer to continue interactively via
+`claude -c` once the constrained run finishes. macOS only. The command's
+prompt, tool allowlist, and diff-then-commit gate stay byte-identical to
+a headless run — only where the process's stdio goes, and whether a
+human sees a gate first, changes; the generated script's own
+`trap ... EXIT` owns the run-lock's lifetime instead of Node, since
+`open -a Terminal <script>` returns long before the real run finishes.
+Two things were measured, not assumed, before shipping: macOS's real
+`/bin/bash` is 3.2.57 and has no `mapfile` (an early draft used it;
+replaced with a bash-3.2-compatible read loop, verified against the real
+shell); and a NUL byte in the prompt would have been a real
+argv-injection path into the spawned `claude` process, on exactly the
+`triage-email`/`triage-issue` path that handles attacker-influenced
+content — caught in review and fixed with a one-line guard before merge.
+A final whole-branch review then caught a second, more subtle bug: the
+script's `EXIT` trap stayed armed after it explicitly released its own
+lock, so closing the window (or Ctrl-C) at the take-over gate could
+delete a *later* run's lock for the same company — reproduced on the
+real system bash in both the buggy and fixed shapes before the fix
+shipped.
+
+v36 fixed a real user-reported bug, not a feature: the macOS app icon
+didn't show after install. Root cause, confirmed by direct inspection —
+`scripts/package-macos.sh` never generated a `.icns` file and `Info.plist`
+had no `CFBundleIconFile` key, so every install got macOS's generic
+fallback icon. Fixed by padding the brand mark (600×626, non-square) onto
+a square transparent canvas — `sips -p`'s transparency behavior was
+measured directly, not assumed, before relying on it — generating the
+full `.iconset`, and packing it with `iconutil`. Shipped as a patch
+version (v0.5.1), diagnosed via `superpowers:systematic-debugging` rather
+than the usual brainstorm-spec-plan flow, since it's a packaging fix with
+no application-code change.
+
+v68 removed the email-polling daemon surface entirely — the built-in, its
+card, the poll trigger (v2), v31's schedule toggle, the launchd/poll-lock
+helpers, and 6 test files. The app now loads **2** existence-gated built-ins.
+**The finding to reuse:** a real mailbox was printed on screen from **two**
+unrelated places — `getIntegrationStatus` (the card) and `buildNetworkMap`'s
+`readPipelineEmail` (the Network tab's Google edge) — and only grepping for the
+*symbol* rather than the feature surfaced the second. Fixing the one you were
+told about would have left the other live. **A bug caught in the same pass:**
+removing the `pipeline` early-return made that kind fall through to the
+company branch and silently acquire github/google/notion/executor edges —
+exactly what v66's note warns about, since that branch is a fall-through and
+not an exhaustive `Record`. `pipeline` is now listed in the isolated-node
+guard; the kind itself was kept because ~15 unrelated tests use it as a
+fixture.
+
+v67 replaced `templates/company-starter/` with own-authored scaffolding: the
+bundled template had been imported from an external starter kit, and v37 had
+only changed its licence text and branding. The
+template is now 33 files written for this repo — the commands the app's
+registry actually runs (each checked against its real `outputPath`), a
+rewritten `docs/templates/ontology-starter.yaml` (a hard dependency of
+`save-company-ontology-impl.ts`, not an optional doc), a rewritten
+`scripts/verify.py` with three checks it can honestly claim, and folder
+skeletons. **Provably-own files were kept** (`check-inbox`/`check-notion`/
+`triage-*` commands, the triage example YAMLs, all of `templates/packs/` —
+none existed at `b2692db`); everything else was dropped rather than rewritten,
+since rewriting would have meant inventing features to fill a shape.
+`TEMPLATE_MANIFEST` went 34 → 19 entries. **The check to reuse:** compare blob
+SHAs at the bundling commit against `HEAD` file by file — that, not reading
+the files, is how to tell which files are this project's own.
+
+v37 tidied the licence and branding of `templates/company-starter/` — the real
+bundled source `create-company-from-template.ts` copies into every new
+company. It still carried the licence text and branding of the program it
+was imported from. Changed: the licence is now MIT (matching this repo's own),
+removed the
+originating program's branding throughout ~25 files, and deleted files
+that were pure event-logistics content (`exercises/`, participant/day
+-flow/feedback docs, feedback issue templates) with no place in a
+software template. Also translated all remaining Japanese
+content to English (`scripts/cycle/`, a CI sanitize-gate pattern, and a
+stale Japanese heading reference in this repo's own
+`lib/company-commands/registry.ts`) and removed two features found to be
+broken or unsuitable on inspection: the `/office` command and its
+test file (`tools/office/office.py` was referenced by both but never
+actually bundled in this repo's history — confirmed via `git log --all`
+— so every new company inherited a command that always fails and a test
+file that fails to even collect), and the `piro`/`piro-run` skills (built
+around and named after AWS's real "Kiro" product, which Alacrán is not
+affiliated with, with no offsetting value for most users). `lib/company-template-manifest.ts` and
+`lib/company-starter-packs.ts` updated so newly-created companies stop
+copying the deleted paths. Verified clean via the pre-existing
+`scripts/jp-audit.py` (added in an earlier slice to make the Japanese-
+translation state objectively checkable rather than eyeballed) and by
+confirming, via
+`git stash` against the pre-edit baseline, that the one remaining
+`templates/company-starter` pytest failure (dangling `PATHREF-01`
+references to `examples/harukaze-ec/`) is pre-existing and unrelated.
+
+v38 added an "Open in Terminal" button on every `command-set` agent's card —
+real user feedback that after finishing the company-setup wizard, there was
+no path to actually building a new skill (the Skills page's Run tab can only
+run/edit commands the app already knows about; `resolve-known-skill.ts`
+requires the write target to already be a discovered skill, so it can't help
+create one). The button opens a real Terminal window, `cd`'d into the
+company's root, running a plain interactive session of whichever AI executor
+is configured for it — no prompt, no allowlist, no gate, the same thing as
+`cd`-ing there and running the executor by hand. Reuses v35's exact
+`open -a Terminal` launch mechanism and `shQuote` helper; the new
+`buildInteractiveTerminalScript` lives alongside `buildVisibleRunScript`.
+macOS only, same gate as v35's visible-run option. A second report from the
+same feedback — a company appearing pre-registered on a fresh install on
+another machine — turned out not to be a product bug: the real per-user
+registry (`~/Library/Application Support/Alacrán/companies.json`) is
+confirmed empty on a machine that hasn't registered anything; the dev-mode
+registry (`.data/companies.json`, gitignored) is what had it, which only
+travels if the whole project folder (not a downloaded release) is copied
+between machines. No fix needed — the existing "Remove" button on any
+registered company's card already clears it.
+
+v39 added a "company guide" — a plain-language walkthrough of every action
+on a company's card, closing the gap v38 opened (a user still didn't know
+what any button, including v38's own "Open in Terminal," actually did).
+Explicit direction: this has to work for CLI-comfortable and non-technical
+users alike, so the copy assumes no CLI literacy at all. No tour library —
+a `Sheet` listing one line per action, opened once automatically the first
+time a company's info is filled in (a single `localStorage` flag, same
+mechanism the landing site already uses for its theme toggle), reachable
+anytime after via a small "?" next to the kind badge. Each blurb is
+exported as a constant from its own button's file, so the copy lives next
+to the component it describes. `lib/company-guide-steps.ts`'s
+`buildGuideSteps` takes the exact same show* flags `AgentCard` already
+computes, so the guide can never explain a button that isn't really there —
+live-verified against the real `ai-company-starter-main` card, which
+correctly showed 7 steps and omitted "Remove" (not a registered company).
+
+v40 replaced the top `Nav` bar with a collapsible glassmorphic sidebar
+(`components/sidebar.tsx`) — icon rail on desktop, bottom tab strip on
+mobile — plus ambient background orbs, both driven by new tokens in
+`app/globals.css`. Every page now shares `.dash-topbar`/`.dash-content`
+from `app/layout.tsx` instead of its own `<main>` wrapper.
+
+v41 let a company connect and use more than one Google account — `gog`
+(the CLI underneath the "email connection") already supported multiple
+stored accounts (`gog auth add/list`, `-a <email|alias|auto>` per call);
+the app just never exposed more than the one `auto` resolved to. Connect
+page now lists every stored account (`lib/google-accounts.ts`) with a
+"connect another email" flow; a new per-company
+`definitions/integrations/google.yaml` (written via
+`saveGoogleAccountsImpl`, same tier/pattern as
+`definitions/ontology/company.yaml`) feeds a `GoogleAccountsPicker` card
+control, and both `check-inbox` and `triage-email` resolve and loop the
+assigned account(s) instead of a hardcoded `-a auto`. Unconfigured
+companies are unaffected (`[]` → `["auto"]` fallback everywhere).
+
+v42 added Google Antigravity CLI (`agy`) as a fourth entry in the
+already-existing pluggable AI-executor registry (`lib/ai-executors.ts` —
+"choose which AI agent runs this company's commands" was not new; it
+shipped alongside v41). Flags (`-p ... --output-format text --mode
+accept-edits --dangerously-skip-permissions`) were confirmed against the
+real installed `agy --help` (v1.1.11) on the user's machine, not web
+docs — search results for Antigravity CLI's flags were unreliable enough
+to include a hallucinated description ("Anthropic's official CLI for
+Claude") on an otherwise-plausible-looking page. `lib/ownership
+/summarize-network-access.ts`'s exhaustive `Record<AiExecutorId, string>`
+(v34) caught the missing case at `tsc` time, same "always a real
+account-bound cloud call" bucket as Claude Code/Codex. **Same-day
+follow-up:** the Connect page's "AI agent" card was hardcoded to check
+only the `claude` binary — a pre-existing gap (Codex/Aider were never
+added either), just more visible now with a 4th option. First fix
+(badges for every executor under the one Claude Code card) was itself
+called out as bad design — a card titled "AI agent (Claude Code)"
+showing 4 tools' status is confusing no matter how accurate the badges
+are. Redesigned properly: every registered AI executor now gets its own
+full connect-page card (own title, real connected state, own install
+guidance via `installHint`/`installLink`, finally used by a UI),
+`ConnectStatus.aiExecutors: ToolStatus[]` replacing the single `claude`
+field. `onboarding-welcome.tsx`'s Claude-only install gate now looks it
+up by id instead of a dedicated field. Live-verified: 6 independent
+cards (Claude Code, Codex, Aider, Antigravity, Google, GitHub), each
+correct for what's really installed on this machine.
+
+v43 added a "Network" tab — a graphical map of every company on the
+machine and exactly what it's plugged into (AI executor, GitHub backup,
+Google, Notion), requested directly by the user as an Obsidian-inspired
+but deliberately different visualization. Bipartite, not a force graph:
+companies on the left, services on the right, curved SVG "cable" edges
+between them — the relationships are already known from existing data,
+so there's nothing to simulate. `lib/build-network-map.ts` composes the
+per-company edge data from primitives that already existed for the
+Ownership Sheet and Connect page (`getConnectStatusImpl`,
+`getCompanyRemoteImpl`, `getAiExecutorIdForAgent`, `readGoogleAccounts`,
+`connectStatus.notion.companies`) — no new detection logic, only a
+structured shape instead of a formatted sentence. Edges are only ever
+drawn for a service a company's *kind* actually supports elsewhere in
+the app (a `pipeline` agent only ever gets a Google/email edge, a
+`report-log` agent gets none at all — a genuinely isolated node, which
+is honest, not a bug) rather than inventing a capability the rest of the
+app doesn't have. Wire color follows the app's own semantic palette, not
+per-vendor brand colors, matching `BrandIcon`'s existing house rule that
+vendor color is reserved for icons at a live moment: ember for "runs on"
+(always true), success-green for a real connection, muted dashes for
+"not yet" — `TOOL_BRAND` was exported from `connect-panel.tsx` rather
+than redefined, so both pages agree on which executor gets which mark.
+Row positions are plain `index * PITCH` arithmetic (no ResizeObserver, no
+client-side layout pass) — every node is a fixed-height flex-centered
+slot and the SVG viewBox lines up with the same grid, so it works
+server-rendered with only a small client component on top for hover-
+highlight. Responsive by CSS breakpoint, not JS: below ~880px the wires
+and services column disappear and each company's own chip row (already
+rendered on desktop too, for redundant non-color-dependent legibility)
+carries the same information alone. Live-verified on a throwaway dev
+server against real registered companies — hover-dimming, the mobile
+stacked layout, and the desktop cable view all confirmed by screenshot;
+`/connect` and `/` (Agents) re-verified unaffected by the `TOOL_BRAND`
+export. Full suite: 561 tests, `tsc`/`next build` clean.
+
+v44 gave Google Antigravity its own real product mark instead of the
+generic Google "G" it was borrowing on `/connect` and the Network tab —
+Simple Icons doesn't carry Antigravity yet, so per the "never hand-draw a
+vendor logo" rule the fix traced the real gradient arch mark straight from
+`antigravity.google`'s own hosted PNG/favicon (`potrace`, build-time-only
+like `simple-icons` itself) into a flat path on the same 24×24 grid,
+shipped as a `MANUAL_MARKS` array alongside `generate-brand-icons.mjs`'s
+existing Simple-Icons `SPEC` so it survives regeneration. `hex` is the
+mark's own area-weighted dominant color rather than an invented one — it
+lands on the same Google Blue every other Google mark already uses. See
+CHANGELOG.md for the affine-transform bug (chained vs. independent
+relative-curve control points) caught before this shipped.
+
+v45 fixed a real user-reported bug: a macOS update would install but the
+running app kept showing the old version. `scripts/package-macos.sh`'s
+launcher killed a prior stale instance with one `kill` + a fixed
+`sleep 0.5` and no confirmation the port was actually free — a slow-to-die
+prior instance (e.g. mid keep-alive with the very browser tab showing the
+update banner) loses the `EADDRINUSE` race silently, and the readiness
+check ends up talking to the OLD server. Same bug class already fixed once
+in this file (the self-test step's post-run cleanup), just never applied
+to the pre-launch clear real installs depend on — fixed by reusing that
+exact confirm-and-escalate-to-`-9` loop. Reproduced live with a stale
+process that delays its exit past 0.5s before fixing, confirmed cleared
+after, and confirmed the fix survives into a real generated launcher
+inside a fresh build. Patch version, diagnosed via
+`superpowers:systematic-debugging` like v36, no application-code change.
+
+v46 added a "Get Started" button, closing a real gap found by walking
+through a concrete case (a user builds a company, writes custom skills,
+defines it — then doesn't know how to use any of it): the Skills page's
+Run tab only recognizes the 9 fixed built-in commands by exact filename
+match, so a user's own custom skills have **no run affordance in the
+dashboard at all** — the only real path was already v38's "Open in
+Terminal," which opens a real interactive AI session with full file
+access but starts completely blank. Rather than building a new mechanism,
+"Get Started" reuses v38's exact machinery and just seeds the session's
+first message ("read this company's skills and ontology, then introduce
+yourself"). Per-executor, verified against each CLI's real `--help`
+(installed Codex and ran aider's `--help` specifically to check, same bar
+as v42): Claude Code and Codex both start interactive with a bare
+positional prompt as the first turn; Google Antigravity CLI needs its own
+`-i`/`--prompt-interactive` flag; Aider genuinely has no equivalent (its
+only message flag exits after one reply) — `AiExecutor.
+buildInteractiveIntroArgs` is deliberately absent for aider rather than a
+guessed flag, and the impl falls back to the same blank session with a
+message that says so. `buildInteractiveTerminalScript` and
+`openInteractiveTerminalImpl` both gained trailing-optional params, so
+every existing call site and test needed zero changes. Deliberately not
+live-tested end to end — a seeded prompt submits and gets a real reply
+the instant the process starts, the same real-API-call risk category this
+project already treats headless spawns as off-limits for in an unattended
+pass. Verified instead down to the exact spawned argv (8 new unit tests)
+and confirmed the button renders correctly gated without ever clicking
+it.
+
+v47, a direct follow-up from watching v46 in use: Get Started was
+re-reading every skill file and the ontology from scratch on every click,
+even when nothing changed. Fixed with a cache the app decides is stale
+without any AI call (asking the agent to judge freshness itself still
+costs tokens every click) — `lib/company-summary.ts` compares a plain
+`git log -1` against the watched paths (`.claude/skills`,
+`.claude/commands`, `definitions/ontology/company.yaml`) to a
+`source_commit:` field stored in a new file, `docs/company-summary.md`'s
+own frontmatter. Match → seeded prompt just says "read the summary."
+Mismatch, missing, or git can't answer at all → the full read-everything
+prompt, now also writing the summary back with today's date and the real
+commit SHA (preserving its existing `created:` date on update, same shape
+as `HANDOFF.md`'s command). Lazy, not a watcher — checked only on the next
+click, no daemon, matching everything else in this app. Portable core
+(`docs/`), not a `.claude/*` executor artifact. Verified with mocked-git
+unit tests plus a real disposable `/tmp` git repo exercising all three
+transitions against real `git log` and real file writes, deleted after —
+still no real AI spawn triggered, same discipline as v46.
+
+v48 fixed the `gog` install link 404ing on the Connect page and in
+README — the project moved (real tap is `openclaw/tap`, confirmed via
+`brew info gogcli` on this machine) and has since landed in
+`homebrew-core` itself with its own canonical site, `https://gogcli.sh`
+(verified live). Links and the install command
+(`brew install gogcli`, no tap needed anymore) now point there in both
+`lib/connect/connect-status-impl.ts` and `README.md`.
+
+v49 moved the Skills page's "Edit" button out of the Content tab's
+scroll (it sat below the full file dump) into the tab row itself:
+**Content | Edit | History | Run**. `SkillEditor`'s `editing` state
+became a controlled prop driven by `SkillBrowser`'s existing `view`
+state (an `"edit"` value added alongside the existing three) rather than
+self-managed internal state with its own button. Verified live; hit a
+real tooling quirk doing it — the screenshot tool kept showing a stale
+pre-click frame while the accessibility snapshot and a direct
+`document.querySelector` check both confirmed the real DOM was correct
+(`Edit` active, a real `<textarea>` present). Trusted the DOM query over
+the screenshot.
+
+v50 let users drag-and-drop reorder the Agents-page cards. Two decisions
+checked with the user first (both took the simpler, recommended path):
+all cards reorder together — the 3 gated built-ins mixed in with
+registered companies, not pinned separately — and the order persists to
+`localStorage` (same per-browser mechanism as v39's guide-seen flag)
+rather than `companies.json`, which also sidesteps built-ins not being
+registry entries. New `components/reorderable-grid.tsx` wraps
+`.bento-grid` in a client component using native HTML5 drag-and-drop (no
+library) and reconciles the saved id order against the live agent list on
+mount, so a stale, missing, or empty saved order never drops a card.
+Live-verified: dragged a card, watched it reorder, confirmed the new
+order survived a reload.
+
+v51 added a `/settings` page: a manual light/dark toggle, a manual
+"Check for updates" that bypasses the banner's 24h throttle
+(`lib/updates/check-for-updates-now-impl.ts`), resets for the two other
+one-time `localStorage` flags this app writes (v50's card order, v39's
+guide-seen), and an About card. Light mode is new — the app had been
+dark-only since v14/v29 — added by porting the marketing site's already-
+shipped light palette into a `:root[data-theme="light"]` override in
+`app/globals.css`; every primitive already ran on CSS custom properties
+with zero hardcoded colors, so it cascaded with no primitive edits.
+Known, disclosed, not fixed: `BrandIcon`'s `tone="brand"` colors stay
+tuned for a dark surface in light mode too (still legible, just not
+repainted — fixing it means regenerating `lib/brand-icons.ts` with a
+second per-icon tint, out of scope for this slice). Building the no-
+flash theme script surfaced a real, confirmed React Server Components
+bug — a Server Component importing a plain (non-component) value from a
+`"use client"` file silently gets `undefined` — fixed by moving
+`THEME_STORAGE_KEY` to a plain `lib/theme.ts` module; a second symptom
+that looked identical (a client-to-client plain-value import crashing)
+was tested in isolation and turned out to be dev-server cache corruption
+from rapid edits, not the same bug — the comment in
+`lib/updates/wait-for-server-then-reload.ts` says so rather than
+repeating the disproven claim.
+
+**Real incident, caught while committing v51's own work:** v0.7.19's
+release commit only staged `package.json`/`package-lock.json` — v50's
+actual code was left uncommitted and never made it into that release at
+all. The published `Alacran.deb` for v0.7.19 (built by CI from a clean
+tag checkout) shipped without the reorderable-cards feature; the macOS
+`.dmg` (built from the local working tree) had it. Fixed forward as
+part of v0.7.20 rather than rewriting the public tag — see CHANGELOG.
+Lesson for every future release: `git status --short` before the
+version-bump commit, not just `git add package.json`.
+
+v52 fixed a real user-reported backup bug: a company whose `.git` already
+had an `origin` remote (set by hand, or inherited from wherever the
+directory was registered from) but whose GitHub repo was never actually
+created failed every backup with git's raw "correct access rights" error.
+`backupCompanyImpl` now treats that specific failure as "stale remote,"
+clears it, and falls through to the same create-and-push path a first-
+ever backup takes — one shared path instead of two. Any other push
+failure (network, auth) still surfaces as a real error.
+
+v53 fixed a real Claude Code false positive: `which claude` succeeded on a
+machine with only the Claude desktop app installed (likely a Homebrew Cask
+launcher shim also named `claude`), so this app reported "Connected" for a
+CLI that wasn't there. `lib/is-claude-code-cli.ts` now confirms with a real
+`claude --version` check for the real CLI's own output signature, used
+everywhere Claude Code specifically gets checked. Also reworded the AI-
+executor "not connected" guidance — "Reopen this app or press Re-check"
+was genuinely ambiguous (reads as "refresh the page," which does nothing,
+since `scripts/package-macos.sh`'s launcher captures PATH once at
+startup) — to explicitly say fully quit and reopen the app itself. And
+added `components/connect-help.tsx`, a step-by-step Connect page help
+guide (v39's `CompanyGuide` Sheet pattern, gated on "anything not
+connected yet") — requested after a non-technical user found the
+existing per-card guidance hard to follow alone; content is generic
+(terminal 101, copy/paste, the restart gotcha) rather than re-describing
+each tool, which is already on its own card.
+
+v54 fixed a real backup bug: the repo got created on GitHub fine, but the
+push right after it failed with "correct access rights" even though `gh`
+was confirmed signed in. Root cause, confirmed on a real machine: `gh
+auth status`'s per-account git-operations protocol was `ssh` (independent
+of `gh`'s global config default, and not overridable per-call on `gh repo
+create`), so the wired-up remote needed a working SSH key — a completely
+separate credential from whatever made `gh auth login` work. Fixed by no
+longer trusting gh's chosen protocol: `ensurePushableRemote` in
+`lib/github/backup-company-impl.ts` rewrites an SSH remote to HTTPS and
+runs `gh auth setup-git` (confirmed live — idempotent) to wire git's
+HTTPS credential helper to gh's own token, before every push, on both the
+first-backup and subsequent-backup paths.
+
+v55 fixed the same symptom's second real cause: the push was rejected
+with GitHub's real "refusing to allow an OAuth App to create or update
+workflow ... without `workflow` scope" — because `templates/company-
+starter/.github/workflows/verify.yml` was in `TEMPLATE_MANIFEST` and got
+copied into every new company, and `gh auth login`'s default scopes
+don't include `workflow`. Fixed for new companies (manifest now only
+copies `.github/ISSUE_TEMPLATE/config.yml`, not the workflows folder —
+`/verify` already runs `scripts/verify.py` directly, no CI needed). The
+second half of that fix — a `pushSelfHealingWorkflowScope` that untracked
+`.github/workflows` at the tip and retried — was **removed in v56**: it
+could not have worked, because GitHub checks what a push *introduces*, not
+what the resulting tree contains, and the case it targeted (a pre-v55
+company's first-ever backup) pushes the whole history including the commit
+that added the file.
+
+v56 fixed three review findings and shipped no new capability. (a) Only
+Claude Code ever honoured `editScopePattern`/`bashPatterns` — Codex, Aider
+and Antigravity ignore both and pass one coarse auto-approve flag instead,
+so the four commands that splice attacker-authored text into a prompt
+(`triage-email`, `triage-issue`, `check-inbox`, `check-notion`) had no
+sandbox at all on 3 of the 4 selectable executors. New
+`AiExecutor.enforcesToolScope` + `CompanyCommand.untrustedInput` refuse that
+pairing before the lock and before any prefetch; no flag was invented to
+fake a sandbox those CLIs don't have. (b) `spawn` had no `'error'` listener
+at five sites — for a binary not on PATH node fires `'error'` and never
+`'exit'` (measured on v24.12.0), so the unhandled event killed the server
+*and* leaked the run lock, which `lib/file-lock.ts` never sweeps. (c) The
+backup fix above became `pushWithWorkflowScopeCheck`, which refuses up front
+when history contains a workflow and gh's token lacks the scope, and tells
+the user to run `gh auth refresh -s workflow` — deliberately reversing v55's
+"rather than making the user re-authenticate" call, since re-authenticating
+is the only fix short of rewriting their history. v56 also finished v55's
+template half: the three shipped docs that still described
+`.github/workflows/verify.yml` were corrected (README's Security Operations
+section had been claiming a gitleaks CI scan that no longer ships, and
+`scripts/verify.py` never scanned for committed secrets in the first place —
+it only checks that `.gitignore` effectively blocks `secrets/`/`.env`), and
+`.github` left `TEMPLATE_MANIFEST` entirely. A new test scaffolds from the
+REAL bundled template into a disposable `/tmp` dir, which is the only way
+this class of drift gets caught — every other test in that file uses a
+synthetic source directory.
+
+v57 gave macOS the "Update & Restart" button Linux already had. The reason it
+had been refused was measured and found false: `com.apple.quarantine` is
+attached by the *downloading application* (browsers opt in, `fetch` doesn't),
+so an update the app downloads itself is never quarantined and needs no
+`xattr -cr`. The one real unknown — whether macOS 13+ TCC "App Management"
+lets an **ad-hoc-signed** app (`TeamIdentifier=not set`, so outside the
+signing-identity-based self-update exemption) replace its own bundle — was
+settled with a purpose-built probe of this app's exact shape, launched by
+LaunchServices from `/Applications`: it succeeded, no prompt. `package-macos.sh`
+now also builds `Alacran.zip` (the updater's payload; `ditto -c -k` keeps the
+signature and exec bit, which `zip -r` doesn't), `resolveAppBundlePath` finds
+the running bundle from `process.cwd()` instead of hardcoding `/Applications`,
+and the swap rolls back to the original bundle if the second `rename` fails.
+**Both** `.dmg` and `.zip` must now be uploaded on every macOS release — see
+the release rule above.
+
+v61 added per-company MCP connectors — a second door onto external tools for
+users who don't want the CLI path (`gog`/`gh`/`api-connect` were the only ways
+in before this). A live probe run *before* any code collapsed the whole feature
+to one file write: a hand-written `.mcp.json` at the company root is picked up
+by the real CLI as `Scope: Project config (shared via .mcp.json)`, pending
+approval "(run `claude` to approve)" — and running `claude` in the company's
+directory is exactly what v38's "Open in Terminal" button already does. So
+**this slice ships no OAuth, no token storage and no login button**; Claude
+Code owns discovery, approval, the browser flow and the credential, and the
+Sheet ends with an instruction instead. New `lib/mcp-servers-config.ts` (read,
+fail-soft like `readGoogleAccounts`) and `lib/save-mcp-servers-impl.ts` (write,
+mirroring `saveGoogleAccountsImpl`), plus a `Connect tools` Sheet on the card.
+Verified against the real installed CLIs, not docs: `claude mcp add -s project`
+writes `.mcp.json`, but **`codex mcp add` has no scope flag at all** — it's
+machine-global `~/.codex/config.toml`, the fourth instance of the recurring
+per-machine-global-config shape after `gog` and `daily-team-log` — and `agy`
+(v1.1.11) has no `mcp` subcommand whatsoever. So the button is gated on the
+company's executor being Claude Code, which `app/page.tsx` had already
+resolved. **Known, disclosed limitations:** Claude Code only; remote `https://`
+servers only (stdio/local-command servers are out — that's the one input
+needing real command validation, and `claude mcp add` still covers it); and MCP
+tools are reachable **only** from Open in Terminal (v38) and Get Started (v46).
+That last one is a security decision, not a convenience one: those two paths
+have no tool allowlist, so this needed zero changes to the command sandbox,
+and the nine headless commands never see an `mcp__*` tool. An MCP tool sits
+outside the `Edit(...)`/`Bash(...)` model entirely, so putting one in scope for
+a command that splices attacker-authored text into its prompt (`triage-email`,
+`triage-issue`, `check-inbox`, `check-notion`) would hand an email author a
+write API to the user's Canva/Figma/Lovable account — the exact hole v56
+exists to close. Preset URLs came from a real `claude mcp list` where the CLI
+health-checked each one; Notion and GitHub are absent because theirs couldn't
+be verified that way. Two review catches before merge: `McpServer` must be a
+**type-only** import in the `"use client"` Sheet (the config module imports
+`node:fs/promises`; a value import would fail the build), and a failed commit
+must **not** fail the save here — `.mcp.json` is commonly gitignored in real
+repos, so a company registered from an existing directory would otherwise 500
+on every save. **The one open question was then settled, and the answer is
+"don't build it":** `claude mcp login <name>` *refuses* a still-pending
+project server, with "is from .mcp.json and awaiting approval. Run `claude` in
+this directory to review it first." — bailing before any network call, writing
+nothing to the credential store. Measured directly against a
+disposable `/tmp` repo with `--no-browser` and stdin closed, so no OAuth was
+ever started. A one-click "Sign in" button is therefore **impossible as
+conceived**: login requires approval first, approval is only reachable by
+running `claude` interactively in the company's directory, and that is exactly
+what v38's Open in Terminal already does. Such a button could only open a
+terminal and then tell the user to approve and type `/mcp` — verbatim what the
+Sheet's instruction already says. Don't add it.
+
+v63 fixed a user-reported bug: a drawer with a lot of text in it "got stuck" —
+its bottom, including the Save/Next buttons, was unreachable. The cause was in
+two primitives, not in any drawer. `SheetContent` is a `fixed`, `h-full`,
+`flex flex-col` panel that **had no scroll container at all**, so anything
+taller than the viewport was clipped with nothing to scroll; only 2 of its 10
+consumers had hand-patched an inner `overflow-y-auto`, and the 4 with plain
+content were all broken. `AlertDialogContent` had no `max-height` while centred
+with `translate-y-[-50%]`, so a tall confirm dialog overflowed *both* ends. Both
+fixed in the primitive: `SheetContent` wraps `children` in a
+`min-h-0 flex-1 overflow-y-auto` flex column (wrapping rather than scrolling
+`SheetContent` itself, so the `absolute` close button stays pinned), and
+`AlertDialogContent` got `max-h-[calc(100dvh-2rem)] overflow-y-auto`.
+**This is the one sanctioned exception to the "never edit `components/ui/*`"
+rule above, confirmed with the maintainer:** that rule governs *styling*
+issues, which belong in a token or a consumer's className — a structurally
+missing scroll container that every caller routes through is the case where the
+rule's own logic points at the primitive. It is not a precedent for colour,
+spacing, or width fixes, which still belong in the consumer (see v16/v29).
+
+v69 added **freee** (Japanese accounting/HR/invoicing/payroll/e-signature) to
+v61's per-company MCP connector presets — one entry in `MCP_PRESETS`, no new
+mechanism. It shipped as one line because it passed v64's standing gate first:
+unauthenticated `POST https://mcp.freee.co.jp/mcp` returns a real **401 with
+`WWW-Authenticate`** (the exact thing the deleted Google presets never did —
+they answered 200 with a tool list, so no OAuth flow ever started), and its
+authorization server is its own origin advertising
+`registration_endpoint: https://mcp.freee.co.jp/register`, so Claude Code can
+complete DCR. **freee's local stdio server (`npx freee-mcp`) was deliberately
+not used** — `isSafeServerUrl` is https-only by design, because a stdio server
+means a user-supplied command line, the one input needing real command
+validation; `claude mcp add` still covers it. No new tests: the preset
+assertions are loops over `MCP_PRESETS`, so any addition is already covered.
+README's connector line was corrected in passing — it still named "a Google
+MCP server", deleted back in v64.
+
+v70 fixed a user-reported bug: after connecting Google, macOS kept popping "gog
+wants to use your confidential information stored in 'gogcli' in your keychain",
+especially on every Re-check. **The prompt is gog's, not ours, and is
+unfixable here** — Homebrew ships `gog` ad-hoc/linker-signed, so its code hash
+changes every release and a Keychain ACL binds to the writing process's
+Designated Requirement, so "Always Allow" stops matching after any gog update
+(openclaw/gogcli#569, closed without a fix). What *was* this app's bug is the
+frequency: every page is `force-dynamic`, so the keyring-reading `gog auth *`
+probes re-ran on every render of Agents/Connect/Network/Ownership plus
+OnboardingWelcome's refresh-on-focus, and `googleStatus` ran `auth status` **and**
+`auth list` — which read **different** Keychain items, so a connected user was
+asked twice per render for what one call answers. Now `auth list` runs first and
+returns on its own when it finds an account (`auth status` only when there is
+none, which is exactly when its `credentials_exists` discriminator from v64 is
+what's being asked), and new `lib/exec-memo.ts` memoizes these read-only probes
+for 5 minutes, keyed on command+args, installed as the *default* `execFn` of
+`connect-status-impl.ts` and `google-accounts.ts` so every caller is covered at
+once and every DI test is untouched. Failures are never cached. Measured against
+a real build with a logging shim in front of the real `gog`: **15 spawns → 3**
+over the same 9 page loads; 5 plain reloads spawn 0; one Re-check spawns exactly
+1. **Two things not to re-derive:** (1) the memo is **per-route, not
+per-process** — Next bundles the server module separately per route, which is
+why "after" is 3 and not 1; (2) `gog auth list -j` returns the same accounts and
+scopes under a disposable `--home`, so gog's account list lives in the Keychain,
+not on disk — there is no file-backed way to answer "is Google connected", which
+is why the fix is caching rather than avoidance. **Standing rule this reinforces
+(v64's, from the other direction):** a `force-dynamic` page calling a third-party
+CLI calls it on *every render* — before adding one to a page, ask what it costs
+when it runs 50 times an hour, because here the cost was a GUI dialog, not CPU.
+
+
+**v71 (2026-08-14) shipped the first slice of the non-technical path** — the
+app now covers the technical part instead of detecting it and instructing.
+Node is bundled into the macOS build (pinned, checksum-verified against
+nodejs.org, launcher prefers it unconditionally; proven with `PATH=/usr/bin:/bin`
+and no system node). Claude Code, `gh` and `gogcli` install from a button —
+at most ONE verified command each, then the tool is read back from the OS
+rather than the exit code trusted (v31's rule). **No command was invented for
+Antigravity**, per v64. Claude Code is the **repair fallback, not the
+installer**: reached only from a button after a failure the user saw, scoped
+with `--allowedTools` + `--permission-mode manual`, never
+`--dangerously-skip-permissions`, `sudo` absent from the allowlist AND
+forbidden in the prompt, and success re-probed from the machine rather than
+read from the transcript. `claude auth status` now gives real signed-in state,
+deleting the false claim that it "can't be detected without spawning the CLI."
+**Google's six console pages are driven by `claude --chrome`**, correcting
+v64's over-read: no API exists for creating an OAuth client (still true), but a
+browser agent routes around it, and `gog auth setup --credentials <file>
+--services gmail,calendar --login` makes the agent's deliverable ONE verifiable
+artifact. Chrome's presence is checked for real before any spawn; which account
+it is signed in as is not checkable, so it gets a confirmation plus a button
+that opens the account page in Chrome specifically. **Advanced mode is off by
+default**, hiding the Network map, MCP, Open in Terminal, the three non-default
+executors, Notion and the path field; Get Started now runs an `orientation`
+command through the existing run→diff→approve machinery instead of opening a
+terminal. **Three paths are built but never really run** — the browser agent,
+the repair agent, and `orientation` — all deliberately left for the maintainer,
+per the standing rule about unattended real spawns. The one load-bearing
+unverified assumption is that `claude --chrome "<prompt>"` engages the Chrome
+integration in an interactive session.
+
+**Standing constraint added here:** `daily-team-log` is the maintainer's own
+workflow. It reaches the UI only through the existence-gated `plh-ops` built-in
+and must never arrive in a user's company by scaffolding — pinned by a test in
+`lib/company-template-manifest.test.ts`. Note the gate protects public
+*installs*, not a company folder handed to someone by hand: on the maintainer's
+machine the button installs it INTO a target repo and commits there.
+
+
+**v72 (2026-08-14) followed v71 within hours, from real use.** Google services
+are now a user-chosen set (`lib/google-services.ts` — one catalog read by the
+picker, the `gog auth add --services` command, and the console pages the
+browser agent enables; consent FAILS for a service whose API was never
+enabled, so those two lists must be the same list). **The card's marks are
+derived from the scopes `gog auth list -j` really reports**, retiring v64's
+"keep the marks in sync" rule by not keeping two lists — and note gog's scope
+names are not its service ids (Docs is `.../auth/documents`, Sheets is
+`.../auth/spreadsheets`), measured on a real store. **Standing rule added:
+simple mode must never hide something already in use.** v71 hid MCP, Notion,
+Aider and Antigravity by default and a real user reported them as "removed";
+worse, hiding the card also removed the only control that could change it
+back. Now: hidden until real, then always shown (executor card when a company
+is assigned to it, Notion card when a company has it configured, MCP button
+when a company has servers). Open in Terminal and Network stay purely
+advanced — neither is state you can be mid-way through depending on.
+
+
+**v73 (2026-08-14) rebuilt the Skills page as a two-pane file explorer**
+(companies and their files left, selected file right, kinds as sub-groups,
+search, collapsible companies) and repaired a **dead palette**: that page used
+five tokens that stopped existing when the palette changed — `bg-shell`,
+`bg-shell-2`, `border-line`, `text-bone`, `text-dune` — so the classes resolved
+to nothing (transparent panels; a bare `border` falling back to `currentColor`).
+**The finding to reuse:** grepping for the dead tokens rather than fixing the
+reported page found the same palette live in `activity-board.tsx` and
+`activity-day-group.tsx` — same shape as v68. `glass-edge` IS real; don't
+"fix" it. When touching a page that looks broken rather than merely ugly,
+check its classes against the tokens actually defined in `app/globals.css`
+before redesigning anything.
+
+**v74 (2026-08-16) closed the door v72 left shut.** The service picker only
+existed on the paths that run when Google is *not* connected, so anyone who
+connected before it shipped was stuck with gmail+calendar and no way to widen
+it. One control (`ConnectGoogleApps`) now serves both jobs, because
+`gog auth add <email> --services …` is the same command for a stored account
+(re-authorize wider) and a new one (first authorize). **The rule to keep:
+re-authorizing with a narrower `--services` list silently drops scopes**, so
+the command is built from the union, the agent prompt says so explicitly, and
+already-granted checkboxes are checked *and disabled*. Whether a run is
+first-time setup or "add more apps" is read off the machine
+(`listGoogleAccounts`, memoized per v70) rather than trusted from the client —
+which also yields the granted set for free. **The bug to not repeat:**
+`grantedServices` is a union across accounts and is wrong for any per-account
+control; `accountServices` carries the per-account map for that. Card title is
+now plain "Google" — naming two services in a title over a card showing seven
+marks was the same "the card lies" failure v64 and v72 each fixed once.
+
+**v75 (2026-08-16) fixed four review findings in v74's own Google flow**, all
+shipped in the published v0.17.0 and all one shape: v74's safety argument
+(always send the union, never a narrower `--services`) holds only where the app
+knows what an account carries, and four paths reached the picker without
+knowing. **Rules worth keeping:** (1) *absent* `accountServices` means
+**unknown**, never none — the `gog auth status` fallback genuinely cannot read
+scopes, and any consumer that treats missing as empty will offer a
+scope-revoking command; (2) never pass a module's raw `execFn` into
+`listGoogleAccounts` — the v70 memo lives on its own default, and this module's
+exec is shared with `openChromeAccountCheckImpl`, which must NOT be memoized
+(a second click would no-op), so the account read needs its own seam; (3)
+`serviceListArg` substitutes the defaults for an empty list, so it must never
+be used to compare two service sets — compare ids; (4) the server matches
+addresses case-insensitively, so every client lookup must too. **The
+test-hygiene lesson was the sharper one:** giving that read a real default made
+an existing test read the developer's own gog store — green on CI, red here,
+plus a Keychain prompt. Every `setupGoogleImpl` test now injects an explicit
+account reader. Also: the install-repair agent is bounded with
+`--max-budget-usd` (real on the installed CLI; `--max-turns` is not), and
+`KeychainNote` renders at every not-connected Google stage including `install`.
+**Left open:** a spend cap is not a wall-clock cap, and the existing 15-minute
+`execFile` timeout should already have made the reported one-hour run
+impossible — most likely `promisify(execFile)` never settling while a
+grandchild holds the stdio pipes. Own slice.
+
+**v76 (2026-08-17) put real marketing expertise in the marketing starter pack** —
+ten skills vendored from `coreyhaines31/marketingskills` (MIT) at a pinned tag,
+into `templates/packs/marketing/.claude/skills/`. **No application code
+changed:** a pack overlay is copied with a recursive `cp` rather than through
+`TEMPLATE_MANIFEST`, and `genericCommandSetSkillAdapter` has scanned
+`<company>/.claude/skills/*/SKILL.md` since v11, so third-party skills reach a
+new company as files alone. `scripts/sync-marketing-skills.sh` is the entire
+update mechanism — bump `TAG`, rerun, review the diff; it wipes and rewrites,
+so an upstream rename or deletion propagates, and it exits non-zero when a
+curated id has no `SKILL.md` at the pin. **Rules this sets for any future
+vendoring:** ship the upstream license and tag beside the files
+(`UPSTREAM.md`) so provenance is always recorded; strip the
+upstream repo's own test fixtures (`evals/`); and keep the pack an overlay,
+which is why it's ten skills and not all 49. **Not wired to
+`definitions/ontology/company.yaml`** despite the overlap: the
+`product-marketing` skill's own job is to write the context file the others
+read, so a translation layer would sit between two things that already work.
+The template runs at scaffold time only — companies created before this get
+nothing, and re-syncing an existing one isn't built.
+
+**v77 (2026-08-17) made template updates reach companies that already exist** —
+an "Update skills" button that applies newer vendored skills in place, closing
+the limitation v76 shipped with. **The rule this establishes, and the reason it
+was a slice and not a project: sync only what the app owns.** Vendored content
+is stamped (`UPSTREAM.md`, `Tag:`) and replaced wholesale, so updating is a copy
+and no merge policy has to exist; anything a user edits (ontology, notes, their
+own skills) is never touched. Content you want existing users to receive ships
+inside a stamped, app-owned folder — updating a file a user may have customized
+is a different feature (diff-and-approve) and must not be folded into this one.
+**Detection must work for companies that predate the content**, which have no
+stamp to compare: nothing records which pack a company came from, so
+`lib/vendored-skills.ts` matches it by a command only that pack ships and treats
+"no stamp" as behind. **Replace entries one by one, never the containing
+directory** — the user's own skills and `daily-team-log` (v20) live in
+`.claude/skills` too, which also means a skill dropped upstream lingers rather
+than being deleted (the safe direction). `commitFile` now takes
+`string | string[]` so the commit is pathspec-scoped to exactly what was
+written; a failed commit does not fail the update (v61's call).
+**The v66 trap was closed by construction, not by aim:** no repo under
+`~/AI-Native/` has the marker command, verified before the live pass, so the
+button cannot render on a real company's card at all.
+**Two defects an adversarial review caught here, both green under the first test
+suite, and the rule that covers both:** a stamp is a claim about what is
+installed, so write it ONLY when the claim is completely true — last, and never
+over a partial result. (a) Replacing every bundled entry name deleted a
+hand-written skill that happened to share one, and for unstamped companies —
+this feature's whole population — nothing in `.claude/skills` is app-owned;
+the test that passed used a deliberately non-colliding name. An existing entry
+is now replaced only when a stamp proves the app installed the set, else it is
+skipped and named back to the user. (b) `readdir` returns `UPSTREAM.md` first,
+so a mid-copy throw stamped the new tag over old skills, and since the button
+compares only the tag it then vanished and stranded the company.
+
+**v78 (2026-08-17) applied a repo-wide over-engineering audit** — net -479 lines,
+one dependency (`clsx`) gone, no feature removed, and `eslint` clean for the
+first time (it also fixed 5 pre-existing warnings). Biggest: -169 lines of dead
+`landing/styles.css` left by the cinematic rewrite, the orphan `landing/pricing`
+page, `scripts/jp-audit.py` (its migration ended in v67), the `ScrollArea`
+wrapper whose two consumers wanted only `overflow-y-auto`, six copies of one
+`pathExists` helper, and the unreachable `needs-attention` activity branch.
+**The dead-CSS rule to reuse:** a compound or descendant selector part matches
+only if EVERY class in it appears in the markup, so one dead ancestor kills the
+rule — the weaker "all classes dead" test leaves half the family behind. Verify
+by rule-count-per-class against the baseline, then probe computed styles in a
+browser; both were needed here.
+**Three findings were rejected and should stay rejected:** `checkDependencies`
+is not derivable from `ConnectStatus` (`ToolStatus` has no `installed` field, so
+cutting it means adding one); `AgentCard`'s nine `show*` props ARE v66's
+default-off safety property; and the `"use server"`/`-impl.ts` pairing earns its
+keep, since 32 of 32 impls have their own test file.
+**Process:** a verifier agent left a stray `lib/zz-collision-probe.test.ts`
+behind during v77's review and it inflated that slice's reported test count —
+check `git status` for agent leftovers before trusting a number.
+
+**v79 (2026-08-17) added 12 HR skills to the HR & People pack** (tuanductran/hr-skills,
+MIT, pinned v1.4.0) and turned `sync-marketing-skills.sh` into
+`scripts/sync-vendored-skills.sh` — a table of packs, run with no args for all
+or a pack name for one. **This is the proof v77's mechanism generalizes: adding
+a pack is one entry in `VENDORED_SKILL_PACKS` plus one case block, and nothing
+else in the app changes.** Two rules this run establishes: (1) **never let a
+sync-script rewrite move an existing pack's `Tag:` line** — regenerating
+marketing changed only its stamp's title and script name, because the tag is
+what the staleness check compares and touching it would offer every existing
+company an update that changes nothing; (2) **marker commands must be unique
+across packs**, or one pack's skills land in another's companies — a test pins
+it, alongside a test that each pack really ships its own marker. Pack tests now
+iterate `VENDORED_SKILL_PACKS`, so listing a pack is what earns it coverage.
+Bash 3.2 traps met here: `"${@:-$LIST}"` collapses to one word (use
+`[ $# -eq 0 ] && set -- $LIST`), and prefer one `EXIT` trap over per-function
+`RETURN` traps.
+
+**v80 (2026-08-18) added 10 stack-agnostic engineering skills** to the Software
+engineering pack (Jeffallan/claude-skills, MIT, pinned v0.4.16). **Cost of a
+third pack: one case block in the sync script and one entry in
+`VENDORED_SKILL_PACKS` — zero new tests, because v79's `describe.each` covers
+whatever is listed.** Two judgments to keep: (1) upstream's ~57 language,
+framework and vendor specialists (`rust-engineer`, `shopify-expert`) are
+deliberately NOT in the default set — each serves one company, so the vendored
+set stays stack-agnostic and maps onto the pack's own commands; a company adds an
+id to the script for its stack. (2) A marker command must be checked against the
+BASE template as well as the other packs — a name `templates/company-starter`
+ships would match every company on the machine, not one pack's.
+
+**v81 (2026-08-18) made vendored skills app-managed and read-only in the app** —
+the maintainer ships skill updates, so the app must not accept an edit it will
+overwrite on the next update. **Where the gate goes:** `resolveKnownSkillPath` is
+the shared membership check for skill READS and WRITES both, so the rule lives in
+a `resolveWritableSkillPath` wrapper used by the one writer
+(`saveSkillContentImpl`); gating the shared function itself would have blocked
+reading the content and history of a managed skill, which must keep working. Any
+new writer should reach for the writable variant — that is why it is named that
+way, and tests pin the read paths. **Ownership is v77's rule reused, not a second
+one:** app-managed means under `.claude/skills/<name>/`, company carries a stamp,
+and the marker-matched pack ships that `<name>`. The stamp requirement is what
+keeps a pre-v76 company's same-named files theirs. The UI hides the Edit tab for
+managed skills (computed server-side on the Skills page) instead of failing after
+the user types. **v77's skip-on-collision logic stays** — Open in Terminal still
+gives full file access, so a hand-written collision is still possible and must
+never be overwritten.
+
+**v82 (2026-08-18) added a `customer-support` skill to the Customer support pack**,
+vendored from `wshobson/agents` (MIT) rather than the aggregator it was requested
+from. **The rule this hardens: check the licence before vendoring, and trace a
+copy to its origin rather than refusing outright.** The requested repo
+(an aggregator) has no licence file, so it was not redistributed in this repo or
+in the shipped binaries; a code search for the skill's first line found 599 copies and one
+MIT-licensed origin, which is what shipped. Signals that a source is a scrape and
+not an origin: frontmatter like `source: community` / `risk: unknown`, no tags or
+releases, and references to files that do not exist in the repo.
+**Two mechanism generalisations came with it:** a pin may be a commit SHA when
+upstream publishes no tags (archive URL differs: `archive/<sha>.tar.gz`, and the
+UI shortens a SHA to 7 chars), and a pack may vendor loose `.md` files via `SRC`
+/ `SRC_FILES` instead of `skills/<id>/SKILL.md`. Existing packs keep the defaults
+and must regenerate byte-identical — resync all packs and diff before committing.
+
+**v83 (2026-08-18) fixed a packaging break that silently half-built every company
+created in v0.19.0-v0.22.0** — pack overlay copied, base skeleton missing, and
+`{ ok: true }` returned. **Three rules from it.** (1) `cp -R src dst` NESTS when
+dst exists: v77's literal `path.join(process.cwd(), "templates", "packs")` made
+Next's file tracing copy `templates/` into `.next/standalone`, so the packaging
+scripts' `cp -R templates "$PAYLOAD/templates"` started nesting and hid
+`company-starter` from the read path. Copy CONTENTS (`templates/.`) into an
+explicit `mkdir -p`'d directory. (2) **A skip-if-missing loop turns a packaging
+slip into silent data loss** — `copyManifestEntry` skipping absent entries is
+right per-file and wrong for the whole root, so
+`createCompanyFromTemplateImpl` now refuses when the template root is absent.
+(3) **Write payload assertions as `if ... fi`, never `[ -d x ] && { exit 1; }`** —
+under `set -euo pipefail` the `&&` form aborts the build on the happy path. Both
+package scripts now assert `templates/company-starter` exists and
+`templates/templates` does not.
+**And a standing tooling warning:** `grep` in this shell wraps
+`ugrep --ignore-files` and silently skips `*.test.ts`, so every dead-code claim
+must use `/usr/bin/grep` — v78's audit and a wrong "unused" call on
+`GOOGLE_SETUP_SERVICES` both came from this.
+
+**v84 (2026-08-18) gave scheduled, unattended runs to the app that only ever
+ran on a click** — any command whose fields are all optional (`orientation`,
+`digest`, `handoff`, `check-inbox`, `check-notion`, `triage-email`) can run once
+a day at a chosen time. **The security argument is that the scheduler adds
+nothing:** it calls `runCompanyCommandImpl` with `{}` and nothing else, so the
+allowlist, v56's `untrustedInput` refusal, the run lock and the before-snapshot
+are all byte-identical, and `commitCompanyCommandResultImpl` remains the only
+committer. **Auto-commit is opt-in per schedule, off by default, and refused in
+code for any command with `untrustedInput`** (`check-inbox`, `check-notion`,
+`triage-email` always wait for a human) — the allowlist confines where an
+injected prompt can write and cannot make what it wrote true, so those are the
+results where "nobody looked" IS the risk. Even with it on the agent does not
+commit: the app diffs and calls the same `commitCompanyCommandResultImpl` the
+approve button calls. **Because the spawn is detached**, auto-commit needed a
+completion watcher — each tick sweeps `pendingCommit` records BEFORE firing
+anything new (firing first would retake the before-snapshot and bury last
+night's result), checks the run lock has dropped, then commits; `pendingCommit`
+is also what stops the sweep committing a diff the *user* left unapproved. **The real work was the waiting, not the running:** a
+run record already survived its run but nothing could find it again, so an
+overnight diff was invisible until you clicked Run, which retakes the `before`
+snapshot and destroys it. Fixed with a mount-load in `CompanyCommandRunner`,
+`listPendingReviews`, and a dot in the Skills tree and sidebar — plus the bug
+that made "pending" meaningless: committing left `.run.json` behind, so an
+approved run looked unapproved forever (now deleted after a successful commit,
+best-effort). **Rules from the timer itself:** it lives in `instrumentation.ts`
+because Next's `register()` runs once per server process and that process is the
+only thing outliving a browser tab (so "closed the tab" works and "quit the app"
+honestly doesn't); `"HH:MM"` string comparison against `localStamp(now)` means
+no date and therefore no DST arithmetic anywhere; `schedules.json` (browser-
+written) and `schedules-last-run.json` (ticker-written) are separate files with
+one writer each, which removes the race a lock would otherwise be needed for;
+`skipDate` stops a schedule saved at 15:00 for 07:00 from firing on Save; and
+the stamp is written **whether or not the run started**, because stamping only
+successes turns a permanent refusal into a per-minute retry until midnight.
+Live-probed with `ALACRAN_DATA_DIR` pointed at a throwaway dir and a company
+that doesn't exist — the refusal returns before the `mkdir` and before any
+spawn, so the whole path was exercised with no real agent run, per the standing
+rule. **The trap worth not repeating, and the reason step 4's live pass exists:**
+Next compiles `instrumentation.ts` for the edge runtime too, so a Node-only
+import must sit INSIDE a positive `if (process.env.NEXT_RUNTIME === "nodejs")`
+block (dead code the edge build drops), not after an early return — the
+early-return shape 500s every page in `next dev` while `tsc`, `vitest`,
+`eslint` and `next build` all stay green, because minification removes the
+unreachable code before webpack can complain. Found by curling a real dev
+server, and by nothing else.
+
+**v85 (2026-08-19) rebuilt the Connect page as grouped list rows** — one
+bordered container per group (*Your AI*, *Accounts*, *Per company*), one
+`<details>` row per tool, setup unfolding only for the row you click. It had
+been a two-up card grid with all six tools' full setup expanded at once.
+`ConnectRow`/`ConnectGroup` are presentational only and every body is the
+previous JSX verbatim, so no connect logic moved. **Two defects the collapse
+exposed, both worth generalising:** a row whose body is entirely `!live`
+content opens onto an *empty panel* once connected (GitHub did — every row
+needs one true thing to say in the connected state), and a status label hidden
+to fit a narrow row leaves colour as the only carrier of state
+(`sr-only sm:not-sr-only`, not `hidden sm:inline`). Rows are `<details>` rather
+than a state-managed accordion, so the toggle, keyboard support and keeping
+closed content out of the tab order are native and nothing tracks which row is
+open.
+
+
+**v86 (2026-08-19) made a company's standing context readable by every executor,
+and let a company hold more than one starter pack.** `AGENTS.md` is now the
+working agreement and `CLAUDE.md` a two-line `@AGENTS.md` pointer — the
+template's own §1 rule ("`.claude/` is one adapter for one tool") applied to the
+context file itself, which had been under a vendor's filename since v17 and so
+auto-loaded for exactly one of the four executors. Existing companies get a
+button that moves their own file, edits intact, in one commit.
+**The rule this sets: a second copy of the same prose is drift you cannot see** —
+scaffolding and backfill both produce the pointer, so a test asserts the constant
+is byte-identical to the bundled template.
+**Two first-match-wins loops and one shared stamp were what made multi-pack
+impossible**, and both would have shipped silently: a company had ONE
+`.claude/skills/UPSTREAM.md`, so with two packs each looked stale against the
+other's tag and the update button flip-flopped forever; `isAppManagedSkillPath`
+returned on the first matching pack, handing a second pack's skills back as
+"yours to edit" right before the next update overwrote them. Stamps are per-pack
+now (`UPSTREAM-<pack>.md`), the legacy name is read but never written or deleted
+so it stays the scaffolding pack's stamp (no migration, and hand-copied files
+self-heal), and both loops consider every match. **`markerCommand` is gone:**
+`isPackInstalled` derives pack membership from the pack's own command files, so
+there is one detector instead of two, and the pinned invariant got stronger —
+no command filename may be shared between two packs or with the base template.
+**A silent permanent wedge was fixed at the shared function:** `file-lock.ts`
+wrote a pid nothing read, so one crash mid-run made a company report "Already
+running" forever, schedules included. It now collects a lock whose writer is
+gone, records the SERVER's pid (the right proxy — while it lives only its own
+handlers touch the lock), and errs toward held on anything ambiguous, because a
+wrongly-held lock costs a restart and a wrongly-released one starts a second
+agent on a live run.
+**v83's grep trap recurred and is worth re-reading:** a repo-wide unused-export
+sweep reported ~35 dead exports under this shell's `grep`; several were live in
+tests only. `/usr/bin/grep`, always, for any dead-code claim.
+
+**v89 (2026-08-21) grouped the Skills tree by department and gave the agent card
+one primary action.** Both were user reports of the same defect — a flat list
+where nothing said what mattered. **The pattern to reuse: derive the grouping,
+don't store it.** A skill's department comes from `templates/packs/`'s own
+`category` field via `lib/skills/departments.ts`, keyed by **path** (frontmatter
+`name:` is user-editable, so a rename would silently drop a skill out of its
+group) — a `departments.json` would be v86's two-detectors problem again. User
+filing overrides it in **localStorage**, the same tier as `reorderable-grid`'s
+card order, which is what lets a v81 app-managed skill be refiled without
+writing to a file the next update overwrites; an override equal to the derived
+value is **deleted, not stored**, or a later pack recategorisation is pinned
+forever. Constants shared with the client live in `company-starter-packs.ts`,
+since `departments.ts` imports `node:fs`. **On the card:** primary solid first
+(setup wizard until there's an ontology, then Get Started — never both),
+offers as a chip row, configuration behind a native `<details>` that is
+deliberately **uncounted**, because `AdvancedOnly` decides on the client whether
+two of its children exist. **Two layout facts:** `.bento-grid`'s item is
+`ReorderableGrid`'s draggable wrapper, so equal-height cards need
+`.bento-grid > * > .bento-card { height: 100% }`; and `mt-auto` on the action
+block was tried and reverted — one card with its More open voids the middle of
+every other card, which is the same thing the original `justify-end` body did.
+
+**v90 (2026-08-21) fixed a reported "there is no section to add more Gmail
+accounts" that was a labelling bug, not a missing feature.** Adding a second
+account has worked since v41 and shares one control with "turn on more apps"
+since v74, because `gog auth add <email> --services …` is the same command for
+both — but the field arrived pre-filled with the existing account under a
+heading about apps, so nothing said the second job existed. **The rule: when
+one control does two jobs, the label has to follow the selection, or it only
+ever advertises the first.** The address chips became a visible selector with a
+dashed "+ Add another account" (which resets the picker to defaults rather than
+inheriting the previous account's ticks), and the heading switches on `stored`.
+Also deleted the passive `<Badge>` address list — the row's own `detail` already
+names them, so three renderings of one list in one panel is what made the
+clickable chips read as decoration.
+
+**v91 (2026-08-21) fixed a user-reported "Couldn't save: An error occurred in the
+Server Components render" when editing a company.** Root cause: the scaffold template
+`templates/company-starter/docs/templates/ontology-starter.yaml` has been **invalid
+YAML since f253aa9 (2026-08-12)** — `<<TODO: hint>>` reads as a nested mapping in a
+compact mapping, so `yaml@2.9.0` throws. `buildCompanyOntology` PARSES that file (v18:
+the customer/org/product domains are copied verbatim), so setup and edit could never
+save for any company scaffolded in that window. **Two standing rules.** (1) A
+`"use server"` action that is a bare `return impl(...)` turns any impl throw into
+Next's redacted production digest — so every reader of a user-editable file must return
+`{ok:false, message}`; this was the last unguarded YAML parse, its three siblings all
+had the guard. (2) **Fixing a bundled template does not fix companies that already
+copied it** — each holds its own copy (three on this machine did). An unparseable
+company template now falls back to the app's own, which the v83 packaging assertion
+guarantees is present and `adopt-folder.ts` already reads at runtime. **The test lesson
+is v56's again:** `build-company-ontology.test.ts` was green the whole time because
+every case used a synthetic template string; it now reads the REAL bundled file, and
+reverting the fix turns three tests red. Reproduction method worth reusing: run
+`ALACRAN_DATA_DIR=<tmp> PORT=<not 3000> npm start` against a disposable /tmp company —
+production masks the error in the browser but logs it in full server-side.
+
+**v92 (2026-08-21) applied a repo-wide over-engineering audit: net -56 lines, no
+dependency removable.** The only real find was 47 lines of the LANDING page's
+terminal-mockup CSS (`.mac-*`, `.terminal-line`) plus `.a-glass` living in
+`app/globals.css` — all used solely by `landing/index.html`, which has its own
+copies. `.a-glass`'s comment still claimed it was shared with the landing nav; its
+one consumer was `components/nav.tsx`, deleted back in v40. **The verification
+method is the reusable part:** v78 requires a browser probe for any dead-CSS
+claim, and PNG bytes differ on every run here because of the `a-rise` stagger and
+the ambient orbs — so capture with `reducedMotion: "reduce"` plus an injected
+`animation:none;transition:none`, and diff per pixel. All six routes came back 0
+of 1,152,000 pixels changed. **What was rejected should stay rejected** (full list
+in the changelog): every prod dependency earns its place, `cn()` cannot be
+unwrapped because most consumers are untouchable `components/ui/*`, `SkillAdapter`
+has two implementations, the tiny `"use server"` files are real client boundaries,
+34/34 `-impl.ts` still have tests, and there are zero exports referenced nowhere.
+Un-exporting the 49 file-local symbols saves 0 lines and is v86's false-positive
+shape.
+
+**v93 (2026-08-21) stopped the Google setup agent operating the wrong account.**
+This machine has three Chrome profiles (personal Gmail, work address, a project
+account); `open -a "Google Chrome"` opens the last-used one, the app named none,
+and the only guard was a line in the prompt asking the model to notice. **The
+finding to keep: "there is no API for which Google account Chrome is signed in
+as" was FALSE and had been load-bearing since v71.** There is no web API, but
+Chrome writes it to `Local State` as plain JSON beside the profiles —
+`lib/chrome-profiles.ts` reads it on both macOS and Linux. `setupGoogleImpl` now
+**refuses before spawning** when no profile matches the typed address, naming the
+addresses that do exist; a match is passed as `--profile-directory` and named in
+the prompt. **Two rules worth reusing:** an unreadable `Local State` is
+"can't tell", not "no match", so it falls through to the old behaviour instead of
+blocking a working setup; and on macOS `open --args` is silently ignored when the
+app is already running, so profile selection must invoke the Chrome binary
+directly. **The residual, marked `ponytail:` in the source:** the app cannot force
+which window `claude --chrome` attaches to — that is Claude Code's behaviour — so
+the profile is named in the prompt too. Restricting to "any browser with the
+Claude extension" is not available: `--chrome` is Chrome-only, with no equivalent
+flag to select another.
+
+**v94 (2026-08-21) followed v93 after a real agent run failed.** v93 fixed which
+Chrome profile the app OPENS; this is which browser the agent ATTACHES to, and
+they are different problems. **The finding: the Claude browser extension
+registers connections against the CLAUDE ACCOUNT, not the machine** — a Chrome on
+another computer signed into the same Claude account is offered as a connectable
+browser, and the run attached to a Linux box's Chrome from this Mac. Not
+choosable from here. **A wrong hypothesis worth not retrying:** the agent
+suggested the extension was missing from the Default profile (extensions are
+per-profile); checked directly, `fcoeoabgfenejglbffodgkkbkcdhcgfn` is in BOTH
+Default and Profile 2, so an extension pre-flight would have returned a false
+green. What the app does now is raise the matching profile's Chrome itself right
+before spawning (reusing `openChromeAccountCheckImpl`, not a second opener) and
+name the failure mode in the prompt. **Standing answer for "make it work with any
+agent":** the browser route cannot be — `--chrome` is Claude Code's own flag with
+no equivalent elsewhere, the same shape as v42/v61's MCP finding. The
+agent-agnostic route already exists and is rendered for every executor: the six
+console links plus one `gog auth setup` command. Only the shortcut is Claude-only,
+and no new mechanism was built to pretend otherwise.
+
+**v95 (2026-08-21) stopped treating a new address as a first-time setup.** A
+machine with two connected Google accounts, adding a third with Drive ticked, was
+handed the whole six-step console job — because `setupGoogleImpl` read
+"is this set up" off the TARGET ADDRESS, which for a new address is always empty.
+**The rule: the OAuth client and the enabled APIs belong to the PROJECT, not to an
+address.** Once any account is connected a client exists; once any account carries
+a scope that API is enabled. Derived now from the union across all accounts
+(`listGoogleAccounts` + `servicesFromScopes`), giving three cases: nothing
+connected → full first-time job; client exists and every ticked service already
+enabled → **no console and no AI**, just `gog auth add` in a visible terminal
+(which is also the any-executor answer, and skips the Chrome profile gate since
+consent opens in the default browser); client exists but an API is missing → the
+short job for exactly those pages. **The conflation to not reintroduce:**
+`buildGoogleExpandPrompt` used one list for both "which APIs still need enabling"
+and "what `--services` to request" — they diverge for a new address on a set-up
+machine, and getting it wrong authorizes the new address for scopes another
+account happens to hold. A test pins that direction specifically.
+
+**v96 (2026-08-22) fixed a v95 regression: one OAuth client does not serve every
+account.** Adding a personal `@gmail.com` to a machine connected to a company
+Workspace hit Google's `Error 403: org_internal`. **The rule v95 missed: an OAuth
+client belongs to ONE Cloud project, and an Internal consent screen admits only
+that Workspace's accounts.** v95 reused the client whenever any account existed,
+which for an outside address is a guaranteed 403 — before v95 that case ran the
+full console path and would have worked. **gog already models this and the app was
+ignoring it:** `auth setup`/`auth add` take `--client=NAME` ("selects stored
+credentials + token bucket") and `auth list -j` reports a `client` per account, so
+clients coexist with separate credentials and tokens. `GoogleAccount` now carries
+`client`; `clientNameForAddress` reuses the client already serving the address's
+DOMAIN and otherwise derives a new one (`gmail.com` → `gmail-com`), so a new
+project never disturbs the working accounts. Two consequences worth keeping:
+"enabled APIs" must be read from the accounts on THAT client, not the machine-wide
+union (only meaningful within one project); and a virgin machine still uses gog's
+own `default` name, since the first client has nothing to coexist with.
+
+**v97 (2026-08-22) fixed two things a failed setup run exposed.** (1) The mangled
+console URLs users reported (`console.cloud.googgoogleapis.com`) were a TERMINAL
+artifact, not bad data — a ~4KB prompt passed as one argv token, redrawn over
+itself. Generating the prompt proved the links were intact. It now goes to
+`google-setup-prompt.md` with a one-line "read this" instruction (the shape
+`buildVisibleRunScript` already used), and a test asserts every
+`GOOGLE_CONSOLE_STEPS` href survives into the file. **Rule: verify a "corrupted
+output" report against the generator before believing it.** (2) The real blocker:
+`ConnectGoogleApps` ("Add another account") never rendered the console
+walkthrough, so an out-of-org address got only the AI route (which had zero
+connected browsers) and a `gog auth add` that can only return
+`org_internal`. It now detects the case client-side by domain and renders the
+full walkthrough plus the correct `gog auth setup … --client <domain>` command.
+**Standing decision: the AI browser shortcut no longer leads on that card.** It
+has failed three distinct ways in real use (wrong profile, remote-only browsers,
+no browser at all), each costing a session; the console steps need no extension,
+no pairing and no particular AI. The card now also states the prerequisite chain
+— the extension pairs by CLAUDE ACCOUNT, so the profile needs the extension AND a
+claude.ai login matching the account this app runs on — because none of it is
+checkable from here.
+
+**v98 (2026-08-23) made the Google browser-agent route reachable instead of
+routing around it.** Its prerequisite chain is four links and only two were ever
+checked: Chrome installed (v71), a profile signed in as the target address (v93),
+**the Claude extension installed in THAT profile** (new — extensions are
+per-profile, so `ChromeProfile.hasClaudeExtension` reads
+`<profile>/Extensions/fcoeoabgfenejglbffodgkkbkcdhcgfn` and `setupGoogleImpl`
+refuses before spawning if it is missing), and **that profile signed in to
+claude.ai as the same Claude account this app runs on** — which is what an empty
+`list_connected_browsers` actually means. **The rule: the extension pairs by
+CLAUDE ACCOUNT, not by machine.** That last link cannot be read locally, but it
+can be acted on: the new "Pair the extension" button opens claude.ai/chrome in
+the matching profile and names the account from `claude auth status`
+(`alex@example.com` here). Note link 3 alone would NOT have explained the
+reported failure — the extension was already in the right profile — which is why
+the pairing step, not the extension check, is the fix. v97's ordering stands: the
+console steps still lead, since they need none of this.
+
+**v99 (2026-08-24) closed the one gap a hosted knowledge product structurally
+wins on, and cut the rest of the surface to what has actually been run.**
+(a) **`refresh`** keeps `definitions/ontology/company.yaml` true after
+`define-company` writes it once — one registry entry with the same
+`known-file` shape `define-company` already had, so the run → diff → approve →
+commit path, the run lock, the realpath containment gate and the daily
+scheduler all apply unchanged. **The evidence is ranged from the commit that
+last touched the ontology, not a wall-clock window** — otherwise a company
+nobody has updated re-shows the same commits every day. **A missing Notion
+connection is a note, not a refusal** (the opposite of `check-notion`, whose
+whole output IS the listing): refresh has to work on a machine with nothing
+plugged in, and the repo's own notes/decisions/retros are the signal that
+needs no connector at all. Two prompt rules are the actual product — a minimal
+diff, and an explicit licence to change nothing, without which the model
+invents an edit to look productive and the diff stops meaning anything.
+**Two entry points for two populations, and the reason is worth keeping:**
+`updateCompanySkillsImpl` syncs only `.claude/skills`, so a template command
+file never reaches a company that already exists — and every company with an
+ontology to refresh is one that already exists. Hence the template
+`refresh.md` (new companies: Skills row + schedule, free) *and* a card button
+(everyone else). Shown in simple mode deliberately: the v71 rule hides
+terminal-literate surfaces and wants the first win to be "a diff the user
+approves," which is what this is.
+(b) **One executor.** Codex, Aider and Antigravity are gone from
+`AI_EXECUTORS`. **No migration was needed** because `getAiExecutor` and
+`getAiExecutorIdForAgent` already treated an unknown id as the default — a
+company assigned to `aider` resolves to Claude Code, pinned by two tests. The
+picker, its guide step, `setAiExecutorImpl` and `lib/set-ai-executor.ts` went
+with them (a writer no UI can reach is worse than no writer); the registry
+**reads** stay, six live callers and a file on every pre-v99 disk.
+(c) **Ten commands → six.** The rule used to pick: *works on a fresh install
+with nothing connected.* `check-inbox`/`triage-email` need `gog`,
+`triage-issue` needs `gh` plus a config file, `handoff` is developer-flavoured
+— every one fails on first click for the stated audience. **Cut from the app,
+not from the company:** the `.md` files stay in the template, so `/handoff`
+and the rest still work in a terminal and still appear in the Skills tree as
+editable files, just with no Run tab (`SkillBrowser` matches tree file →
+registry entry, and there is none). `prefetch/repo-status`, `triage-*`,
+`triage-config` and `repo-summary` were deleted; `check-notion` survives
+because `refresh` reuses it.
+(d) **The landing hero** is now a slot for a real 60-second diff recording,
+with **the still as the fallback rather than a placeholder** — the mock stays
+until `hero-diff.mp4` decodes a frame and `onloadeddata` swaps them, so a
+missing file never renders as a broken player. The clip itself is
+deliberately unrecorded: it needs a real headless `claude -p` run to
+completion, which the standing rule forbids an automated pass from triggering.
+`landing/hero-diff.README.md` carries the take list and the encode.
+**The follow-on nobody would have grepped for:** cutting the two gog-backed
+jobs left the Google-accounts picker naming commands the app no longer offers
+— same "the card lies" shape as v64/v72/v74 — so its blurb now describes what
+it really still does. No command declares `bashPatterns` any more, so every
+run gets a blanket `--disallowedTools Bash`.
+
+**v100 (2026-08-25) made Alacrán a native desktop app on macOS and Linux — no
+browser.** Same local Next.js server; the one line that ran `open`/`xdg-open`
+now runs an OS webview instead (`scripts/webview-macos.swift` → WKWebView,
+compiled by `swiftc` into `Contents/MacOS/alacran-window`;
+`scripts/webview-linux.py` → WebKitGTK via PyGObject). **The payload and
+launcher were deliberately left in shape** — their comments are a list of
+already-paid-for bugs (v83's `templates/` nesting, v0.7.8's `.data` leak,
+v45's port race, the PATH discovery) — and Electron was rejected for the same
+reason plus ~200MB of Chromium. `docs/native-app.md` holds the four-rule
+window contract and the Windows checklist.
+**Four things worth not re-deriving.** (1) **`open -a` stops relaunching the
+app once it has a real window**: a bash launcher never registered as a running
+GUI app, but the Swift window does, so LaunchServices just activates it and
+starts no server — measured (one launcher start where two were needed) and
+fixed with `open -n -a` in `restartAppImpl`, which in-app updates now depend
+on. Do not "tidy" the `-n`. (2) **`lsof -ti tcp:PORT` matches CLIENT sockets**,
+so the launchers' stale-instance clear — which escalates to `kill -9` — could
+kill the user's *browser* network process, and did match Chrome's here. All
+five sites are `-sTCP:LISTEN`-scoped now. (3) The window binary must live in
+`Contents/MacOS` so `Bundle.main` resolves to the `.app` (icon, name and the
+ATS declaration for free — the on-screen window reports its owner as
+`Alacrán`). (4) **`target="_blank"` is dead in a bare webview** and a Swift
+delegate with a wrong signature fails *silently*, so both handoff paths were
+verified with a probe built from the real source; Cmd+C also needs a real Edit
+menu, which matters most on the Connect page.
+**Lifecycle change, now in the README:** the window owns the app's lifetime in
+both directions — closing it quits Alacrán (so schedules stop; minimise
+instead), and a watchdog closes the window if the server dies, which is what an
+in-app update looks like from inside. Linux stays `Architecture: all` because
+the window is a script, not a compiled shell.
+**Windows is still gated** per the roadmap, but is additive rather than a
+migration: `performUpdate` already returns a clean "not available" and
+`restartAppImpl`'s spawn failure is guarded, so it needs a WebView2 host, a
+packaging script, and `win32` branches in `resolveDataDirFrom` (change that
+one *before* a first Windows user exists, not as a migration after) and
+`restartAppImpl`.
+
+
+**v101 (2026-08-25) fixed two onboarding blockers from a real Ubuntu 24.04
+install**, neither reachable on a dev machine. (1) **git refuses to commit
+without an identity** — a fresh Linux box has no `user.name`/`user.email`, so
+the scaffold died with "Author identity unknown". **It was never only the
+scaffold:** `createCompanyFromTemplateImpl`, `adoptFolderImpl` and
+`commitFile` all commit, and the last backs every approved diff, so fixing the
+reported path alone would have broken the first approval instead. One
+`gitCommit` helper now serves all three. It is **reactive, not pre-flight**
+(a probe before every commit is a spawn per approved diff forever — v70's cost
+question), so the happy path is byte-identical and every pre-existing test
+passes unchanged; a configured user is never overridden; and any other failure
+rethrows the ORIGINAL error so v61's benign "nothing to commit" callers still
+see it. Detection is git's exit code, never its error text.
+(2) **A new company denied its own agent** — Claude Code ignores
+`.claude/settings.json` until the workspace is trusted, so the template's four
+read-only git commands were denied. `trustCompanyDirImpl` marks it trusted.
+**The scope is the security argument:** only for a company the app itself
+scaffolded from its own bundled template, never from `registerCompanyImpl` or
+`adoptFolderImpl`, where the files came from elsewhere and the prompt is doing
+its job — keep that boundary if it gets another caller. The write merges,
+refuses to overwrite an unparseable config, is atomic via temp+rename, and
+never throws, because that file is the user's whole Claude Code state.
+**Both verified against the real things** (git in a Debian container; Claude
+Code 2.1.243 with an isolated `CLAUDE_CONFIG_DIR` and no API call), and the
+new tests confirmed red without the fixes. **Trap:** the trust write defaults
+to the real `~/.claude.json`, so scaffold tests must set `CLAUDE_CONFIG_DIR`
+— v75's lesson, except writing rather than reading.
+
+
+**v103 (2026-08-26) is the first of five slices toward a merged Companies
+workspace**, and the first to add no feature at all. Spec:
+`2026-08-26-workspace-redesign-design.md`; a clickable prototype was built and
+accepted before any app code changed. The remaining four: **v104** merges
+Agents and Skills into one workspace (rail → explorer → workbench, the overview
+grid as its empty state, and a "run gutter" putting each command's last outcome
+in the tree); **v105** adds git-backed file and folder operations; **v106** adds
+an in-app terminal; **v107** redesigns Activity, Connectors, Map and Settings.
+**`/skills` must redirect into the workspace, never 404.**
+
+What v103 itself shipped: the three ambient orbs are gone (`.a-glow` stays —
+`onboarding-welcome.tsx` still uses it), cards no longer levitate or carry
+`backdrop-filter`, and the nav rail is pinned with an explicit remembered
+collapse. **The rail's width is now one custom property, `--nav-w`**, read by
+both `.app-sidebar`'s width and `.app-shell-main`'s `margin-left`; they were
+two literal `72px` values, and `data-nav` is stamped pre-paint by the same
+blocking script as `data-theme` because otherwise a remembered collapsed rail
+snaps on hydration. Collapsed labels are hidden **visually only** — each is its
+link's accessible name, same clip-path recipe as `.bottom-nav-item`.
+
+**Two findings worth reusing.** (a) The reported dead class on the Activity page
+(`bg-card/60/50`) was one of **four**: grepping the shape rather than the line
+also found `border-glass-edge` — **`--glass-edge` is a real custom property but
+is NOT mapped in `@theme inline`, so any `*-glass-edge` utility resolves to
+nothing** — plus two raw `text-red-*` classes bypassing the tokens entirely.
+Before using a token name in a className, check it is in `@theme inline`, not
+merely defined in `:root`. (b) A planned repo-wide 12px type floor collapsed to
+**one line** once each of the 33 hits was classified: most live in files v104
+and v107 rewrite, and two are not prose (a digit inside a 16px circle, an
+uppercase category header). **The standing rule for the remaining slices:** a
+12px floor for content, none for uppercase tracked micro-labels or glyphs sized
+to a shape — and `.bottom-nav-item`'s 10px label stays excluded, because
+`globals.css`'s measured note beside it is the one layout a size change
+silently breaks.
+
+**Deferred on purpose, so the next slice inherits them:** the surface-elevation
+tokens (no consumer until v104's panes exist — adding them now would be
+speculative), and `connect-panel.tsx`'s 19 small-type occurrences (v107 rebuilds
+that file).
+
+
+**v104 (2026-08-26) merged Agents and Skills into one workspace at `/`.**
+`skill-browser.tsx` became `workspace.tsx` (a `git mv`) rather than being
+forked — it already owned search, departments, the localStorage filing
+overrides, the tabs and the app-managed rule. The right-hand pane has three
+states: every company, one company, one file. **`/skills` is a permanent
+redirect and must stay one.** The nav says **Companies** now (two entries became
+one); every user-facing string already said "company", only the nav said
+"Agents".
+
+**The mechanism to preserve: `AgentCard` is rendered on the SERVER and passed
+into the client workspace as a node keyed by agent id.** It reads
+`os.homedir()`, so it cannot move to the client, and handing it over whole is
+what carried all thirteen controls through the merge untouched; the same nodes
+back both the overview grid and the single-company panel, so the card is built
+once. `getAgentCardFlags` (`lib/agent-card-flags.ts`) was extracted first so
+those two surfaces cannot drift, and it carries v66's property forward — every
+flag keyed to `isCommandSet`, only `showOpenTerminalButton` ORing in
+`isExternal`.
+
+**Verify card changes by PARITY, not by `tsc`.** Every `show*` prop is optional,
+so a forgotten one vanishes silently rather than failing the build. Compare the
+prop list against what is supplied (30 props: 24 flags + 6 explicit).
+
+**The run gutter, and the limit of what the data supports.**
+`lib/company-commands/run-signals.ts` is `stat`-only — it feeds a
+`force-dynamic` page, so `git log` would be a subprocess per company per render
+(v70). `<commandId>.run.json` is deleted on commit, so it cannot distinguish
+"approved" from "never ran"; `<commandId>.log` is never deleted, so its mtime is
+the durable "has this ever run". Four states — running / waiting on you / ran
+(when) / never — and **no "failed" state, because nothing records a non-zero
+outcome and reading agent prose for failure would eventually mark a good run
+bad.** Skills get no tick at all; the tick's presence is what says "this runs".
+
+**Two things found by running it, not by reading it:** an `sr-only` status label
+placed BEFORE a row's filename makes every row announce its state before its
+identity (order builds the accessible name), and the app's 11px
+`::-webkit-scrollbar` means the layout viewport a media query sees is ~11px
+narrower than the window — a 561px window matches `(max-width: 560px)`. The
+bottom-nav note in `globals.css` now records both, plus the new measurement
+(five items, 487px against the 560px breakpoint, 73px slack).
+
+
+**v105 (2026-08-26) added file and folder operations** — create, move-or-rename
+(one operation, because a filesystem makes them one), delete, and a real folder
+tree behind an **All files** toggle with "By department" still the default.
+
+**The reuse is the point: no git code was written.** `commitFile` already stages
+deletions and renames through `git add --`, so a move commits as a genuine
+rename. Containment is `resolveWithinAgentRoot`, unchanged.
+
+**The guard rule to keep:** `resolveWithinAgentRoot` realpaths its argument and
+returns null for a path that does not exist, which is every create. So it runs
+on the **parent**, and the name is validated separately — **refuse a name
+containing a separator, never `basename` it**. For a move the destination's
+parent must ALSO be realpath-guarded: the string check alone passes a
+destination whose parent symlinks out of the company, and `file-ops-impl.test.ts`
+has the case that proves it.
+
+**Delete never unlinks** — app trash first (always recoverable), then a
+best-effort commit of the removal (recoverable from History too). Both, because
+choosing between them costs a spawn to answer a question whose wrong answer
+destroys work.
+
+**Not built on purpose:** editing an arbitrary file. `resolveWritableSkillPath`'s
+membership gate accepts only discovered skill/command files and that stands, so
+loose files open read-only; the terminal covers the rest.
+
+**Two bugs only the browser found:** a company expanded in All-files mode never
+loaded its root listing (the company row and the folder rows used different key
+spaces), and clearing the listing cache after an operation left already-expanded
+folders on "Reading…" forever, because nothing re-fetches an open folder — open
+listings are re-read now, not dropped.
+
+
+**v106 (2026-08-26) put a real terminal in the app** — a pty in a right-hand
+dock, ⌘J, closed by default. Ships to everyone rather than behind Advanced
+mode: a deliberate exception to the v71 rule, because the thing it replaces
+(Open in Terminal) *ejects* a non-technical user into a bare shell, so the
+framed panel is the gentler option, not the more advanced one.
+
+**`@homebridge/node-pty-prebuilt-multiarch`, never plain `node-pty`.** The fork
+ships linux-x64/arm64/arm/ia32 + darwin + win32 binaries INSIDE the tarball and
+picks by platform/arch at runtime — which is what keeps the `.deb`
+**`Architecture: all`** and means no machine needs a compiler. It is also
+per-**Node-ABI**: there is no build for ABI 108, which is exactly Ubuntu
+24.04's own `nodejs`, so the feature degrades with a sentence there.
+
+**Route handlers have NO CSRF protection — server actions do.** This one writes
+into a shell, so it requires an `Origin` matching the **Host header** plus a
+JSON content type (which forces a preflight a cross-origin caller cannot pass).
+**Compare against the HOST HEADER, not `new URL(request.url).origin`:** Next's
+standalone server reports its own internal URL there, so the origin comparison
+403s the app's own POST while every curl test passes. Found in the browser.
+
+**Never answer a capability question with a request that has the side effect.**
+Next derives HEAD from GET, so probing availability with a HEAD would have
+spawned a shell to check whether it could spawn a shell. `?probe=1` returns
+before `openSession`.
+
+**Packaging:** `serverExternalPackages` + an explicit copy in both scripts (the
+binary path is runtime-interpolated, so the tracer cannot see it), and
+**exclude `build/`** — it holds the build machine's own binary and shipping it
+makes another arch load the wrong object. Both scripts fail loudly if
+`prebuilds/` is absent from the payload.
+
+
+**v107 (2026-08-26) finished the five-slice redesign.** Activity is a two-pane
+timeline (sticky day headers, company filter, no Sheet — `activity-day-group.tsx`
+deleted); Settings is sections with a **plain-anchor** index rather than five
+Cards; the Map's flow animation now means "running right now" instead of
+"connected", sourced from v104's run signals.
+
+**Connectors needed almost nothing — v85 had already built the grouped-rows
+design.** Worth checking what a page already is before redesigning it.
+
+**The finding that matters: `getActivityDetail` was violating v91's own standing
+rule.** A `"use server"` action that is a bare `return impl(...)` turns a throw
+into Next's redacted production digest, and this one threw for any activity
+whose `detailPath` is a directory — so the user saw "The specific message is
+omitted in production builds…" instead of the perfectly good sentence the
+function already had. It went unseen because the old Sheet only rendered on
+activities you opened; a permanent detail pane hits it immediately. **Fixed at
+the shared function** (both the workspace viewer and the activity board call
+it): it returns `{ ok, content | message }` now. **Grep for other bare
+`return impl(...)` actions whose impl can throw — that rule is only as good as
+its last audit.**
+
+**Two design restraints worth keeping:** `ActivityStatus` has one value
+(`"done"`), so Activity has no severity colour — a stripe would be a legend for
+a distinction the data does not draw; and motion is reserved for events, never
+states, which is why "connected" is solid and "running" is what moves.
+
+**v108 (2026-08-26) closed the gap between the v103–v107 redesign and the
+prototype it was reviewed against — structurally faithful, visually
+diverged in a few dominant spots.** Re-compared against the prototype's
+actual HTML at every step (not memory), screenshotting both sides.
+
+**The sidebar was most of the "doesn't look like it" impression, because
+it's on every page.** 228px labelled list with a solid boxed active state
+→ 88px, icon over label, thin left accent line, matching the prototype's
+rail exactly (collapsed state 72px → 60px, icon-only).
+
+**The explorer's flat company list became a switcher once a company is
+focused** — a bordered pill (colour-coded initial glyph, name, path,
+chevron back to the list) replacing the old "same list, one row
+highlighted" state, with the tree rendering directly underneath instead of
+behind a redundant expand row. **One real trap found while wiring it up:**
+switching to "All files" while already focused never fetched the newly-
+visible root's listing, since the only code path that does that is
+`openCompany()`, called when a company is first selected — not when the
+mode tab flips afterward. Fixed with one `useEffect` keyed on
+`[mode, companyId]`. Without it the tree sits on "Reading…" forever.
+
+**Settings rows are boxed now, with a real toggle switch** — new
+`components/ui/switch.tsx` wraps `radix-ui`'s `Switch` (already a
+dependency), and a small `Row` helper in `settings-panel.tsx` boxes every
+setting, matching the prototype's `.opt` pattern instead of the previous
+plain unboxed lines with a native checkbox.
+
+**A real regression, found and fixed properly rather than reverted:** the
+overview cards and the network map gained the prototype's colour-coded
+identity glyph (new `lib/glyph-hue.ts`, hashing a company id into one of
+four existing accent tokens). First pass added it directly to `AgentCard`'s
+header row and broke it — the row was already at its width limit (a long
+badge like `command-set` plus the guide tooltip icon on a 276px card), and
+the glyph's 36px tipped "Demo Co" into truncating to "D...". Root cause, not
+symptom: the row fought over one line for two things that don't need to
+share one. Fixed with `flex-wrap` on the row instead of shrinking or
+removing the glyph — the name gets its full line, the badge cluster wraps
+to a second line on cards tight enough to need it. The network map's node
+cards get the same glyph sized to 22px via a CSS rule matching the one that
+already sizes the photo-avatar `<img>` variant down there.
+
+**Found by running the full suite, not by this slice's own changes:**
+`lib/get-activity-detail.test.ts` still asserted the throwing behaviour
+`getActivityDetail` had before v107 rewrote it to return `{ ok, content |
+message }` — four tests failing because nobody updated the test file when
+v107 shipped. Fixed in passing.
+
+**Deliberately not matched, and why:** Activity's filters stay
+company-based, not the prototype's fictional "Waiting on you / Failed /
+Scheduled" — v107's own restraint already established that `ActivityStatus`
+has exactly one real value, so those filters would always show zero
+results. The prototype's fake window titlebar/traffic-lights don't exist
+here either: that was the prototype simulating a browser tab for its own
+demo purposes, and the real app is an actual native window.
+
+**v109 (2026-08-26) moved macOS packaging out of this repo entirely, to the
+separately maintained macOS desktop shell
+— an Electron shell, by explicit request, replacing the WKWebView shell v100
+built.** Linux is untouched: `scripts/package-linux.sh` and
+`scripts/webview-linux.py` are exactly what they were. `scripts/package-macos.sh`
+and `scripts/webview-macos.swift` are deleted from this repo, not archived —
+the new repo is where that logic lives now, ported rather than left to rot
+here unused.
+
+**The one decision that kept this from being a rewrite:** the new repo's
+`electron/main.js` spawns the same bundled vanilla Node binary running the
+same `server.js` the bash launcher did, instead of running the server on
+Electron's own Node runtime. `node-pty`'s prebuilt binary is compiled for a
+plain Node ABI — a real vanilla Node process is exactly what it already
+expects, so this native module needed zero changes. Electron only replaces
+the shell (window, menu, updater), not the payload it's pointed at, which is
+also why the macOS shell's `build-app-payload.sh` ports
+`package-macos.sh`'s payload-assembly logic (the `templates/` contents-copy
+handling, the node-pty `build/Release` + Mach-O assertion, the pinned/
+checksummed Node download) rather than reimplementing it — v100's own framing
+("a rewrite of a packaging pipeline whose bug fixes are individually
+documented") is exactly what this avoided, even while reversing the decision
+that pipeline's rationale was arguing for.
+
+**Two gaps found only by grepping control-panel for every reference to the
+files being deleted, worth recording so the next port doesn't miss them
+either:** (1) `lib/install-tool-impl.ts` and
+`lib/connect/connect-status-impl.ts` both explicitly depend on the bash
+launcher's `COMMON_BINS`/login-shell-PATH widening being on the server
+process's PATH — ported into the macOS shell's `main.js` as
+`resolveWidePath()`, verbatim reasoning included, since a double-clicked
+Electron app inherits no more shell-rc PATH than a double-clicked `.app`
+did. (2) `docs/native-app.md`'s four-rule window contract had two rules
+`main.js`'s first draft didn't satisfy — retry-after-1s on a failed load, and
+closing the window if the server dies first — both now ported from the
+Swift shell's `retryLoad()`/watchdog equivalents.
+
+**Distinct app identity, not an in-place upgrade:** new bundle id
+(`app.alacran.desktop.mac`, not `app.alacran.desktop`), and its own
+`electron-updater` against the same public `alacran-releases` repo —
+control-panel's hand-rolled mac updater (`perform-mac-update-impl.ts`,
+`resolve-app-bundle.ts`) is deleted, not adapted, since nothing about its
+bundle-swap logic (which validated a WKWebView `.app`'s specific
+`Contents/Resources/app` shape) applies to an Electron bundle. New:
+`lib/updates/can-auto-update.ts`, `false` on every platform except Linux —
+mac's own update UI lives in the Electron shell now, so control-panel's
+"Check for updates"/"Update & Restart" correctly has nothing to do there.
+One thing that needed no code at all: `~/Library/Application Support/Alacrán`
+is keyed on platform + home directory, not bundle identity, so a user's
+existing registered companies show up in the new app with zero migration.
+
+**Release ritual, updated:** step 2 (rebuild mac) now happens in the other
+repo, and step 5 (upload) gained a third required asset,
+`latest-mac.yml` — `electron-updater` won't detect an update without it,
+and it's the easiest of the three to forget since it isn't a familiar
+`.dmg`/`.zip` pair. See the Standing release rule above for the full,
+updated steps.
+
+**v110 (2026-08-26) fixed the first Electron mac build being unable to launch
+at all.** v0.33.0's published `.dmg`/`.zip` crashed with `SIGTRAP` inside V8
+before any app code ran, every time. Cause: `productName: "Alacrán"` — macOS
+stores the bundle filename **NFD**-normalized (`Alacra` + U+0301) while
+`Info.plist`'s `CFBundleExecutable` is **NFC** (precomposed `á`), so Electron
+cannot resolve its own executable. Fixed in the macOS shell by
+unaccenting `productName`; this repo only changed `README.md`'s
+`xattr -cr`/uninstall paths and `scripts/uninstall-macos.sh`.
+**The standing rule this sets: the app bundle is `Alacran.app` (unaccented)
+and the data directory is `~/Library/Application Support/Alacrán` (accented),
+and that asymmetry is deliberate** — `lib/data-dir.ts` owns the accented name
+and it is where every existing install's `companies.json` lives, so
+"consistency-fixing" either one orphans real companies or re-breaks launch.
+The window title and menu also stay accented; they come from
+`electron/main.js`, not `productName`.
+**Two findings worth not re-deriving.** (1) electron-builder had been printing
+`7z doesn't support NFD-normalized filenames` in every mac build log since the
+first Electron build — it reads as cosmetic and was the actual diagnosis; it is
+gone now, so its return means the accent came back. (2) **A JIT-shaped stack
+trace is not evidence of a JIT problem.** Entitlements, `--options runtime`
+(verified reaching `flags=0x10002(adhoc,runtime)`) and three Electron majors
+(33/42/44) were each tried and each crashed identically; the bundled `node` and
+`app-payload` resources were each added back and were both fine. What isolated
+it was a minimal Electron app grown toward the real one until the only
+remaining difference was the name. `scripts/after-sign.js` now says in its own
+comment that its entitlements are standard practice and were *not* the fix, so
+the next reader doesn't mistake them for one.
+**A verification trap that invalidated several rounds, and the rule:** an
+`open`-launched app started from an automated shell exits silently with status 0
+instead of showing Gatekeeper's first-run consent — it neither crashes nor runs,
+and twice looked like a successful fix. **A mac launch verdict must come from a
+human double-click, or from `~/Library/Logs/DiagnosticReports/` / `log show`;
+an automated `open` proves nothing either way.** Electron also moved 33 → 42
+(not the fix, but 33 is past end-of-life and 42 is what this was verified on).
+
+
+**v115 (2026-08-27) turned the hero constellation into a three-state morph and
+made the page move sideways** — brain → explosion → light bulb on scroll, a
+pinned `#companies` band whose card row travels ~900px, and every other band
+sliding across its own pass through the viewport. Requested against
+`dala.craftedbygc.com`; no colour or type token changed, so nothing to mirror
+into `app/globals.css`. The bulb is a second stroke path sampled the way v114's
+brain is; the explosion is no drawing at all, just the same particles pushed out
+along their own angle, so one lerp carries both transitions. Keyframes measure
+off `.hband-view` and `.close` rather than a fraction of the page, and the last
+one is clamped to `scrollHeight - innerHeight`.
+
+**The regression to not repeat, and the check that catches it.**
+`landing/home.css` is loaded by **every page on the site** — its own header had
+claimed since the cinematic rewrite that subpages load `styles.css`, which is
+false and is what made a `.sec > .wrap` rule look home-only. The parallax script
+lives in `index.html` alone, so on subpages the transform was identity and
+nothing moved — but `will-change: transform` still promoted every band to its own
+compositing layer, and **a composited layer drops text from subpixel to grayscale
+antialiasing**, re-rendering every glyph on `/how-to-use/`. Geometry diffed
+clean, which is why it is invisible to a layout check. **Key a home-page-only
+rule to a class that page's script adds (`.wrap.px`), never to shared markup**,
+and verify with v92's method — full-page pixel diff at ten widths with
+animation/transition suppressed and `#swarm` hidden. An overflow-and-reveal pass
+called all five subpages clean while this was live; byte-identical is the bar.
+
+**One layout rule from the same slice:** a band travels as ONE block. Drifting
+each column of a `.two` against the other closes the grid's 44px gap at one end
+of the pass and lands content on content — any differential between adjacent
+columns does. Travel is capped to the gutter the 1180px wrap leaves over.
+
+**v116 (2026-08-27) made both landing shapes real 3D solids that respond to the
+pointer** — parametric surfaces sampled in model space with a per-particle
+normal, yawed and put through a perspective divide each frame, with the cursor
+displacing the surface along its own normal so it bulges where touched.
+
+**Three findings worth not re-deriving.** (1) **Canvas +y is down and model +y is
+up** — everything rendered upside down for three passes, and the tell was a stalk
+growing out of the top of the skull (the brainstem). Check the projection's sign
+first. (2) **A brain reads by its gyri, and the SAMPLING draws them, not the
+displacement** — an evenly-sampled folded ellipsoid is a bean at this particle
+size; rejection-sample so points land only on the ridge crests. Combine the two
+sine families with `max`, never `+`: summed they crest only where both do and the
+surface breaks into islands, where the maximum gives each family a continuous
+meandering band. (3) **Depth needs distance AND facing.** `FOV/(FOV+z)` alone
+lets the far wall show through the near one; rotate each normal with its point
+and dim the ones facing away, or the solid reads as a flat cloud.
+
+**And v115's lesson one layer down:** every page loads `landing/constellation.js`
+too, so the surface seeding is gated on the page actually having a hero — three
+6200-point rejection-sampled surfaces built on a docs page is work nobody sees.
+
+**v117 (2026-08-27) rebuilt the landing brain as anatomy and lit the cloud.**
+The identifying thing about a brain is its SILHOUETTE, not its folds — a folded
+ellipsoid has no temporal lobe, no poles and no cerebellum however the fold
+function is tuned, which is why v113/v116 kept being rejected. It is a metaball
+field now: fifteen spheres where the lobes sit, mirrored, fused, ray-marched per
+particle with the normal from the field gradient.
+
+**Three geometry rules from it:** take the OUTERMOST isosurface crossing, not the
+first (the first loses the temporal lobe under the cerebral overhang and the
+whole cerebellum); a ray that crosses nothing must RESAMPLE, or those particles
+land at the centroid as a bright knot; and use a fourth-power falloff, not sixth
+— sixth individuates every sphere into its own bump. Model bounds are measured
+and fitted per keyframe rather than carried as a scale constant, since a metaball
+isosurface sits outside the radii that generate it and moving a lobe moves them.
+
+**The measurement lesson, which invalidates the frame figures quoted in v115 and
+v116:** end-to-end rAF intervals are VSYNC-QUANTIZED — under headless load they
+only report 16.7/33.3/50ms, so configurations differing by 10ms read identical
+and an unchanged one reads differently between runs. Both happened here. Time the
+animation's own rAF callback directly instead; the real cost is 4.5-5.5ms/frame
+at 6400 particles. That is also what found the genuine regression — building a
+radial gradient and filling through it every frame cost 15ms, so every wash is a
+pre-rendered sprite now.
+
+**v118 (2026-08-27) made the landing brain a neural network instead of a point
+shell.** v117 sampled the metaball's surface, and a surface can only describe the
+outside of a thing — nodes now fill the volume (weighted toward the cortex),
+k-nearest-neighbour links are drawn as curved synapses, and pulses of light run
+along them.
+
+**Rules from it.** Link with a forward-only scan (`j > i`): it halves the work
+and makes a duplicate pair impossible, so no dedupe pass exists. **Two links per
+node, not three** — three fills the silhouette solid and it reads as a ball of
+yarn. Bulge the curve in SCREEN space off the projected endpoints (one control
+point, not a third projection) and alternate the sign per edge or a bundle reads
+as a comb. **Each shape needs its OWN edge set** — a node's neighbours in the
+brain are nowhere near it in the bulb.
+
+**Two things only a render shows:** the longitudinal fissure must be a real gap
+in the VOLUME, because neighbour-linking bridges a midline that was merely carved
+into the surface; and the synapse pass must dim on DISTANCE only — a node inside
+a volume faces nowhere, so reusing the surface-facing term blinks whole tracts
+out as the shape turns.
+
+Cheaper than what it replaced: 2.8ms/frame at 2600 nodes against 4.5-5.5ms at
+6400 surface particles, since ~5000 curves cost less than 6400 stroked triangles.
+
+**v119 (2026-08-27) traced the landing brain and bulb off supplied reference
+photographs.** The brain's lateral silhouette is a 26-point polygon read off the
+photo and lofted into 3D by giving it a width that closes to nothing at the rim;
+the bulb is a 23-row [height, radius] profile table plus the interior the photo
+shows (glass stem, press, two splayed support wires, filament strung between
+their tips).
+
+**Metaballs were abandoned here and should not be retried for this shape.** Four
+passes proved thirty-odd overlapping spheres sum to inside almost everywhere
+within the hull, so the frontal pole, temporal lobe and occipital smooth into one
+oval regardless of falloff — q², q³ and q⁴ each give either a ball or a bunch of
+grapes. A traced outline gives the profile view by construction.
+
+**The lesson that ended four failed passes: when a shape is wrong, MEASURE the
+shape.** `window.__probe()` in `landing/constellation.js` prints the model's own
+lateral silhouette as text from the node data, and said in one line what rounds
+of screenshots had not — length/height 1.25 against the photo's 1.5, and an
+outline with no temporal lobe, cerebellum or stem in it. It is kept in the source
+deliberately. A render only tells you that you dislike the result.
+
+**v120 (2026-08-27) made the landing brain a dense point cloud with a lit rim.**
+A screenshot of the reference site settled what five rounds of description had
+not: the SHAPE was already right (v119's traced outline measures 1.44
+length-over-height; so does the reference's, to two decimals) — the rendering
+differed. The reference is thousands of tiny triangles as one textured mass with
+a bright silhouette rim and almost no visible connections, where v118's brief had
+asked for flowing synapses. Density 2600 → 12000, links dropped behind at 45%
+weight, and only the first 1300 nodes carry tracts (linking is O(count²/2), so
+all 12000 would be 72M distance tests at startup).
+
+**The rim is what draws the shape:** particles whose normal is perpendicular to
+the eye sit on the silhouette and are the brightest thing on the canvas. Use
+`(1 - |n·view|)³` — cubed, or the whole cloud lights and it reads as fog.
+
+**The perf trap to remember: a threshold on a value another change just shifted
+is not a constant.** 9000 → 12000 nodes took the frame 6.9ms → 33ms, 4.8× cost
+for 1.33× work, because the new rim term pushed far more particles past the
+per-particle halo's alpha threshold — the haloed count grew several times faster
+than the node count. Raising the threshold restored 7.7ms at full density.
+
+**v122 (2026-08-27) turned the Companies overview into tiles, made the terminal a
+view of a company, and applied a repo-wide audit in the same slice.** A card was
+thirteen controls for a company you were not working on, beside an explorer that
+was a second copy of the same list; a card is now glyph/name/path/kind/activity
+and clicking it opens the company, where every control lives. **`AgentCard` is
+handed over TWICE from ONE props object** (`panels` with controls, `tiles`
+without) — every `show*` prop is optional, so a flag given to one and forgotten
+on the other vanishes silently rather than failing `tsc`, which is v104's
+verify-by-parity rule applied to two variants instead of two surfaces. The
+explorer exists only once a company is open, but a SEARCH widens it back to
+every company, because cross-company file search is the thing v104 says this
+page must not lose.
+
+**The terminal holds several sessions per company now** — keyed by company AND
+session id, capped at eight, ids validated before they name a process, and the
+tab strip restored from the server after a reload because the ptys outlive the
+page. A new tab is the company's own executor started with
+`buildGetStartedIntroPrompt` unchanged, running **as the pty's own process**:
+argv straight through, never typed into a shell, because a shell echoes what it
+is given and v97 is the slice about a ~1.4KB prompt redrawing over itself.
+**Starting a session moved from GET to POST** — a GET that spawns a process is
+reachable cross-origin with no preflight, and EventSource surfaces no response
+body, so a refusal on the stream request could only ever read as a generic
+connection error.
+
+**Two bugs only a merge and a nesting change could show.** The sticky page
+header stops at `top: 34px` under `[data-shell="mac"]`, because v121's
+`#titlebar-drag` is a fixed `-webkit-app-region: drag` strip across the top 34px
+at the same z-index — pinned to `top: 0`, "Add a company" would drag the window
+instead of opening the form. It was found by merging master in **before**
+building the mac app; the two halves live in different branches. And
+`.bento-grid > * > .bento-card` silently stopped matching when a wrapper nested
+one level between the grid item and the card — **a `> * >` rule breaks on any
+future nesting and says nothing when it does**; it is a descendant selector now.
+
+**The audit, net -1401 lines and eslint clean with zero warnings for the first
+time since v78.** `landing/styles.css` + `landing/cinematic.css` (1199 lines)
+deleted — v112 had already recorded them as "ready to delete" and left them;
+`components/ui/card.tsx` deleted, orphaned by v107. `defaultExecFile` x16 →
+`lib/default-exec-file.ts`, `isPresent` x3 → `lib/binary-present.ts`,
+`isDirectory` x4 → `lib/path-exists.ts` — the same regrowth v78 cut out of
+`pathExists`, around different functions. **The two MEMOIZED exec defaults were
+deliberately left alone**, per v75: a memo belongs to the module whose default
+it is, and a shared one would no-op the second click on any path whose job is to
+look again. **What is clean and should not be re-derived:** every prod dep is
+consumed, one module was imported by nothing, and the 58 "unused exports" are
+inline-used types where un-exporting saves 0 lines — v92's false positive, still
+false.
+
+**Slice numbering collided.** Two branches authored on 2026-08-27 both claimed
+v117; the one that shipped (tag v0.35.0, the mac drag and updater fix) was
+renumbered to **v121** in CHANGELOG.md and the landing-motion run kept v117-v120.
+Numbers are internal chronology and no published artifact names them.
+
+
+**v123 (2026-08-27) fixed the mac update that downloaded and then hung forever.**
+**Squirrel.Mac cannot update an ad-hoc-signed app, and fails SILENTLY when it
+cannot.** An ad-hoc signature (`TeamIdentifier=not set` — what v110 settled on)
+has a designated requirement of a bare `cdhash`, a fingerprint of that exact
+binary, and Squirrel validates the update against the RUNNING app's requirement;
+two builds never share a cdhash. Measured, not reasoned: 0.35.0's is
+`cdhash H"33f50f..."`, 0.36.0's is `cdhash H"e42741..."`, and `codesign --verify
+-R` confirms the second fails the first. electron-updater's
+`MacUpdater.quitAndInstall()` responds by registering an `update-downloaded`
+listener and waiting — no error, no timeout, no quit — so the page sat on
+"restarting..." forever. **The evidence was on disk:** a complete
+`pending/Alacran.zip` byte-exact against the published `latest-mac.yml`, beside
+an EMPTY `~/Library/Caches/app.alacran.desktop.mac.ShipIt/`. Downloaded, never
+handed over. **When a mac update misbehaves, check those two directories before
+reading any code.**
+
+**The fix restores v57's bundle swap**, which v109 removed when it moved to
+Electron: electron-updater still checks and downloads (both work, and it
+sha512-verifies), and `installFromZip()` in the shell extracts with `ditto`,
+refuses anything failing `codesign --verify --deep`, and does two renames with
+the old bundle parked so a failed second move puts it back. v57's measurement
+still holds — an ad-hoc-signed app in /Applications can replace its own bundle
+with no TCC prompt, because quarantine is attached by the DOWNLOADING
+application. `autoInstallOnAppQuit` is now `false`: left at its default it also
+routes the download through the native updater and retries the doomed install on
+every quit. `scripts/verify-swap.mjs` in the shell repo runs the whole swap
+against a throwaway copy and a real downloaded zip.
+
+**Two things not to retry.** A stable identifier-based designated requirement
+(`--requirements '=designated => identifier "..."'`) does give two builds a
+requirement both satisfy, but re-signing a built Electron bundle that way left
+nested code reporting `nested code is modified or invalid` against a pristine
+bundle that verifies clean — and it would do nothing for anyone already running
+a cdhash-signed build, which is everyone. A real Developer ID certificate is the
+actual fix for the signing half. **And anyone on 0.35.0 or 0.36.0 must install
+0.37.0 by hand**, because the broken installer is the one on their machine.
+
+
+**v135 (2026-08-31) gave the company one connection for every chat network, and
+gave the HITL gate somewhere to exist.** Both threads started from a file that
+was cited and never shipped.
+
+**26 references pointed at five `.claude/rules/*.md` files no company ever
+had** — `hitl-gate.md` alone from ten pack commands telling the agent to pause
+money, contracts and publication. The first fix shipped the file and added
+`.claude/rules` to `TEMPLATE_MANIFEST`, which put company policy inside the
+tool adapter and then had `AGENTS.md` point into it — the one dependency
+direction `AGENTS.md` §1 forbids. **The gate is now `AGENTS.md` §6 and the
+manifest gained nothing**: that file is already copied, is the name every agent
+reads, and is already `@`-imported by `CLAUDE.md`, so it is in context before
+the first tool call with no adapter and no import plumbing. The other sixteen
+references were repointed at the READMEs that already covered them
+(`definitions/README.md` gained a "Structure, not personal detail" rule so its
+new pointer is true). `scope-contract.md` (5) and `issue-first.md` (2) are
+still dangling in the software-engineering pack, deliberately.
+
+**`check-messages` moved from two bot tokens to the Beeper CLI.** It read
+Telegram and Slack and needed a secret in the company's `.env` for each;
+Beeper bridges eleven networks including Instagram, which v133 recorded as
+impossible here because Meta only pushes to a webhook. **The first draft did
+not use the CLI because `beeper` was not on PATH and `@beeper/cli` 404s on
+npm — the package is `beeper-cli` and the repo is `github.com/beeper/cli`. A
+negative from two registries is not proof a tool does not exist.** Going
+through the CLI removed the credential entirely (`beeper setup` adopts Beeper
+Desktop's own session; `readCompanyEnvVar`'s only remaining caller is Notion),
+made read-only enforced by the CLI rather than merely intended, and moved the
+"not my own messages" filter server-side. Every flag was verified against the
+real 0.6.2 binary. Installed with `npm install -g beeper-cli`, not the
+Homebrew tap, which needs `brew tap beeper/tap` first and so is two commands.
+
+**The finding to reuse: `beeper status --json` is the wrong probe for "is it
+connected".** On a working machine it reported `target-unreachable`, then
+`initializing`, while `chats list` returned real chats in the same second —
+readiness hits `/v1/app/setup`, a different endpoint with a different
+authorization result. Gating on `state === "ready"` tells a connected user to
+run setup, which is v53's false positive from the other side. The Connect row
+does the smallest real read instead and consults `status` only for the reason
+when that read fails.
+
+`untrustedInput: true` is unchanged and now covers eleven networks instead of
+two, so `runCompanyCommandImpl` still refuses this command on Kimi Code before
+the prefetch runs. **Its refusal message says "Switch this company to Claude
+Code" and now names one valid executor while hiding Kiro — not fixed here.**
+New `AGENTS.md` §7 tells any agent that `beeper` exists (guarded on `command -v
+beeper`, since most companies will not have it), because the unrestricted
+terminal sessions can drive it directly and nothing said so.
+
+
+**v161 (2026-09-06) reordered the nav and fixed an X that closed nothing — plus a
+build that was already dead on `master`.** Nav is Companies, Assistant,
+Connectors, Networks, Activity, Settings; Networks is an `advancedOnly` entry in
+`NAV` rather than a spliced-in constant.
+
+**The X report was three defects in `components/ui/*`, and only a hit test found
+them.** (a) `AlertDialogContent` **had no close button at all** — nine
+confirmations route through it, and Radix's AlertDialog also refuses
+outside-click dismissal by design, so a 642px-tall dialog's only exits were
+Escape and a footer button below the fold. (b) It scrolled *itself*, so a pinned
+X was impossible on exactly those dialogs; the body is an inner
+`grid min-h-0 … overflow-y-auto` wrapper now, v63's `SheetContent` shape. (c)
+`DialogContent`'s X was a 24px target where Sheet's is 36px — and `sheet.tsx`'s
+own comment already recorded that a small target "read as broken".
+**Two rules from it:** the AlertDialog X is an `AlertDialogPrimitive.Cancel`
+placed **first in the DOM**, because Radix gives initial focus to whichever
+Cancel registers the shared `cancelRef` last and that must stay the footer's real
+button — painting is unaffected, since an absolute box always paints over in-flow
+siblings whatever the source order. And **`min-h-0` is load-bearing** on the
+wrapper: a grid item's automatic minimum otherwise holds it at full content
+height and the dialog overflows the viewport instead of scrolling.
+Alongside: `.sidebar-version` still carried `pointer-events: none` from when it
+was a `<span>`, so v158's changelog modal had **no working trigger at all**; and
+the modal layer went z-50 → z-70 because `.app-sidebar`/`.app-bottom-nav` are
+z-60 and were painting over open modals (clicks were fine — Radix's own
+pointer-events lockout — so this only ever looked wrong).
+
+**The build failure is the finding worth not re-deriving, because nothing in this
+repo causes it.** `next build` died with `TypeError: generate is not a function`
+— reproduced with every change stashed, then in an **empty directory with no
+`next.config` at all**. A standalone Next server exports
+`__NEXT_PRIVATE_STANDALONE_CONFIG` for its own process; `loadConfig`
+short-circuits on it and `JSON.parse`s the value, and **JSON has no functions**,
+so `generateBuildId` — the ONLY function-valued entry in Next's own
+`defaultConfig` — returns `undefined`. **Setting `generateBuildId` in
+`next.config.ts` does not help**: that branch returns before the config file is
+read, which is the wrong fix to reach for and was tried. `dev`/`build`/`start`
+clear that variable and `__NEXT_PRIVATE_ORIGIN` in `package.json`, in the
+scripts rather than in a shell, because **both packaging pipelines run
+`npm run build`** (`scripts/package-linux.sh:58` and the macOS shell's
+`build-app-payload.sh`) — so a packager launched from a shell that has ever run
+the packaged app inherits the same dead build. **Related trap on this machine:**
+`NODE_ENV=production` is exported in the shell, so a bare `npm install` prunes
+every devDependency (336 of them, `@tailwindcss/postcss` and `typescript`
+included) and `next dev` then fails on `globals.css` with
+`Unexpected character '@'`. Use `env -u NODE_ENV npm install --include=dev`.
+
+
+v163 stopped the What's New modal showing engineering notes to end users
+("just show descriptive new updates added, don't show all files and non-related
+things to the user"). It scraped `CHANGELOG.md`, which declares in its own
+header that it is kept "in the detail it was written in rather than compressed
+into release notes" — so a non-technical founder read `components/sidebar.tsx`,
+"the modal layer moved z-50 → z-70", and, at the top of the list, v162: a CI
+credential fix whose own first line is "Not a code change to the app".
+**No better scraping fixes that** — stripping backticks and filtering paths is
+guessing which sentences were meant for a user, and it stays wrong. Each entry
+now carries an authored `### What's new for you (<category>[, v<release>])`
+block and `parseChangelog` returns that block and nothing else; **an entry
+without one is not returned at all**, so the default is invisible rather than
+leaked. `inferCategory`'s keyword lists were deleted rather than tuned (they
+tested `fix` first against the whole section, which is why v160's "latency
+optimizations" came out a fix), and the `core` category went with them — it was
+the fallthrough of a guess and had no filter tab. `ChangelogItem.version` is
+now **the release the user installed**, declared in the block; the slice number
+survives as `id`, a React key that is never rendered, because the modal header
+was comparing `v0.55.0 → v0.56.0` above a list labelled v160/v161/v162. A
+second release-notes file was considered and rejected on v86's rule ("a second
+copy of the same prose is drift you cannot see"). **The invariant is pinned
+against the real `CHANGELOG.md`, not a fixture** — a test walks every entry the
+shipped file yields and fails on a backtick, a path, a CSS selector, "tsc", or
+a test count, because the failure being guarded is an author writing the next
+block in engineering voice, which no fixture can catch. Blocks backfilled for
+v151–v161; the release each shipped in was read from `package.json` at the
+commit that introduced the entry, not guessed.
+
+v164 gave "Add a company → Already have a folder of work on this computer?" a
+real native folder picker, on top of — not instead of — the in-app folder list
+`lib/list-home-folders.ts` already backs. **The constraint that shapes the whole
+design, and the reason that list existed in the first place: web code cannot
+obtain an absolute filesystem path.** `showDirectoryPicker()` returns a handle
+carrying no path; `<input type="file" webkitdirectory>` reports names *relative
+to* the folder chosen, never that folder's own location. `adoptFolder` needs a
+real path, so only a process that can ask the OS can answer — `dialog.showOpenDialog`
+in the macOS shell's main process (`wireFolderPicker`), exposed over the
+existing `window.alacran` bridge as `dialog.pickDirectory` and read through
+`lib/desktop-folder-picker.ts` (the third accessor of that shape, after
+`desktop-mic.ts` and `desktop-updater.ts`). **The button is gated on the
+bridge's own presence, never on `shell === "mac"`** — control-panel updates
+independently of the shell around it, so a user on a bundle built before this
+bridge exists still reports `"mac"` and would have got a dead button; with the
+capability gate they keep today's flow until they take the next packaged build.
+**Linux was deliberately left on the in-app browser:** `scripts/webview-linux.py`
+has no JS bridge at all (no `user_content_manager`, no
+`register_script_message_handler`), so a picker there means building the bridge
+plus a GTK `FileChooserDialog` first, none of which can be exercised on a macOS
+dev machine — and the same gate makes it a non-event rather than a dead button.
+The dialog's result feeds the same `pickFolder(fullPath, folderName)` the list
+already calls, so there is **one** code path and the returned path gets
+`adoptFolderImpl`'s existing `isDirectory` check exactly as a typed one does —
+it is untrusted input crossing a process boundary and is treated as such.
+Cancellation and a refused second concurrent dialog return the same
+`{ path: null }` no-op; the one-at-a-time guard lives in the main process, where
+a stale renderer cannot bypass it, with the disabled button as UX on top.
+**As with every mac-shell change, this half reaches users only on the next
+packaged the macOS shell build** — the bridge is in the shell, not in the
+payload it serves.
+
+v165 (2026-09-07) fixed a user-reported "I approved the microphone and the
+assistant still cannot hear me". **It is not v146's permission bug** — that one
+is the OS prompt never appearing, and here it appeared and was approved. The
+shell's plumbing is correct (`setPermissionRequestHandler` and
+`setPermissionCheckHandler` both scoped to `media` on a local origin,
+`askForMediaAccess` called, page on `http://127.0.0.1`, a secure context), so
+anyone reaching for `tccutil` on this symptom is on the wrong trail.
+**The measurement, which closes the question v138 left open:** in Electron
+42.10.1 — the framework version the packaged app embeds — with the microphone
+granted, `webkitSpeechRecognition` is a function, `onstart` and `onaudiostart`
+fire, **the microphone really opens**, and then `onerror` arrives with
+`error: "network"`. Chromium ships the API surface and the Google
+speech-service URL in the binary; Electron ships no key for it. So
+`hasEngine` was a truthiness check on a constructor that exists and does
+nothing, and the `onerror` handler mapped everything but `no-speech` and
+`not-allowed` to "Did not catch that." — telling the user they mumbled.
+**Presence is not capability, the THIRD time** after v53's `which claude` and
+v135's `beeper status`; the answer is the same each time, so reach for it
+first: do the smallest real thing, then believe the result.
+`classifySpeechError` sorts the one error string into four classes and
+`speechFailureMessage` owns the copy, so the assistant page and the per-company
+ask panel cannot tell one user two stories. **`not-allowed` and
+`service-not-allowed` are one hyphen apart and mean opposite things** — the
+user refused the mic, versus the machine has no speech service — and sharing
+one message is what made this a dead end (v142's 401-vs-403 rule again).
+`markSpeechEngineBroken()` is module state for the life of the page, so a
+proved-dead engine stops being offered and every surface that already copes
+with an absent one copes with a dead one for free. `DEFAULT_VOICE_PROVIDER`
+stays `browser` deliberately: it works in a real tab, and changing it pushes
+every user toward a paid key.
+**The verification lesson, and it is the transferable half:** rewriting
+`lib/speech.test.ts` around the new classification dropped v147's `pickVoice` /
+`voicesForLanguage` / `isNoveltyVoice` coverage while the suite stayed green at
+**exactly the same total**, because 16 new tests replaced 16 old ones. Those
+hold the macOS joke-voice bug shut. **A test total that does not move is not
+evidence that coverage did not** — diff the test file's own `describe` list,
+not the count.
+
+## v223 (2026-10-02): a live office on Home shows who is working
+
+**How it works.** `lib/os/office/build-office.ts` merges five existing sources into one `Office`: AI terminal sessions (`listSessions`, `kind: "ai"`), unattended runs (`listRunsImpl`, mapped through the run card's own `statusView` tones so `interrupted` reads as waiting), the company-command run lock, pending approvals, and the schedule files. `GET /api/office/[agentId]` is local-only and read-only (it does not reconcile runs). Each source is settled on its own, so one unreadable source marks only its desk `Can't read …` instead of looking idle. Schedules are read with new strict readers: a missing file is empty, and one that is bad JSON or the wrong shape is unreadable rather than "nothing scheduled". A run record still saying `running` with no live run session (the app closed mid-run) shows as waiting on you, not working, without the read-only route reconciling anything. The card polls every 4 s while visible, backing off to 30 s on failure, and loads `three` (new dependency) by dynamic import only when the card is on screen. Every shape is a primitive built in `components/os/dashboard/office-scene.ts`; nothing comes from `ajsahni/agents-office`, which inspired the idea but is licensed PolyForm Noncommercial.
+
+**Not shown.** Live scheduled work appears as a running company command, because nothing records who started a run. The Assistant has no server-side busy state and has no desk. A theme switch keeps the old scene colours until reload.
+
+## v224 (2026-10-03): your AIs at work in a little 3D office
+
+### What's new for you (feature, v0.86.0)
+Home now shows your company as a little 3D office, with your AIs as the people working in it.
+- Each AI you use (Claude, Codex, Kimi…) walks to the right room when it starts a job, sits down and types; when something needs your OK it brings it to your desk and waves.
+- Your starter-pack teams and your departments each get their own room, and each AI sits in the room whose work it's doing.
+- In light mode it's a sunny studio; in dark mode it's the office after hours, with glowing screens and neon team signs.
+- "Expand office" opens it full-screen: drag to turn it, scroll to zoom, and click anyone to follow them around.
+
+**What changed underneath.** `lib/os/office/rooms.ts` builds the rooms (HQ, installed starter packs via `isPackInstalled`, departments from `getCompanyDepartments` with records or work) and the residents (the company's AI, workspace-pinned AIs, any AI seen working), capped at 12 rooms. Work is placed by data, never by guess: a runner command's room comes from its own `outputPath` (`records/<slug>/…` or `notes/<slug>/…`), a terminal's from its workspace's name, approvals and runs needing review go to Your desk, everything else to the hot desks or HQ. The runner now writes `running-command.json` right after taking its lock, so the office can name the command; it is trusted only while the lock is held. `lib/os/office/plan.ts` lays out the floor and its waypoint graph from the room list (up to 3 rows of 4, balanced, with an aisle to back rows); `lib/os/office/director.ts` keeps people, desks and queue spots stable across updates and moves everyone each frame, outside the scene, so a theme switch or full-screen never resets anyone. Name tags of people standing together lift apart (`lib/os/office/labels.ts`), so a queue at your desk stays readable. A theme or room change crossfades: the old picture holds its last frame in its own layer until the new one draws, then fades out underneath it. The scene (`components/os/dashboard/office-*.ts`) draws Kenney Furniture Kit models (CC0, bundled with the build via `new URL(…, import.meta.url)`) and people built from rounded boxes, in two moods following `data-theme`; bloom only at night. The idea and the feel come from Claw3D (MIT, github.com/iamlukethedev/Claw3D); no Claw3D code is used.
+
+**Not shown.** Which slash command runs inside a terminal (the app cannot see it); which AI produced a pending approval (assumed to be the company's); collision avoidance between walkers.
+
+## v225 (2026-10-04): your own departments
+
+### What's new for you (feature, v0.87.0)
+Add your own departments, like Legal or Support.
+- Create one from Records, or ask the assistant to propose one and confirm it with a button.
+- Each department gets its own list of simple notes, and a room in your office once it holds records.
+- If you remove a department, its records are kept safe in an archive rather than deleted.
+
+**What changed underneath.** A custom department is one entry in `definitions/departments.yaml` (a `departments:` list of `slug`, `name`, `purpose`, `color`; other top-level keys in the file are left alone on rewrite) plus a folder `records/<slug>/`. Slugs are lowercase letters, digits and hyphens and may not be reserved names; `color` is `#rrggbb`. Files added or changed on this branch: `app/api/office/[agentId]/route.departments.test.ts`, `app/c/[companyId]/records/[slug]/page.tsx`, `app/c/[companyId]/records/page.tsx`, `components/assistant/assistant-stage.tsx`, `components/assistant/department-proposal-card.tsx`, `components/os/departments/add-department-dialog.tsx`, `components/os/departments/add-record-dialog.tsx`, `components/os/departments/color-picker.tsx`, `components/os/departments/edit-department-dialog.tsx`, `components/os/departments/office-sign.tsx`, `components/os/org/stakeholder-gate-matrix.test.ts`, `lib/assistant/action-envelope.test.ts`, `lib/assistant/action-envelope.ts`, `lib/assistant/persona.test.ts`, `lib/assistant/persona.ts`, `lib/os/departments/actions.test.ts`, `lib/os/departments/actions.ts`, `lib/os/departments/definitions.test.ts`, `lib/os/departments/definitions.ts`, `lib/os/departments/mutations.test.ts`, `lib/os/departments/mutations.ts`, `lib/os/departments/palette.test.ts`, `lib/os/departments/palette.ts`, `lib/os/departments/records.test.ts`, `lib/os/departments/records.ts`, `lib/os/departments/registry.test.ts`, `lib/os/departments/registry.ts`, `lib/os/departments/rules.test.ts`, `lib/os/departments/rules.ts`, `lib/os/departments/safety.test.ts`, `lib/os/departments/safety.ts`, `lib/os/office/rooms.test.ts`, `lib/os/records/write.ts`.
+
+**Palette.** Six colours (Red, Copper, Ocean, Rose, Pine, Moss) in `lib/os/departments/palette.ts`. `palette.test.ts` enforces CIE76 ΔE >= 20 between every swatch and every fixed colour (built-in departments, teams, HQ, discovered folders) and between swatches, and a contrast check of >= 3. Measured minima: 22.7 and 23.7.
+
+**Removal.** A populated department is moved to `records/.archive/<slug>`, or `<slug>-2`, `<slug>-3` and so on if that name is taken; an empty one is simply dropped from the definitions. The removal is confirmed against the plan it showed (kind, file count, archive target) and refused if the folder changed since.
+
+**Safety.** Per-company lock around every change; a revision check on `departments.yaml`, so a change made by hand in the meantime is detected and refused; symlink containment on department and archive folders; scoped commits (only the files the change touched); a strict allowlist for what a retry may redo.
+
+**Verified.** `npx tsc --noEmit`: 107 errors, the pre-existing baseline, none in files this branch added or changed. `npm run lint`: 0 errors, 22 warnings (baseline), none in files this branch touched. `npx vitest run`: 392 files passed, 3017 tests passed, 1 skipped, 0 failed. `npm run build`: succeeded.
+
+### Known limits
+- Records are plain titled notes, with no fields.
+- Non-Markdown files in a department are listed by name only.
+- Editing or removing a department through the assistant is not included.
+- The operating guide (v226) does not exist yet.
+- Browser walkthrough in a disposable company: 11 checks passed, 1 partial (keyboard-only pass), 1 not run (the assistant card needs a live model); no console errors or hydration warnings.
+- The assistant-proposal path is unit-tested only (envelope, persona) and has not been run end to end with a live model.
+
+## v226 (2026-10-04): a guide your AIs can follow
+
+### What's new for you (feature, v0.87.0)
+Your AIs can now see how your company works.
+- Add it from the Skills page with one button.
+- It lists your departments, your installed teams with their commands, and your own commands.
+- It tells every AI to name the skill it picks, run your checks after changing files, and offer a handoff when work is done.
+- It stays up to date when you change a department or add a team.
+- Your own writing in your company's working agreement is never touched.
+- If you edit the guide yourself, it is left exactly as you wrote it.
+
+**What changed underneath.** The guide is one marked block inside the company's `AGENTS.md`. Units: `lib/guide/markers.ts` (marker format and hashing), `apply.ts` (pure insert/replace of the single block, bytes outside it preserved for a UTF-8 file), `render.ts` (block text from inputs, and the escaping of everything it embeds), `inventory.ts` (reads departments from the v225 registry minus app-owned ones, installed teams only, own commands with shared-first dedupe; never reads a skill body), `refresh.ts` (the guarded rewrite), `actions.ts` (the Add and Refresh server actions); UI in `components/os/guide/*` (card and note) shown on the Skills page; wiring in `lib/os/departments/mutations.ts` (add, edit, remove a department) and `lib/add-company-pack.ts` (pack add), plus `AGENTS.md` joins the retry allowlist.
+
+**Marker format.** The block opens with a marker carrying two hashes: a fingerprint of the inputs (what the block was rendered from, so a refresh can tell whether anything changed) and a body hash (of the block text as written, so a later human edit is detected). Metadata is escaped (in `render.ts`) so it cannot forge a marker, newlines are stripped and lengths bounded.
+
+**What refreshes and what does not.** Only a company that already has a block is refreshed, in the same commit as the department or pack change; no block means no work. The refresh is skipped when the fingerprint is unchanged. It never blocks the primary action: the result carries a `guide` field and the dialog shows a one-line note. Only the button creates a block (append, never replacing the agreement). Company create, adoption and portable conversion are deliberately not wired (their `AGENTS.md` can never hold a block).
+
+**Safety.** Company root comes from the id and is contained; the per-company lock covers Add and Refresh as well as department changes; write to a temp file, re-read and compare, then rename (compare-before-rename); create is no-clobber. Refused with a plain reason: symlinked `AGENTS.md`, uncommitted changes to it, a block whose body hash no longer matches (edited), and malformed, duplicate, nested or unclosed markers. Commits touch `AGENTS.md` only (or ride along with the department/pack commit).
+
+**Rulings made while planning.** (1) Company create, adoption and portable conversion get no `refreshGuide` call: their `AGENTS.md` can never hold a block, so a call would be dead code. (2) Pack lines include the pack's command names (names only, no descriptions). (3) Listed departments are custom ones plus built-in ones holding at least one record; discovered folders and the app-owned `workflows`/`roadmap` are excluded. (4) A malformed `definitions/departments.yaml` makes refresh refuse (`unreadable-inputs`) rather than rewrite the block without the custom departments. (5) The card lives on the Skills page. (6) The actions hold the per-company lock; `refreshGuide` never locks, because the department mutations call it while already holding that lock.
+
+**Rulings made while implementing.** The writer refuses to replace a block whose body hash does not match. Sorting is by code unit and clipping by code point, so fingerprints match on every machine. Team summaries are hand-written. The write compares before it renames, and a create is no-clobber, so an owner's save made during the update is never overwritten.
+
+**Verified.** `npx tsc --noEmit`: 107 errors, the pre-existing baseline, none in the 23 files this branch added or changed (checked against `git diff --name-only 674d867..HEAD`). `npm run lint`: 0 errors, 22 warnings (baseline), none in files this branch touched. `npx vitest run`: 397 files passed, 3095 tests passed, 1 skipped, 0 failed. `npm run build`: succeeded.
+
+### Known limits
+- Changes made outside the app are not detected automatically; use Refresh the guide.
+- Nothing yet checks that each AI actually follows the guide.
+- Pack skills are summarised by team line, not listed individually.
+- The pack-add flow takes no per-company lock; the edited and dirty checks make a simultaneous second writer refuse.
+- A tiny window remains between the final re-read and the rename.
+- This slice is stacked on the v225 PR (#26).
+- A file with invalid UTF-8 has those bytes rewritten as the replacement character.
+- If an edited guide is left alone there is no in-app way to get updates back yet (delete the block and press Add).
+- The card has no retry for a failed history save yet.
+- Browser walkthrough in a disposable company with stub AIs: 11 checks passed, 0 failed, 0 not run; no console errors or hydration warnings; no horizontal overflow at 390px or 1280px in light or dark.
+
+## v227 (2026-10-04): which AIs follow your company's guide
+
+This slice adds a typed, per-executor coverage table seeded from each vendor's documentation, disposable company fixtures, output scoring, bounded process runner and report redaction. The gated live test measures the app's unattended `buildArgs` path against one company with the guide and one control without it. Its default and plan modes never start an AI; live mode requires an explicit executor selection and refuses to overwrite existing reports. Tool processes run with a 180-second timeout and bounded output, in a temporary company that is removed after the run. The test never uses the owner's company registry or Claude trust file.
+
+The owner approved and ran one small real measurement per AI on 2026-10-04: four runs each (two tasks, with the guide and without it) in disposable temp companies. The committed evidence is `docs/guide-coverage/2026-10-04-report.md` and its `.json`. Verdicts: Codex `follows`; Kiro `partial` (routing passed with and without the guide, verify passed in neither); Claude Code `does-not` (it worked from company context but did not name the skill or `/verify` in its final text); Kimi `unverified` (every run failed with a 403 subscription error); Google Antigravity `unverified` (the routing runs timed out at 180 s). Only those three measured cells carry a verdict in `lib/guide/executor-coverage.ts`, and only Codex's print-mode cell is `measured`; documentation statements elsewhere are not measured support. PLAN prints each executor's full argv, prompts and version probe, plus a SHA-256 digest covering every command, prompt and execution limit. LIVE refuses missing or mismatched digests before creating fixtures or probing a CLI. The controller supplies the digest only after the owner approves the displayed plan.
+
+Successful-run stdout and stderr are retained separately, redacted and clipped in the Markdown and JSON reports; only stdout is scored. `node scripts/update-guide-coverage.mjs <date-report.json> <date-report.md>` validates a merged report and synchronizes all behaviour rows in the coverage table, preserving `UNVERIFIED` where evidence is incomplete. The stale registry description is corrected from vendor docs dated 2026-10-04, with source links in the coverage table. No runtime flags changed. Whether to trim the opening primer stays a separate decision: these runs used the unattended path only, so they say nothing about the interactive primer.
+
+### Known limits
+- Results are tied to the CLI versions measured; a later version may behave differently.
+- Scoring checks only final output text for mentions of `follow-up-lead`, `/verify` or `verify.py`. Silent compliance is not detected, and mentions or negations can produce false positives.
+- The interactive Get Started path was not measured.
+- Codex's `follows` rests on final text only: its control transcript shows it chose the `follow-up-lead` skill on its own, as its docs describe, so the guide is not shown to be what led it there. Kiro's control also found the skill by itself.
+- Claude Code's `does-not` means it did not name the skill or `/verify`, not that it ignored the guide: it had no shell, and the temporary workspace was untrusted, so it ignored the company's `.claude/settings.json` allow rules.
+- Kimi's runs failed on the account (403, no Kimi Code subscription), so nothing is known about Kimi. Antigravity timed out on routing, so its verdict stays unverified even though its guide verify run cited AGENTS.md.
+- Each AI was measured once (one guide run and one control run per task); a single run per cell is not a rate.
+- An unverified cell means the CLI was unavailable, errored, timed out or did not complete every control needed for comparison. It is not a finding that the AI fails to follow the guide.
+
+## v228 (2026-10-05): your operating guide tells you when it is out of date
+
+### What's new for you (improvement, v0.88.0)
+Alacrán now tells you when your operating guide has fallen out of date.
+- If your company changes outside the app, Home and Approvals say so and show what would change, in plain words.
+- Choose "Update the guide" to save the change in one step, or "Not now" to come back to it from Skills.
+- Nothing is written until you say yes, and your own writing in the working agreement is never touched.
+
+**What changed underneath.** v226 added the guide and refreshed it only when a department or pack changed inside the app, or when the owner pressed Refresh. This slice notices a change made anywhere else and turns it into an approval. `lib/guide/proposal.ts` holds the check: `proposeGuide` evaluates the company once and returns either `none` with the guide's state, or a `proposal` carrying the block that would be written, the block now on disk, and `buildProposal`'s plain-language grouping (teams, commands, departments, and a "standard wording" line when only the guide's fixed text moved; 20 rows per group, then "and N more"; counts of new, reworded and removed). The proposal's `id` is the body hash of the block that would be written and its `baseBodyHash` is the body hash of the block on disk. A proposal is never stored; it is recomputed on every render.
+
+**Stored state.** Only a pending flag (for the sidebar badge) and one dismissed id (for "Not now") are kept, in `guide-proposal.json` in the app's per-company data folder (`lib/guide/proposal-state.ts`), never in the company repo. Ids must be 64 lowercase hex characters (`isProposalId`), a malformed file reads as empty, and a write goes through a temp file and a rename. `lib/guide/observe.ts` is what the pages call: `observeGuide` never throws, keeps the flag in step with what the page just computed and says whether the proposal was dismissed; `guidePendingCount` is what the layout calls, and it only reads the file, so the badge never runs git.
+
+**The write.** `lib/guide/actions.ts` gains approve, dismiss and reopen, all under the per-company lock. Approve is handed what the owner was shown (the id and the base hash) and evaluates once (`refreshGuideIfUnchanged`, which shares `writeStale` with v226's Refresh). If either value no longer matches, nothing is written and the card shows the new proposal, so the block written is exactly the one that was approved. The history entry touches `AGENTS.md` only (`docs: update the operating guide`). Dismiss records an id and nothing else.
+
+**Where it shows.** Approvals: `GuideProposalCard` (`components/os/guide`) with grouped rows tagged New, Reworded or Removed, a proportion meter, the real diff behind "Show technical details", "Update the guide" and "Not now" (each with a tooltip) and an outcome notice. The card stays mounted so the notice can be read, and the board's "nothing waiting" message is suppressed while a guide update waits. Home: a second focus row with the same tags and "Review N changes", shown only at the stages that show attention rows (`attentionRowsShow` in `lib/os/first-run.ts`). Skills: v226's Refresh button became "Review N changes" (the same diff), "Review changes again" after a "Not now", and the needs-attention message as before. The sidebar's Approvals count includes a waiting guide update, and so does the assistant's "is anything waiting" answer (`lib/os/pending-approvals.ts`).
+
+**Decisions the owner made (2026-10-05).** Skills opens the Approvals diff instead of refreshing in place; the Approvals card is the grouped, colour-tagged one with the technical diff collapsed; Home gets a focus row with change-preview tags; and the proposal is live, storing only the dismissed id and a pending flag.
+
+**Found by review and fixed in this slice.** (1) Approve first checked the proposal and then wrote through a second evaluation, with a gap between the two; it now uses one. (2) Pack add copied files, refreshed the guide and committed with no company lock; it takes the lock now, which retires v226's limit of the same name. (3) The guide's "is `AGENTS.md` dirty" check ran plain `git status` on every render, and Home, Approvals and Skills re-render every 15 seconds. Plain `git status` refreshes stat data and rewrites `.git/index`, which can make an agent's `git commit` in the same repo fail on an index lock. It now passes `--no-optional-locks`, a regression test hashes `.git/index` before and after, and `AGENTS.md` gained a rule for it. (4) Engine hardening: a guide line reading exactly `constructor` made the grouping throw, an order-only change read "0 changes", a failed flag write also dropped a "Not now", and a one-element array passed the id check. (5) Light theme: the tags measured 3.6 to 4.3:1 as small text on their own tint, under the 4.5:1 bar; their text is darker in the light theme only (5.3 to 5.6:1 measured in the live pass).
+
+**Verified.** `npx tsc --noEmit`: 0 errors (exit 0). `npm run lint`: 0 errors, 22 warnings (the baseline). `npx vitest run`: 414 files passed, 3291 tests passed, 3 skipped, 0 failed. `npm run build`: succeeded. Real renders in a disposable company with a stub `claude` and an isolated data folder, light and dark: the Home row, the Approvals card against the approved mockup, the real diff behind "Show technical details", "Not now" (notice, count cleared, Home row gone, "Review changes again" on Skills), "Review changes again" (card and count back), "Update the guide" (the button reads "Updating…" while it runs, then one commit touching `AGENTS.md` only, a clean tree, the notice, and the card and count cleared), a broken departments file (a needs-attention message, no card), a 150-character unbroken command name with a 200-character description (wraps inside the card, no horizontal scroll), and the tag contrast after the fix. The app logged no console errors.
+
+### Known limits
+- The sidebar count is read from a stored flag that the pages keep in step, so a change made outside the app reaches it only after Home, Approvals or Skills has rendered once. The check itself runs every 15 seconds while one of those pages is open and not at all while none is.
+- A "Not now" is remembered against the proposed text only. If the guide on disk changes and the same proposed text comes back, it stays dismissed. Keying it on the base as well (a hash of both) touches about four files and is a follow-up.
+- A failed history save leaves `AGENTS.md` written but uncommitted, with no in-app retry: the card stays until the next check (up to 15 seconds), a second click is refused as an uncommitted change, and the commit has to be made by hand. This is v226's limit, now on the only rewrite path.
+- Approvals and Skills check every kind of company while Home checks only command-set ones, so an external folder that already carries a guide block shows the update on Approvals and the badge while Home says nothing is waiting. The older cause is that Skills' Add has no kind check.
+- The Doctor page's `git status` (`lib/os/doctor/checks/connectors.ts`) and possibly a client-side re-run of `getCompanyCommandResult` (`lib/company-commands/repo-changes.ts`, unverified at runtime) are still plain `git status`, so they can still rewrite `.git/index` while a page is open.
+- Four other "waiting" counts still count command reviews only: the assistant's all-companies gather, the office route, the org page and the workspace view.
+- The guide's actions file exports its injectable `…Impl` functions beside the public actions, as v226's Add did. They are reachable as actions but a browser cannot hand them working dependencies. Moving them to a paired `-impl.ts` file is a follow-up. `guideState` in `lib/guide/refresh.ts` is no longer used by anything.
+- A change in order alone is labelled as an update to the guide's standard wording. The production path cannot produce one.
+- The shared secondary text colour (`--text-3`) measures 3.2:1 in the light theme on the card's small print. It is an app-wide token and was left alone.
+- With a 150-character unbroken command name the Skills page grows a horizontal scrollbar; found while testing, and it is the skills grid, not the guide card.
+- Browser walkthrough in a disposable company with a stub AI: 10 checks passed, 0 failed, 2 not run. Not run: the hero-stage combination of the badge and Home (the disposable company sat at the connect-AI stage; the unit tests pin it), and the card's flight into the badge, which was seen only as a copy of the card in the page, not by eye.
+
+## v229 (2026-10-06): session notes follow the conversation you actually had
+
+### What's new for you (fix, v0.89.0)
+Session notes no longer fire at conversations that ended days ago.
+- Alacrán writes a note only after a conversation you really had, and writes it into that conversation.
+- Old conversations that an AI tool merely touched in the background are left alone.
+
+**What changed underneath.** Claude Code rewrites bookkeeping lines into old transcripts, so file modification times jumped with no new conversation. The hourly note run read those times as activity and fired prompts into conversations that had ended days earlier (719 hourly prompts, measured on 2026-09-26). `lib/terminal/last-conversation.ts` now reads the transcripts and takes the newest interactive human turn (entrypoint `cli`), returning `{ sessionId, at, size }`. The resume arguments in `lib/ai-executors.ts` take an optional session id and use `--resume <id>`; with none they still use `--continue`. `lib/terminal/auto-session-note.ts` passes the id through, and `lib/terminal/conversation-fingerprint.ts` hashes `<sessionId>@<time>`. Written on 2026-10-02, committed on 2026-10-06 and merged as PR #31 (`30cbf62`).
+
+**Verified.** Rebased onto `0.88.0`: targeted tests 19 files and 177 passed; full suite 414 files, 3294 passed, 3 skipped, 0 failed; lint 0 errors, 22 warnings (the baseline). CI green on the PR.
+
+### Known limits
+- Not verified in a running app. Nobody has yet left a company with an old conversation and confirmed that no note run fires, or held a real conversation and confirmed that one note run targets that session.
+
+## v230 (2026-10-07): the operating guide describes each skill in one sentence
+
+### What's new for you (improvement, v0.89.0)
+Your operating guide now describes each skill in one clear sentence.
+- The long lists of trigger phrases that used to be cut off mid-word are gone.
+- Your AIs still read each skill's full instructions when they use it.
+- Alacrán will offer this wording as a guide update. Nothing changes until you approve it.
+
+**What changed underneath.** Slice E of the operating guide. `lib/guide/render.ts` capped every command description at 200 characters, which cut vendored pack descriptions (up to about 1000 characters, ending in lists of trigger phrases) mid-sentence. `summarise` now keeps the first sentence (`e.g.`, `i.e.` and `etc.` do not end one) and, when that is still over 200 characters, cuts at the last word boundary, hard-cutting only a run with no space. It applies to command descriptions only; department purposes and team summaries are unchanged. Vendored skill files and `scripts/sync-vendored-skills.sh` are untouched, since vendored files are not hand-edited.
+
+**Consequence.** Every company that carries pack skills renders a different block, so the v228 check shows each one a Guide update card on its next check. Nothing is written until the owner approves.
+
+**Verified.** Five new tests in `lib/guide/render.test.ts` (two failed before the change); the guide tests pass. The real pack skills were rendered and read: 33 pack skills, one sentence each; 3 still end in `…` (`code-reviewer`, `social`, `test-master`: single sentences over 200 characters).
+
+### Known limits
+- A first sentence over 200 characters is still cut, now at a word boundary. Three pack skills are long enough (`social`, `code-reviewer`, `test-master`).
+- Pack skills with a generic upstream description (`customer-support`, the `hr-*` ones) stay generic. Better wording needs an override table, which this slice did not build.
+
+## v231 (2026-10-08): see what a guide update looks like before you have one
+
+### What's new for you (feature, v0.90.0)
+You can now preview the Guide update card before your company needs one.
+- On the Skills page, "See what a guide update looks like" opens a sample card in Approvals with made-up changes.
+- Press "Update the guide" and "Not now" as often as you like. Nothing is saved or changed.
+
+**What changed underneath.** The Guide update card (v228) only appears when a company's guide block is out of date and its `AGENTS.md` is clean, so a fresh install never showed it, and the owner reasonably took the design for missing. `GuideProposalCard` takes an optional `actions` prop (approve, dismiss, refresh) that defaults to the real server actions; Approvals passes none and behaves as before. The new page `/c/[companyId]/preview/guide-update` renders the real card from `sampleProposal()` (`lib/guide/sample.ts`: made-up teams, commands and a department, built through the real `renderGuide` and `buildProposal`, so it cannot drift from the shipped card) with stand-in actions (`components/os/guide/guide-proposal-preview.tsx`) that write nothing. "Show the card again" remounts it. The Skills guide card links to the page from every state, because the packaged app has no address bar.
+
+**Verified.** New tests: `lib/guide/sample.test.ts`, `guide-proposal-preview.test.tsx`, and a link test in `guide-card.test.tsx`; three `not.toContain("<a ")` assertions in that file now assert there is no link into Approvals, since the preview link is present in every state. Full suite 416 files, 3306 passed, 3 skipped, 0 failed; `npm run build` passes and lists the new page. A real render on a throwaway dev server (built-ins off, a disposable company, a stub `claude`) checked the card at 1280px and 390px, "Update the guide", "Not now", "Show technical details", "Show the card again" and the Skills link; the disposable company was unchanged afterwards. Nothing was committed or released in the same session.
+
+### Known limits
+- In the preview the card does not fly to the sidebar's Approvals count, because that count exists only when something is really waiting.
+- The preview shows one made-up set of changes. There is no switcher for a long list, "changed while you were reading" or an error.
+- At 640px and below the assistant dock covers part of the page and blocks clicks. That was already so and is not part of this slice.
+- It reaches an installed app only in the next release.
+
+## v232 (2026-10-09): resize terminals, add Google accounts, and four fixes
+
+### What's new for you (feature, v0.91.0)
+You can now resize your terminals, and the Connected tools windows work the way you expected.
+- Drag the gap between terminals to make one wider or narrower, or taller or shorter. Double-click a gap to make them even again.
+- Open Google under Connected tools and press "Add another account" to connect more than one Gmail or Workspace account.
+- The Connected tools windows are wider, and a long one scrolls without pushing the Close button off the screen.
+- "View Changelog" and a few other buttons no longer go blank when you point at them, in both the light and dark looks.
+- Terminals scroll smoothly and keep far more of a long session to scroll back through.
+
+**What changed underneath.** Five reports in one slice, one commit each.
+
+1. *Modals.* `MachineSetupModal` and `McpSetupModal` were `max-w-lg`, and the MCP one had no height limit. Both are `max-w-2xl`, `max-h-[90vh]`, with the header and footer pinned and only the body scrolling. Measured at 1280x800 and 900x600: the Close button stays on screen, no horizontal scroll.
+2. *Google accounts.* The modal had lost the flow the old Connect page carried: account chips, "Add another account", a per-account app picker, the one-click AI setup, and the separate Cloud project an address in another organisation needs. That flow still existed as `ConnectGoogleApps` and `GoogleSetup` in `components/connect-panel.tsx`, but nothing rendered `ConnectPanel` any more, so the modal showed a copy-paste list instead. The modal now renders them (exported, no logic changed). Multi-account already worked underneath: `gog auth list` returns every account and `gog auth add` is the same command for a new address and a wider scope.
+3. *Ghost buttons.* `--accent` is the high-contrast inverse (`#f4f4f5` dark, `#18181b` light), so a ghost button hovers to `bg-accent` with `text-accent-foreground`. Four callers also set `hover:text-foreground` or `hover:text-os-text`, which replaced that text colour with one matching the fill. The override is removed in the changelog button, the preflight dismiss, the raw-diff toggle and the setup wizard's Back. `components/ui/button.tsx` is untouched, per the rule about primitives. Measured hovered: light `rgb(255,255,255)` on `rgb(24,24,27)`, dark `rgb(24,24,27)` on `rgb(244,244,245)`.
+4. *Terminal scroll.* `scrollback` was 5,000 lines. Once full, every new line ages off the top the history you scrolled to, and the viewport slides to line 0: a 300,000-line stream scrolled up 46 lines ended at the oldest line and stayed there. It is now 20,000. `smoothScrollDuration` was the default 0, so a wheel notch moved ~6 lines in one frame; it is now 125ms (about five steps per notch, same total distance).
+5. *Terminal resize.* `lib/terminal/grid-layout.ts` gains `evenTracks`, `dragTrack` and `tracksFor`; `components/terminal-gutters.tsx` draws a 10px `role="separator"` over each 6px gap. A drag changes only the grid's column and row fractions, so the panes stay in one container in a fixed order (moving a terminal to another parent blanks its xterm) and each pane's own `ResizeObserver` refits it. Minimum track 12%. Arrow keys move a focused handle by 2%; double-click resets that axis. Sizes are saved when the drag ends, per grid shape (`2x2`), in `alacran-terminal-tracks`.
+
+**Verified.** Full suite: 417 files, 3,317 tests pass; new tests in `lib/terminal/grid-layout.test.ts` and `components/os/connectors/machine-setup-modal.test.tsx`. In a browser against an isolated dev server with stub `gog` and `claude` and a disposable company: real mouse drags move both axes and clamp at the minimum; nothing is saved mid-drag; sizes survive a reload; `stty size` in a resized pane matches the pane (the shell follows the drag); the Google modal shows two accounts, "Add another account" and the own-project walkthrough for an address in a third organisation; hover colours measured in both themes. No setup button was pressed, because the one-click Google setup starts a real agent run.
+
+### Known limits
+- A handle moves a whole row or column, not one pane's edge, so there are no tmux-style independent splits. That needs a layout tree and a rewrite of how the grid renders.
+- The scroll report was "sometimes it ceases to scroll". The cause I could measure is the history aging off at the limit. I could not reproduce a pane that stops responding to the wheel by hiding a tab while it streams, leaving the page and returning, resizing the window, or forcing a WebGL context loss: all kept scrolling. If it still happens, note what was running in the pane.
+- 20,000 lines is ~35MB per terminal at 145 columns once full, so eight full panes are ~280MB. It is allocated as lines arrive, not up front.
+- Outlook and GitHub still hold one account each. Only Google was asked for.
+- A pane whose process has already exited still sends a resize on every refit, and the server answers 409 "No session". It is harmless, was already there, and shows as red lines in a browser console.
+- Not run in the packaged Electron app. Nobody has launched a Mac build by hand since 0.87.0.
+- It reaches an installed app only in the next release.
+
+## v233 (2026-10-09): talk to your assistant out loud, with ElevenLabs
+
+### What's new for you (feature, v0.92.0)
+Talk to your assistant out loud, with a natural ElevenLabs voice. Press the mic and it wakes up; it stops listening by itself.
+- The assistant has a new look: a glowing 3D orb that shows when it is listening, thinking and speaking, with three colours to choose from.
+- Use your own ElevenLabs account: paste your key in Settings and Alacrán sets up the voice agent for you.
+- Interrupt it any time, and see captions of the whole conversation.
+- When you ask about your company, it checks your own files on this computer first.
+- Built for everyone: screen-reader announcements, full keyboard use, high contrast, bigger text, and a calm mode with no motion.
+- The assistant stops listening by itself after 2 minutes without you speaking or typing, or at the longest length you set, so you are not billed for an empty line.
+- Ask the voice assistant to set up your company. It asks you four questions, then shows you the answers to check and edit before anything is drafted.
+- Ask the voice assistant to pass a job to your own AI agent: you see the exact words first, then it types them into your agent for you.
+- Ask it to check your unread mail, update your handoff notes, run your company's checks, or edit or remove a department; each one shows up as a card for you to approve first.
+
+**What was built.** A new voice provider, `elevenlabs`, next to the browser and Deepgram engines. Alacrán creates the ElevenLabs agent through the owner's own key, so the account and the bill are theirs. The agent has one client tool, `ask_company`, which bridges each company question to the company AI on this computer, so the company AI stays the brain and ElevenLabs only listens and speaks. The key never reaches the browser: the server swaps it for a signed URL for each call. The call session reconnects a bounded number of times when the line drops. The call guard ends a call after 2 minutes of silence or at the maximum length, ends it when the panel unmounts, and gives up if the connection takes longer than 30 seconds. Accessibility: live captions, a live region for screen readers, a calm mode with no motion, a high-contrast mode, text size through CSS zoom, a full keyboard path, and an orb that stays visible in a dark room.
+
+**Voice setup and commands, added later on the same branch.** The list of commands the assistant may propose gained `define-company` and `check-messages`. A second client tool, `propose_define_company` (`lib/voice/agent/propose-define-company-tool.ts`), lets the voice agent interview the owner for the four `define-company` answers (domain, stakeholders, value flow, bottleneck) and put a proposal on screen. It never runs anything: the handler does not import or call the command runner, caps each answer at 2000 characters, and its success text ends by telling the agent the proposal is not done yet. `ElevenLabsAgent` gained an optional `setupToolId`, so agents saved before this change still load. An agent made before this change has no second tool: the owner presses the Update agent button once (the same button reads Create agent before any agent exists) and it creates the missing tool and attaches it to the agent. The approval card shows the four answers as editable boxes for `define-company` only, and Prepare draft stays disabled while any box is blank. None of this has had a live ElevenLabs call: the agent interview, the tool call, the on-screen card and the old-agent upgrade were exercised only against fakes and unit tests.
+
+**Voice delegation, inbox, handoff, verify and department editing, added later on the same branch.** The list of commands the assistant may propose gained `check-inbox`, `handoff` and `verify`, plus edit and remove proposals for departments. `check-inbox` reads unread Gmail headers through `gog` (new prefetch kind `inbox`: date, sender and subject only, no message bodies, fenced as untrusted, `untrustedInput: true`) and refuses without spawning an agent when no Google account is connected or none of the accounts the company chose is connected. `handoff` has its own prefetch kind `handoff` (working tree, diff size and decisions recorded since the last handoff, all read from git) and appends a section to HANDOFF.md. `check-inbox` and `handoff` are also ordinary Run-button jobs and can be scheduled once a day (the Workflows page lists every registered command that needs no live terminal, the Run tab draws the button for any company command file the registry knows, and neither takes a required field); `handoff` may be set to commit itself, while `check-inbox` never may, because it reads text written outside the company. `verify` is a card that runs the company's own `scripts/verify.py` through the new company-scoped `runCompanyVerify` and shows the real result; external folders are skipped. A third client tool, `propose_agent_task` (`lib/voice/agent/propose-agent-task-tool.ts`), builds a `delegate-task` proposal and never sends anything; a test reads the handler file to pin that. Its card (`DelegateTaskCard`) shows the exact words in an editable box with a plain note, warns when the sanitised text starts with "/", refuses one that starts with "!" (the server refuses it too, with nothing written or typed, because a leading "!" runs as a command line in the agent without asking), says the text goes to the newest agent tab and that its Enter will answer anything the agent is waiting on, and its Send to my agent button POSTs `{ type: "delegate-task", task }` to the terminal route. A `delegate-task` branch there (a branch of the route and not a server action, because the session map is per-route module state) sanitises the text again (control characters become a space, capped at 4000 characters), picks the owner's newest live `ai` terminal (never a shell or run tab), records the review baseline (the before snapshot and `beforeDirty`), and only then types the single line, followed by a fixed instruction to save a summary in `notes/company/tasks/`. With no agent terminal open nothing is written and the card says so. That summary file is what appears in Approvals; any other file the agent changed is listed as a stray, with no per-file diff for it. A delegated summary is never one-click approvable when the stray list is unknown, and a second delegated task keeps the earlier baseline while a summary is waiting or earlier edits to other files are still unreviewed. Department editing: `edit_department` (the card prefills omitted fields from the current definition and disables Save when nothing changes) and `remove_department` (the card first says what will happen: a populated department's folder is moved to an archive folder and nothing is deleted; an empty department's empty folder is deleted, and the card says so plainly) go through the existing department actions, and both cards offer a retry when the history save fails. The assistant's department list now shows each department's current name with its real folder name in brackets so it can name the right one, including after a rename. Plumbing: `ElevenLabsAgent.taskToolId` is the third saved ElevenLabs tool id, so **the owner must press Update agent in Settings once more** (an agent saved without it still reads as ready, so Settings gives no hint), a `ProposalCard` router picks the card for each kind of proposal, and `resolveCompany` and `sanitizeTaskText` are shared by the propose handlers. None of this has had a live call: ElevenLabs, Gmail, the typing into the terminal and the department changes were exercised only against fakes and unit tests.
+
+**Voice lookups use the executor's quick model.** Company lookups made by voice run on the executor's quick model where it has one (Claude Code: haiku) so they answer faster; typed questions keep the full model. Requests to do something (the voice agent sets `action` on `ask_company`) use the full model so the approval card appears; the quick model is for plain questions only; the agent now also recognises the setup and overview phrases ("setup company", "show me this company"); the owner must press Update agent in Settings for both to take effect.
+
+**Voice phrase routing, added later on the same branch.** The voice agent now routes common owner phrases (setup, overview, daily briefing, things to record, jobs, departments, questions, passing work to the agent by its product name) to the right tool, whichever agent the company uses, and approval words such as "yes" or "go ahead" never approve anything; press Update agent to apply it.
+
+**Push-to-talk by default, added later on the same branch.** The microphone now starts closed and opens only while the owner holds Space or the Hold to talk button (a new `pushToTalk` preference, default on, with a Push-to-talk switch in Configure; mute is re-applied after a reconnect, and a press counts as activity for the 2-minute silence rule), so the agent stops answering people nearby or its own voice through the speakers; this is client-side and needs only a page reload, not Update agent.
+
+**Agent instructions trimmed for speed, added later on the same branch.** The phrase-routing block had grown the agent's instructions from about 2,700 to about 4,700 characters and made replies noticeably slower, so `buildAgentPrompt` is cut back to about 3,200 (one short line per intent, at most two example phrases each, no repeat between the setup and overview lines and the block; the approval-words rule, the interview and the action-flag rule are unchanged) and a test caps it at 3,200; press Update agent to apply it.
+
+**The Nexus assistant, added later on the same branch.** The orb and the screen around it are a port of the Nexus design: WebGL with a 2D canvas fallback when WebGL is missing, and the animation paused in calm mode. The layout answers to the width of its own container (container queries) instead of the window, so the same view fits the narrow dock and the full layout; the expanded dock is wider (`clamp(560px, 70vw, 1280px)`) so the full layout fits on windows from about 1170px up. There is no Start or End control any more: the assistant wakes on first use. Typed text sent while it is waking is queued and sent once it connects, a held mic is replayed once on connect, and a release always reaches the mic gate; Space wakes it only when focus is inside the assistant (`spaceMayWake`), and once awake it talks from anywhere, because every waking costs ElevenLabs minutes. The status pill, captions and timer were removed along with `formatTimer`, `canType`, `typePlaceholder`, `PILL_LABEL` and the hook's `elapsedMs` and `end`. Every visible "call" string is gone (the setup message now says to hold the mic to talk). Not run against a live ElevenLabs account: waking on the first press, queued text being sent and the orb following real speech are for the owner's live check.
+
+**After the owner's first look (2026-10-09).** Three fixes from a live try. A proposal card now appears the moment its tool returns, as its own line: before, it waited for the agent's next message, and when the agent had already said "it's on screen" before the tool answered, no card ever showed. Hold-to-talk is replaced by a mic switch the owner asked for: a tap (or Space) turns the mic on, the next tap turns it off; it still starts closed, so it never hears the room unasked. The push-to-talk preference, `HoldToTalkButton`, `talkKeyAction`, `setTalking` and the focus-on-mount were removed (the last also stops a restored dock from turning a page-scroll Space into a paid wake). The orb now shows listening and speaking at a glance: the shell swells with the voice, the core grows and glows, the rings pulse outward while speaking, and the aura behind it brightens (`--nx-voice`, written by the renderer each frame).
+
+**Deviations decided while planning.**
+- No new orb state was added to `animated-particles.tsx`; the call states reuse the existing ones.
+- A saved key belongs to one provider and is dropped when the owner switches provider.
+- The assistant is dock-sized, with Chat, Console and Configure tabs.
+- Closing the dock ends the call.
+- `AnimatedParticles` is mounted in the app for the first time.
+
+**What review caught and fixed.** Proposal markup that leaked into the spoken and captioned text is now sanitised. Billing leaks in the session (a call that kept running after it should have stopped) were closed. The hook had defects in mute, in proposal handling and in the connect timeout. Several accessibility defects were fixed. Settings showed a stale "ready" after the key or agent changed. The root layout needed plumbing for the new options, and the dark room needed its own orb treatment.
+
+**Live-test fix: company lookups timed out.** ElevenLabs waits 20 s for a client tool by default, and `ask_company` runs a whole headless AI session, so the agent said "the system is taking too long" twice. `ask_company` now asks for the 120 s maximum (`response_timeout_secs`), the tool answers itself at 110 s (`ASK_TIMEOUT_MS`) with a plain sentence, and Update agent now PATCHes every saved tool (a 404 makes a new one) so a config change reaches an agent made earlier. The settings view carries `elevenlabsAgentOutdated`, and Settings says so when an agent lacks the setup or task tool. The owner must press Update agent once.
+
+**Verified.** `tsc --noEmit` clean; lint 0 errors (22 warnings, the baseline); full vitest 422 files, 3373 passed, 3 skipped; `npm run build` ok; a browser render check of the agent screen in both themes with a throwaway `voice.json` (Start call was never pressed). No live ElevenLabs call has been made. Re-verified with voice setup: tsc clean; lint 0 errors (22 warnings); vitest 424 files, 3417 passed, 3 skipped; `npm run build` ok. Re-verified again with voice delegation, inbox, handoff, verify and department editing: tsc clean; lint 0 errors (22 warnings); full vitest 436 files, 3589 passed, 3 skipped; `npm run build` ok on the first run. No live ElevenLabs, Gmail or terminal call has been made. Re-verified after the whole-branch review fixes: tsc clean; lint 0 errors (22 warnings); full vitest 436 files, 3605 passed, 3 skipped, with 3 real-git tests (lib/guide/actions, lib/guide/refresh, lib/os/departments/mutations) timing out at 5 seconds under full-suite load and passing when those 3 files were re-run alone (119 tests); `npm run build` ok; `lib/updates` 11 files, 67 passed.
+
+### Known limits
+- Not verified against a live ElevenLabs account. No real call has been made. Per AGENTS.md, "Ship only what has been run end to end", so do not release before the owner's live check.
+- How long a signed URL lives is undocumented, so the reconnect after a long call is untested. The reconnect bound is per drop, not per call.
+- `expects_response: true` for the client tool is untested live: it is not yet known that the agent waits for and speaks the tool's answer.
+- The Electron macOS audio path is untested; only the browser path is expected to work.
+- The agent working in all nine app languages is untested, and its greeting (`first_message`) is English.
+- The orb's idle look is faint and wants art direction.
+- The in-call Mute and End row at the Largest text size was not seen.
+- A question handed over from the Ask page is not forwarded into a live call.
+- The voices list is capped at 100.
+- The silence rule counts only what you say or type (and a company lookup you start); the agent talking or asking "are you still there?" does not keep a call alive. ElevenLabs' own 2-minute silence and 60-minute limits are also set on the agent as a backstop, and are untested live.
+- How long a call link made for each call stays valid is not documented by ElevenLabs and was not verified.
+- A non-English agent may need a multilingual voice model (`tts`); verify at the live check.
+- The agent keeps the assistant's names and languages in your ElevenLabs account. If you change them in the app, press Update agent in Settings.
+- Voice setup, still to check live: the agent asks one question at a time.
+- Voice setup, still to check live: it calls the tool once all four answers are in.
+- Voice setup, still to check live: the approval card appears with editable boxes.
+- Voice setup, still to check live: pressing Prepare draft starts the run and the diff appears in Approvals.
+- Voice setup, still to check live: an agent made before this change works after pressing Update agent once.
+- Voice setup, still to check live: A box edited on the voice setup card reaches the draft the run writes (the edited text, not the spoken original).
+- Voice delegation, still to check live: for open-ended work the agent calls `propose_agent_task` rather than `ask_company`.
+- Voice delegation, still to check live: pressing Send to my agent types the card's text into the open agent terminal and submits it.
+- Voice delegation, still to check live: the agent's summary appears in Approvals, and any other file it changed is listed as a stray.
+- Voice delegation, still to check live: with no agent terminal open the card says so and nothing is written.
+- Voice inbox, still to check live: `check-inbox` reads the unread mail of a connected Google account, and refuses cleanly (no agent started) when Google is not connected.
+- Voice verify, still to check live: the `verify` card shows the real result of the company's own checks.
+- Voice departments, still to check live: editing a department changes it, and removing one shows the right wording (moved to an archive folder when it holds files, folder deleted when empty) and does what it says.
+- Voice departments, still to check live: a failed history save on an edit or remove card offers a retry, and the retry works.
+- Voice proposals, carried forward: only one proposal card survives per turn, because the pending-proposal slot is shared by all three proposing tools.
+- Voice proposals, carried forward: press Update agent in Settings once more so the third tool (`propose_agent_task`) exists on the agent; an agent saved without it still reads as ready.
+- Voice delegation, still to check live: a task starting with "!" is refused with the plain sentence, Send is off on the card, and nothing is typed into the agent.
+- Voice delegation, still to check live: Send pressed while the agent is waiting at a permission prompt. The card's note says the Enter will answer it; check that this is what happens and that the note is clear enough.
+- Voice delegation, still to check live: a mailbox with exactly one unread message still lists it. The inbox reader assumes a header line before the rows; if that one message is dropped, say so.
+- Voice delegation, still to check live: a delegated task where the agent writes no summary shows nothing in Approvals, and the success message says so.
+- Voice delegation, still to check live: Enter submits the typed text in each agent. If it sits unsubmitted, the fix is to write the text and then a separate carriage return.
+- Voice delegation, still to check live: a leading "/" shows the warning and still sends.
+- Voice departments, still to check live: a voice rename of a department is reflected in the assistant's department list.
+
+## v234 (2026-10-12): session notes write facts back (issue #35)
+
+Sessions now keep the company's facts current, not just its notes. "Save what we learned" lets the agent
+you were talking to edit `definitions/ontology/company.yaml` and add `docs/decisions/` files for anything
+the session settled, each changed line marked `# source:`. The automatic session note cannot edit facts;
+it lists them under "Proposed fact changes", and the owner ticks which to apply. The live note with fact
+changes and the apply review are High-risk reviews; an automatic note that proposes facts is a Medium-risk
+review of the note only (never in "Approve All Safe"), and applying its facts is a second, High-risk review.
+Nothing auto-commits.
+
+Plumbing: commands may declare `alsoWrites`; the review computes those changes from git, measured from an
+`ownedBaseline` taken when the agent is actually asked (a run's start, or the live "Save what we learned"
+prompt; never the automatic note), excluding any path another pending review claims. A record without that
+baseline has its lanes off, so such edits show as stray files and are never committed or dropped. Approve
+and drop act only on the fact changes the owner was shown and refuse if they changed since. Owned changes
+are committed with the output and can be dropped as a whole ("Keep note, drop fact changes"); the original
+design's per-file discard of owned paths was replaced by that whole-lane drop button. New command `apply-session-facts` (manual only, checks every line
+against the committed note, refuses a second apply via an `Applied facts from:` commit line).
+Released in 0.93.0 together with v235, v236 and v237. Also fixed: assistant briefings no longer print "Worked on: :"
+for the new session-note labels.
+
+### What's new for you (feature, v0.93.0)
+What you settle in a session now updates what Alacrán knows about your company.
+- After "Save what we learned", you see which company facts changed and where each one came from, and approve them with the note.
+- Automatic notes suggest fact changes instead of making them. Tick the ones you agree with and Alacrán applies them for you to check.
+- Keep a note but drop its fact changes with one button.
+- Changes to company facts are always reviewed one by one, never approved in bulk.
+
+## v235 (2026-10-12): memory health score (issue #36)
+
+"What Alacrán knows" now says how true the memory is. A separate "Memory health" score (0–100) covers three
+things, all read from the company's git history with no AI call: company-profile sections that look out of
+date (at least 90 days old and at least 3 notes or decisions saved since), `<<TODO>>` placeholders, and
+fact changes with no recorded source (judged from the first sourced change onward; a company that has never
+recorded a source is not marked down). Out-of-date and unsourced items offer "Check it with refresh", which
+starts the normal `refresh` review; unfinished items link to Company profile. Home's memory card gains one
+line when something needs a look. Optional thresholds live in `definitions/memory-health.yaml`
+(`stale_after_days` 7–730, default 90; `min_newer_notes` 1–50, default 3). The Diagnostics score is unchanged.
+Reads are `git --no-optional-locks`, HEAD only; measured 165 ms on a 500-commit company (asserted < 2 s).
+Builds on v234 (session fact writeback), whose `# source:` marks and `Applied facts from:` commit line the
+Sources check reads. README files are skipped by the placeholder search, and `<<TODO: …>>` variants count. Released in 0.93.0 with v234 to v237.
+
+### What's new for you (feature, v0.93.0)
+Alacrán now tells you how up to date its memory of your company is.
+- A "Memory health" score appears at the top of "What Alacrán knows".
+- It points out parts of your company profile that may be out of date, things you haven't finished filling in, and changes that have no recorded source.
+- Each one shows what to do next, and nothing changes until you approve it.
+- Home shows a short line when something needs a look.
+
+## v236 (2026-10-12): learning how you like things done (issue #37)
+
+Every approve, discard and "ask for changes" is now logged locally per company (`outcomes.jsonl` in the
+run-data folder: ids, outcomes and your own feedback text, never file contents; a feedback that looks like a
+credential is withheld). Once 3 revisions for the same command pile up, Home offers "Learn from my feedback".
+The offer ignores the `learn-preferences` command's own reviews and feedback withheld as credential-like.
+Pressing it runs the new `learn-preferences` command: the AI reads the fenced feedback (at most the 20 most
+recent revisions per command) and proposes lines for `definitions/preferences.md` only where 3 or more entries
+agree, each quoting your words. It is a High-risk review you approve individually. Approved preferences reach
+the AI two ways: the generated operating guide now tells every AI to read the file before drafting
+(GUIDE_VERSION 2): an untouched guide block is offered the update on Home like any guide change (and is also
+refreshed whenever a department changes), while a guide the owner edited by hand is left as written and does
+not receive the new sentence. The digest, decision, retro,
+check-messages, check-inbox and handoff prompts also append the file's bullet lines (at most 40 lines / 4 KB,
+read at run time, so deleting a line stops it applying). The assistant's Ask paths do not get the block yet. While suggestions wait in
+Approvals, nothing from them reaches the AI's prompts that Alacrán builds (the block reads the committed file, a
+second "Learn from my feedback" run is refused and the Home offer is hidden); AIs the owner starts themselves read
+the file as it is on disk, so approve or discard promptly.
+Per-post and per-lead discards (the single-file discard path) are not logged yet; only revisions drive the
+offer anyway. Released in 0.93.0 with v234 to v237. Builds on v234
+and v235.
+
+### What's new for you (feature, v0.93.0)
+Alacrán now learns how you like your drafts written.
+- When you ask for the same kind of change a few times, Home offers to learn from your feedback.
+- It suggests short preference lines that quote your own words, and nothing is saved until you approve each one.
+- Approved preferences are written in a plain file you can read, edit or delete, and your AI follows them when it drafts.
+- Delete a line and it stops applying.
+
+## v237 (2026-10-12): voice tasks go straight to your agent (opt-in)
+
+### What's new for you (feature, v0.93.0)
+Speak a task and your assistant can now send it to your agent without a button press.
+- Turn it on per company in Settings. It is off until you do.
+- The assistant reads the task back, then sends it after 5 seconds unless you press Cancel or Esc, or say "cancel" while the mic is on.
+- Tasks that mention money, contracts, deleting, publishing or access still wait for your click. The check looks for words, so listen to the read-back before it sends.
+- Press Update agent in Settings once after turning this on.
+
+Engineering notes: the voice tool picks a countdown strip instead of a card when the company is switched on and `isGatedTask` passes; the terminal route re-checks the switch and the gate (`auto: true`), so a client cannot opt itself in, and refuses (409, fail-closed) while an earlier task's summary or stray edits are unreviewed, so the typed Enter cannot answer the agent's permission prompt for an earlier task; a refused or failed auto send falls back to the approval card; `delegateTaskImpl` is untouched and still baselines the folder so Approvals shows what the agent changed. Spoken cancel is read from the transcript (no new ElevenLabs tool), and a dropped or reconnecting call also cancels; the agent prompt changed, so **Update agent** must be pressed once. Known limits: the gate is a keyword list and non-English tasks always get the card; an earlier task that has edited nothing and written no summary yet is not seen as pending; cancel is best effort, so the agent is told to point the owner at the screen rather than promise nothing was sent; nothing catches a non-file action by the agent. Not yet run live: a real ElevenLabs call, Enter submission in a real terminal, and cancel latency; the owner's live check decides release.
+
+## v238 (2026-10-13): two stale-review fixes before the 0.93.0 release
+
+### What's new for you (fix, v0.93.0)
+A fact update that changed nothing no longer leaves a stale review behind.
+- Your next session note keeps its own fact changes instead of showing them as stray edits.
+- A fact update you really want later is no longer refused because an earlier empty one was left over.
+- Approving or dropping fact changes now always checks what you were shown, and the messages say which review is still waiting.
+
+Engineering notes: a run of a command with `alsoWrites` (apply-session-facts) that ended with no output change, no owned files and no strays left `<command>.run.json`, which kept claiming its lanes in `pendingClaimedPaths` and diffed company.yaml against a stale `before`, so the next session's edit appeared as a phantom "Apply facts" review committed with the old trailer (making `hasAppliedFacts` refuse the genuine apply). `getCompanyCommandResultImpl` now removes such a record (only for lane commands that are not `requiresLiveSession`, only when git was read and the run lock is free); the headless exit handler re-reads once after releasing the lock, and any later read or the root layout's `listPendingReviews` covers a visible-terminal run. Minors: commit and drop now refuse (`OWNED_CHANGED_MESSAGE`) when owned files exist and no `expectedOwned` was passed; the drop and partial-drop sentences depend on the command and on drop versus whole-review Discard; `prepareSessionNote`'s kept-baseline rewrite runs under `lockReview`; `ownedMatchesExpected` treats a directory (nested repo) like the empty text the review showed, so it can still be skipped as partial. Fix round: the record is removed by a compare-and-delete under the run lock (never one rewritten since it was read); a render-time read only sweeps a record at least 10 minutes old, while the headless exit handler sweeps at once. Known limit: a restart during a visible-terminal run is bounded by that 10-minute age. A live session note whose baseline rewrite cannot get the lock after 10 tries of 100ms refuses with a plain sentence instead of handing the agent a wrong baseline; the automatic path is unchanged. Dropping an apply's decision files now says when nothing is left, and approving never commits a directory in an owned lane.

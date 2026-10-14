@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 22 100 74" fill="none" stroke="#d4141c" stroke-linecap="round" stroke-linejoin="round" role="img" aria-label="Alacrán"><title>Alacrán</title>
+<g stroke-width="5">
+<path d="M25 66 C15 64 9 57 11 48"/><path d="M25 77 C14 82 6 77 5 68"/>
+<path d="M74 72 C92 76 99 58 91 44 C85 32 71 28 63 36"/>
+</g>
+<g stroke-width="3">
+<path d="M35 79 L30 90"/><path d="M46 80 L44 92"/><path d="M57 80 L60 92"/>
+</g>
+<g fill="#d4141c" stroke="none">
+<path d="M11 53 C2 45 5 32 15 27 C14 37 19 46 11 53Z"/>
+<ellipse cx="31" cy="72" rx="10" ry="8"/><ellipse cx="43" cy="73" rx="8" ry="6.5"/><ellipse cx="54" cy="73" rx="7" ry="6"/><ellipse cx="64" cy="73" rx="6" ry="5.5"/><ellipse cx="72" cy="73" rx="4.5" ry="4.5"/>
+<path d="M56 36 L67 29 L68 42Z"/>
+</g>
+</svg>

@@ -1,0 +1,82 @@
+import { describe, it, expect } from "vitest"
+import { buildGuideSteps } from "./company-guide-steps"
+
+describe("buildGuideSteps", () => {
+  it("always includes Skills and Avatar, regardless of flags", () => {
+    const steps = buildGuideSteps({})
+    const labels = steps.map((s) => s.label)
+    expect(labels).toContain("Skills")
+    expect(labels).toContain("Avatar")
+    expect(labels).toHaveLength(2)
+  })
+
+  it("includes every flagged step, in a stable order, and nothing else", () => {
+    const steps = buildGuideSteps({
+      showOpenTerminalButton: true,
+      showGetStartedButton: true,
+      showBackupButton: true,
+      showOwnershipButton: true,
+      showGoogleAccountsPicker: true,
+      removable: true,
+      showEditCompanyButton: true,
+      showMcpButton: true,
+    })
+    expect(steps.map((s) => s.label)).toEqual([
+      "Set up / edit company info",
+      "Get Started",
+      "Open in Terminal",
+      "Connect tools",
+      "Skills",
+      "Back up to GitHub",
+      "View ownership",
+      "Inbox accounts",
+      "Remove",
+      "Avatar",
+    ])
+  })
+
+  it("shows the company-info step if either the create or edit flag is set", () => {
+    expect(buildGuideSteps({ showSetupCompanyButton: true }).map((s) => s.label)).toContain(
+      "Set up / edit company info"
+    )
+    expect(buildGuideSteps({ showEditCompanyButton: true }).map((s) => s.label)).toContain(
+      "Set up / edit company info"
+    )
+  })
+
+  it("never renders a step whose flag is false", () => {
+    const steps = buildGuideSteps({
+      showOpenTerminalButton: false,
+      showGetStartedButton: false,
+      showBackupButton: false,
+    })
+    expect(steps.map((s) => s.label)).not.toContain("Open in Terminal")
+    expect(steps.map((s) => s.label)).not.toContain("Get Started")
+    expect(steps.map((s) => s.label)).not.toContain("Back up to GitHub")
+  })
+
+  // The button is gated on the company's executor being Claude Code, so a
+  // Codex/Aider/Antigravity company must not be told about a button it hasn't
+  // got — the whole point of building the guide from AgentCard's own flags.
+  it("only explains Connect tools when the button is really there", () => {
+    expect(buildGuideSteps({ showMcpButton: true }).map((s) => s.label)).toContain("Connect tools")
+    expect(buildGuideSteps({ showMcpButton: false }).map((s) => s.label)).not.toContain("Connect tools")
+    expect(buildGuideSteps({}).map((s) => s.label)).not.toContain("Connect tools")
+  })
+
+  it("every step has non-empty label and blurb text", () => {
+    const steps = buildGuideSteps({
+      showOpenTerminalButton: true,
+      showGetStartedButton: true,
+      showSetupCompanyButton: true,
+      showBackupButton: true,
+      showOwnershipButton: true,
+      showGoogleAccountsPicker: true,
+      removable: true,
+    })
+    for (const step of steps) {
+      expect(step.label.length).toBeGreaterThan(0)
+      expect(step.blurb.length).toBeGreaterThan(0)
+    }
+  })
+})

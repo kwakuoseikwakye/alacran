@@ -1,0 +1,53 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: end-users
+      name: Active Customers & Power Users
+      job_to_be_done: Resolve technical hurdles instantly, maximize product ROI, and ensure uninterrupted operations
+      alternative: Impersonal bot loops and unresolved ticket queues
+  acquisition:
+    - channel: Customer Referral & In-Product Onboarding
+      notes: Seamless customer handoff from sales directly into dedicated support channels
+
+org:
+  roles:
+    - id: support-lead
+      name: Head of Customer Experience
+      owns: Support SLAs, customer satisfaction (CSAT), and escalation policies
+    - id: support-engineer
+      name: Technical Support Engineer
+      owns: Ticket triage, bug reproduction, and technical troubleshooting
+    - id: success-manager
+      name: Customer Success Manager
+      owns: Account retention, proactive quarterly business reviews, and adoption health
+  decisions:
+    - decision: Customer refund approvals, credit vouchers & SLA compensation
+      approver: support-lead
+    - decision: Enterprise support level agreements & custom SLA addenda
+      approver: support-lead
+    - decision: Deletion of customer interaction histories & ticket records
+      approver: support-lead
+    - decision: Public incident postmortems, status page updates & advisory notices
+      approver: support-lead
+    - decision: Helpdesk administration access & customer portal credential issuance
+      approver: support-lead
+
+product:
+  offerings:
+    - id: support-engine
+      name: Customer Success & Support Engine
+      promise: Rapid, empathetic technical support with strict gatekeeping on customer data and compensation
+      pricing: Included in Subscription / Premium SLA Add-on
+  value_flow:
+    - step: Inbound Support Request Intake & Triage
+      owner: support-engineer
+    - step: Root-Cause Investigation & Solution Formulation
+      owner: support-engineer
+    - step: §6 Gate Escalation for Refund or Incident Advisory
+      owner: support-lead
+    - step: Solution Delivery & CSAT Feedback
+      owner: success-manager
+  bottleneck: Complex technical triage requiring cross-team engineering coordination

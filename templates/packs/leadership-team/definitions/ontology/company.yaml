@@ -1,0 +1,53 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: stakeholders
+      name: Board Members, Investors & Executive Leadership
+      job_to_be_done: Clear strategic alignment, capital efficiency, and rapid operational execution
+      alternative: Fragmented slide decks and unaligned executive silos
+  acquisition:
+    - channel: Executive Network & Investor Relations
+      notes: Ongoing stakeholder briefings and strategic advisory networks
+
+org:
+  roles:
+    - id: ceo-founder
+      name: Chief Executive Officer / Founder
+      owns: Company vision, capital strategy, and company-wide prioritization
+    - id: coo-lead
+      name: Head of Operations / COO
+      owns: Department coordination, resource allocation, and operational cadence
+    - id: chief-of-staff
+      name: Chief of Staff
+      owns: Strategic initiatives, executive communication, and governance records
+  decisions:
+    - decision: Capital raises, equity grants, debt facilities & major capex spend
+      approver: ceo-founder
+    - decision: Executive employment agreements, board resolutions & M&A terms
+      approver: ceo-founder
+    - decision: Irreversible corporate structural changes & business entity dissolution
+      approver: ceo-founder
+    - decision: Shareholder letters, investor updates & major press releases
+      approver: ceo-founder
+    - decision: Banking signatory authority, corporate credit cards & cap table access
+      approver: ceo-founder
+
+product:
+  offerings:
+    - id: executive-governance-engine
+      name: Executive Leadership & Governance Engine
+      promise: Sovereign corporate governance where all strategic decisions are recorded in plain files
+      pricing: Core Business Foundation
+  value_flow:
+    - step: Strategic Priority Setting & OKR Definition
+      owner: ceo-founder
+    - step: Operational Alignment Across Departments
+      owner: coo-lead
+    - step: §6 Human Gate Review for Strategic Commitments
+      owner: ceo-founder
+    - step: Performance Retrospective & Horizon Review
+      owner: chief-of-staff
+  bottleneck: Executive bandwidth and cross-department dependency alignment

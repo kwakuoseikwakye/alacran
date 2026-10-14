@@ -1,0 +1,44 @@
+# Secrets — never committed. The folder structure is kept, the contents are not.
+secrets/**
+!secrets/**/
+!secrets/**/.gitkeep
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.p12
+credentials.json
+service-account*.json
+
+# Generated status output — safe to delete, regenerated on demand.
+state/*
+!state/README.md
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*~
+
+# Opening notes/ as an Obsidian vault drops config here. Not ours to track.
+.obsidian/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Node
+node_modules/
+dist/
+build/
+npm-debug.log*

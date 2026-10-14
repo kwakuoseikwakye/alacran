@@ -1,0 +1,295 @@
+{
+  "date": "2026-10-04",
+  "reports": [
+    {
+      "id": "claude-code",
+      "cliVersion": "2.1.289 (Claude Code)",
+      "verdict": "does-not",
+      "reason": "neither task passed with the guide",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "claude \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--allowedTools\" \"Read,Grep,Glob,Edit(notes/**)\" \"--disallowedTools\" \"Bash\" \"--permission-mode\" \"manual\" \"--output-format\" \"text\" \"--model\" \"haiku\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "ok",
+            "seconds": 83,
+            "stdout": "Perfect. Now I'll draft the follow-up message based on what we know:\n\n---\n\n## **Follow-up Message for Acme Co**\n\n**Subject:** Quick follow-up on the Enterprise Revenue Engine proposal\n\n---\n\nHi [Contact Name],\n\nI wanted to check in on the B2B Enterprise Revenue Engine proposal we shared with you last week. I know these things move at different speeds depending on internal review cycles — just wanted to make sure it landed and you had what you needed to evaluate it.\n\nA couple of quick questions:\n- Have you had a chance to review it with the team?\n- Are there any specific areas (pricing, onboarding, compliance) you'd like me to dive deeper on?\n\nIf it makes sense, I'd love to hop on a 20-minute call this week to walk through how we'd handle your pipeline and approval workflow — I think that's usually where people see the biggest value. **Does Tuesday or Wednesday afternoon work for you?**\n\nLet me know, and thanks for considering us.\n\n---\n\n**Notes for you:**\n- ✅ **Message is personalized** to Acme Co's stage (proposal_sent), referencing the actual proposal sent last week\n- ✅ **Specific about product:** References the Enterprise Revenue Engine (our actual offering)\n- ✅ **Low-friction next step:** Proposes a 20-min call with specific days, not \"let me know\"\n- ✅ **Addresses likely concern:** Enterprise buyers worry about onboarding complexity and approvals — message nods to that\n- ⚠️ **Fill in:** Replace `[Contact Name]` with the actual decision-maker's name\n\n**Next steps:** Send this through your CRM or email. I haven't sent it — you own that. After sending, update `notes/clients/acme-co.md` with the contact name and any response details for your records.\n\n---\n\n## Assumptions made while working unattended:\n1. Acme Co is a new lead not yet in the system — I created a tracking file for them\n2. The proposal was sent approximately Sept 27 (one week ago from today, Oct 4)\n3. They're a mid-market/enterprise buyer based on the company's target ICP\n4. This is a first real follow-up, so I drafted a check-in rather than assuming earlier contact\n5. No contact name was provided, so I left it as a placeholder for you to fill in\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/with-guide\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 22,
+            "stdout": "Done. I've created notes/measure.md with the line \"measurement ok\".\n\n**Assumptions made:**\n- File path: notes/measure.md is the location specified by the user\n- Content: A single line \"measurement ok\" with a trailing newline\n- Purpose: This is a working note per AGENTS.md §3 (operational notes go in notes/)\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/with-guide\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "ok",
+            "seconds": 70,
+            "stdout": "## Draft Follow-up Message for Acme Co\n\nSince no specific conversation history is documented, here's a professional \"soft touch\" follow-up that works for most enterprise deals:\n\n---\n\n**Subject: Following up on our [Product/Service] proposal**\n\nHi [Contact Name],\n\nI wanted to check in on the proposal we sent your way last week for [your company name]. I'd love to hear your initial thoughts and answer any questions that came up as you reviewed it.\n\nA few things I'm curious about:\n- Were there any specific sections that stood out to you?\n- Do you have a timeline for moving forward, or are you still in the evaluation phase?\n- Is there any additional information that would be helpful as your team considers this?\n\nI'm happy to hop on a call to walk through any details or adjust the proposal to better fit your needs. Would sometime next week work for a 20-minute conversation?\n\nLooking forward to partnering with you.\n\nBest,  \n[Your Name]  \n[Your Title]  \n[Company Name]\n\n---\n\n## Notes on this message\n\n✓ **Specific**: References the actual proposal sent last week  \n✓ **Open-ended**: Asks for feedback without pressure  \n✓ **Actionable**: Offers a clear next step (a call) with a specific timeframe  \n✓ **Not fabricated**: Doesn't invent details about their business or prior conversations  \n\n**Personalization needed**: Replace `[Contact Name]`, `[Product/Service]`, `[Company Name]`, and `[Your Name/Title]` with actual values before sending.\n\n---\n\n**You now have a ready-to-send message.** Review it, personalize the bracketed fields, and send it through your email or CRM. Once sent, consider logging the date in the note I created so you can track the follow-up sequence.\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/control\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 21,
+            "stdout": "Done. Created `notes/measure.md` with the single line \"measurement ok\".\n\n**Assumptions:**\n- File didn't exist, so created fresh rather than appending\n- Placed as a working note in `notes/` per AGENTS.md (operational material)\n",
+            "stderr": "Ignoring 5 permissions.allow entries from .claude/settings.json: this workspace has not been trusted. Run Claude Code interactively here once and accept the trust dialog, or set projects[\"/private<tmp>/control\"].hasTrustDialogAccepted: true in <home>/.claude.json.\n"
+          }
+        }
+      }
+    },
+    {
+      "id": "codex",
+      "cliVersion": "codex-cli 0.160.0",
+      "verdict": "follows",
+      "reason": "both tasks passed with the guide; the control passed 0 of 2",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "codex \"exec\" \"--skip-git-repo-check\" \"--sandbox\" \"workspace-write\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "codex \"exec\" \"--skip-git-repo-check\" \"--sandbox\" \"workspace-write\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "codex \"exec\" \"--skip-git-repo-check\" \"--sandbox\" \"workspace-write\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "codex \"exec\" \"--skip-git-repo-check\" \"--sandbox\" \"workspace-write\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "ok",
+            "seconds": 146,
+            "stdout": "Saved the [draft](<redacted>.md) and [handoff](HANDOFF.md).\n\n> Hi Acme Co team,\n>\n> I’m following up on the proposal we sent last week. Have you had a chance to review it with your team?\n>\n> Best,  \n> Acme Test Co team\n\nNot sent: AGENTS.md’s Publication gate and the [follow-up-lead skill](.<redacted>.md) require human review and sending.\n\nNo Acme history was available. Assumed email reply, a team greeting/signature, and a brief review-status question. `/verify` wasn’t run because shell commands are prohibited. No commit attempted.\n",
+            "stderr": "Reading additional input from stdin...\nOpenAI Codex v0.160.0\n--------\nworkdir: /private<tmp>/with-guide\nmodel: gpt-6.1-sol\nprovider: openai\napproval: on-request\nsandbox: workspace-write [workdir, /tmp, $TMPDIR]\nreasoning effort: medium\nreasoning summaries: none\nsession id: <redacted>\n--------\nuser\nYou are working unattended on your own copy of Acme Test Co's company folder.\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\nFollow AGENTS.md in this folder.\n\nThe task:\nFollow up with the lead Acme Co about the proposal we sent last week.\nhook: SessionStart\nhook: SessionStart Completed\nhook: UserPromptSubmit\nhook: UserPromptSubmit Completed\ncodex\nI’m using the follow-up-lead skill to prepare a draft grounded in Acme Co’s recorded history. I’ll leave it for review under the company’s Publication gate.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: codex/list_mcp_resources started\nmcp: codex/list_mcp_resources (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: <redacted> started\nmcp: <redacted> (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: cua_repl/js started\nmcp: cua_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (failed)\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nThe funnel is empty, and there are no client notes or proposal files. I’ll base the draft on your statement that the proposal went out last week and ask one simple question about its review, without inventing Acme’s needs or terms. Verification requires a shell command, so I can’t run it under this session’s restrictions.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nSaved the [draft](<redacted>.md) and [handoff](HANDOFF.md).\n\n> Hi Acme Co team,\n>\n> I’m following up on the proposal we sent last week. Have you had a chance to review it with your team?\n>\n> Best,  \n> Acme Test Co team\n\nNot sent: AGENTS.md’s Publication gate and the [follow-up-lead skill](.<redacted>.md) require human review and sending.\n\nNo Acme history was available. Assumed email reply, a team greeting/signature, and a brief review-status question. `/verify` wasn’t run because shell commands are prohibited. No commit attempted.\nhook: Stop\nhook: Stop Completed\ntokens used\n39,495\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 60,
+            "stdout": "Created `notes/measure.md` with exactly one line: `measurement ok`. Recorded completion in `HANDOFF.md`.\n\nAssumption: create the file because it didn’t exist.\n\nConfirmed the content by reading it back. `/verify` was not run because shell commands are prohibited. No commit attempted.\n",
+            "stderr": "Reading additional input from stdin...\nOpenAI Codex v0.160.0\n--------\nworkdir: /private<tmp>/with-guide\nmodel: gpt-6.1-sol\nprovider: openai\napproval: on-request\nsandbox: workspace-write [workdir, /tmp, $TMPDIR]\nreasoning effort: medium\nreasoning summaries: none\nsession id: <redacted>\n--------\nuser\nYou are working unattended on your own copy of Acme Test Co's company folder.\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\nFollow AGENTS.md in this folder.\n\nThe task:\nAdd one line saying \"measurement ok\" to notes/measure.md.\nhook: SessionStart\nhook: SessionStart Completed\nhook: UserPromptSubmit\nhook: UserPromptSubmit Completed\ncodex\nI’ll read the company context, then add the requested line. No installed skill fits this small edit, so I’ll use ordinary file assistance.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\n`notes/measure.md` doesn’t exist, so I’ll create it with the single requested line. I’ll use the handoff skill to record completion. `/verify` requires a shell command, which your instructions prohibit, so I’ll report it as unrun.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nCreated `notes/measure.md` with exactly one line: `measurement ok`. Recorded completion in `HANDOFF.md`.\n\nAssumption: create the file because it didn’t exist.\n\nConfirmed the content by reading it back. `/verify` was not run because shell commands are prohibited. No commit attempted.\nhook: Stop\nhook: Stop Completed\ntokens used\n23,894\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "ok",
+            "seconds": 104,
+            "stdout": "Saved the [follow-up draft](/private<tmp><redacted>.md) and HANDOFF.md.\n\n> Hi Acme team,\n>\n> Following up on the proposal we sent last week. What is the next step in your team’s review?\n>\n> Best,  \n> Acme Test Co\n\nNot sent: AGENTS.md’s Publication gate requires human review and sending. No shell commands or commits were attempted; verification was not run.\n\nAssumptions: email is appropriate, a team greeting is suitable, and asking about the review process is the next useful step. No Acme history or proposal was available locally.\n",
+            "stderr": "Reading additional input from stdin...\nOpenAI Codex v0.160.0\n--------\nworkdir: /private<tmp>/control\nmodel: gpt-6.1-sol\nprovider: openai\napproval: on-request\nsandbox: workspace-write [workdir, /tmp, $TMPDIR]\nreasoning effort: medium\nreasoning summaries: none\nsession id: <redacted>\n--------\nuser\nYou are working unattended on your own copy of Acme Test Co's company folder.\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\nFollow AGENTS.md in this folder.\n\nThe task:\nFollow up with the lead Acme Co about the proposal we sent last week.\nhook: SessionStart\nhook: SessionStart Completed\nhook: UserPromptSubmit\nhook: UserPromptSubmit Completed\ncodex\nI’ll use the follow-up-lead skill to read Acme Co’s history and draft a follow-up for review.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (failed)\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nThe folder has no Acme Co notes or proposal, and the lead register is empty. I’ll base the draft on your statement that the proposal went out last week, without inventing details.\n\nThe Publication gate in [AGENTS.md](AGENTS.md) keeps this as a draft for a person to send. I’m also using the handoff skill to record the remaining review step.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nSaved the [follow-up draft](/private<tmp><redacted>.md) and HANDOFF.md.\n\n> Hi Acme team,\n>\n> Following up on the proposal we sent last week. What is the next step in your team’s review?\n>\n> Best,  \n> Acme Test Co\n\nNot sent: AGENTS.md’s Publication gate requires human review and sending. No shell commands or commits were attempted; verification was not run.\n\nAssumptions: email is appropriate, a team greeting is suitable, and asking about the review process is the next useful step. No Acme history or proposal was available locally.\nhook: Stop\nhook: Stop Completed\ntokens used\n30,520\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 51,
+            "stdout": "Created `notes/measure.md` with one line: `measurement ok`.\n\nAssumption: create the file because it was missing. Appended the required handoff. No shell commands or commits were run.\n",
+            "stderr": "Reading additional input from stdin...\nOpenAI Codex v0.160.0\n--------\nworkdir: /private<tmp>/control\nmodel: gpt-6.1-sol\nprovider: openai\napproval: on-request\nsandbox: workspace-write [workdir, /tmp, $TMPDIR]\nreasoning effort: medium\nreasoning summaries: none\nsession id: <redacted>\n--------\nuser\nYou are working unattended on your own copy of Acme Test Co's company folder.\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\nFollow AGENTS.md in this folder.\n\nThe task:\nAdd one line saying \"measurement ok\" to notes/measure.md.\nhook: SessionStart\nhook: SessionStart Completed\nhook: UserPromptSubmit\nhook: UserPromptSubmit Completed\ncodex\nI’ll read the repository guidance, then add the requested line and record the handoff without running shell commands.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\n`notes/measure.md` does not exist, so I’ll create it with the single requested line. I’m using the handoff skill to append the required session record.\nhook: PreToolUse\nhook: PreToolUse Completed\nmcp: node_repl/js started\nmcp: node_repl/js (completed)\nhook: PostToolUse\nhook: PostToolUse Completed\ncodex\nCreated `notes/measure.md` with one line: `measurement ok`.\n\nAssumption: create the file because it was missing. Appended the required handoff. No shell commands or commits were run.\nhook: Stop\nhook: Stop Completed\ntokens used\n24,145\n"
+          }
+        }
+      }
+    },
+    {
+      "id": "kimi",
+      "cliVersion": "0.39.0",
+      "verdict": "unverified",
+      "reason": "the guide routing run ended as error",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "kimi \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "error",
+            "seconds": 6,
+            "stdout": "",
+            "stderr": "kimi version 0.39.0\nerror: failed to run prompt: provider.auth_error: 403 Your current subscription does not have access to Kimi Code right now. Upgrade your plan to keep coding with Kimi Code: https://www.kimi.com/code/#pricing\nSee log: <home>/.kimi-code/logs/kimi-code.log\n"
+          },
+          "verify": {
+            "status": "error",
+            "seconds": 5,
+            "stdout": "",
+            "stderr": "kimi version 0.39.0\nerror: failed to run prompt: provider.auth_error: 403 Your current subscription does not have access to Kimi Code right now. Upgrade your plan to keep coding with Kimi Code: https://www.kimi.com/code/#pricing\nSee log: <home>/.kimi-code/logs/kimi-code.log\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          },
+          "verify": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          }
+        }
+      }
+    },
+    {
+      "id": "kiro",
+      "cliVersion": "kiro-cli 2.25.0",
+      "verdict": "partial",
+      "reason": "1 of 2 tasks passed with the guide (control 1 of 2)",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "kiro-cli \"chat\" \"--no-interactive\" \"--agent\" \"alacran\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "kiro-cli \"chat\" \"--no-interactive\" \"--agent\" \"alacran\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "kiro-cli \"chat\" \"--no-interactive\" \"--agent\" \"alacran\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "kiro-cli \"chat\" \"--no-interactive\" \"--agent\" \"alacran\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "ok",
+            "seconds": 52,
+            "stdout": "I'll start by reading the relevant files to understand the company context and the Acme Co lead before drafting anything.Now let me read the key files in parallel — the company ontology, the leads record, the follow-up-lead skill, and any client notes:The leads file is nearly empty and there are no client notes for Acme Co. Let me check if there's anything in the notes/inbox or other notes directories:The leads record is empty (`records: []`) and there are no client notes for Acme Co anywhere. Per the `follow-up-lead` skill, when there's no real history I should say so rather than inventing detail — but I can still write a genuine, contextually grounded message using what I do know about the company.\n\nThe task says \"the proposal we sent last week\" — the current date is 2026-10-04, so the proposal was sent approximately 2026-09-27. The company sells a B2B Enterprise Revenue Engine with ACV pricing. The contact is at \"Acme Co\" (a separate company from \"Acme Test Co\", which is our company).\n\nThe **Publication gate** fires here — this is a message leaving the company. I will draft it in full and leave it for a human to send.\n\nLet me write the follow-up note to the clients folder and update the leads record:Now add Acme Co to the leads record so it exists as a tracked lead:The file write to `records/funnel/leads.yaml` is being blocked by a permission check in this environment. The follow-up draft was successfully saved. Now write the HANDOFF:The environment is blocking writes to files other than the one already created (the client note was created successfully). The follow-up draft is saved. Here's a full summary of what was done and what still needs human action:\n\n---\n\n## What happened\n\n**Skill used:** `/follow-up-lead`\n\n**Draft written to:** `<redacted>.md`\n\nThe draft message:\n\n> **Subject:** Re: Acme Test Co proposal — quick question\n>\n> Hi [Name],\n>\n> I wanted to check in on the proposal I sent over last week. Rather than ask you to re-read it, I have one specific question: is the main blocker right now on your side legal/security review, or is it more about internal budget sign-off?\n>\n> The reason I ask is that we can move pretty differently depending on the answer — we have a security questionnaire package ready to go that typically cuts compliance turnaround in half, and if it's a budget conversation I'd rather have that directly with you than leave it in a document.\n>\n> Happy to jump on a 20-minute call this week if that's easier. I have Tuesday and Thursday afternoon free — does either work?\n>\n> [Sender name]\n\n---\n\n## Publication gate\n\nThis message must be reviewed and sent by a human. Fill in `[Name]` and `[Sender name]` before sending.\n\n## What needs a human to do next\n\n1. Review the draft and send it via your email client or CRM.\n2. Add Acme Co to `records/funnel/leads.yaml` — that file is currently empty:\n   ```yaml\n   records:\n     - id: acme-co\n       name: Acme Co\n       stage: proposal_sent\n       last_contacted_at: '2026-09-27'\n       notes: Proposal sent approx 2026-09-27. Follow-up drafted 2026-10-04.\n   ```\n3. Write a `HANDOFF.md` — the file didn't exist and the environment blocked creating it in this session.\n\n---\n\n## Assumptions made\n\n- \"Last week\" = proposal sent approximately 2026-09-27 (the session date is 2026-10-04).\n- No conversation history for Acme Co existed anywhere in the repo (leads.yaml was `records: []`, `notes/clients/` was empty). The message is grounded in the company's known sales process bottleneck (enterprise security/compliance turnaround) rather than invented detail specific to Acme Co.\n- \"Acme Co\" the lead is distinct from \"Acme Test Co\" our company.\n- Contact name and sender name at Acme Co are unknown — left as placeholders.\n",
+            "stderr": "[tool] status: Failed\n\n[tool] Reading listing with-guide\n[tool] status: Completed\n\n[tool] Reading company.yaml:1, leads.yaml:1, SKILL.md:1, listing clients\n[tool] status: Completed\n\n[tool] Reading leads.yaml:1, README.md:1\n[tool] status: Completed\n\n[tool] Creating 2026-10-04-follow-up.md\n[tool] status: Completed\n\n[tool] Editing leads.yaml\n[denied] tool permission approval is not supported in non-interactive mode. Use --trust-all-tools to auto-approve.\n[tool] status: Failed\n\n[tool] Creating leads.yaml\n[denied] tool permission approval is not supported in non-interactive mode. Use --trust-all-tools to auto-approve.\n[tool] status: Failed\n\n[tool] Creating HANDOFF.md\n[denied] tool permission approval is not supported in non-interactive mode. Use --trust-all-tools to auto-approve.\n[tool] status: Failed\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 10,
+            "stdout": "`notes/measure.md` doesn't exist yet. I'll create it with the required line.Done. Created `notes/measure.md` containing the single line `measurement ok`.\n\n**Assumption:** The file didn't exist, so I created it rather than appending to an existing one. If it was meant to be appended to a pre-existing file that wasn't present, that's a gap to flag — but creating a new note in `notes/` is the appropriate action per the repo's structure.\n",
+            "stderr": "\n[tool] Reading listing notes\n[tool] status: Completed\n\n[tool] Creating measure.md\n[tool] status: Completed\n"
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "ok",
+            "seconds": 43,
+            "stdout": "Let me start by reading the relevant files to understand the current state of things.Now let me read the key files in parallel — the company ontology, the funnel leads, the follow-up-lead skill, and any existing client notes.The leads.yaml is empty (just `records: []`) and there are no client notes. Let me also check the notes/inbox and any docs for any context on Acme Co.The repo is essentially a fresh install — no client notes, no decision records, no lead data for Acme Co. As the skill instructions say, I should not invent detail. I'll do what the skill says: acknowledge there's no real history to draw on, add Acme Co to the funnel as a `proposal_sent` lead (since the task states a proposal was sent last week), create a client note folder, and draft an honest first-contact-post-proposal follow-up that doesn't fake familiarity.\n\nFirst, let me update `records/funnel/leads.yaml` to record the lead properly.Now I'll write the lead record, create a client notes folder with a note, and write the follow-up draft. I'll do these in parallel.I can't write files in this environment due to a permissions constraint (non-interactive mode without `--trust-all-tools`). I'll produce everything as output so it's ready for the human reviewer to apply.\n\n---\n\n## Gate: Publication row\n\nThis task involves drafting a follow-up message that, once approved, will leave the company (sent to Acme Co). Per AGENTS.md §6 — **Publication row**: I've written it in full below. It's a draft. Do not send it until a human says so.\n\n---\n\n## What I found\n\nThe repo is a fresh install. There is:\n- No entry for Acme Co in `records/funnel/leads.yaml` (file contains only `records: []`)\n- No client notes in `notes/clients/`\n- No prior conversation history, meeting notes, or proposal content recorded anywhere\n\nThe task says \"the proposal we sent last week\" (relative to 2026-10-04, so approximately 2026-09-27), so I'm treating that as the only known fact.\n\nPer the follow-up-lead skill: when there's no real history to draw on, don't fake familiarity — draft an honest post-proposal follow-up instead.\n\n---\n\n## Files to create/update\n\n**1. `records/funnel/leads.yaml`** — replace current content with:\n\n```yaml\nrecords:\n  - id: acme-co\n    name: Acme Co\n    stage: proposal_sent\n    last_contacted_at: '2026-09-27'   # assumed: \"last week\" relative to 2026-10-04\n    notes: Proposal sent 2026-09-27. No response received as of 2026-10-04. Follow-up drafted.\n```\n\n**2. Create `<redacted>.md`** — new file:\n\n```markdown\n# Acme Co — Follow-up note\n\nDate: 2026-10-04\nStage: proposal_sent\n\n## Context\n\nProposal sent approximately 2026-09-27 (one week ago). No reply received.\nNo prior meeting notes or conversation history exists in this repo.\n\n## Follow-up draft\n\nSee draft below. Awaiting human approval before sending.\n\n## What we don't know yet\n\n- Contact name and email at Acme Co\n- What was in the proposal (scope, pricing tier, timeline)\n- Whether Acme Co has internal stakeholders who need to review it\n- Any concerns or questions raised before the proposal was sent\n\nThese should be recorded here once known.\n```\n\n**3. Create `<redacted>.md`** — the actual draft message:\n\n```markdown\n# Follow-up draft — Acme Co proposal\n# Status: DRAFT — do not send until approved\n# Date: 2026-10-04\n\n---\n\nSubject: Re: Proposal — following up\n\nHi [Name],\n\nI wanted to follow up on the proposal I sent over last week. I know these things\nhave a way of landing in a busy week, so no pressure — I just want to make sure\nyou have everything you need to move it forward internally.\n\nIf anything in the proposal needs clarifying, or if the scope or terms aren't\nquite right for where you are right now, I'd rather hear that than leave you\nguessing. A quick call this week or next would work, or just reply here if\nthere's a specific question.\n\n[Your name]\n\n---\n\n# Notes for the sender\n\n- Fill in [Name] before sending.\n- If you remember a specific concern Acme Co raised before the proposal was sent,\n  replace the second parag\n… (cut)",
+            "stderr": "[tool] status: Failed\n\n[tool] Reading listing control\n[tool] status: Completed\n\n[tool] Reading company.yaml:1, leads.yaml:1, SKILL.md:1, listing clients\n[tool] status: Completed\n\n[tool] Reading listing inbox, listing decisions, listing company\n[tool] status: Completed\n\n[tool] Reading leads.yaml:1\n[tool] status: Completed\n\n[tool] Editing leads.yaml\n[denied] tool permission approval is not supported in non-interactive mode. Use --trust-all-tools to auto-approve.\n[tool] status: Failed\n\n[tool] Creating leads.yaml\n[denied] tool permission approval is not supported in non-interactive mode. Use --trust-all-tools to auto-approve.\n[tool] status: Failed\n"
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 9,
+            "stdout": "`notes/measure.md` doesn't exist yet. I'll create it with the required line.Done. `notes/measure.md` now contains the single line `measurement ok`.\n\n**Assumptions made:**\n- The file didn't exist, so I created it rather than appending to an existing file.\n- No header or metadata was added — the task asked for one line, so the file contains exactly one line.\n",
+            "stderr": "\n[tool] Reading listing notes\n[tool] status: Completed\n\n[tool] Creating measure.md\n[tool] status: Completed\n"
+          }
+        }
+      }
+    },
+    {
+      "id": "google-antigravity",
+      "cliVersion": "1.2.16",
+      "verdict": "unverified",
+      "reason": "the guide routing run ended as timeout",
+      "commands": [
+        {
+          "task": "routing",
+          "side": "guide",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "verify",
+          "side": "guide",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "routing",
+          "side": "control",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nFollow up with the lead Acme Co about the proposal we sent last week.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        },
+        {
+          "task": "verify",
+          "side": "control",
+          "line": "agy \"-p\" \"You are working unattended on your own copy of Acme Test Co's company folder.\\nNobody is watching this session, so don't stop to ask questions: make reasonable choices, and list what you assumed at the end.\\nYou can read, search and edit files here. You can't run shell commands, and you must not try to commit — when you finish, Alacrán saves your changes for a person to review, keep or discard.\\nFollow AGENTS.md in this folder.\\n\\nThe task:\\nAdd one line saying \\\"measurement ok\\\" to notes/measure.md.\" \"--output-format\" \"text\" \"--mode\" \"accept-edits\" \"--dangerously-skip-permissions\""
+        }
+      ],
+      "runs": {
+        "guide": {
+          "routing": {
+            "status": "timeout",
+            "seconds": 180,
+            "stdout": "I will wait for the research subagent to finish searching the workspace files for Acme Co information.\n",
+            "stderr": ""
+          },
+          "verify": {
+            "status": "ok",
+            "seconds": 36,
+            "stdout": "The requested line has been added to [notes/measure.md](file:///private<tmp>/with-guide/notes/measure.md).\n\nNo installed skill directly matched this operation, so ordinary assistance was used per the guidance in [AGENTS.md](file:///private<tmp>/with-guide/AGENTS.md). While shell commands could not be run to execute `/verify`, the invariants in [scripts/verify.py](file:///private<tmp>/with-guide/scripts/verify.py) were reviewed and are unaffected by this note file. When ready, you can run `/handoff` to record where things stand.\n\n### Assumptions Made\n1. **File existence**: [notes/measure.md](file:///private<tmp>/with-guide/notes/measure.md) did not previously exist; it was assumed that creating the file containing the single line was the desired action.\n2. **Formatting**: Assumed standard newline termination (`measurement ok\\n`) for the added line.\n",
+            "stderr": ""
+          }
+        },
+        "control": {
+          "routing": {
+            "status": "timeout",
+            "seconds": 180,
+            "stdout": "In accordance with the project instructions, I am waiting for the repository explorer subagent to locate the relevant lead notes and proposal history for Acme Co. Once the subagent finishes researching the workspace, I will review the findings and draft the follow-up.\n",
+            "stderr": ""
+          },
+          "verify": {
+            "status": "unavailable",
+            "seconds": 0,
+            "stdout": "",
+            "stderr": "Skipped: two earlier runs ended without an ok result."
+          }
+        }
+      }
+    }
+  ]
+}

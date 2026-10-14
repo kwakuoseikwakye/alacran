@@ -1,0 +1,6 @@
+# Rename to repos.yaml and fill in. Paths are absolute, on this machine.
+# Triage refuses to run without at least one entry.
+repos:
+  - name: example-app
+    path: /Users/you/code/example-app
+    description: What this repo is, in a few words — these words are used for keyword routing

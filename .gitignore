@@ -1,0 +1,27 @@
+node_modules/
+.next/
+.env
+.env.*
+!.env.example
+next-env.d.ts
+.playwright-mcp/
+*.tsbuildinfo
+page-*.png
+.data/
+.superpowers/
+docs/superpowers/
+dist/
+.claude/worktrees/
+.DS_Store
+/state/
+
+# Secrets and signing material must never be committed. The release signing
+# key lives outside this repository (a CI secret or a keychain).
+*.pem
+*.key
+*.p12
+*.enc
+# Anchored to the repo root: templates/company-starter/secrets/ is a real,
+# tracked scaffold folder (it must stay committed).
+/secrets/
+/release/

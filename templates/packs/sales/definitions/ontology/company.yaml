@@ -1,0 +1,55 @@
+meta:
+  version: 1
+  updated: '2026-09-14'
+
+customer:
+  segments:
+    - id: enterprise-buyers
+      name: B2B Enterprise & Mid-Market Accounts
+      job_to_be_done: Modernize operational tooling with predictable procurement and secure vendor compliance
+      alternative: Legacy ERPs, disconnected spreadsheets, and fragmented sales pipelines
+  acquisition:
+    - channel: Outbound Account-Based Outreach
+      notes: Highly personalized outbound sequences to verified decision-makers
+    - channel: Partner Ecosystem & Co-Selling
+      notes: Joint offerings and referrals with trusted industry partners
+
+org:
+  roles:
+    - id: head-of-sales
+      name: VP of Sales & Revenue
+      owns: Revenue targets, sales quota allocation, and enterprise deal negotiation
+    - id: account-executive
+      name: Senior Account Executive
+      owns: Discovery calls, bespoke product demonstrations, and closing deals
+    - id: bdr-outreach
+      name: Business Development Representative
+      owns: Prospect identification, ICP enrichment, and qualified lead generation
+  decisions:
+    - decision: Custom pricing quotes, enterprise discounts & payment terms
+      approver: head-of-sales
+    - decision: Customer contracts, MSAs, SOWs & legal obligations
+      approver: head-of-sales
+    - decision: Deletion or export of CRM customer lead databases
+      approver: head-of-sales
+    - decision: Outbound case studies, customer reference quotes & press releases
+      approver: head-of-sales
+    - decision: Sales engagement platform API keys & CRM credentials
+      approver: head-of-sales
+
+product:
+  offerings:
+    - id: enterprise-solution
+      name: B2B Enterprise Revenue Engine
+      promise: Accelerated sales velocity with automated pipeline tracking and human-in-the-loop contract approvals
+      pricing: Annual Contract Value (ACV) with tiered onboarding
+  value_flow:
+    - step: Prospect Research & ICP Outreach
+      owner: bdr-outreach
+    - step: Solution Discovery & Product Demonstration
+      owner: account-executive
+    - step: §6 Gate Proposal & Contract Signing
+      owner: head-of-sales
+    - step: Customer Handoff to Onboarding
+      owner: account-executive
+  bottleneck: Enterprise legal compliance approval and security questionnaire turnaround
