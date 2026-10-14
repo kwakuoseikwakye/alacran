@@ -50,7 +50,7 @@ disabled and shows "Running…" whenever that lock is held, regardless of what
 started the run.
 
 This is still the only write action in the app — `ai-company-starter-main`
-and `plh-ops` remain read-only in this dashboard.
+and the external team-report agent remain read-only in this dashboard.
 
 ## v3: skill/command browser
 
@@ -144,13 +144,13 @@ problem than this slice solves), and `ingest-context` / `office` (hard
 interactive gates and a persistent background server, respectively, neither
 of which fits "run once, produce a file, exit").
 
-## v9: trigger plh-ops's daily-team-log on demand
+## v9: trigger the external team-report routine on demand
 
-The `plh-ops` card now has a "Run now" button that triggers the exact same
+The external team-report agent card now has a "Run now" button that triggers the exact same
 routine already registered as a nightly (22:00) scheduled task on this
-machine — reading `~/.claude/daily-team-log/config.json`, summarizing the
+machine — reading `~/.claude/team-report/config.json`, summarizing the
 operator's own local Claude Code session history, and committing the
-result to the shared `plh-ops` repo. Unlike every other write action in
+result to the shared team-report repo. Unlike every other write action in
 this app, this one **pushes to a remote shared with the analysis
 agent and teammates** — the confirm dialog discloses this plainly before
 the run starts, since there's no local diff to preview beforehand (the
@@ -162,7 +162,7 @@ and Bash scoped to the exact five command shapes the routine needs — never
 a blanket grant, even though this routine's prompt has no user-field
 interpolation at all (there's nothing here for a user to inject into).
 
-If the machine hasn't run the daily-team-log skill's one-time setup yet,
+If the machine hasn't run the team-report skill's one-time setup yet,
 the button reports that plainly instead of attempting a run.
 
 This slice was deliberately verified with unit tests only, never a real
@@ -174,7 +174,7 @@ ready.
 ## v10: live log streaming for in-flight runs
 
 The email-pipeline poll button, every company-command's "Run" tab, and the
-plh-ops daily-team-log button all now show the growing tail of their log
+external team-report button all now show the growing tail of their log
 file while running, instead of only a static "Running…" label — polled
 the same ~3s interval each already used for its running/idle status, not
 a separate mechanism. No websockets or SSE; it's the same file each
@@ -391,7 +391,7 @@ This is piece 3 of the roadmap. v20 (guided command/workflow discovery,
 possibly formalizing a "plugin" concept) is next, still just named, not
 designed.
 
-## v20: install the daily-team-log workflow
+## v20: install the team-report workflow
 
 The roadmap named v20 "guided command/workflow discovery, possibly
 formalizing the plugin concept." Investigating what's real found that
@@ -400,14 +400,14 @@ page already scans any registered company's `.claude/skills/` and
 `.claude/commands/`) — nothing needed there. "Formalize the plugin
 concept" as a general, reusable packaging format has no existing
 mechanism to build on anywhere in this ecosystem — every real workflow
-(`email-pipeline-agent`'s 6-role email pipeline, `plh-ops`'s
+(`email-pipeline-agent`'s 6-role email pipeline, the external team-report agent's
 `skill-installer`) is bespoke to its own repo. Designing a real
 plugin-packaging format from scratch would be a bigger effort than
 v17-v19 combined, for a population of examples this project deliberately
 keeps at one.
 
 So v20 hand-builds a one-off installer for exactly one workflow instead:
-`plh-ops`'s `daily-team-log` skill, chosen because it's the one workflow
+an external team-report skill, chosen because it's the one workflow
 in this whole ecosystem that was already designed to be portable — its
 own `config.example.json` and self-bootstrapping `Setup.md` already
 auto-detect who's using it and which projects to include, entirely
@@ -418,15 +418,15 @@ originals hardcode both the upstream owner/repo to clone and a fixed set
 of per-teammate report folders — copying them as-is would have pointed a
 new company's daily reports at the upstream shared repo instead of its
 own. The
-"Install daily-team-log" button appears on any `command-set`-kind
+"Install team-report" button appears on any `command-set`-kind
 agent's card that doesn't have it yet; the actual bootstrap (who you
 are, which projects, scheduling) still happens inside Claude Code
 afterward, the same division of labor v19 established for `api-connect`.
 
 **Known, disclosed limitation:** `gather.py`'s config lives at a fixed,
-global, per-machine path (`~/.claude/daily-team-log/config.json`), not
+global, per-machine path (`~/.claude/team-report/config.json`), not
 scoped per-installation — documented in the installed `SKILL.md` itself.
-Only one company's `daily-team-log` can be actively bootstrapped per
+Only one company's `team-report` can be actively bootstrapped per
 machine at a time in this version; fixing that would mean redesigning
 `gather.py`'s config storage, exactly the "generalize the format" work
 this slice deliberately didn't do.
@@ -521,7 +521,7 @@ CLI, so `CompanyCommand` gained an optional `bashPatterns` field — a
 command that declares patterns gets narrowly-scoped `Bash(gog ...)`
 access (exactly the two read-only gog calls, nothing else) instead of a
 blanket disallow, reusing the same scoped-Bash approach v9's
-`daily-team-log` trigger already used. The 5 existing commands omit the
+`team-report` trigger already used. The 5 existing commands omit the
 field and spawn byte-identically to before. And the Skills-page "Run"
 tab, gated to `ai-company-starter-main` only since v21, now opens to any
 `command-set` company — a natural completion of v21's generalization,
@@ -533,7 +533,7 @@ whole-folder copy.
 **Known, disclosed limitation:** `gog`'s auth store is global
 per-machine and `check-inbox` uses `-a auto`, so only one company can
 meaningfully have its own connected Google account active for this
-command at a time — the same shape as v20's `daily-team-log`
+command at a time — the same shape as v20's `team-report`
 config-collision limitation, documented rather than fixed.
 
 This is piece 6 of the roadmap.
@@ -545,8 +545,8 @@ planned as a 4-day push. Day 1 makes a fresh install a clean product
 while the developer's own machine keeps full daily use with zero setup,
 split into three slices:
 
-- **v23 — de-PLH the config.** The 3 example agents (`email-pipeline-agent`,
-  `ai-company-starter-main`, `plh-ops`) were hardcoded in `lib/config.ts`
+- **v23 — de-company-specific config.** The 3 example agents (`email-pipeline-agent`,
+  `ai-company-starter-main`, the external team-report agent) were hardcoded in `lib/config.ts`
   at `~/AI-Native/*` paths. They now load via a testable
   `buildBuiltins(exists)` (`lib/builtin-agents.ts`) **only if their
   directories exist on disk**. On a developer machine they exist → all
@@ -554,8 +554,8 @@ split into three slices:
   unchanged, zero setup. On a fresh install none exist → `AGENTS`/
   `ADAPTERS`/`SKILL_ADAPTERS` are empty → the app starts clean. Their
   bespoke features already gate on `agent.id`, so they simply go dormant
-  when absent — no deletion. Also: the install-daily-team-log button now
-  hides when its `plh-ops` source is absent (no broken action on a fresh
+  when absent — no deletion. Also: the install-team-report button now
+  hides when its external team-report source is absent (no broken action on a fresh
   install), and the two cosmetic "ai-company-starter-main template"
   strings are genericized to "company starter template".
 
@@ -810,7 +810,7 @@ independent of the schedule either way. The control renders only when
 file exists, so a fresh install sees nothing. The displayed state always comes from a real
 `checkLaunchdJob()` read taken after the attempt, never an optimistic
 guess, so a failed unload can never render as "off". Like v2 (Run now),
-v9 (daily-team-log trigger) and v19 (integration status), this is
+v9 (team-report trigger) and v19 (integration status), this is
 deliberately bespoke to one agent id — the population is one; generalise
 if a second scheduled agent ever exists.
 
@@ -967,7 +967,7 @@ says exactly that, rather than guessing. Overclaiming there would make the
 dashboard less trustworthy than saying nothing.
 
 Scoped to `command-set` agents only, same as the existing backup button and
-AI-executor picker — `email-pipeline-agent` and `plh-ops` don't get the
+AI-executor picker — `email-pipeline-agent` and the external team-report agent don't get the
 button, since they aren't company-shaped (no per-company backup remote or
 AI-executor choice in the same sense).
 
@@ -1067,7 +1067,7 @@ slice.
 `--permission-mode default`, an undocumented legacy alias — confirmed
 accepted by the real CLI, but not among the six documented mode values
 (`acceptEdits`, `auto`, `bypassPermissions`, `manual`, `dontAsk`, `plan`).
-Pinned to the real value, `"manual"`. `lib/daily-team-log/trigger-daily-team-log-impl.ts`
+Pinned to the real value, `"manual"`. the team-report trigger module
 has the identical hardcoded string in a separate spawn path — left
 untouched, disclosed not fixed, same shape as other cross-cutting
 findings this project records rather than opportunistically patches.
@@ -1181,12 +1181,12 @@ Terminal" button on every `command-set` agent's card, gated to macOS like
 v35's visible-run option.
 
 Also investigated a second report from the same feedback — a company named
-"PLH Triage" appearing on a freshly-installed second laptop. Traced
+"another internal agent" appearing on a freshly-installed second laptop. Traced
 `lib/data-dir.ts`: the real per-user registry
 (`~/Library/Application Support/Alacrán/companies.json`) is empty by design
 on any machine that hasn't registered a company yet — confirmed directly.
 The dev-mode registry (`.data/companies.json`, gitignored) is the one that
-had "PLH Triage" in it. No code path in `scripts/package-macos.sh` ever
+had "another internal agent" in it. No code path in `scripts/package-macos.sh` ever
 copies `.data/` into a packaged build. Conclusion: not a product bug — it's
 what happens when a whole project checkout (not just a downloaded release)
 travels between machines, since a raw folder copy doesn't honor
@@ -1468,7 +1468,7 @@ this app's existing "don't overclaim" discipline: edges are only ever
 produced for a service a company's *kind* actually supports elsewhere in
 the real UI (`AgentCard`'s show* flags) — a `pipeline` agent
 (`email-pipeline-agent`) gets only a Google/email edge (its one real
-integration), a `report-log` agent (`plh-ops`) gets none at all and
+integration), a `report-log` agent (the external team-report agent) gets none at all and
 renders as a genuinely isolated node, and only `command-set` companies
 get the full github/google/notion trio. Nothing here invents a
 capability the rest of the app doesn't have.
@@ -2102,7 +2102,7 @@ installed-check anywhere. Fixed at all five sites
 appends a plain-language note to the log the Run tab already tails. The
 visible path needs it too: if the terminal launcher never starts, the wrapper
 script's own `trap` never fires and nothing else would free the lock. Only
-`trigger-daily-team-log-impl.ts` already had it.
+the team-report trigger module already had it.
 
 **3. v55's workflow-scope self-heal could not have worked.** It untracked
 `.github/workflows` at the tip and retried the push — but GitHub's check is on
@@ -2401,7 +2401,7 @@ Verified against the real installed CLIs, not docs (v42's rule):
 - `claude mcp login <name>` / `logout <name>` do the OAuth, with `--no-browser` for headless.
 - `codex mcp add` has **no** scope or project flag — machine-global
   `~/.codex/config.toml` only. A fourth instance of the recurring
-  per-machine-global-config shape, after `gog` and `daily-team-log`.
+  per-machine-global-config shape, after `gog` and `team-report`.
 - `agy --help` (Antigravity v1.1.11) has no `mcp` subcommand at all; it has `plugin`.
 - Aider has no MCP. Not installed on the dev machine, so stated as unknown
   rather than asserted.
@@ -2461,7 +2461,7 @@ company's own repo. Also confirmed the button and its guide entry disappear
 when that company is switched to Codex and come back when switched back. No
 `claude mcp login` was run and no model was spawned; the OAuth flow is the
 user's own action against their own accounts. Disposable dirs deleted;
-`email-pipeline-agent` and `plh-ops` confirmed untouched.
+`email-pipeline-agent` and the external team-report agent confirmed untouched.
 
 One real UX finding from that pass, fixed in the same slice: the Address
 field's placeholder was a bare realistic URL, indistinguishable from an
@@ -2746,10 +2746,10 @@ calling the same `registerCompanyImpl`. And a company registered in `next dev`
 is invisible to the installed app on purpose: dev writes the repo's own
 `.data/`, production writes `~/Library/Application Support/Alacrán/`
 (`data-dir.ts`, so an update replacing the bundle can't destroy the registry).
-Registering PLH Triage in the installed app gave it all nine card actions
+Registering another internal agent in the installed app gave it all nine card actions
 immediately, with no change to the repo itself.
 
-Moving `email-pipeline-agent`/`plh-ops` out of `~/AI-Native/` was considered and
+Moving `email-pipeline-agent` and the external team-report agent out of `~/AI-Native/` was considered and
 rejected as a non-solution: their card features are gated by the hardcoded
 `kind` in `builtin-agents.ts`, not by location, so relocating changes nothing
 visible — while breaking the live launchd job (which writes to absolute
@@ -2816,7 +2816,7 @@ Filling the form via `document.querySelector('input[type="checkbox"]')` hit the
 *first* checkbox on the page — the Google-accounts picker on a company card
 behind the open Sheet — not the new one. That picker auto-saves, so it wrote
 and committed `definitions/integrations/google.yaml` into the real
-`plh-triage` repo. Caught immediately, scoped (one commit, one file, not
+another internal repo. Caught immediately, scoped (one commit, one file, not
 pushed), reported, and undone with `git reset --hard HEAD~1` after asking. The
 lesson is narrow and mechanical: **scope every automated selector to the
 dialog under test**, because a page-wide selector in this app can reach live
@@ -3768,7 +3768,7 @@ optional, so a forgotten one vanishes silently instead of failing `tsc`. The
 prop list was compared against what is supplied: 30 props, 24 from the flags
 object and 6 explicit, none missing and none extra. Confirmed again in the
 browser — the single-company panel renders Set up your company, Get Started,
-Install daily-team-log, More, Add more skills, Back up to GitHub, View
+Install team-report, More, Add more skills, Back up to GitHub, View
 ownership, Save avatar and Remove, with the rest correctly Advanced-gated.
 
 **The tree still lists EVERY company**, not only the selected one. Searching for
@@ -5139,7 +5139,7 @@ add` refuse; and a folder this app ran `git init` on has no `user.email` until
 someone sets one, which fails every commit on a fresh machine. The rule was
 already written down twice in this codebase ("a failed commit must not fail the
 update — the files are already correct on disk"); this call site, plus
-`portable-agent-file`, `install-daily-team-log` and `save-google-accounts`, never
+`portable-agent-file`, `install-team-report` and `save-google-accounts`, never
 got it. All four fixed. **Deliberately not moved into `commitFile` itself**,
 which would have been the smaller diff: `save-skill-content-impl` reports commit
 failures to the user on purpose, and swallowing at the chokepoint would make it
@@ -5714,7 +5714,7 @@ file reads per company and no subprocess, which is what makes it safe on a
 `force-dynamic` page (v70).
 
 **It replaces the vendored entries one by one and never the skills directory
-itself** — the user's own skills live in there, and so does `daily-team-log`
+itself** — the user's own skills live in there, and so does `team-report`
 (v20). The consequence, deliberate: a skill upstream has dropped stays in the
 company rather than being deleted, because this code cannot tell an abandoned
 vendored skill from one the user has come to depend on.
@@ -5763,7 +5763,7 @@ the tags matched; the third's stayed, correctly. **Checked before clicking
 anything:** no repo under `~/AI-Native/` has the marker command, so the button
 cannot appear on a real company's card — which is the v66 trap (a page-wide
 selector reaching a live control that writes to a real repo) closed by
-construction rather than by careful aim. `plh-triage` was confirmed untouched
+construction rather than by careful aim. Another internal repo was confirmed untouched
 afterward. 722 tests, `tsc` and `next build` clean.
 
 **Known limitations, disclosed not fixed:** only the marketing pack vendors
@@ -7125,7 +7125,7 @@ run needs `--yolo`, which auto-approves everything. It would therefore enter
 as `enforcesToolScope: false`, which is exactly what the stray-file work above
 makes survivable. Its `PreToolUse` hook can deny (exit 2), but hooks are
 machine-global in `~/.kimi-code/config.toml` — the fifth instance of the
-per-machine-global-config shape after `gog`, `daily-team-log`, `codex mcp` and
+per-machine-global-config shape after `gog`, `team-report`, `codex mcp` and
 Kiro's — and on this machine Orca already manages that file. Two findings that
 would carry over for free: Kimi reads `AGENTS.md` (32 references in the binary;
 `CLAUDE.md` zero), and it reads `.mcp.json`, which `saveMcpServersImpl` already
@@ -7170,7 +7170,7 @@ Kimi's `PreToolUse` hook *can* block a tool call (exit code 2, or a
 `permissionDecision: "deny"` JSON reply), so a real scope is theoretically
 reachable. A scope writer was not built: hooks live only in the machine-global
 `~/.kimi-code/config.toml` — the fifth instance of the per-machine-global-config
-shape after `gog`, `daily-team-log`, `codex mcp` and Kiro's own store — and on a
+shape after `gog`, `team-report`, `codex mcp` and Kiro's own store — and on a
 real machine another tool may already manage that file.
 
 **Flags verified by argument parsing**, which fires before any model call, so
@@ -8550,7 +8550,7 @@ tests write fake agent ids (`a`, `on`, `b`) into the developer's own
 file now injects a collector. **A defaulted writer added to a function whose
 tests already pass is silently a test that writes to real state.**
 
-Two related findings worth keeping, neither fixed here. `plh-engineering`'s
+Two related findings worth keeping, neither fixed here. An internal engineering repo's
 note was committed yet still blocked, because its `session-note.run.json`
 survived the commit — v84 deletes that "best-effort" and here it did not.
 And two of three companies get the STALE intro prompt, which asks the agent
@@ -8925,7 +8925,7 @@ by reading for them.
 
 2. **`AlertDialogContent` had no close button at all** (`components/ui/alert-dialog.tsx`).
    Nine confirmations route through it — Add a starter pack, Install
-   daily-team-log, Back up to GitHub, Remove a company, delete a file, three
+   team-report, Back up to GitHub, Remove a company, delete a file, three
    commit confirmations — and none rendered one. Radix's AlertDialog also
    declines to dismiss on an outside click, by design, so the only ways out were
    Escape and a footer button that a 642px-tall dialog puts below the fold.
@@ -11457,14 +11457,14 @@ ecosystem to build on — every real workflow is bespoke to its own repo,
 and designing one from scratch would be a bigger effort than v17–v19
 combined for a population of examples deliberately kept at one. So v20
 hand-built a one-off installer for exactly one already-portable
-workflow instead: `plh-ops`'s `daily-team-log` skill
-(`lib/install-daily-team-log-impl.ts`) — copies its generic `gather.py`
+workflow instead: an external team-report skill
+(the installer module) — copies its generic `gather.py`
 extractor verbatim, regenerates its `SKILL.md`/`Setup.md` to point at
 the installing company's own repo instead of the upstream shared one (the
 originals hardcode an owner/repo slug and per-teammate folder names), and
 commits the result. **Known, disclosed limitation:** `gather.py`'s
 config is a fixed, global, per-machine path
-(`~/.claude/daily-team-log/config.json`), so only one company's copy can
+(`~/.claude/team-report/config.json`), so only one company's copy can
 be actively bootstrapped per machine at a time — documented in the
 installed `SKILL.md` itself, not fixed in v20. v21 investigated the
 roadmap's remaining "AI-generated ontology entities via a connected
@@ -12058,7 +12058,7 @@ mirroring `saveGoogleAccountsImpl`), plus a `Connect tools` Sheet on the card.
 Verified against the real installed CLIs, not docs: `claude mcp add -s project`
 writes `.mcp.json`, but **`codex mcp add` has no scope flag at all** — it's
 machine-global `~/.codex/config.toml`, the fourth instance of the recurring
-per-machine-global-config shape after `gog` and `daily-team-log` — and `agy`
+per-machine-global-config shape after `gog` and `team-report` — and `agy`
 (v1.1.11) has no `mcp` subcommand whatsoever. So the button is gated on the
 company's executor being Claude Code, which `app/page.tsx` had already
 resolved. **Known, disclosed limitations:** Claude Code only; remote `https://`
@@ -12188,8 +12188,8 @@ per the standing rule about unattended real spawns. The one load-bearing
 unverified assumption is that `claude --chrome "<prompt>"` engages the Chrome
 integration in an interactive session.
 
-**Standing constraint added here:** `daily-team-log` is the maintainer's own
-workflow. It reaches the UI only through the existence-gated `plh-ops` built-in
+**Standing constraint added here:** `team-report` is the maintainer's own
+workflow. It reaches the UI only through the existence-gated external team-report built-in
 and must never arrive in a user's company by scaffolding — pinned by a test in
 `lib/company-template-manifest.test.ts`. Note the gate protects public
 *installs*, not a company folder handed to someone by hand: on the maintainer's
@@ -12302,7 +12302,7 @@ is a different feature (diff-and-approve) and must not be folded into this one.
 stamp to compare: nothing records which pack a company came from, so
 `lib/vendored-skills.ts` matches it by a command only that pack ships and treats
 "no stamp" as behind. **Replace entries one by one, never the containing
-directory** — the user's own skills and `daily-team-log` (v20) live in
+directory** — the user's own skills and `team-report` (v20) live in
 `.claude/skills` too, which also means a skill dropped upstream lingers rather
 than being deleted (the safe direction). `commitFile` now takes
 `string | string[]` so the commit is pathspec-scoped to exactly what was
@@ -13968,3 +13968,12 @@ A fact update that changed nothing no longer leaves a stale review behind.
 - Approving or dropping fact changes now always checks what you were shown, and the messages say which review is still waiting.
 
 Engineering notes: a run of a command with `alsoWrites` (apply-session-facts) that ended with no output change, no owned files and no strays left `<command>.run.json`, which kept claiming its lanes in `pendingClaimedPaths` and diffed company.yaml against a stale `before`, so the next session's edit appeared as a phantom "Apply facts" review committed with the old trailer (making `hasAppliedFacts` refuse the genuine apply). `getCompanyCommandResultImpl` now removes such a record (only for lane commands that are not `requiresLiveSession`, only when git was read and the run lock is free); the headless exit handler re-reads once after releasing the lock, and any later read or the root layout's `listPendingReviews` covers a visible-terminal run. Minors: commit and drop now refuse (`OWNED_CHANGED_MESSAGE`) when owned files exist and no `expectedOwned` was passed; the drop and partial-drop sentences depend on the command and on drop versus whole-review Discard; `prepareSessionNote`'s kept-baseline rewrite runs under `lockReview`; `ownedMatchesExpected` treats a directory (nested repo) like the empty text the review showed, so it can still be skipped as partial. Fix round: the record is removed by a compare-and-delete under the run lock (never one rewritten since it was read); a render-time read only sweeps a record at least 10 minutes old, while the headless exit handler sweeps at once. Known limit: a restart during a visible-terminal run is bounded by that 10-minute age. A live session note whose baseline rewrite cannot get the lock after 10 tries of 100ms refuses with a plain sentence instead of handing the agent a wrong baseline; the automatic path is unchanged. Dropping an apply's decision files now says when nothing is left, and approving never commits a directory in an owned lane.
+
+## Removed the team-report integration (2026-10-14)
+
+The built-in agent for one company's internal team-report workflow, its
+"Run now" and "Install" buttons, its activity adapter and its skill
+installer are gone from the public repo. It was another company's internal
+workflow wired in as a built-in. `ai-company-starter-main` and every
+registered company are unchanged. The earlier entries above that describe the
+integration are kept as history, with its names replaced by neutral wording.

@@ -53,7 +53,6 @@ beforeEach(async () => {
   await write(path.join(coSkills, "copywriting", "SKILL.md"), "old copywriting\n")
   await write(path.join(coSkills, "paywalls", "SKILL.md"), "dropped upstream\n")
   await write(path.join(coSkills, "my-own-skill", "SKILL.md"), "hand-written, do not touch\n")
-  await write(path.join(coSkills, "daily-team-log", "gather.py"), "# installed by v20\n")
   await write(path.join(companyRoot, "definitions", "ontology", "company.yaml"), "name: mine\n")
 })
 
@@ -91,7 +90,7 @@ describe("updateCompanySkillsImpl", () => {
     expect(await readFile(path.join(companyRoot, ".claude", "skills", "UPSTREAM.md"), "utf-8")).toContain("Tag: v2.9.0")
   })
 
-  it("leaves the user's own skill, daily-team-log and their ontology untouched", async () => {
+  it("leaves the user's own skill and their ontology untouched", async () => {
     const updateCompanySkillsImpl = await loadImpl()
 
     await updateCompanySkillsImpl("co", packsRoot, fakeExecFn)
@@ -99,9 +98,6 @@ describe("updateCompanySkillsImpl", () => {
     const coSkills = path.join(companyRoot, ".claude", "skills")
     expect(await readFile(path.join(coSkills, "my-own-skill", "SKILL.md"), "utf-8")).toBe(
       "hand-written, do not touch\n"
-    )
-    expect(await readFile(path.join(coSkills, "daily-team-log", "gather.py"), "utf-8")).toBe(
-      "# installed by v20\n"
     )
     expect(await readFile(path.join(companyRoot, "definitions", "ontology", "company.yaml"), "utf-8")).toBe(
       "name: mine\n"

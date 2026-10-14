@@ -60,7 +60,6 @@ export async function WorkspaceView({
   }
 
   const avatarByAgentId = Object.fromEntries(avatars.map((a) => [a.agentId, a.imageUrl]))
-  const plhOpsExists = agents.some((agent) => agent.id === "plh-ops")
 
   const [activityResults, availableGoogleAccounts, skillResults, pending, runSignals] = await Promise.all([
     getAllActivities(agents, adapters),
@@ -99,7 +98,7 @@ export async function WorkspaceView({
   const cards = await Promise.all(
     activityResults.map(async (result, index) => {
       const latest = mergeAndSortActivities([result])[0] ?? null
-      const flags = await getAgentCardFlags(result.agent, plhOpsExists)
+      const flags = await getAgentCardFlags(result.agent)
       const props = {
         agent: result.agent,
         latestActivity: latest,

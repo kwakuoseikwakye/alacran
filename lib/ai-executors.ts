@@ -383,7 +383,7 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
      * scope. It is not used, and a scope writer was not built, because hooks
      * live only in the machine-global ~/.kimi-code/config.toml — the fifth
      * instance of the per-machine-global-config shape after gog,
-     * daily-team-log, `codex mcp` and Kiro's own store, and on a real machine
+     * `codex mcp` and Kiro's own store, and on a real machine
      * another tool may already own that file.
      */
     enforcesToolScope: false,

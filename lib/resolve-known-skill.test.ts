@@ -37,9 +37,9 @@ async function mockAgents() {
 describe("resolveKnownSkillPath", () => {
   it("resolves a known skill file", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
-    await writeFile(skillFile, "---\nname: plh-dev-team\ndescription: x\n---\n")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
+    await writeFile(skillFile, "---\nname: example-skill\ndescription: x\n---\n")
 
     const { resolveKnownSkillPath } = await import("./resolve-known-skill")
     const result = await resolveKnownSkillPath(skillFile)

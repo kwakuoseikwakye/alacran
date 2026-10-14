@@ -3,10 +3,8 @@ import os from "node:os"
 import { existsSync } from "node:fs"
 import type { Agent, Adapter } from "./adapters/types"
 import { aiCompanyStarterMainAdapter } from "./adapters/ai-company-starter-main"
-import { plhOpsAdapter } from "./adapters/plh-ops"
 import type { SkillAdapter } from "./skills/types"
 import { genericCommandSetSkillAdapter } from "./skills/generic-command-set"
-import { scanSkillsDir } from "./skills/scan-helpers"
 
 const AI_NATIVE_ROOT = path.join(os.homedir(), "AI-Native")
 
@@ -29,18 +27,6 @@ const BUILTIN_DESCRIPTORS: BuiltinDescriptor[] = [
     },
     adapter: aiCompanyStarterMainAdapter,
     skillAdapter: genericCommandSetSkillAdapter,
-  },
-  {
-    agent: {
-      id: "plh-ops",
-      name: "PLH Ops",
-      rootPath: path.join(AI_NATIVE_ROOT, "plh-ops"),
-      kind: "report-log",
-    },
-    adapter: plhOpsAdapter,
-    // plh-ops's skills live under workflow/, not .claude/skills, so the
-    // generic command-set skill adapter doesn't apply.
-    skillAdapter: (agent) => scanSkillsDir(agent.id, path.join(agent.rootPath, "workflow")),
   },
 ]
 

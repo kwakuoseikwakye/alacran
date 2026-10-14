@@ -40,12 +40,12 @@ describe("scanSkillsDir", () => {
     await mkdir(path.join(root, "mystery-skill"), { recursive: true })
     await writeFile(path.join(root, "mystery-skill", "SKILL.md"), "# No frontmatter here\n")
 
-    const entries = await scanSkillsDir("plh-ops", root)
+    const entries = await scanSkillsDir("acme-ops", root)
 
     expect(entries).toEqual([
       {
         id: path.join(root, "mystery-skill", "SKILL.md"),
-        agentId: "plh-ops",
+        agentId: "acme-ops",
         kind: "skill",
         name: "mystery-skill",
         description: "",
@@ -100,7 +100,7 @@ describe("scanCommandsDir", () => {
   })
 
   it("returns an empty array when the commands directory doesn't exist", async () => {
-    const entries = await scanCommandsDir("plh-ops", path.join(root, "does-not-exist"))
+    const entries = await scanCommandsDir("acme-ops", path.join(root, "does-not-exist"))
     expect(entries).toEqual([])
   })
 })

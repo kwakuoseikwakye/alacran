@@ -214,9 +214,8 @@ model provider on your behalf.
 
 - **[`gog`](https://gogcli.sh)** (`brew install gogcli`), a Google API CLI.
   No app job calls it since v99, but it's what `check-inbox` and
-  `triage-email` use when you run them yourself in a terminal, and what the
-  `daily-team-log` workflow reads. Alacrán detects it and walks you through
-  installing it if it's missing.
+  `triage-email` use when you run them yourself in a terminal. Alacrán detects
+  it and walks you through installing it if it's missing.
 - **[GitHub CLI](https://cli.github.com/) (`gh`)**, needed only for the
   optional "back up this company to a private repo" flow.
 
@@ -486,11 +485,6 @@ plainly:
   Minimise the window instead if you want a schedule to keep firing.) A run that was missed fires when the app next
   starts, rather than being skipped for the day. Once a day at a set time is
   all it does; there's no cron expression and no sub-daily interval.
-- **`daily-team-log` is per-machine global.** Its config lives at a single
-  fixed path, so only one company can have a bootstrapped daily-log setup
-  active at a time. Google is different: each company can be assigned its
-  own account (or accounts) now, so this limitation doesn't apply there
-  anymore.
 - **MCP tools are remote-only.** Only remote (`https://`) servers can be
   added from the app — a local, command-launched server is still
   `claude mcp add` in a terminal.

@@ -20,7 +20,7 @@ export default async function ContentSocialPage({ params }: { params: Promise<{ 
   if (!agent) notFound()
 
   const [flags, executor, posts] = await Promise.all([
-    getAgentCardFlags(agent, agents.some((a) => a.id === "plh-ops")),
+    getAgentCardFlags(agent),
     resolveAiExecutorForAgent(agent.id),
     listPosts(agent.rootPath, path.join(COMPANY_COMMANDS_DATA_DIR, agent.id, "make-posts.run.json")),
   ])

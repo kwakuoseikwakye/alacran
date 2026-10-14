@@ -34,9 +34,9 @@ async function mockAgents() {
 describe("saveSkillContentImpl", () => {
   it("writes the file and commits it when the path is a known skill", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
-    await writeFile(skillFile, "---\nname: plh-dev-team\ndescription: old\n---\nold body\n")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
+    await writeFile(skillFile, "---\nname: example-skill\ndescription: old\n---\nold body\n")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
 
@@ -48,14 +48,14 @@ describe("saveSkillContentImpl", () => {
 
     const result = await saveSkillContentImpl(
       skillFile,
-      "---\nname: plh-dev-team\ndescription: new\n---\nnew body\n",
+      "---\nname: example-skill\ndescription: new\n---\nnew body\n",
       fakeExec
     )
 
     expect(result).toEqual({ saved: true, message: "Saved and committed" })
     const written = await readFile(skillFile, "utf-8")
     expect(written).toContain("new body")
-    expect(calls[0]).toEqual(["-C", await realpath(root), "add", "--", path.join("skills", "plh-dev-team", "SKILL.md")])
+    expect(calls[0]).toEqual(["-C", await realpath(root), "add", "--", path.join("skills", "example-skill", "SKILL.md")])
     expect(calls[1][0]).toBe("-C")
   })
 
@@ -89,9 +89,9 @@ describe("saveSkillContentImpl", () => {
 
   it("returns a no-op message when content is unchanged", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
-    const content = "---\nname: plh-dev-team\ndescription: same\n---\nsame body\n"
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
+    const content = "---\nname: example-skill\ndescription: same\n---\nsame body\n"
     await writeFile(skillFile, content)
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
@@ -102,8 +102,8 @@ describe("saveSkillContentImpl", () => {
 
   it("returns a failure message when the commit fails, without throwing", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
     await writeFile(skillFile, "old")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
@@ -118,8 +118,8 @@ describe("saveSkillContentImpl", () => {
 
   it("uses a custom commit message verbatim when provided", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
     await writeFile(skillFile, "old")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
@@ -137,8 +137,8 @@ describe("saveSkillContentImpl", () => {
 
   it("trims whitespace from a custom commit message", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
     await writeFile(skillFile, "old")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
@@ -155,8 +155,8 @@ describe("saveSkillContentImpl", () => {
 
   it("falls back to the default message when customMessage is blank/whitespace-only", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
     await writeFile(skillFile, "old")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")
@@ -173,8 +173,8 @@ describe("saveSkillContentImpl", () => {
 
   it("rejects an overly long custom commit message before writing anything", async () => {
     await mockAgents()
-    await mkdir(path.join(root, "skills", "plh-dev-team"), { recursive: true })
-    const skillFile = path.join(root, "skills", "plh-dev-team", "SKILL.md")
+    await mkdir(path.join(root, "skills", "example-skill"), { recursive: true })
+    const skillFile = path.join(root, "skills", "example-skill", "SKILL.md")
     await writeFile(skillFile, "old")
 
     const { saveSkillContentImpl } = await import("./save-skill-content-impl")

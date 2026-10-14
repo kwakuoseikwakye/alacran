@@ -48,7 +48,7 @@ function AlertDialogOverlay({
 /**
  * **Every modal in this app closes from an X in the top-right corner, and this
  * one used to be the exception.** Nine confirmations route through here — add a
- * starter pack, install daily-team-log, back up to GitHub, remove a company,
+ * starter pack, back up to GitHub, remove a company,
  * delete a file, three commit confirmations — and none of them rendered a close
  * control at all. Radix's AlertDialog also declines to dismiss on an outside
  * click, by design, so the only ways out were Escape and a footer button that a

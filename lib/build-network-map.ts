@@ -32,7 +32,7 @@ export type NetworkMap = { companies: NetworkCompany[]; executorsInUse: AiExecut
  *
  * Only ever produces edges for a service a company's *kind* actually
  * supports elsewhere in this app (see AgentCard's show* flags), rather than
- * inventing a capability that isn't real. A report-log agent (e.g. plh-ops)
+ * inventing a capability that isn't real. A report-log agent
  * has none of those buttons, so it's a genuinely isolated node — that's
  * honest, not a bug.
  *

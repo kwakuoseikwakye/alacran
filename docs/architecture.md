@@ -277,7 +277,6 @@ installs that wrote into the old in-bundle path.
 | `schedules.json` / `schedules-last-run.json` | daily command schedules |
 | `update-check.json` | last update check + cached release info |
 | `company-runs/<agentId>/` | `<id>.run.json`, `<id>.log`, `run.lock`, run scripts |
-| `daily-team-log/` | that job's lock + log |
 
 ---
 

@@ -403,7 +403,7 @@ describe("getConnectStatusImpl", () => {
     it("excludes pipeline/report-log built-ins — only command-set companies can run api-connect or check-notion", async () => {
       const agents: Agent[] = [
         { id: "legacy-pipeline", name: "Legacy Pipeline", rootPath: "/nonexistent", kind: "pipeline" },
-        { id: "plh-ops", name: "PLH Ops", rootPath: "/nonexistent", kind: "report-log" },
+        { id: "ops-log", name: "Ops Log", rootPath: "/nonexistent", kind: "report-log" },
       ]
       const status = await getConnectStatusImpl(noopExec, undefined, async () => agents)
 

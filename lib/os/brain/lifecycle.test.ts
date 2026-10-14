@@ -13,7 +13,7 @@ const input = {
   signals: ["notes/company/digests/2026-09-07-digest.md"],
   claims: [
     { agentId: "acme", commandId: "refresh", touchesDefinitions: true },
-    { agentId: "acme", commandId: "daily-team-log", touchesDefinitions: false },
+    { agentId: "acme", commandId: "weekly-report", touchesDefinitions: false },
   ],
   ontology,
   memories: ["docs/decisions/2026-09-06-releases-repo-token-scope.md"],

@@ -3,11 +3,9 @@ import { ExecutorGapNote } from "@/components/executor-gap-note"
 import { Badge } from "@/components/ui/badge"
 import type { Agent, Activity } from "@/lib/adapters/types"
 import { VerifyButton } from "@/components/verify-button"
-import { DailyTeamLogButton } from "@/components/daily-team-log-button"
 import { RemoveCompanyButton } from "@/components/remove-company-button"
 import { AgentAvatar } from "@/components/agent-avatar"
 import { AgentAvatarForm } from "@/components/agent-avatar-form"
-import { InstallDailyTeamLogButton } from "@/components/install-daily-team-log-button"
 import { UpdateSkillsButton } from "@/components/update-skills-button"
 import { PortableAgentFileButton } from "@/components/portable-agent-file-button"
 import { PortableSkillsButton } from "@/components/portable-skills-button"
@@ -31,10 +29,8 @@ import type { CompanyTerminalStatus } from "@/lib/terminal/sessions"
 import {
   RefreshCw,
   ShieldCheck,
-  FileText,
   PackagePlus,
   ArrowUpCircle,
-  Download,
   FileOutput,
   Share2,
   AtSign,
@@ -55,7 +51,6 @@ type AgentCardProps = {
   latestActivity: Activity | null
   error: string | null
   showVerifyButton?: boolean
-  showDailyTeamLogButton?: boolean
   removable?: boolean
   avatarUrl?: string | null
   showSetupCompanyButton?: boolean
@@ -64,7 +59,6 @@ type AgentCardProps = {
   showOwnershipButton?: boolean
   showVisibleRunOption?: boolean
   integrationStatus: string
-  showInstallDailyTeamLogButton?: boolean
   /** Set only when this company's vendored skills are behind the app's, or still only where Claude Code reads them. */
   skillsUpdate?: { installedTag: string | null; bundledTag: string; movesLocation?: true }
   showPortableAgentFileButton?: boolean
@@ -119,7 +113,6 @@ export function AgentCard({
   latestActivity,
   error,
   showVerifyButton,
-  showDailyTeamLogButton,
   removable,
   avatarUrl,
   showSetupCompanyButton,
@@ -127,7 +120,6 @@ export function AgentCard({
   showBackupButton,
   showOwnershipButton,
   integrationStatus,
-  showInstallDailyTeamLogButton,
   skillsUpdate,
   showPortableAgentFileButton,
   showPortableSkillsButton,
@@ -246,13 +238,6 @@ export function AgentCard({
       node: <VerifyButton />,
       blurb: "Checks this company's folder for what it expects to find, and reports what is missing.",
     }),
-    ...when(showDailyTeamLogButton, {
-      band: "run",
-      icon: FileText,
-      tone: "lime",
-      node: <DailyTeamLogButton />,
-      blurb: "Writes today's report from what the team actually did. You approve it before it saves.",
-    }),
     // Setting up / editing the company lives at the top of Company profile.
     ...when(availablePacks && availablePacks.length > 0, {
       band: "knows",
@@ -277,13 +262,6 @@ export function AgentCard({
       blurb: skillsUpdate?.movesLocation
         ? "Moves the ready-made skills to the folder every AI reads. Your own work is untouched."
         : "Replaces the ready-made skills with newer ones. Your own work is untouched.",
-    }),
-    ...when(showInstallDailyTeamLogButton, {
-      band: "knows",
-      icon: Download,
-      tone: "amber",
-      node: <InstallDailyTeamLogButton agentId={agent.id} companyName={agent.name} />,
-      blurb: "Installs the daily-team-log skill here, pointed at this company's own repo.",
     }),
     ...when(showPortableAgentFileButton, {
       band: "knows",

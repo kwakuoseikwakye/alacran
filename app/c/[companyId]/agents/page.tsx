@@ -35,7 +35,7 @@ export default async function AgentsPage({ params }: { params: Promise<{ company
   const result = (await getAllActivities([agent], adapters).catch(() => []))[0]
   const latest = result ? mergeAndSortActivities([result])[0] ?? null : null
   const flags = result
-    ? await getAgentCardFlags(agent, allAgents.some((a) => a.id === "plh-ops")).catch(() => null)
+    ? await getAgentCardFlags(agent).catch(() => null)
     : null
   const readiness = flags?.showAiExecutorPicker
     ? readinessMap(await aiExecutorStatusesImpl().catch(() => []))

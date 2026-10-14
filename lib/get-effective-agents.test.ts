@@ -65,21 +65,21 @@ describe("get-effective-agents", () => {
   it("drops a registered company whose id collides with a static agent id, instead of overwriting it", async () => {
     // ./config's AGENTS/ADAPTERS/SKILL_ADAPTERS are existence-gated against
     // real ~/AI-Native/* directories (see lib/builtin-agents.ts) — this test
-    // needs a REAL static "plh-ops" entry to collide with, so it must mock
+    // needs a REAL static "static-ops" entry to collide with, so it must mock
     // ./config explicitly rather than assume one exists on whatever machine
     // happens to be running the suite (true on this repo's own dev machine,
     // false on a clean checkout/CI runner).
-    const realStaticPlhOps = { id: "plh-ops", name: "PLH Ops", rootPath: "/real/plh-ops", kind: "report-log" as const }
+    const realStatic = { id: "static-ops", name: "Static Ops", rootPath: "/real/static-ops", kind: "report-log" as const }
     const realAdapter = async () => []
     const realSkillAdapter = async () => []
     vi.doMock("./config", () => ({
-      AGENTS: [realStaticPlhOps],
-      ADAPTERS: { "plh-ops": realAdapter },
-      SKILL_ADAPTERS: { "plh-ops": realSkillAdapter },
+      AGENTS: [realStatic],
+      ADAPTERS: { "static-ops": realAdapter },
+      SKILL_ADAPTERS: { "static-ops": realSkillAdapter },
     }))
     vi.doMock("./companies-registry", () => ({
       getRegisteredCompanies: async () => [
-        { id: "plh-ops", name: "Imposter Ops", rootPath: "/fake/imposter" },
+        { id: "static-ops", name: "Imposter Ops", rootPath: "/fake/imposter" },
       ],
     }))
     const { getEffectiveAgents, getEffectiveAdapters, getEffectiveSkillAdapters } = await import(
@@ -88,15 +88,15 @@ describe("get-effective-agents", () => {
     const { AGENTS, ADAPTERS, SKILL_ADAPTERS } = await import("./config")
 
     const agents = await getEffectiveAgents()
-    const matching = agents.filter((a) => a.id === "plh-ops")
+    const matching = agents.filter((a) => a.id === "static-ops")
     expect(matching).toHaveLength(1)
-    expect(matching[0]).toEqual(AGENTS.find((a) => a.id === "plh-ops"))
+    expect(matching[0]).toEqual(AGENTS.find((a) => a.id === "static-ops"))
     expect(agents).toEqual(AGENTS)
 
     const adapters = await getEffectiveAdapters()
-    expect(adapters["plh-ops"]).toBe(ADAPTERS["plh-ops"])
+    expect(adapters["static-ops"]).toBe(ADAPTERS["static-ops"])
 
     const skillAdapters = await getEffectiveSkillAdapters()
-    expect(skillAdapters["plh-ops"]).toBe(SKILL_ADAPTERS["plh-ops"])
+    expect(skillAdapters["static-ops"]).toBe(SKILL_ADAPTERS["static-ops"])
   })
 })

@@ -2,7 +2,6 @@ import path from "node:path"
 import type { Agent } from "./adapters/types"
 import { companyOntologyExists } from "./company-ontology-exists"
 import { getIntegrationStatus } from "./get-integration-status"
-import { dailyTeamLogInstalled } from "./daily-team-log-installed"
 import { getVendoredSkillsUpdate } from "./vendored-skills"
 import { needsPortableAgentFile } from "./portable-agent-file"
 import { needsPortableSkills } from "./portable-skills"
@@ -36,7 +35,6 @@ export type CredentialRowFlag = { credentialKey: string; label: string; source: 
 /** Everything AgentCard needs that has to be read off the disk. */
 export type AgentCardFlags = {
   showVerifyButton: boolean
-  showDailyTeamLogButton: boolean
   removable: boolean
   showSetupCompanyButton: boolean
   showEditCompanyButton: boolean
@@ -44,7 +42,6 @@ export type AgentCardFlags = {
   showOwnershipButton: boolean
   showVisibleRunOption: boolean
   integrationStatus: string
-  showInstallDailyTeamLogButton: boolean
   skillsUpdate?: { installedTag: string | null; bundledTag: string }
   showPortableAgentFileButton: boolean
   showPortableSkillsButton: boolean
@@ -85,13 +82,9 @@ export type AgentCardFlags = {
  * folder the app doesn't manage, rather than needing to be excluded one at a
  * time as someone remembers.
  */
-export async function getAgentCardFlags(
-  agent: Agent,
-  plhOpsExists: boolean
-): Promise<AgentCardFlags> {
+export async function getAgentCardFlags(agent: Agent): Promise<AgentCardFlags> {
   const isAiCompanyStarterMain = agent.id === "ai-company-starter-main"
-  const isPlhOps = agent.id === "plh-ops"
-  const isRegisteredCompany = !["ai-company-starter-main", "plh-ops"].includes(agent.id)
+  const isRegisteredCompany = agent.id !== "ai-company-starter-main"
   const isCommandSet = agent.kind === "command-set"
   // A folder the user added that follows none of this app's conventions.
   // Open in Terminal is the ONLY action it gets.
@@ -101,8 +94,6 @@ export async function getAgentCardFlags(
   const hasOntology = isCommandSet && (await companyOntologyExists(agent.rootPath))
   const needsCompanySetup = isCommandSet && !hasOntology
   const integrationStatus = await getIntegrationStatus(agent)
-  const showInstallDailyTeamLogButton =
-    plhOpsExists && isCommandSet && !(await dailyTeamLogInstalled(agent.rootPath))
   // Three small file reads, no subprocess (see lib/vendored-skills.ts).
   const skillsUpdate = isCommandSet
     ? ((await getVendoredSkillsUpdate(agent.rootPath, PACKS_ROOT)) ?? undefined)
@@ -134,7 +125,6 @@ export async function getAgentCardFlags(
 
   return {
     showVerifyButton: isAiCompanyStarterMain,
-    showDailyTeamLogButton: isPlhOps,
     removable: isRegisteredCompany,
     showSetupCompanyButton: needsCompanySetup,
     showEditCompanyButton: hasOntology,
@@ -142,7 +132,6 @@ export async function getAgentCardFlags(
     showOwnershipButton: isCommandSet,
     showVisibleRunOption,
     integrationStatus,
-    showInstallDailyTeamLogButton,
     skillsUpdate,
     showPortableAgentFileButton,
     showPortableSkillsButton,

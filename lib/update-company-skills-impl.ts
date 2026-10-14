@@ -70,7 +70,7 @@ export async function updateCompanySkillsImpl(
     await mkdir(target, { recursive: true })
 
     // Replace the vendored entries one by one, NEVER the whole skills directory:
-    // the user's own skills live in there too, and so does daily-team-log (v20).
+    // the user's own skills live in there too.
     // A skill dropped upstream therefore lingers in the company rather than
     // being deleted — the safe direction, since this code cannot tell an
     // abandoned vendored skill from one the user has come to rely on.

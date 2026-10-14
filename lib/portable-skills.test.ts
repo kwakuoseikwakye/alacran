@@ -49,16 +49,15 @@ describe("commandToSkillMarkdown", () => {
 })
 
 describe("planPortableSkills", () => {
-  it("plans to move commands and a user's own skill, and to leave app-owned ones", async () => {
+  it("plans to move commands and a user's own skill", async () => {
     await put(".claude/commands/verify.md", CMD)
     await put(".claude/skills/mine/SKILL.md", "---\nname: mine\n---\n")
-    await put(".claude/skills/daily-team-log/SKILL.md", "---\nname: daily-team-log\n---\n")
 
     const plan = await planPortableSkills(root, packs)
 
     expect(plan.copyCommands).toEqual(["verify"])
     expect(plan.copySkills).toEqual(["mine"])
-    expect(plan.leftInPlace).toEqual(["daily-team-log"])
+    expect(plan.leftInPlace).toEqual([])
     expect(plan.removeLegacy).toEqual([".claude/commands/verify.md", ".claude/skills/mine"])
     expect(plan.clashes).toEqual([])
   })
@@ -132,14 +131,13 @@ describe("planPortableSkills", () => {
 })
 
 describe("previewPortableSkillsImpl", () => {
-  it("lists what would move and what would stay, and writes nothing", async () => {
+  it("lists what would move, and writes nothing", async () => {
     vi.mocked(getEffectiveAgents).mockResolvedValue([{ id: "acme", name: "Acme", rootPath: root, kind: "command-set" }] as never)
     await put(".claude/commands/verify.md", CMD)
-    await put(".claude/skills/daily-team-log/SKILL.md", "---\nname: daily-team-log\n---\n")
 
     const preview = await previewPortableSkillsImpl("acme", packs)
 
-    expect(preview).toEqual({ ok: true, move: ["verify"], keep: ["daily-team-log"] })
+    expect(preview).toEqual({ ok: true, move: ["verify"], keep: [] })
     expect(await exists(".agents")).toBe(false)
     expect(await exists(".claude/commands/verify.md")).toBe(true)
   })

@@ -28,7 +28,7 @@ import type { SyncReport } from "./skills/sync-agent-skills"
  *
  * Left where they are, and reported: skills the app installed and keeps up to
  * date (vendored packs, replaced wholesale on update, so a moved copy would be
- * orphaned), `daily-team-log` (its own text points at its .claude path), and any
+ * orphaned), and any
  * folder that is a link to somewhere outside the company (a commands folder
  * shared across repos: deleting through it would change every repo that uses it).
  * Until the shipped packs move too, vendored skills stay Claude Code and Kiro only.
@@ -36,7 +36,6 @@ import type { SyncReport } from "./skills/sync-agent-skills"
 
 const LEGACY_COMMANDS = ".claude/commands"
 const LEGACY_SKILLS = ".claude/skills"
-const LEAVE_IN_PLACE = new Set(["daily-team-log"])
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/
 
 /**
@@ -109,7 +108,7 @@ export async function planPortableSkills(rootPath: string, packsRoot: string): P
     if (generated.has(name)) continue
     const legacyDir = path.join(rootPath, ...LEGACY_SKILLS.split("/"), name)
     if (!(await pathExists(path.join(legacyDir, "SKILL.md")))) continue
-    if (LEAVE_IN_PLACE.has(name) || (await isAppManagedSkillPath(rootPath, path.join(legacyDir, "SKILL.md"), packsRoot))) {
+    if (await isAppManagedSkillPath(rootPath, path.join(legacyDir, "SKILL.md"), packsRoot)) {
       plan.leftInPlace.push(name)
       continue
     }
