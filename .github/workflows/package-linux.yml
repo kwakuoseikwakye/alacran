@@ -153,7 +153,7 @@ jobs:
         # to protect against it. Its whole reason for existing is to help when
         # the publish fails; it must not be able to cause that.
         continue-on-error: true
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Alacran-deb-${{ env.TARGET_TAG }}
           # The .sig too: a .deb salvaged from here and attached by hand is
