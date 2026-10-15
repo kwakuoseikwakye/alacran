@@ -1,35 +1,220 @@
-# Design system: the receipt book (website v5)
+---
+name: Alacrán website (v6)
+description: One calm, light page with one accent: the company as plain files, an AI that drafts, a human who approves.
+colors:
+  ground: "#f4f2ee"
+  sheet: "#ffffff"
+  ink: "#17181c"
+  ink-2: "#4a4c55"
+  ink-3: "#5c5e67"
+  rule: "#e3dfd7"
+  rule-strong: "#d2cdc2"
+  scorpion-red: "#d6202f"
+  scorpion-red-hover: "#b61a28"
+  marker-red: "#a81424"
+  red-wash: "#fbe9eb"
+  slab-red: "#e22a3f"
+  added-wash: "#e6f0e8"
+  added-ink: "#1f5a35"
+typography:
+  display:
+    fontFamily: "Onest, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
+    fontSize: "clamp(2.4rem, 4.2vw, 3.85rem)"
+    fontWeight: 300
+    lineHeight: 1.06
+    letterSpacing: "-0.036em"
+  headline:
+    fontFamily: "Onest, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "clamp(1.9rem, 3.7vw, 3.1rem)"
+    fontWeight: 300
+    lineHeight: 1.08
+    letterSpacing: "-0.032em"
+  title:
+    fontFamily: "Onest, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1.22rem"
+    fontWeight: 500
+    lineHeight: 1.25
+    letterSpacing: "-0.015em"
+  body:
+    fontFamily: "Onest, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "1rem"
+    fontWeight: 400
+    lineHeight: 1.6
+  lede:
+    fontFamily: "Onest, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "clamp(1.1rem, 1.5vw, 1.3rem)"
+    fontWeight: 400
+    lineHeight: 1.5
+  label:
+    fontFamily: "JetBrains Mono, ui-monospace, SF Mono, Menlo, monospace"
+    fontSize: "0.78rem"
+    fontWeight: 500
+rounded:
+  sm: "8px"
+  md: "10px"
+  lg: "16px"
+  xl: "24px"
+spacing:
+  gutter: "clamp(20px, 4vw, 48px)"
+  section: "clamp(56px, 8vw, 112px)"
+  wrap: "1200px"
+components:
+  button-primary:
+    backgroundColor: "{colors.scorpion-red}"
+    textColor: "{colors.sheet}"
+    rounded: "{rounded.md}"
+    padding: "0 22px"
+    height: "46px"
+  button-primary-hover:
+    backgroundColor: "{colors.scorpion-red-hover}"
+  button-secondary:
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.md}"
+    padding: "0 22px"
+    height: "46px"
+  card:
+    backgroundColor: "{colors.sheet}"
+    textColor: "{colors.ink-2}"
+    rounded: "{rounded.md}"
+    padding: "22px"
+  cta-card:
+    backgroundColor: "{colors.ink}"
+    textColor: "{colors.sheet}"
+    rounded: "{rounded.xl}"
+  commit-note:
+    backgroundColor: "{colors.red-wash}"
+    textColor: "{colors.marker-red}"
+    rounded: "{rounded.sm}"
+    padding: "12px 14px"
+---
 
-Derived from the shipped `landing/v5.css`, `landing/v4.js` (the behaviour script keeps its old name) and `landing/build-site.py`. Applies to the public website only, not the desktop app.
+# Design System: Alacrán website (v6)
 
-## World
-A duplicate (carbon-copy) receipt book on a green desk blotter. Chosen from a design-direction exploration on 2026-10-13, replacing the first redesign. It maps to the product on purpose: the white original is what you asked for, the canary and pink copies are the company record and its history, the rubber APPROVED stamp is the human gate, and the red printed serial number is the record's identity.
+Applies to the public website (`landing/`), not the desktop app. Derived from the shipped `landing/v6.css`, `landing/v6.js` and the generated `landing/index.html`; `landing/build-site.py` emits every page.
 
-## Palette
-- Desk `--desk #22362c` (blotter green), `--desk-2 #182820`, `--desk-3 #2f4a3c`.
-- Sheets: paper `#f7f7f2`, canary `#f5e68c`, pink `#f3bfcd`, powder blue `#bdd9e6`.
-- Print ink `--ink #15192b`; typed text in carbon violet `--carbon #2c3490`; printed serial and stamp red `--serial #c42b2b`.
-- Context tokens `--fg/--fg-2/--fg-3/--rule/--accent/--on` flip between desk and sheet, so components never hard-code a colour.
+## Overview
 
-## Type
-- Display: Big Shoulders Display 900, uppercase, a print-shop condensed gothic. Headlines carry a carbon offset (two shadow copies in the next sheet colours) that registers into place as they reveal.
-- Body and form labels: Libre Franklin (the form-printer's gothic). Typed values, serials, captions: Special Elite.
-- All three are self-hosted in `landing/fonts/`.
+**Creative North Star: "The Calm Ledger"**
 
-## Motion grammar
-CSS driven by numbers `v4.js` sets; every loop holds still under `prefers-reduced-motion` and the nav's Pause motion control.
-- `--s` pinned hero: example receipt slips and taped app crops drift on the desk, lean toward the pointer, then converge into one file copy as the book fades.
-- Reveals: blocks rise out of a soft blur; headline words ride up out of a mask while the carbon copy registers.
-- APPROVED / YOURS stamps slam once when they enter view (SVG roughen filter `#rough`).
-- Loops: benefit scenes, department copies that open on hover, company books swapping, the agent stamp rack, tour auto-play with binder-tab progress, label-tape ticker.
-- Easing: `--ease`, `--pop`, `--loop`; no bounce, no stock ease-in-out.
+One page that says what Alacrán is in a single read: a large light headline, one illustration of the mechanism (company files, an agent task, a diff, a human approval), one primary action. The reference was pinned by the owner on 2026-10-15 as laravel.com's clean look and hero animation, with the existing motion kept but quieter. It replaced the receipt-book world (v5), which the owner found to have "a lot going on".
+
+The ground is warm grey, content sits on white sheets with hairline warm rules, ink is near-black, and the only chroma is the scorpion red from the desktop logo. Depth is a single soft shadow and borders. Everything else is whitespace: sections are separated by one rule and generous padding, not by boxes, tickers or badges.
+
+**Key Characteristics:**
+- Light display type (weight 300) with tight tracking; weight 500 for titles; JetBrains Mono only for file paths, commands and small captions.
+- One accent. Red marks the primary action, the memory slab, focus, and the approve moment; deep red is the text-on-grey variant.
+- Four plain columns, hairline-topped list rows and split rows instead of card grids on the home page.
+- One memorable moment: the isometric hero stack (one slab per department, a red memory slab on top).
+- The desktop app's red scorpion (`landing/logo.png`, generated by `scripts/generate-logo.py`) is the mark, at the left of the nav and footer.
+
+## Colors
+
+A warm-neutral page with one scorpion-red voice.
+
+### Primary
+- **Scorpion Red** (`{colors.scorpion-red}`): fills the Download button, tour-tab progress line, focus ring, "on" states in the department and agent demos.
+- **Scorpion Red, pressed** (`{colors.scorpion-red-hover}`): hover of the primary button; also the approve flash in the hero.
+- **Marker Red** (`{colors.marker-red}`): red as text on grey or white: text links, "go" links, selection text, active side-nav item, the commit note.
+- **Slab Red** (`{colors.slab-red}`): the top face of the hero's memory slab only (with its own darker side faces inline in the SVG).
+
+### Neutral
+- **Warm Ground** (`{colors.ground}`): page background and the inset fill of file rows.
+- **White Sheet** (`{colors.sheet}`): menus, cards, the screenshot frame, prompt blocks.
+- **Ink** (`{colors.ink}`): headings, body emphasis, the closing call-to-action card.
+- **Ink 2 / Ink 3** (`{colors.ink-2}`, `{colors.ink-3}`): body copy and captions/meta. Ink 3 is the lightest text allowed on the ground.
+- **Hairline / Strong hairline** (`{colors.rule}`, `{colors.rule-strong}`): section dividers, card borders; the strong value is for button and input borders.
+- **Red Wash** (`{colors.red-wash}`): selected states and the removed line of a diff. **Added Wash / Ink** (`{colors.added-wash}`, `{colors.added-ink}`) are the added line of a diff, used only in that one demo.
+
+### Named Rules
+**The One Red Rule.** Red is the only chroma on the page. If a new element wants a second hue, it uses ink or a neutral instead.
+**The Ink-On-Grey Rule.** Red text on the ground uses Marker Red, never the fill red; the fill red is for backgrounds and lines.
+
+## Typography
+
+**Display and body:** Onest (variable, 100 to 900, self-hosted `landing/fonts/onest.woff2`, with a system-sans fallback stack)
+**Mono:** JetBrains Mono (self-hosted `landing/fonts/jetbrainsmono.woff2`) for paths, commands, file names and small tags only.
+
+**Character:** Quiet and light. Large type is thin and tightly tracked; hierarchy comes from size and weight steps (300 to 500 to 600), not from colour or case.
+
+### Hierarchy
+- **Display** (300, `clamp(2.4rem, 4.2vw, 3.85rem)`, 1.06, -0.036em): the home h1 only, one block per sentence.
+- **Headline** (300, `clamp(1.9rem, 3.7vw, 3.1rem)`, 1.08, -0.032em): section h2 and page h2. Inner-page h1 runs larger (`clamp(2.3rem, 5vw, 4rem)`).
+- **Title** (500, 1.2 to 1.22rem, 1.25): feature and step headings. Prose h2 is weight 400 at `clamp(1.5rem, 2.4vw, 1.95rem)`; prose h3 is 600 at 1.1rem.
+- **Body** (400, 1rem, 1.6): paragraphs in Ink 2; prose measure capped at 72ch, FAQ answers at 62ch.
+- **Lede** (400, 1.1 to 1.3rem, 1.5, Ink 2): under headlines, max 31 to 38em.
+- **Label** (JetBrains Mono 500, 0.78rem, Ink 3): file paths, download-format tags, prompt captions. Small sans labels (600, 0.84rem) head footer and docs-nav columns.
+
+### Named Rules
+**The Light Display Rule.** Headings above 1.5rem are weight 300 (or 400 in prose) with negative tracking; bold display type is not part of this system.
+**The Mono Is Paths Rule.** JetBrains Mono names things on disk or things to type. It is never used as a decorative label style.
+
+## Layout
+
+A single 1200px content wrap with a fluid gutter (`clamp(20px, 4vw, 48px)`), centred. The home hero is a two-column grid (1.02fr copy, 1fr illustration) vertically centred. Sections are `clamp(56px, 8vw, 112px)` tall with a single 1px hairline between neighbours; the closing dark card removes that line. Home sections use: four equal columns (features, how it works, with a numbered circle on a hairline), hairline-topped department rows (name, sentence, link), 50/50 split rows with a small white visual, a sticky-heading FAQ grid. Inner pages use a docs grid of a 232px side nav, a prose column (72ch) and an optional 196px on-page contents, both sticky.
+
+Breakpoints actually used: 1100px (4 columns to 2, contents rail hidden), 900px (nav collapses to a toggle, grids to one column), 720px (single column, hero art enlarged and clipped, the diff card replaces the SVG card and stamp), 480px (full-width action buttons). Body uses `overflow-x: clip`.
+
+## Elevation & Depth
+
+Mostly flat with borders. A single soft shadow (`0 1px 2px rgba(23,24,28,.05), 0 8px 24px -8px rgba(23,24,28,.12)`) lifts menus, the screenshot frame, split-row visuals and a hovered pack card. Dialogs carry a larger shadow (`0 30px 80px -20px rgba(23,24,28,.35)`) over a 50% ink backdrop. The hero's depth is geometric, not shadowed: isometric slabs with light, mid and dark faces.
+
+### Named Rules
+**The One Shadow Rule.** Use the single soft shadow or none. No hard offset shadows, no glow on text or cards.
+
+## Shapes
+
+10px is the working radius (`{rounded.md}`): buttons, cards, prompt blocks, spaces and agent rows. Menus and the small commit note use 12px and 8px; the screenshot frame, visuals, packs and dialogs use 16px; the closing call-to-action card uses 24px (18px on phones). Pills (999px) appear only on catalogue chips. Borders are 1px hairlines; the one 2px line is the active tour-tab underline. The numbered circles on steps are the only circles besides window dots.
 
 ## Components
-Cloth-spine nav with red stitch line, embossed label-tape ticker, binder-tab tour with a taped print, bento form cells, colored department copies, perforated how-it-works line, company books, typed file copy, stamp rack, closing tear-off receipt, desk footer with a stencil wordmark. Every section is a sheet with a punched-hole perforation along its top edge; inner pages reuse the same classes and cycle white, canary and pink.
 
-## Do not
-- Do not add testimonials, counts or benchmarks (none exist).
-- Do not return to a cream page with a black mono-label grid: that is the look this replaced.
-- Do not load fonts from a CDN at runtime.
-- Do not write an em dash in HTML or CSS (`test_landing.py` fails on it).
-- Do not put `overflow-x` on `body`: it makes the body a scroll container and silently breaks the sticky hero.
+### Buttons
+- **Shape:** 10px radius, 46px minimum height, 22px side padding, weight 500, 0.98rem.
+- **Primary:** Scorpion Red fill, white text; hover darkens to the pressed red.
+- **Secondary:** white sheet, strong hairline border; hover darkens the border to Ink 3. On the dark card it becomes transparent with a 35% white border.
+- **Press:** `translateY(1px)`. **Focus:** 2px red outline, 3px offset on every focusable.
+- **Download menu:** the primary button is a `details` summary with a caret; its sheet menu lists Mac Apple Silicon, Mac Intel and Linux with mono format tags.
+
+### Cards / Containers
+- White sheet, 1px hairline, 10px radius (16px for visuals, packs and the screenshot frame), 22 to 28px padding, soft shadow only on visuals, frames and hover. Home sections avoid cards in favour of hairline rows.
+
+### Navigation
+- Sticky on the ground colour; a hairline appears once scrolled. Scorpion mark and wordmark (weight 600, -0.02em) at left, four text links and a Guides menu in Ink 2, red Download at right. Below 900px the links fold behind a 44px toggle.
+
+### Hero illustration (signature)
+- Generated inline SVG from `hero_art()` in `build-site.py`: five isometric slabs, four departments in white and light grey, one red company-memory slab on top carrying the white scorpion mark. Slabs rise in once; then a 10s loop runs: a dashed red line flows, an agent chip travels along it (SMIL), a diff card and an APPROVED stamp land, an output line returns. The Pause animation control and `prefers-reduced-motion` settle it on the finished frame; pointer movement drifts the art a few pixels.
+
+### Tour, FAQ, diff demo
+- Tabs with a red underline that fills as an auto-advance timer; screenshots in a white frame with window dots and a visible "sample company" disclosure. FAQ is plain `details` rows with a plus that rotates to a minus. The diff/commit demos use red wash for removed and green wash for added.
+
+### Motion
+- Easing is `cubic-bezier(.16, 1, .3, 1)` throughout. Blocks reveal by rising 18px out of a 5px blur; headline words ride up from a mask. Hover movements are 3 to 8px translations. Reduced motion zeroes durations and shows end states.
+
+## Do's and Don'ts
+
+### Do:
+- **Do** keep one primary action per view, in Scorpion Red.
+- **Do** use the scorpion raster (`landing/logo.png`, produced by `scripts/generate-logo.py`) as the mark; never redraw it. Size it by width with `height: auto`.
+- **Do** keep every font self-hosted in `landing/fonts/`.
+- **Do** end every generated page body with the Buy Me a Coffee widget script.
+- **Do** rebuild generated pages from `landing/` with `python3 build-site.py && python3 build-md.py && python3 test_landing.py`; edit `build-site.py` and `docs/website-copy.md`, never the generated HTML.
+- **Do** give every shipping raster a provenance note, and label screenshots as the sample company.
+
+### Don't:
+- **Don't** add testimonials, customer counts or benchmarks; none exist (see PRODUCT.md).
+- **Don't** load fonts from a CDN at runtime.
+- **Don't** write an em dash in HTML or CSS; `test_landing.py` fails on it.
+- **Don't** put `overflow-x` on `body` as hidden; it makes the body a scroll container and breaks sticky elements. The shipped value is `overflow-x: clip`.
+- **Don't** return to the receipt-book look (green blotter, carbon copies, condensed gothic, stamps on every section) or to a cream page with a mono-label grid.
+- **Don't** scatter floating chips, tickers, number strips or decorative badges around sections.
+- **Don't** introduce a second accent hue.
+
+## Open questions
+
+- **Typeface history.** The first v6 build used Geist, which the design detector flags as overused. On 2026-10-15 the owner asked for a less common face, so the site now uses Onest (text) and JetBrains Mono (paths), both variable and self-hosted. Change them only through the `@font-face` rules and `--sans`/`--mono`. The tracking values (-0.036em on the hero headline, -0.032em on section headings) were tuned on Geist; re-check them after any further swap.
+
+## Not canonized (defects the build carries)
+
+- The `→` characters in "go" links and menu footers are text glyphs used as arrows; not a rule for new surfaces.
+- The Buy Me a Coffee widget script sets its own colour (`#FF5F5F`) and a third-party button outside the palette; it is required but not part of the system.
+- `landing/og.png` still shows the old look; the tour uses interim screenshots.

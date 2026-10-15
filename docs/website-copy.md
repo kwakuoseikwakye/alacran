@@ -1173,7 +1173,7 @@ Status: Existing published policy retained below, not rewritten. Preserve its ef
 
 ### Website copy — retained published policy
 
-Privacy / Effective September 19, 2026
+Privacy / Effective October 15, 2026
 
 # Your data stays close.
 
@@ -1194,6 +1194,10 @@ Alacrán uses credentials managed by your operating system or the connected tool
 ## Analytics and updates
 
 Alacrán does not require behavioral advertising or a hosted user profile. The application may check for available software updates. Requests made by connected AI tools and services are governed by those providers.
+
+## This website
+
+The Alacrán website shows a Buy Me a Coffee support button. Loading it makes your browser send a request, which includes your IP address, to buymeacoffee.com, and that provider handles it under its own privacy policy. The button appears on this website only. The Alacrán app does not load it.
 
 ## Your choices
 

@@ -14,7 +14,7 @@ Summarize recent activity, work waiting for review, and the three issues I shoul
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Choose a department and a concrete task.
 
@@ -36,7 +36,7 @@ Saving a draft and sending it are separate steps. Check the workflow before taki
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Keep your company knowledge useful.
 
@@ -62,7 +62,7 @@ Local background work depends on the app, computer, and required connections bei
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Use the assistant your way.
 
@@ -72,7 +72,7 @@ For technical work, Advanced mode exposes terminals, agent workspaces, skills, a
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Switch companies deliberately.
 

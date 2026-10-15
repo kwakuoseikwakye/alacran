@@ -26,7 +26,7 @@ SECTIONS = [
 
 BLOCK = {"h1": "# ", "h2": "## ", "h3": "### ", "p": "", "small": "", "div": "", "article": "",
          "section": "", "pre": "", "li": "- ", "footer": "", "header": ""}
-SKIP_CLASS = ("v2-guide-nav",)
+SKIP_CLASS = ("v2-guide-nav", "side", "toc")
 
 
 class Main(HTMLParser):

@@ -1,4 +1,4 @@
-Departments / Content & social
+[Home](https://www.alacran.app/) / [Departments](https://www.alacran.app/#departments) / Content & social
 
 # Turn what your business knows into content worth sharing.
 

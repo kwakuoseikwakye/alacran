@@ -38,9 +38,8 @@ DOWNLOAD_LABEL = "Download Alacrán"
 # Files live in screens/ as <name>.webp (full) and <name>-1200.webp; sizes are
 # read from the files. The detail crop (fractions left, top, right, bottom) is
 # what a phone shows, because a whole desktop window at 360px is unreadable;
-# build_details() cuts it to <name>-detail.webp. Sample-company shots carry the
-# copy's disclosure. Every shot comes from a throwaway example company, never a
-# real workspace, so each carries it.
+# build_details() cuts it to <name>-detail.webp. Every shot comes from a throwaway
+# example company, never a real workspace, so each carries the copy's disclosure.
 SAMPLE = "Example company · Sample data"
 SHOTS = {
     "content": ("Content and social screen with approved post drafts for an example company", SAMPLE, (.22, .11, .71, .96)),
@@ -170,6 +169,23 @@ def read_pages(src: str) -> list[dict]:
 
 # ---------------------------------------------------------------- pieces
 
+BRAND = ('<a class="brand" href="/" aria-label="Alacrán home">'
+         '<img src="/logo.png" width="34" height="35" alt=""><span>Alacrán</span></a>')
+BMC = ('<script data-name="BMC-Widget" data-cfasync="false" src="https://cdnjs.buymeacoffee.com/1.0.0/widget.prod.min.js" '
+       'data-id="alacran" data-description="Support me on Buy me a coffee!" data-message="" data-color="#FF5F5F" '
+       'data-position="Right" data-x_margin="18" data-y_margin="18"></script>')
+SIDE = [("Guides", [("/getting-started", "Get started"), ("/how-to-use", "How to use"),
+                    ("/docs", "Documentation"), ("/integrations", "Integrations")]),
+        ("Departments", [("/departments/customers", "Customers"), ("/departments/finances", "Finances"),
+                         ("/departments/content", "Content &amp; social"), ("/departments/messages", "Messages")]),
+        ("Explore", [("/use-cases", "Use cases"), ("/templates", "Starter packs")])]
+LEGAL_SIDE = [("Legal", [("/privacy", "Privacy"), ("/terms", "Terms")])]
+LEGAL = ("/privacy", "/terms")
+GALLERY = {"/templates": "packs", "/use-cases": "cases"}
+# Departments with no dedicated screenshot borrow the app screen that honestly shows their work.
+HERO_SHOTS.update({"/departments/customers": "departments", "/departments/messages": "approvals"})
+
+
 def dl_menu(cls: str = "") -> str:
     items = "".join(
         f'<a href="{DL}{f}" download><strong>{n}</strong><small>{d}</small><span class="tag">.{f.rsplit(".", 1)[1]}</span></a>'
@@ -186,18 +202,18 @@ def nav(route: str) -> str:
     links = "".join(f'<a href="{h}"{cur(h, route)}>{label}</a>' for h, label in NAV)
     on = ' class="is-current"' if any(h == route for h, *_ in GUIDES) else ""
     guides = "".join(f'<a href="{h}"{cur(h, route)}><strong>{label}</strong><small>{d}</small></a>' for h, label, d in GUIDES)
-    return f"""<header class="nav" id="top">
-  <a class="brand" href="/" aria-label="Alacrán home"><i class="mk" aria-hidden="true"></i><span>Alacrán</span></a>
-  <nav class="nav-links" id="navlinks" aria-label="Main navigation">{links}<details class="guides"><summary{on}>Guides<span class="caret" aria-hidden="true"></span></summary><div class="menu">{guides}</div></details><button class="motion-toggle" type="button">Pause motion</button></nav>
+    return f"""<header class="nav" id="top"><div class="wrap nav-in">
+  {BRAND}
+  <nav class="nav-links" id="navlinks" aria-label="Main navigation">{links}<details class="guides"><summary{on}>Guides<span class="caret" aria-hidden="true"></span></summary><div class="menu">{guides}</div></details></nav>
   {dl_menu("dl-nav")}
   <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu"><span></span><span></span></button>
-</header>"""
+</div></header>"""
 
 
-FOOTER = """<footer class="foot">
+FOOTER = f"""<footer class="foot"><div class="wrap">
   <div class="foot-top">
     <div class="foot-brand">
-      <a class="brand" href="/"><i class="mk" aria-hidden="true"></i><span>Alacrán</span></a>
+      {BRAND}
       <p class="foot-tag">Your business knowledge. Your AI. Your workspace.</p>
       <p>Alacrán brings business records, AI workflows, and human review together on your desktop.</p>
     </div>
@@ -205,12 +221,11 @@ FOOTER = """<footer class="foot">
       <div><h2>Product</h2><a href="/#features">Features</a><a href="/templates">Starter packs</a><a href="/integrations">Integrations</a><a href="/use-cases">Use cases</a></div>
       <div><h2>Departments</h2><a href="/departments/customers">Customers</a><a href="/departments/finances">Finances</a><a href="/departments/content">Content &amp; social</a><a href="/departments/messages">Messages</a></div>
       <div><h2>Resources</h2><a href="/getting-started">Get started</a><a href="/how-to-use">How to use</a><a href="/docs">Documentation</a><a href="https://github.com/kwakuoseikwakye/alacran-releases" target="_blank" rel="noreferrer">GitHub</a></div>
-      <div><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:contact@alacran.app">Contact</a></div>
+      <div><h2>Company</h2><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href="mailto:contact@alacran.app">Contact</a><a href="https://www.buymeacoffee.com/alacran" target="_blank" rel="noreferrer">Buy me a coffee</a></div>
     </nav>
   </div>
-  <p class="foot-note">Free app for macOS and Linux. Connected AI and third-party services may have separate charges.</p>
-  <p class="foot-word" aria-hidden="true">ALACRÁN</p>
-</footer>"""
+  <div class="foot-base"><p>Free app for macOS and Linux. Connected AI and third-party services may have separate charges.</p></div>
+</div></footer>"""
 
 
 def cta_row(s: str) -> str | None:
@@ -236,7 +251,7 @@ def lone_link(s: str) -> bool:
 
 def prompt(label: str, quotes: list[str]) -> str:
     q = "".join(f"<p>{inl(x.strip('“”'))}</p>" for x in quotes)
-    return f'<figure class="prompt" data-tilt><figcaption>{e(label)}</figcaption><blockquote>{q}</blockquote></figure>'
+    return f'<figure class="prompt"><figcaption>{e(label)}</figcaption><blockquote>{q}</blockquote></figure>'
 
 
 def table(rows: list[list[str]]) -> str:
@@ -273,6 +288,8 @@ def render_flow(bl: list[dict]) -> str:
                 out.append(prompt(m[1], [m[2]]))
             elif m := re.match(r"^(Eyebrow|Disclosure): \*\*(.+)\*\*$", s):
                 out.append(f'<p class="{m[1].lower()}">{inl(m[2])}</p>')
+            elif m := re.match(r"^\*\*(Try asking):\*\* (.+)$", s):
+                out.append(prompt(m[1], [m[2]]))
             elif m := re.match(r"^\*\*([^*]+?):\*\* (.+)$", s):
                 out.append(f'<p class="lab"><span>{inl(m[1])}</span> {inl(m[2])}</p>')
             else:
@@ -325,10 +342,8 @@ def lead_bold(b: dict):
 def cards(groups: list[tuple[str, list[dict]]]) -> str:
     out = []
     for n, (title, body) in enumerate(groups):
-        badge = ""
-        if m := re.match(r"^(\d+)\. (.+)$", title):
-            badge, title = f'<span class="num">{m[1].zfill(2)}</span>', m[2]
-        out.append(f'<article class="card" data-tilt style="--i:{n}">{badge}<h3>{inl(title)}</h3>{render_flow(body)}</article>')
+        title = re.sub(r"^\d+\. ", "", title)
+        out.append(f'<article class="card" style="--i:{n}"><h3>{inl(title)}</h3>{render_flow(body)}</article>')
     cols = "cols-2" if len(groups) in (2, 4) else "cols-3"
     return f'<div class="cards {cols}">{"".join(out)}</div>'
 
@@ -357,21 +372,40 @@ def section_body(bl: list[dict]) -> str:
         return render_flow(bl[:leads[0]]) + cards(groups) + render_flow(tail)
     if len(bl) > 1 and all(b["t"] == "p" and lone_link(b["s"]) for b in bl):
         return '<div class="next">' + "".join(
-            f'<a class="next-card" data-tilt href="{re.search(r"`([^`]+)`", b["s"])[1]}"><span>{e(re.search(r"[*][*](.+?)[*][*]", b["s"])[1])}</span><b aria-hidden="true">→</b></a>'
+            f'<a class="next-card" href="{re.search(r"`([^`]+)`", b["s"])[1]}"><span>{e(re.search(r"[*][*](.+?)[*][*]", b["s"])[1])}</span><b aria-hidden="true">→</b></a>'
             for b in bl) + "</div>"
     return render_flow(bl)
 
 
-# ---------------------------------------------------------------- 3D visuals
+def groups_of(bl: list[dict]):
+    """Blocks -> (intro, [(title, body)]), grouping on h3 or on bold lead-ins."""
+    h3s = [i for i, b in enumerate(bl) if b["t"] == "h3"]
+    if len(h3s) >= 2:
+        return bl[:h3s[0]], [(bl[i]["s"], bl[i + 1:(h3s[k + 1] if k + 1 < len(h3s) else len(bl))]) for k, i in enumerate(h3s)]
+    leads = [i for i, b in enumerate(bl) if lead_bold(b)]
+    out = []
+    for k, i in enumerate(leads):
+        title, rest = lead_bold(bl[i])
+        out.append((title, ([{"t": "p", "s": rest}] if rest else []) + bl[i + 1:(leads[k + 1] if k + 1 < len(leads) else len(bl))]))
+    return bl[:leads[0]] if leads else bl, out
 
-def stack(labels: list[str], top: str | None = None) -> str:
-    """Layered glass panes floating in depth, labelled with the page's own sections."""
-    panes = [f'<div class="pane" style="--z:{n}"><small>{n + 1:02d}</small><b>{inl(label)}</b><i></i><i class="short"></i></div>'
-             for n, label in enumerate(labels[:4])]
-    if top:
-        panes.append(f'<div class="pane pane-top" style="--z:{len(panes)}"><small>Draft for review</small><b>{e(top)}</b><span class="pane-btns"><em>Approve</em><em>Ask for changes</em></span></div>')
-    return f'<div class="stage" aria-hidden="true"><div class="stack"><div class="floor"></div>{"".join(panes)}</div></div>'
 
+def split(bl: list[dict], level: str):
+    idx = [i for i, b in enumerate(bl) if b["t"] == level]
+    pre = bl[:idx[0]] if idx else bl
+    return pre, [(bl[i], bl[i + 1:(idx[k + 1] if k + 1 < len(idx) else len(bl))]) for k, i in enumerate(idx)]
+
+
+def head_of(bl: list[dict]) -> tuple[str, list[dict]]:
+    h2 = next(b for b in bl if b["t"] == "h2")
+    return f'<h2 data-split>{inl(h2["s"])}</h2>', [b for b in bl if b is not h2]
+
+
+def sec_head(title: str, intro: list[dict]) -> str:
+    return f'<div class="sec-head reveal">{title}{render_flow(intro)}</div>'
+
+
+# ---------------------------------------------------------------- screenshots
 
 NOTAB, LAZY = ' tabindex="-1"', ' loading="lazy"'
 SCREENS = HERE / "screens"
@@ -418,264 +452,144 @@ def shot_img(name: str, lazy: bool = True) -> str:
 
 
 def zoom(name: str) -> str:
-    """Opens the full screenshot in the page's dialog (v4.js)."""
+    """Opens the full screenshot in the page's dialog (v6.js)."""
     return (f'<button type="button" class="zoom" data-full="/screens/{name}.webp" data-alt="{e(SHOTS[name][0])}">'
             f'View full screenshot</button>')
 
 
-def shot3d(name: str, cls: str = "") -> str:
-    return (f'<figure class="shot {cls}" data-scroll3d><div class="shot-frame"><div class="bar"><i></i><i></i><i></i><span>Alacrán</span></div>'
-            f'{shot_img(name, lazy=cls != "shot-hero")}</div>'
+WINDOW = '<div class="bar"><i></i><i></i><i></i><span>Alacrán</span></div>'
+
+
+def shot_fig(name: str, lazy: bool = True) -> str:
+    return (f'<figure class="shot reveal"><div class="shot-frame">{WINDOW}{shot_img(name, lazy)}</div>'
             f'<figcaption class="shot-foot"><span class="disclosure">{e(SHOTS[name][1])}</span>{zoom(name)}</figcaption></figure>')
 
 
-CHIPS = [  # x%, y%, tilt, depth, extra class, label, title, line (illustrative, shown as "Example company")
-    (10, 25, -6, 1.0, "need", "Messages", "Customer inquiry", "Reply waiting for you"),
-    (77, 76, -4, 0.8, "red", "Draft for review", "Customer follow-up", "Approve or ask for changes"),
-    (62, 11, 4, 1.3, "img", "Company memory", "What your agents read", "memory-detail"),
-    (36, 90, 5, 1.1, "img", "Finances", "Cash and runway", "finances-detail"),
-    (88, 22, 6, 1.5, "", "Decision", "Keep pricing simple", "docs/decisions/"),
-    (11, 78, 4, 1.2, "", "Session notes", "What changed this week", "notes/company/sessions/"),
-    (30, 12, -4, 0.9, "", "Calendar", "Supplier call on Tuesday", "Prep notes ready"),
-    (63, 90, -5, 1.4, "img", "Content", "Drafts to review", "content-detail"),
-    (93, 50, 3, 0.7, "far", "Chat", "Can you send the invoice?", "From a connected chat"),
-    (5, 51, -3, 0.9, "far", "Skill", "/digest", "A weekly summary"),
-    (76, 33, 5, 1.0, "far", "Briefing", "What needs you today", "3 items"),
+# ---------------------------------------------------------------- hero illustration
+
+C = 0.8660254          # cos 30: the isometric x step
+OX, OY, S = 330, 252, 200   # screen origin of the stack's top corner, slab edge length
+SH, SG = 30, 10        # slab height, gap between slabs
+SLABS = [  # bottom to top: (label, file path shown on the right face, kind)
+    ("Messages", "records/messages/", "w"),
+    ("Content &amp; social", "records/content/", "w"),
+    ("Finances", "records/finances/", "w"),
+    ("Customers", "records/customers/", "w"),
+    ("Company memory", "definitions/ notes/ docs/", "r"),
 ]
-TICKER = [("claude", "Claude Code"), ("google-antigravity", "Google Antigravity"), ("kiro", "Kiro"), ("kimi", "Kimi"), (None, "Codex"), ("beeper", "Beeper"),
-          ("google", "Google Workspace"), ("notion", "Notion"), ("github", "GitHub"), ("vercel", "Vercel"), ("figma", "Figma")]
+FACE = {"w": ("#fbfaf7", "#ebe8e1", "#d8d4ca", "#c6c1b5", "#17181c", "#5c5e67"),
+        "r": ("#e22a3f", "#c41f33", "#9d1323", "#860e1d", "#ffffff", "rgba(255,255,255,.82)")}
 
 
-def hero_scene(flow: str) -> str:
-    def chip(x, y, r, k, cls, lab, t, line):
-        if cls == "img":  # a real crop of the app; the last field names the file
-            w, h = size(SCREENS / f"{line}.webp")
-            body = f'<img src="/screens/{line}.webp" alt="" width="{w}" height="{h}" decoding="async"><b>{e(t)}</b>'
-        else:
-            body = f"<b>{e(t)}</b><i>{e(line)}</i>"
-        return f'<li class="chip {cls}" style="--x:{x};--y:{y};--r:{r};--k:{k}"><div class="chip-in"><small>{e(lab)}</small>{body}</div></li>'
-    chips = "".join(chip(*c) for c in CHIPS)
-    m = re.search(r'<p class="eyebrow">(.*?)</p>\n?', flow)
-    title = f'<span class="form-title">{m[1]}</span>' if m else ""
-    flow = flow.replace(m[0], "", 1) if m else flow
-    flow = flow.replace("<h1>", "<h1 data-split>", 1).replace("</h1>\n<p>", '</h1>\n<p class="lede">', 1)
-    return f"""<section class="hero hero-home" id="overview"><div class="hero-pin">
-<ul class="orbit" aria-hidden="true">{chips}</ul>
-<div class="hero-copy"><div class="pad"><div class="pad-head"><div><b><i class="mk" aria-hidden="true"></i>Alacrán</b>{title}</div><span class="serial" aria-hidden="true">No. <em>00471</em></span></div>{flow}</div></div>
-<div class="vault" aria-hidden="true"><div class="vault-card"><small>File copy · Example company</small>
-<code><b>definitions/</b><span>company facts</span></code><code><b>notes/</b><span>working notes</span></code><code><b>docs/decisions/</b><span>the reasoning</span></code><code><b>records/</b><span>department data</span></code></div>
-<p class="vault-line">One memory. Plain files you own.</p></div>
-<p class="hero-note">Example company · Sample data</p>
+def P(x: float, y: float, z: float = 0) -> tuple[float, float]:
+    return OX + (x - y) * C, OY + (x + y) * 0.5 - z
+
+
+def pts(*ps: tuple[float, float]) -> str:
+    return " ".join(f"{a:.1f},{b:.1f}" for a, b in ps)
+
+
+def rpath(points: list[tuple[float, float]], r: float = 12) -> str:
+    """A polyline with its corners rounded, in screen coordinates."""
+    def toward(a, b, d):
+        dx, dy = b[0] - a[0], b[1] - a[1]
+        n = (dx * dx + dy * dy) ** .5
+        return a[0] + dx / n * d, a[1] + dy / n * d
+    d = f"M{points[0][0]:.1f} {points[0][1]:.1f}"
+    for k in range(1, len(points) - 1):
+        a, c = toward(points[k], points[k - 1], r), toward(points[k], points[k + 1], r)
+        d += f" L{a[0]:.1f} {a[1]:.1f} Q{points[k][0]:.1f} {points[k][1]:.1f} {c[0]:.1f} {c[1]:.1f}"
+    return d + f" L{points[-1][0]:.1f} {points[-1][1]:.1f}"
+
+
+def slab(i: int, label: str, sub: str, kind: str) -> str:
+    top, left, right, edge, ink, ink2 = FACE[kind]
+    z0 = i * (SH + SG)
+    z1 = z0 + SH
+    t = pts(P(0, 0, z1), P(S, 0, z1), P(S, S, z1), P(0, S, z1))
+    l = pts(P(0, S, z1), P(S, S, z1), P(S, S, z0), P(0, S, z0))
+    r = pts(P(S, 0, z1), P(S, S, z1), P(S, S, z0), P(S, 0, z0))
+    (lx, ly), (rx, ry) = P(0, S, z0), P(S, S, z0)
+    extra = ""
+    if kind == "r":
+        cx, cy = P(S / 2, S / 2, z1)
+        extra = (f'<image href="/mark-white.png" x="-70" y="-73" width="140" height="146" transform="translate({cx:.1f} {cy:.1f}) scale(1 .577)"/>'
+                 f'<g class="glow" fill="#fff"><polygon points="{t}"/><polygon points="{l}"/><polygon points="{r}"/></g>')
+    return (f'<g class="slab" style="--i:{i}">'
+            f'<polygon points="{l}" fill="{left}" stroke="{edge}" stroke-width=".8" stroke-linejoin="round"/>'
+            f'<polygon points="{r}" fill="{right}" stroke="{edge}" stroke-width=".8" stroke-linejoin="round"/>'
+            f'<polygon points="{t}" fill="{top}" stroke="{edge}" stroke-width=".8" stroke-linejoin="round"/>'
+            f'<text class="t-label" fill="{ink}" transform="matrix({C} .5 0 1 {lx:.1f} {ly:.1f})" x="16" y="-10.5">{label}</text>'
+            f'<text class="t-mono" fill="{ink2}" transform="matrix({C} -.5 0 1 {rx:.1f} {ry:.1f})" x="16" y="-11">{sub}</text>'
+            f'{extra}</g>')
+
+
+def hero_art() -> str:
+    slabs = "".join(slab(i, *s) for i, s in enumerate(SLABS))
+    grid = "".join(
+        f'<line x1="{P(-120, k)[0]:.1f}" y1="{P(-120, k)[1]:.1f}" x2="{P(380, k)[0]:.1f}" y2="{P(380, k)[1]:.1f}"/>'
+        f'<line x1="{P(k, -120)[0]:.1f}" y1="{P(k, -120)[1]:.1f}" x2="{P(k, 380)[0]:.1f}" y2="{P(k, 380)[1]:.1f}"/>'
+        for k in range(-100, 381, 50))
+    shadow = pts(P(-14, -14), P(S + 14, -14), P(S + 14, S + 14), P(-14, S + 14))
+    inp = [P(40, 400), P(40, 300), P(110, 300), P(110, S)]
+    outp = [P(S, 100), P(330, 100), P(330, 30)]
+    din, dout = rpath(inp), rpath(outp)
+    gx, gy = outp[-1]
+    return f"""<svg class="art" viewBox="0 30 720 470" role="img" aria-label="Illustration: an AI agent carries a task to a stack of company departments, a draft for review appears, the owner approves it, and the change is saved to history.">
+<defs>
+<radialGradient id="art-fg" cx="46%" cy="52%" r="55%"><stop offset=".3" stop-color="#fff"/><stop offset="1" stop-color="#000"/></radialGradient>
+<mask id="art-fade"><rect x="-200" y="-100" width="1100" height="900" fill="url(#art-fg)"/></mask>
+<filter id="art-blur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="12"/></filter>
+<filter id="art-sh" x="-20%" y="-20%" width="140%" height="160%"><feDropShadow dx="0" dy="8" stdDeviation="9" flood-color="#17181c" flood-opacity=".14"/></filter>
+</defs>
+<g mask="url(#art-fade)" stroke="#e4e0d7" stroke-width="1" fill="none">{grid}</g>
+<polygon points="{shadow}" fill="#17181c" opacity=".1" filter="url(#art-blur)"/>
+<g class="drift">
+<path d="{din}" fill="none" stroke="#cdc8bd" stroke-width="2.4" stroke-linecap="round"/>
+<path class="flow" d="{din}"/>
+<path d="{dout}" fill="none" stroke="#cdc8bd" stroke-width="2.4" stroke-linecap="round"/>
+<path class="flow flow-out" d="{dout}"/>
+<circle cx="{inp[0][0]:.1f}" cy="{inp[0][1]:.1f}" r="5" fill="#f4f2ee" stroke="#9a958a" stroke-width="1.6"/>
+<circle cx="{outp[0][0]:.1f}" cy="{outp[0][1]:.1f}" r="4" fill="#9a958a"/>
+<circle cx="{gx:.1f}" cy="{gy:.1f}" r="7" fill="#fff" stroke="#9a958a" stroke-width="1.6"/>
+<circle class="saved" cx="{gx:.1f}" cy="{gy:.1f}" r="4.2" fill="#d6202f"/>
+<text class="t-mono saved" x="{gx + 15:.1f}" y="{gy + 4:.1f}" fill="#a81424">Saved to history</text>
+{slabs}
+<g class="chip"><g><animateMotion dur="10s" repeatCount="indefinite" calcMode="linear" keyPoints="0;0;1;1" keyTimes="0;.06;.34;1" path="{din}"/>
+<g transform="translate(-45 -13)"><rect width="90" height="26" rx="13" fill="#fff" stroke="#d6202f" stroke-width="1.3"/><circle cx="14" cy="13" r="4" fill="#d6202f"/><text x="26" y="17.4" font-size="12" font-weight="500" fill="#17181c">AI agent</text></g></g></g>
+</g>
+<g transform="translate(502 70)"><g class="card" filter="url(#art-sh)">
+<rect width="214" height="178" rx="12" fill="#fff" stroke="#e3dfd7"/>
+<text x="16" y="26" font-family="JetBrains Mono, monospace" font-size="10.5" fill="#5c5e67">Draft for review · Example</text>
+<text x="16" y="48" font-size="13" font-weight="600" fill="#17181c">Follow-up: Northstar Café</text>
+<rect x="16" y="62" width="182" height="24" rx="5" fill="#fbe9eb"/><text x="24" y="78" font-family="JetBrains Mono, monospace" font-size="11" fill="#a81424">- Reply by Friday</text>
+<rect x="16" y="90" width="182" height="24" rx="5" fill="#e6f0e8"/><text x="24" y="106" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f5a35">+ Reply by Thursday</text>
+<rect x="16" y="118" width="182" height="24" rx="5" fill="#e6f0e8"/><text x="24" y="134" font-family="JetBrains Mono, monospace" font-size="11" fill="#1f5a35">+ Menu attached</text>
+<rect class="approve" x="16" y="148" width="72" height="22" rx="6" fill="#d6202f"/><text x="52" y="163" text-anchor="middle" font-size="11.5" font-weight="500" fill="#fff">Approve</text>
+<rect x="96" y="148" width="102" height="22" rx="6" fill="#fff" stroke="#d2cdc2"/><text x="147" y="163" text-anchor="middle" font-size="11.5" font-weight="500" fill="#17181c">Ask for changes</text>
+</g></g>
+<g transform="translate(626 262)"><g class="stamp"><rect x="-56" y="-17" width="112" height="34" rx="4" fill="#fff" fill-opacity=".9" stroke="#a81424" stroke-width="2.4"/><text y="6" text-anchor="middle" font-size="17" font-weight="700" letter-spacing="2" fill="#a81424">APPROVED</text></g></g>
+</svg>"""
+
+
+# ---------------------------------------------------------------- home
+
+# The draft card as HTML, shown under the stack on phones where the SVG's own card would be too small to read.
+ART_CARD = ('<div class="art-card" aria-hidden="true"><div class="ac-card"><small>Draft for review · Example</small><b>Follow-up: Northstar Café</b>'
+            '<p class="del">- Reply by Friday</p><p class="add">+ Reply by Thursday</p><p class="add">+ Menu attached</p>'
+            '<div class="ac-btns"><span class="ac-ok">Approve</span><span>Ask for changes</span></div></div><span class="ac-stamp">APPROVED</span></div>')
+
+
+def hero(bl: list[dict]) -> str:
+    h1 = next(b["s"] for b in bl if b["t"] == "h1")
+    ps = [b["s"] for b in bl if b["t"] == "p" and not b["s"].startswith("Eyebrow")]
+    lede = ps[0]
+    row = next(cta_row(s) for s in ps if cta_row(s))
+    fine = next(s for s in ps[1:] if not cta_row(s))
+    return f"""<section class="hero" id="overview"><div class="wrap hero-grid">
+<div class="hero-copy"><h1 data-split>{inl(h1)}</h1><p class="lede reveal">{inl(lede)}</p>{row}<p class="fine reveal">{inl(fine)}</p></div>
+<div class="hero-art">{hero_art()}{ART_CARD}<button class="art-pause motion-toggle" type="button">Pause animation</button></div>
 </div></section>"""
-
-
-def ticker() -> str:
-    def item(k, n):
-        mark = f'<svg class="bi" aria-hidden="true"><use href="#b-{k}"/></svg>' if k else ""
-        return f"<span>{mark}{e(n)}</span>"
-    row = "".join(item(k, n) for k, n in TICKER)
-    return f'<div class="ticker" aria-hidden="true"><div class="ticker-row">{row}{row}</div></div>'
-
-
-BENEFIT_VIS = [
-    '<div class="cell-vis" aria-hidden="true"><div class="row need" style="--n:0"><i></i>Customer inquiry waiting</div><div class="row" style="--n:1"><i></i>3 follow-ups ready</div><div class="row" style="--n:2"><i></i>Finances refreshed</div><div class="row" style="--n:3"><i></i>2 drafts to review</div></div>',
-    '<div class="cell-vis" aria-hidden="true"><div class="row" style="--n:0"><i></i><span class="type" style="--n:0;--w:24ch">definitions/company.yaml</span></div><div class="row" style="--n:1"><i></i><span class="type" style="--n:1;--w:22ch">docs/decisions/pricing.md</span></div><div class="row" style="--n:2"><i></i><span class="type" style="--n:2;--w:25ch">notes/company/sessions/</span></div></div>',
-    '<div class="cell-vis days" aria-hidden="true">' + "".join(f'<u style="--n:{n};--h:{h}"></u>' for n, h in enumerate((.5, .8, .6, 1, .7, .4, .9))) + '<em>Runs every morning</em></div>',
-    '<div class="cell-vis diff" aria-hidden="true"><p class="del">- Reply by Friday</p><p class="add">+ Reply by Thursday, menu attached</p><p class="add">+ Offer the team a tasting</p><div class="go-row"><em>Approve</em><em>Ask for changes</em></div><span class="stamp">Saved</span></div>',
-]
-DEPT_VIS = [
-    '<div class="dept-vis" aria-hidden="true"><div class="dots">' + "".join(f'<b style="--n:{n}">{t}</b>' for n, t in enumerate(("Prospect", "Contacted", "Follow-up drafted", "Reviewed"))) + '</div></div>',
-    '<div class="dept-vis" aria-hidden="true"><svg viewBox="0 0 200 120" preserveAspectRatio="none"><path class="fill" d="M0 100 L30 80 L60 90 L95 55 L130 62 L165 30 L200 22 L200 120 L0 120Z"/><path vector-effect="non-scaling-stroke" d="M0 100 L30 80 L60 90 L95 55 L130 62 L165 30 L200 22"/></svg></div>',
-    '<div class="dept-vis" aria-hidden="true"><div class="dots">' + "".join(f'<b style="--n:{n}">{t}</b>' for n, t in enumerate(("Idea", "Draft", "In review", "Ready to publish"))) + '</div></div>',
-    '<div class="dept-vis" aria-hidden="true"><span class="bub" style="top:10px;animation-delay:0s">Is the venue free Friday?</span><span class="bub me" style="top:46px;animation-delay:.9s">Draft reply ready</span><span class="bub" style="top:82px;animation-delay:1.8s">Thanks, confirmed</span></div>',
-]
-WORKSPACES = """<div class="spaces" aria-hidden="true"><svg class="string" viewBox="0 0 400 380" preserveAspectRatio="none"><path vector-effect="non-scaling-stroke" d="M34 78 C -12 130 -12 190 62 232"/><path vector-effect="non-scaling-stroke" d="M62 148 C 14 200 14 260 88 302"/></svg><div class="space on" style="--k:0"><small>Workspace</small><b>Example company</b></div><div class="space" style="--k:1"><small>Workspace</small><b>Second venture</b></div><div class="space" style="--k:2"><small>Workspace</small><b>Client project</b></div></div>"""
-FOLDER = """<div class="folder" aria-hidden="true"><span class="stamp">Yours</span><small><span>File copy</span><span>Example company</span></small>
-<code style="--n:0"><b>definitions/</b><span>company facts</span></code><code style="--n:1"><b>notes/</b><span>working notes</span></code><code style="--n:2"><b>docs/decisions/</b><span>the reasoning</span></code><code style="--n:3"><b>records/</b><span>department data</span></code><code style="--n:4"><b>AGENTS.md</b><span>working rules</span></code>
-<div class="commit"><b>approved</b> follow-up draft, saved to history</div></div>"""
-
-
-def agents_row() -> str:
-    def mark(k):
-        return f'<svg class="bi" aria-hidden="true"><use href="#b-{k}"/></svg>' if k else ""
-    items = "".join(f"<li>{mark(k)}{n}</li>" for k, n in AGENT_MARKS)
-    return f'<ul class="agents">{items}</ul>'.replace("<li>", '<li class="on">', 1)
-
-
-def groups_of(bl: list[dict]):
-    """Blocks -> (intro, [(title, body)]), grouping on h3 or on bold lead-ins."""
-    h3s = [i for i, b in enumerate(bl) if b["t"] == "h3"]
-    if len(h3s) >= 2:
-        return bl[:h3s[0]], [(bl[i]["s"], bl[i + 1:(h3s[k + 1] if k + 1 < len(h3s) else len(bl))]) for k, i in enumerate(h3s)]
-    leads = [i for i, b in enumerate(bl) if lead_bold(b)]
-    out = []
-    for k, i in enumerate(leads):
-        title, rest = lead_bold(bl[i])
-        out.append((title, ([{"t": "p", "s": rest}] if rest else []) + bl[i + 1:(leads[k + 1] if k + 1 < len(leads) else len(bl))]))
-    return bl[:leads[0]] if leads else bl, out
-
-
-def strip(n: int, label: str, right: str = "") -> str:
-    return ""  # section-number eyebrows read as a template tell, so the rails and the spy list carry orientation instead
-
-
-def with_strip(html_: str, s: str) -> str:
-    return re.sub(r"^(<section[^>]*>)", lambda m: m[1] + s, html_, count=1)
-
-
-def head_of(bl: list[dict]) -> tuple[str, list[dict]]:
-    h2 = next(b for b in bl if b["t"] == "h2")
-    return f'<h2 data-split>{inl(h2["s"])}</h2>', [b for b in bl if b is not h2]
-
-
-def bento(bl: list[dict]) -> str:
-    title, rest = head_of(bl)
-    intro, groups = groups_of(rest)
-    cells = "".join(
-        f'<article class="card" style="--i:{n}"><span class="num">{n + 1:02d}</span>{BENEFIT_VIS[n % 4]}<h3>{inl(t)}</h3>{render_flow(b)}</article>'
-        for n, (t, b) in enumerate(groups))
-    return f'<section class="sec" id="features">{strip(2, "What it does", "Briefing, context, routines, review")}<div class="sec-in"><div class="reveal">{title}{render_flow(intro)}</div><div class="cards cols-2 bento">{cells}</div></div></section>'
-
-
-def depts(bl: list[dict]) -> str:
-    title, rest = head_of(bl)
-    intro, groups = groups_of(rest)
-    cols = "".join(
-        f'<article class="dept"><span class="idx">{n + 1:02d}</span><h3>{inl(t)}</h3>{render_flow(b)}{DEPT_VIS[n % 4]}</article>'
-        for n, (t, b) in enumerate(groups))
-    return f'<section class="sec" id="departments">{strip(3, "Departments", "Customers, finances, content, messages")}<div class="sec-in"><div class="reveal">{title}{render_flow(intro)}</div><div class="depts">{cols}</div></div></section>'
-
-
-def how(bl: list[dict]) -> str:
-    title, rest = head_of(bl)
-    intro, groups = groups_of(rest)
-    tail = []
-    last_t, last_b = groups[-1]
-    if last_b and last_b[-1]["t"] == "p" and lone_link(last_b[-1]["s"]):
-        tail, groups[-1] = [last_b[-1]], (last_t, last_b[:-1])
-    steps = "".join(
-        f'<article class="card" data-n="{m[1].zfill(2)}"><span class="num">{m[1].zfill(2)}</span><h3>{inl(m[2])}</h3>{render_flow(b)}</article>'
-        for t, b in groups for m in [re.match(r"^(\d+)\. (.+)$", t)])
-    return f'<section class="sec alt" id="how">{strip(4, "How it works", "Four steps")}<div class="sec-in"><div class="reveal">{title}</div><div class="cards how">{steps}</div>{render_flow(tail)}</div></section>'
-
-
-def build_home(p: dict) -> str:
-    _, groups = split(p["blocks"], "h4")
-    out, faq_ld = [], []
-    for g, bl in groups:
-        name = g["s"]
-        if name == "Hero":
-            out += [hero_scene(render_flow(bl)), ticker()]
-        elif name.startswith("Product tour"):
-            out.append(with_strip(tour(g, bl), strip(1, "See it work", "Example company, sample data")).replace('<div class="tabs reveal"', '<span class="stamp" aria-hidden="true">Approved</span><div class="tabs reveal"', 1))
-        elif name == "Benefits":
-            out.append(bento(bl))
-        elif name == "Departments":
-            out.append(depts(bl))
-        elif name == "How it works":
-            out.append(how(bl))
-        elif name == "Final call to action":
-            out.append(section_html("cta", "", bl))
-        else:
-            if name.startswith("FAQ"):
-                q = None
-                for b in bl:
-                    if is_q(b):
-                        q = {"@type": "Question", "name": b["s"].strip("*"), "acceptedAnswer": {"@type": "Answer", "text": ""}}
-                        faq_ld.append(q)
-                    elif q and b["t"] == "p":
-                        q["acceptedAnswer"]["text"] = (q["acceptedAnswer"]["text"] + " " + b["s"]).strip()
-            if not any(b["t"] == "h2" for b in bl):
-                bl = [{"t": "h2", "s": name}] + bl
-            visual = {"Multiple companies": WORKSPACES, "Ownership": FOLDER,
-                      "Flexible agents": '<div class="agents-vis"><div class="core"><small>Company memory</small><b>Same files, any agent</b></div>' + agents_row() + "</div>"}.get(name, "")
-            sid, num, right = {"Multiple companies": ("companies", 5, "One workspace each"), "Ownership": ("ownership", 6, "Plain files, yours"),
-                               "Flexible agents": ("agents", 7, "Bring your own AI")}.get(name, (g["id"] or "", 8, ""))
-            out.append(with_strip(section_html("alt" if name == "Flexible agents" else ("stacked" if name == "Multiple companies" else ""), sid, bl, visual), strip(num, name.replace("FAQ", "Questions"), right)))
-    ld = [{"@type": "SoftwareApplication", "name": "Alacrán", "url": f"{SITE}/", "description": p["desc"],
-           "applicationCategory": "BusinessApplication", "operatingSystem": "macOS, Debian, Ubuntu",
-           "downloadUrl": "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest",
-           "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "publisher": {"@id": f"{SITE}/#org"}},
-          {"@type": "FAQPage", "mainEntity": faq_ld}]
-    return page(p, "\n".join(out), ld, "home")
-
-
-
-# ---------------------------------------------------------------- pages
-
-def hv(cap: str, inner: str, cls: str = "") -> str:
-    return f'<div class="hero-vis {cls}" aria-hidden="true"><small class="cap">{e(cap)}</small>{inner}</div>'
-
-
-def checks(items: list[str]) -> str:
-    return '<ol class="check">' + "".join(f'<li style="--n:{n}">{e(x)}</li>' for n, x in enumerate(items)) + "</ol>"
-
-
-SUB_VIS = {
-    "/departments/customers": hv("Example company · Pipeline", '<div class="board"><div class="col"><b>Prospect</b><div class="mc" style="--n:0">Northstar Café</div><div class="mc" style="--n:1">Harbor Print</div></div><div class="col"><b>Contacted</b><div class="mc" style="--n:2">Lumen Studio</div></div><div class="col"><b>Follow-up</b><div class="mc" style="--n:3">Bright Dental</div></div><div class="col"><b>Reviewed</b></div><div class="mc mover">Draft for Northstar</div></div>'),
-    "/departments/messages": hv("Example company · Messages", '<div class="thread"><p class="msg" style="--n:0">Is the venue free on Friday?</p><p class="msg me" style="--n:1">Draft reply ready for review</p><p class="msg" style="--n:2">Can you send the menu?</p><div class="msg draft" style="--n:3"><small>Draft for review</small>Yes, Friday is open. Menu attached.<span class="pane-btns"><em>Approve</em><em>Ask for changes</em></span></div></div>'),
-    "/templates": hv("Seven starter packs", '<div class="fan">' + "".join(f'<div class="pk" style="--i:{i};z-index:{i if i < 4 else 7 - i}"><small>Starter pack</small><b>{n}</b></div>' for i, n in enumerate(("General", "Software engineering", "Sales", "Marketing", "Customer support", "HR &amp; People", "Leadership"))) + "</div>"),
-    "/integrations": hv("Your AI and your tools", '<div class="hub"><div class="core"><small>Company memory</small><b>Your files</b></div><div class="spin">' + "".join(f'<div class="sat" style="--a:{a}"><i><span>{n}</span></i></div>' for a, n in zip(range(0, 360, 60), ("Claude Code", "Google", "GitHub", "Notion", "Beeper", "Vercel"))) + "</div></div>"),
-    "/use-cases": hv("From a question to a result", '<div class="flow3"><div class="s3" style="--n:0"><small>1 / Ask</small><b>Draft a follow-up for this prospect.</b></div><div class="s3" style="--n:1"><small>2 / Draft</small><b>A follow-up, based on your saved records.</b></div><div class="s3" style="--n:2"><small>3 / Review</small><b>Approve, ask for changes, or discard.</b></div></div>'),
-    "/docs": FOLDER,
-    "/getting-started": hv("Seven steps", checks(["Install and open Alacrán", "Choose your starting goal", "Connect your AI", "Create your company", "Describe how your business works", "Review your first draft", "Ask a useful first question"])),
-    "/how-to-use": hv("A day with Alacrán", checks(["Start with the morning briefing", "Choose a department and a task", "Review proposed work", "Keep what is useful", "Turn good tasks into routines"])),
-}
-
-
-def head(p: dict, extra_ld: list) -> str:
-    url = SITE + ("/" if p["route"] == "/" else p["route"])
-    ld = {"@context": "https://schema.org", "@graph": [
-        {"@type": "Organization", "@id": f"{SITE}/#org", "name": "Alacrán", "url": f"{SITE}/", "logo": f"{SITE}/logo.png", "slogan": "The agentic business environment"},
-        {"@type": "WebPage", "url": url, "name": p["title"], "description": p["desc"]}] + extra_ld}
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{e(p["title"])}</title>
-  <meta name="description" content="{e(p["desc"])}">
-  <meta name="theme-color" content="#22362c">
-  <link rel="canonical" href="{url}">
-  <meta property="og:type" content="website">
-  <meta property="og:site_name" content="Alacrán">
-  <meta property="og:url" content="{url}">
-  <meta property="og:title" content="{e(p["title"])}">
-  <meta property="og:description" content="{e(p["desc"])}">
-  <meta property="og:image" content="{SITE}/og.png">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Alacrán: Your business, organized. Your AI, put to work.">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="{e(p["title"])}">
-  <meta name="twitter:description" content="{e(p["desc"])}">
-  <meta name="twitter:image" content="{SITE}/og.png">
-  <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-  <link rel="icon" href="/favicon.png" sizes="128x133">
-  <link rel="preload" href="/fonts/bigshoulders.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="/fonts/franklin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/v5.css">
-  <script src="/v4.js" defer></script>
-  <script src="/brands.js" defer></script>
-</head>"""
-
-
-def split(bl: list[dict], level: str):
-    idx = [i for i, b in enumerate(bl) if b["t"] == level]
-    pre = bl[:idx[0]] if idx else bl
-    return pre, [(bl[i], bl[i + 1:(idx[k + 1] if k + 1 < len(idx) else len(bl))]) for k, i in enumerate(idx)]
-
-
-def section_html(cls: str, sid: str, bl: list[dict], visual: str = "", extra: str = "") -> str:
-    h2 = next((b for b in bl if b["t"] == "h2"), None)
-    rest = [b for b in bl if b is not h2]
-    hid = f' id="{sid}"' if sid else ""
-    title = f"<h2 data-split>{inl(h2['s'])}</h2>" if h2 else ""
-    if visual:
-        return (f'<section class="sec split {cls}"{hid}><div class="split-copy reveal">{title}{section_body(rest)}</div>'
-                f'<div class="split-vis reveal">{visual}</div></section>')
-    return f'<section class="sec {cls}"{hid}><div class="sec-in"><div class="reveal">{title}</div><div class="reveal">{section_body(rest)}{extra}</div></div></section>'
 
 
 def tour(g: dict, bl: list[dict]) -> str:
@@ -696,7 +610,7 @@ def tour(g: dict, bl: list[dict]) -> str:
             label = re.match(r"\*\*(.+?):\*\*", item)[1]
             if label in TOUR_INTERIM:
                 shot, cap = TOUR_INTERIM[label]
-                steps.append((label, shot, cap, disc if SHOTS[shot][1] == SAMPLE else SHOTS[shot][1]))
+                steps.append((label, shot, cap, disc))
     tabs, panels = [], []
     for n, (label, shot, cap, note) in enumerate(steps):
         first = n == 0
@@ -705,55 +619,270 @@ def tour(g: dict, bl: list[dict]) -> str:
         panels.append(f'<div role="tabpanel" id="tp-{n}" aria-labelledby="tt-{n}" class="tour-panel"{"" if first else " hidden"}>'
                       f'<div class="tour-media">{shot_img(shot, lazy=not first)}</div>'
                       f'<div class="tour-cap"><p>{inl(cap)}</p><p class="shot-foot"><span class="disclosure">{e(note)}</span>{zoom(shot)}</p></div></div>')
-    return f"""<section class="sec tour" id="{g['id']}"><div class="sec-in">
-  <div class="reveal"><h2>{inl(h2['s'])}</h2><p class="lede">{inl(intro)}</p></div>
+    return f"""<section class="sec tour" id="{g['id']}"><div class="wrap">
+  <div class="sec-head reveal"><h2 data-split>{inl(h2['s'])}</h2><p class="lede">{inl(intro)}</p></div>
   <div class="tabs reveal" role="tablist" aria-label="Product tour">{''.join(tabs)}</div>
-  <figure class="shot shot-tour" data-scroll3d><div class="shot-frame"><div class="bar"><i></i><i></i><i></i><span>Alacrán</span></div>{''.join(panels)}</div></figure>
+  <figure class="shot shot-tour reveal"><div class="shot-frame">{WINDOW}{''.join(panels)}</div></figure>
 </div></section>"""
+
+
+def features(bl: list[dict]) -> str:
+    title, rest = head_of(bl)
+    intro, groups = groups_of(rest)
+    cols = "".join(f'<article class="reveal" style="--i:{n}"><h3>{inl(t)}</h3>{render_flow(b)}</article>' for n, (t, b) in enumerate(groups))
+    return f'<section class="sec" id="features"><div class="wrap">{sec_head(title, intro)}<div class="feat">{cols}</div></div></section>'
+
+
+def depts(bl: list[dict]) -> str:
+    title, rest = head_of(bl)
+    intro, groups = groups_of(rest)
+    rows = []
+    for n, (t, body) in enumerate(groups):
+        link = [b for b in body if b["t"] == "p" and lone_link(b["s"])]
+        text = [b for b in body if b not in link]
+        more = f'<p class="more">{inl(link[0]["s"].removeprefix("Link: "))}</p>' if link else ""
+        rows.append(f'<article class="dept-row reveal" id="dept-{n}"><h3>{inl(t)}</h3><div>{render_flow(text)}</div>{more}</article>')
+    return f'<section class="sec" id="departments"><div class="wrap">{sec_head(title, intro)}<div class="dept-list">{"".join(rows)}</div></div></section>'
+
+
+def how(bl: list[dict]) -> str:
+    title, rest = head_of(bl)
+    intro, groups = groups_of(rest)
+    tail = []
+    last_t, last_b = groups[-1]
+    if last_b and last_b[-1]["t"] == "p" and lone_link(last_b[-1]["s"]):
+        tail, groups[-1] = [last_b[-1]], (last_t, last_b[:-1])
+    steps = "".join(
+        f'<article class="reveal" style="--i:{n}"><h3>{inl(re.sub(r"^[0-9]+[.] ", "", t))}</h3>{render_flow(b)}</article>'
+        for n, (t, b) in enumerate(groups))
+    return f'<section class="sec" id="how"><div class="wrap">{sec_head(title, intro)}<div class="how">{steps}</div><div class="how-more">{render_flow(tail)}</div></div></section>'
+
+
+def agents_list() -> str:
+    def mark(k):
+        return f'<svg class="bi" aria-hidden="true"><use href="#b-{k}"/></svg>' if k else ""
+    items = "".join(f"<li>{mark(k)}{n}</li>" for k, n in AGENT_MARKS)
+    return f'<ul class="agents">{items}</ul>'.replace("<li>", '<li class="on">', 1)
+
+
+VISUALS = {
+    "Multiple companies": '<small>Switch workspaces without rebuilding your setup</small>' + "".join(
+        f'<div class="space{" on" if n == 0 else ""}"><b>{t}</b><small>Workspace</small></div>'
+        for n, t in enumerate(("Example company", "Second venture", "Client project"))),
+    "Ownership": '<small>Example company · plain files on your computer</small>' + "".join(
+        f'<div class="file">{f}<span>{d}</span></div>' for f, d in (
+            ("definitions/", "company facts"), ("notes/", "working notes"), ("docs/decisions/", "the reasoning"),
+            ("records/", "department data"), ("AGENTS.md", "working rules"))) +
+        '<div class="commit"><b>Approved:</b> follow-up draft saved to history</div>',
+    "Flexible agents": '<small>Same files, any agent</small>' + agents_list(),
+}
+
+
+def split_section(name: str, sid: str, bl: list[dict], flip: bool) -> str:
+    title, rest = head_of(bl)
+    return (f'<section class="sec" id="{sid}"><div class="wrap split-row{" flip" if flip else ""}">'
+            f'<div class="split-copy reveal">{title}{render_flow(rest)}</div>'
+            f'<div class="split-vis reveal"><div class="vis" aria-hidden="true">{VISUALS[name]}</div></div></div></section>')
+
+
+def cta_section(bl: list[dict]) -> str:
+    h2 = next(b for b in bl if b["t"] == "h2")
+    rest = [b for b in bl if b is not h2]
+    return (f'<section class="cta"><div class="wrap"><div class="cta-card reveal"><h2>{inl(h2["s"])}</h2>{render_flow(rest)}'
+            f'<img class="cta-mark" src="/mark-white.png" width="300" height="313" alt="" aria-hidden="true"></div></div></section>')
+
+
+def build_home(p: dict) -> str:
+    _, groups = split(p["blocks"], "h4")
+    out, faq_ld = [], []
+    flip = False
+    for g, bl in groups:
+        name = g["s"]
+        if name == "Hero":
+            out.append(hero(bl))
+        elif name.startswith("Product tour"):
+            out.append(tour(g, bl))
+        elif name == "Benefits":
+            out.append(features(bl))
+        elif name == "Departments":
+            out.append(depts(bl))
+        elif name == "How it works":
+            out.append(how(bl))
+        elif name == "Final call to action":
+            out.append(cta_section(bl))
+        elif name in VISUALS:
+            sid = {"Multiple companies": "companies", "Ownership": "ownership", "Flexible agents": "agents"}[name]
+            out.append(split_section(name, sid, bl, flip))
+            flip = not flip
+        else:
+            q = None
+            for b in bl:
+                if is_q(b):
+                    q = {"@type": "Question", "name": b["s"].strip("*"), "acceptedAnswer": {"@type": "Answer", "text": ""}}
+                    faq_ld.append(q)
+                elif q and b["t"] == "p":
+                    q["acceptedAnswer"]["text"] = (q["acceptedAnswer"]["text"] + " " + b["s"]).strip()
+            out.append(f'<section class="sec" id="{g["id"] or "faq"}"><div class="wrap faq-grid">'
+                       f'<div class="sec-head reveal"><h2 data-split>{e(name)}</h2></div><div class="reveal">{faq(bl)}</div></div></section>')
+    ld = [{"@type": "SoftwareApplication", "name": "Alacrán", "url": f"{SITE}/", "description": p["desc"],
+           "applicationCategory": "BusinessApplication", "operatingSystem": "macOS, Debian, Ubuntu",
+           "downloadUrl": "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest",
+           "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "publisher": {"@id": f"{SITE}/#org"}},
+          {"@type": "FAQPage", "mainEntity": faq_ld}]
+    return page(p, "\n".join(out), ld, "home")
+
+
+# ---------------------------------------------------------------- inner pages
+
+def plain(s: str) -> str:
+    return re.sub(r"<[^>]+>", "", inl(s))
+
+
+def slug(s: str, seen: set) -> str:
+    base = re.sub(r"[^a-z0-9]+", "-", plain(s).lower()).strip("-") or "section"
+    out, n = base, 2
+    while out in seen:
+        out, n = f"{base}-{n}", n + 1
+    seen.add(out)
+    return out
+
+
+def phead(pre: list[dict], route: str, shot: str | None = None) -> str:
+    crumb = meta = h1 = lede = actions = ""
+    extra: list[str] = []
+    for b in pre:
+        if b["t"] == "h1":
+            h1 = f"<h1>{inl(b['s'])}</h1>"
+        elif b["t"] == "p":
+            s = b["s"]
+            if m := re.match(r"^Eyebrow: \*\*(.+)\*\*$", s):
+                if route.startswith("/departments/"):
+                    crumb = f'<p class="crumb"><a href="/">Home</a> / <a href="/#departments">Departments</a> / {e(m[1].split(" / ")[-1])}</p>'
+                elif " / " in m[1]:
+                    meta = f'<p class="meta">{e(m[1].split(" / ", 1)[1])}</p>'
+            elif row := cta_row(s):
+                actions = row
+            elif not lede:
+                lede = f'<p class="lede">{inl(s)}</p>'
+            else:
+                extra.append(f"<p>{inl(s)}</p>")
+        else:
+            extra.append(render_flow([b]))
+    copy = f'<div class="phead-copy">{crumb}{h1}{lede}{"".join(extra)}{meta}{actions}</div>'
+    if shot:
+        return f'<section class="phead"><div class="wrap dept-hero">{copy}{shot_fig(shot, lazy=False)}</div></section>'
+    return f'<section class="phead"><div class="wrap">{copy}</div></section>'
+
+
+def side_nav(route: str) -> str:
+    groups = LEGAL_SIDE if route in LEGAL else SIDE
+    out = []
+    for name, links in groups:
+        on = any(h == route for h, _ in links)
+        items = "".join(f'<li><a href="{h}"{cur(h, route)}>{label}</a></li>' for h, label in links)
+        out.append(f'<div class="grp{" cur" if on else ""}"><h2>{name}</h2><ul>{items}</ul></div>')
+    return f'<nav class="side" aria-label="Site pages">{"".join(out)}</nav>'
+
+
+def docs_layout(p: dict, pre: list[dict], secs: list, cta: list[dict]) -> str:
+    route = p["route"]
+    legal = route in LEGAL
+    seen: set = set()
+    body, toc = [], []
+    for h, bl in secs:
+        sid = h["id"] or slug(h["s"], seen)
+        seen.add(sid)
+        shot = shot_fig(SECTION_SHOTS[(route, h["s"])]) if (route, h["s"]) in SECTION_SHOTS else ""
+        body.append(f'<section id="{sid}"><h2>{inl(h["s"])}</h2>{section_body(bl)}{shot}</section>')
+        toc.append(f'<li data-t="{sid}"><a href="#{sid}">{plain(h["s"])}</a></li>')
+    missing = {k for k in SECTION_SHOTS if k[0] == route} - {(route, h["s"]) for h, _ in secs}
+    if missing:
+        raise SystemExit(f"SECTION_SHOTS names a heading the copy no longer has: {sorted(missing)}")
+    out = [phead(pre, route, HERO_SHOTS.get(route)),
+           f'<div class="wrap docs">{side_nav(route)}<article class="prose">{"".join(body)}</article>'
+           f'<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul>{"".join(toc)}</ul></aside></div>']
+    if not legal:
+        out.append(cta_section(cta))
+    return "\n".join(out)
+
+
+def packs_layout(p: dict, pre: list[dict], secs: list, cta: list[dict]) -> str:
+    cards_, rest = [], []
+    for h, bl in secs:
+        (cards_ if any(b["t"] == "p" and b["s"].startswith("First task to try") for b in bl) else rest).append((h, bl))
+    grid = "".join(f'<article class="pack reveal" style="--i:{n % 3}"><h2>{inl(h["s"])}</h2>{render_flow(bl)}</article>' for n, (h, bl) in enumerate(cards_))
+    tail = "".join(f'<section class="prose-tail"><h2 class="page-h2">{inl(h["s"])}</h2>{section_body(bl)}</section>' for h, bl in rest)
+    return "\n".join([phead(pre, p["route"]), f'<div class="wrap"><div class="packs">{grid}</div></div>',
+                      f'<div class="wrap tail"><div class="prose">{tail}</div></div>', cta_section(cta)])
+
+
+def cases_layout(p: dict, pre: list[dict], secs: list, cta: list[dict]) -> str:
+    seen: set = set()
+    rows, rest = [], []
+    for h, bl in secs:
+        if any(b["t"] == "p" and b["s"].startswith("**The situation:**") for b in bl):
+            sid = h["id"] or slug(h["s"], seen)
+            seen.add(sid)
+            rows.append(f'<article class="case reveal" id="{sid}"><div><h2>{inl(h["s"])}</h2></div><div class="case-body">{render_flow(bl)}</div></article>')
+        else:
+            rest.append((h, bl))
+    tail = "".join(f'<section class="prose-tail"><h2 class="page-h2">{inl(h["s"])}</h2>{section_body(bl)}</section>' for h, bl in rest)
+    return "\n".join([phead(pre, p["route"]), f'<div class="wrap cases">{"".join(rows)}</div>',
+                      f'<div class="wrap tail"><div class="prose">{tail}</div></div>', cta_section(cta)])
 
 
 def build_sub(p: dict, cta: list[dict]) -> str:
     pre, secs = split(p["blocks"], "h2")
-    legal = p["route"] in ("/privacy", "/terms")
+    route = p["route"]
+    legal = route in LEGAL
     if legal and pre and pre[1:] and pre[0]["t"] == "p" and " / " in pre[0]["s"]:
         pre = [{"t": "p", "s": f"Eyebrow: **{pre[0]['s']}**"}] + pre[1:]
-    if p["route"] in HERO_SHOTS:
-        vis = shot3d(HERO_SHOTS[p["route"]], cls="shot-hero")
-    elif p["route"] in SUB_VIS:
-        vis = SUB_VIS[p["route"]]
-    elif legal:
-        vis = ""
-    else:
-        has_prompt = any(b["t"] == "quote" or b["t"] == "p" and "Try asking" in b["s"] for b in p["blocks"])
-        vis = stack([h["s"] for h, _ in secs], "Your next result" if has_prompt else None)
-    out = [f'<section class="hero{" hero-legal" if legal else ""}"><div class="hero-copy">{render_flow(pre)}</div>{vis}</section>']
-    out += [section_html("alt" if n % 2 else "", h["id"] or "", [h] + bl,
-                         extra=shot3d(SECTION_SHOTS[(p["route"], h["s"])]) if (p["route"], h["s"]) in SECTION_SHOTS else "")
-            for n, (h, bl) in enumerate(secs)]
-    missing = {k for k in SECTION_SHOTS if k[0] == p["route"]} - {(p["route"], h["s"]) for h, _ in secs}
-    if missing:
-        raise SystemExit(f"SECTION_SHOTS names a heading the copy no longer has: {sorted(missing)}")
-    if not legal:
-        out.append(section_html("cta", "", cta))
-    return page(p, "\n".join(out), [], "legal" if legal else "sub")
+    layout = {"packs": packs_layout, "cases": cases_layout}.get(GALLERY.get(route, ""), docs_layout)
+    return page(p, layout(p, pre, secs, cta), [], "legal" if legal else "sub")
+
+
+# ---------------------------------------------------------------- page shell
+
+def head(p: dict, extra_ld: list) -> str:
+    url = SITE + ("/" if p["route"] == "/" else p["route"])
+    ld = {"@context": "https://schema.org", "@graph": [
+        {"@type": "Organization", "@id": f"{SITE}/#org", "name": "Alacrán", "url": f"{SITE}/", "logo": f"{SITE}/logo.png", "slogan": "The agentic business environment"},
+        {"@type": "WebPage", "url": url, "name": p["title"], "description": p["desc"]}] + extra_ld}
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{e(p["title"])}</title>
+  <meta name="description" content="{e(p["desc"])}">
+  <meta name="theme-color" content="#f4f2ee">
+  <link rel="canonical" href="{url}">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Alacrán">
+  <meta property="og:url" content="{url}">
+  <meta property="og:title" content="{e(p["title"])}">
+  <meta property="og:description" content="{e(p["desc"])}">
+  <meta property="og:image" content="{SITE}/og.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Alacrán: Your business, organized. Your AI, put to work.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{e(p["title"])}">
+  <meta name="twitter:description" content="{e(p["desc"])}">
+  <meta name="twitter:image" content="{SITE}/og.png">
+  <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
+  <link rel="icon" href="/favicon.png" sizes="128x133">
+  <link rel="preload" href="/fonts/onest.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/v6.css">
+  <script src="/v6.js" defer></script>
+  <script src="/brands.js" defer></script>
+</head>"""
 
 
 DIALOG = """<dialog class="viewer" aria-label="Full screenshot">
   <form method="dialog" class="viewer-bar"><button class="btn btn-ghost viewer-close" value="close">Close</button></form>
   <img alt="">
 </dialog>"""
-
-
-SPY = [("overview", "Overview"), ("tour", "See it work"), ("features", "What it does"), ("departments", "Departments"), ("how", "How it works"),
-       ("companies", "Companies"), ("ownership", "Ownership"), ("agents", "Agents"), ("faq", "Questions")]
-
-
-def furniture(kind: str) -> str:
-    """An SVG filter that roughens the rubber stamps; nothing else sits on the page."""
-    return ('<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><filter id="rough">'
-            '<feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="n"/>'
-            '<feDisplacementMap in="SourceGraphic" in2="n" scale="3"/></filter></svg>')
-
 
 MAC_CMD = 'xattr -cr "/Applications/Alacran.app"'
 MAC_DIALOG = f"""<dialog class="mac-help" aria-labelledby="mac-title">
@@ -778,13 +907,13 @@ def page(p: dict, main: str, ld: list, kind: str) -> str:
 <body class="{kind}">
 <a class="skip" href="#main">Skip to content</a>
 {nav(p['route'])}
-{furniture(kind)}
 <main id="main">
 {main}
 </main>
 {FOOTER}
 {DIALOG if 'class="zoom"' in main else ''}
 {MAC_DIALOG}
+{BMC}
 </body>
 </html>
 """

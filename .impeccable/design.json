@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-15T00:00:00Z",
+  "title": "Design System: Alacrán website (v6)",
+  "extensions": {
+    "colorMeta": {
+      "scorpion-red": {
+        "role": "primary",
+        "displayName": "Scorpion Red",
+        "canonical": "#d6202f",
+        "tonalRamp": [
+          "#430a0f",
+          "#78121a",
+          "#ad1a26",
+          "#de2635",
+          "#e65b66",
+          "#ee9098",
+          "#f5bcc1",
+          "#fce9ea"
+        ]
+      },
+      "marker-red": {
+        "role": "primary",
+        "displayName": "Marker Red",
+        "canonical": "#a81424",
+        "tonalRamp": [
+          "#44080f",
+          "#7b0f1a",
+          "#b21526",
+          "#e42035",
+          "#eb5666",
+          "#f18d98",
+          "#f7bbc1",
+          "#fce8ea"
+        ]
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Warm Ground",
+        "canonical": "#f4f2ee",
+        "tonalRamp": [
+          "#2e291e",
+          "#544a36",
+          "#796b4e",
+          "#9d8b67",
+          "#b5a78c",
+          "#cdc4b2",
+          "#e1dbd1",
+          "#f5f3f0"
+        ]
+      },
+      "sheet": {
+        "role": "neutral",
+        "displayName": "White Sheet",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#454545",
+          "#636363",
+          "#828282",
+          "#a1a1a1",
+          "#bfbfbf",
+          "#d9d9d9",
+          "#f2f2f2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#17181c",
+        "tonalRamp": [
+          "#22242a",
+          "#3e414c",
+          "#5a5e6d",
+          "#767b8e",
+          "#979baa",
+          "#b9bbc6",
+          "#d5d6dc",
+          "#f1f1f4"
+        ]
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e3dfd7",
+        "tonalRamp": [
+          "#2d2920",
+          "#514939",
+          "#756952",
+          "#98896c",
+          "#b1a690",
+          "#cbc3b4",
+          "#dfdbd2",
+          "#f4f3f0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Home h1 only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section and page h2, weight 300."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Feature and step headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Paragraphs in Ink 2."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Intro under headlines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "JetBrains Mono for paths, commands and format tags."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft",
+        "value": "0 1px 2px rgba(23,24,28,.05), 0 8px 24px -8px rgba(23,24,28,.12)",
+        "purpose": "Menus, screenshot frame, visuals, hovered pack."
+      },
+      {
+        "name": "dialog",
+        "value": "0 30px 80px -20px rgba(23,24,28,.35)",
+        "purpose": "Modal dialogs over a 50% ink backdrop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.16, 1, .3, 1)",
+        "purpose": "All transitions and reveals."
+      },
+      {
+        "name": "hero-loop",
+        "value": "10s infinite",
+        "purpose": "Agent chip, diff card, stamp, output line; settles under pause or reduced motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "wide",
+        "value": "1100px"
+      },
+      {
+        "name": "nav-collapse",
+        "value": "900px"
+      },
+      {
+        "name": "phone",
+        "value": "720px"
+      },
+      {
+        "name": "narrow",
+        "value": "480px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single red Download action.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Download Alacrán</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 22px;border-radius:10px;font:500 .98rem/1 Onest,system-ui,sans-serif;border:1px solid #d2cdc2;background:#fff;color:#17181c;cursor:pointer;transition:background-color .2s,border-color .2s,transform .35s cubic-bezier(.16,1,.3,1)}.ds-btn:hover{border-color:#5c5e67}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:2px solid #d6202f;outline-offset:3px}.ds-btn-primary{background:#d6202f;border-color:#d6202f;color:#fff}.ds-btn-primary:hover{background:#b61a28;border-color:#b61a28}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "White button for the quieter second action.",
+      "html": "<button class=\"ds-btn\">See it in action</button>",
+      "css": ".ds-btn{display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 22px;border-radius:10px;font:500 .98rem/1 Onest,system-ui,sans-serif;border:1px solid #d2cdc2;background:#fff;color:#17181c;cursor:pointer;transition:background-color .2s,border-color .2s,transform .35s cubic-bezier(.16,1,.3,1)}.ds-btn:hover{border-color:#5c5e67}.ds-btn:active{transform:translateY(1px)}.ds-btn:focus-visible{outline:2px solid #d6202f;outline-offset:3px}.ds-btn-primary{background:#d6202f;border-color:#d6202f;color:#fff}.ds-btn-primary:hover{background:#b61a28;border-color:#b61a28}"
+    },
+    {
+      "name": "Navigation",
+      "kind": "nav",
+      "description": "Sticky bar on the ground colour: mark, text links, red Download.",
+      "html": "<nav class=\"ds-nav\"><b class=\"ds-brand\">Alacrán</b><a href=\"#\">How it works</a><a href=\"#\">Guides</a><button class=\"ds-dl\">Download</button></nav>",
+      "css": ".ds-nav{display:flex;align-items:center;gap:20px;min-height:72px;padding:0 24px;background:#f4f2ee;font:400 .96rem Onest,system-ui,sans-serif;color:#4a4c55}.ds-nav a{padding:8px 12px;border-radius:8px;text-decoration:none;color:inherit}.ds-nav a:hover{color:#17181c;background:rgba(23,24,28,.05)}.ds-brand{font-weight:600;font-size:1.28rem;letter-spacing:-.02em;color:#17181c;margin-right:12px}.ds-dl{margin-left:auto;min-height:42px;padding:0 18px;border:0;border-radius:10px;background:#d6202f;color:#fff;font:500 .96rem Onest,system-ui,sans-serif}.ds-dl:hover{background:#b61a28}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White sheet with hairline border, used on inner pages.",
+      "html": "<div class=\"ds-card\"><h3>Starter pack</h3><p>Plain files you own.</p></div>",
+      "css": ".ds-card{background:#fff;border:1px solid #e3dfd7;border-radius:10px;padding:22px;font-family:Onest,system-ui,sans-serif;color:#4a4c55}.ds-card h3{margin:0 0 8px;font-weight:600;font-size:1.1rem;color:#17181c}.ds-card p{margin:0}"
+    },
+    {
+      "name": "File Row and Commit Note",
+      "kind": "custom",
+      "refersTo": "commit-note",
+      "description": "Mono file path row with the red-wash commit note.",
+      "html": "<div class=\"ds-vis\"><div class=\"ds-file\">definitions/company.yaml<span>updated</span></div><div class=\"ds-commit\">Saved only after you approve.</div></div>",
+      "css": ".ds-vis{display:grid;gap:10px;background:#fff;border:1px solid #e3dfd7;border-radius:16px;padding:28px;box-shadow:0 1px 2px rgba(23,24,28,.05),0 8px 24px -8px rgba(23,24,28,.12)}.ds-file{display:flex;gap:14px;align-items:baseline;padding:10px 14px;border:1px solid #e3dfd7;border-radius:8px;background:#f4f2ee;font:500 .92rem 'JetBrains Mono',ui-monospace,monospace}.ds-file span{margin-left:auto;font:400 .85rem Onest,system-ui,sans-serif;color:#5c5e67}.ds-commit{padding:12px 14px;border-radius:8px;background:#fbe9eb;color:#a81424;font:400 .92rem Onest,system-ui,sans-serif}"
+    },
+    {
+      "name": "FAQ Row",
+      "kind": "custom",
+      "description": "Hairline details row with a plus.",
+      "html": "<details class=\"ds-faq\"><summary>Is it free?<span class=\"ds-plus\"></span></summary><p>The app is free to download.</p></details>",
+      "css": ".ds-faq{border-top:1px solid #e3dfd7;font-family:Onest,system-ui,sans-serif}.ds-faq summary{display:flex;justify-content:space-between;align-items:center;padding:22px 0;cursor:pointer;font-weight:500;font-size:1.1rem;letter-spacing:-.01em;list-style:none}.ds-faq summary::-webkit-details-marker{display:none}.ds-faq summary:hover{color:#a81424}.ds-faq summary:focus-visible{outline:2px solid #d6202f;outline-offset:3px}.ds-faq p{margin:0;padding:0 40px 22px 0;color:#4a4c55}.ds-plus{width:14px;height:14px;background:linear-gradient(currentColor,currentColor) center/100% 1.5px no-repeat,linear-gradient(currentColor,currentColor) center/1.5px 100% no-repeat}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Calm Ledger",
+    "overview": "One page that says what Alacrán is in a single read: a large light headline, one illustration of the mechanism, one primary action. The ground is warm grey, content sits on white sheets with hairline rules, ink is near-black, and the only chroma is the scorpion red from the desktop logo. Depth is a single soft shadow and borders.",
+    "keyCharacteristics": [
+      "Light display type (weight 300) with tight tracking; JetBrains Mono only for paths and commands.",
+      "One accent: scorpion red.",
+      "Four plain columns, hairline rows and split rows instead of card grids.",
+      "One memorable moment: the isometric hero stack.",
+      "The desktop app's red scorpion is the mark."
+    ],
+    "rules": [
+      {
+        "name": "The One Red Rule",
+        "body": "Red is the only chroma on the page. A new element that wants a second hue uses ink or a neutral instead.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-On-Grey Rule",
+        "body": "Red text on the ground uses Marker Red, never the fill red; the fill red is for backgrounds and lines.",
+        "section": "colors"
+      },
+      {
+        "name": "The Light Display Rule",
+        "body": "Headings above 1.5rem are weight 300 (or 400 in prose) with negative tracking; bold display type is not part of this system.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is Paths Rule",
+        "body": "JetBrains Mono names things on disk or things to type. It is never a decorative label style.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Shadow Rule",
+        "body": "Use the single soft shadow or none. No hard offset shadows, no glow on text or cards.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep one primary action per view, in Scorpion Red.",
+      "Do use the scorpion raster (landing/logo.png, produced by scripts/generate-logo.py) as the mark; never redraw it.",
+      "Do keep every font self-hosted in landing/fonts/.",
+      "Do end every generated page body with the Buy Me a Coffee widget script.",
+      "Do rebuild generated pages from landing/ with python3 build-site.py && python3 build-md.py && python3 test_landing.py.",
+      "Do give every shipping raster a provenance note, and label screenshots as the sample company."
+    ],
+    "donts": [
+      "Don't add testimonials, customer counts or benchmarks; none exist.",
+      "Don't load fonts from a CDN at runtime.",
+      "Don't write an em dash in HTML or CSS; test_landing.py fails on it.",
+      "Don't put overflow-x hidden on body; the shipped value is overflow-x: clip.",
+      "Don't return to the receipt-book look or a cream page with a mono-label grid.",
+      "Don't scatter floating chips, tickers, number strips or decorative badges around sections.",
+      "Don't introduce a second accent hue."
+    ]
+  }
+}

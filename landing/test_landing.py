@@ -139,8 +139,10 @@ def test_http_server() -> list[str]:
         ("/sitemap.xml", 200, "xml"),
         ("/og.png", 200, "image/png"),
         # Static CSS and JS assets
-        ("/v5.css", 200, "text/css"),
-        ("/v4.js", 200, "javascript"),
+        ("/v6.css", 200, "text/css"),
+        ("/v6.js", 200, "javascript"),
+        ("/fonts/onest.woff2", 200, "font"),
+        ("/mark-white.png", 200, "image/png"),
         ("/brands.js", 200, "javascript"),
         # Static image assets
         ("/logo.png", 200, "image/png"),
@@ -180,9 +182,9 @@ def test_em_dashes() -> list[str]:
     em_dash = "\u2014"
 
     # Scan the stylesheet
-    site_css = (LANDING_DIR / "v5.css").read_text(encoding="utf-8")
+    site_css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
     if em_dash in site_css:
-        failures.append("control-panel/landing/v5.css contains em-dash (\u2014)")
+        failures.append("control-panel/landing/v6.css contains em-dash (\u2014)")
 
     # Scan all HTML files
     for html_file in sorted(LANDING_DIR.glob("**/*.html")):
@@ -261,24 +263,24 @@ def test_html_dom_and_assets() -> list[str]:
 
 def test_responsive_and_contrast() -> list[str]:
     failures = []
-    site_css = (LANDING_DIR / "v5.css").read_text(encoding="utf-8")
+    site_css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
 
-    # 1. Check strict overflow containment
-    if "overflow-x: hidden" not in site_css:
-        failures.append("v5.css: missing global 'overflow-x: hidden' on body")
+    # 1. Check strict overflow containment. `clip`, not `hidden`: hidden on body makes it a scroll container.
+    if "overflow-x: clip" not in site_css:
+        failures.append("v6.css: missing global 'overflow-x: clip' on body")
     if "box-sizing: border-box" not in site_css:
-        failures.append("v5.css: missing 'box-sizing: border-box'")
+        failures.append("v6.css: missing 'box-sizing: border-box'")
 
     # 2. Check required responsive breakpoints
-    required_breakpoints = ["1024px", "900px", "720px", "680px", "480px"]
+    required_breakpoints = ["1100px", "900px", "720px", "480px"]
     for bp in required_breakpoints:
         if f"max-width: {bp}" not in site_css:
-            failures.append(f"v5.css: missing responsive breakpoint for max-width: {bp}")
+            failures.append(f"v6.css: missing responsive breakpoint for max-width: {bp}")
 
     if "prefers-reduced-motion" not in site_css:
-        failures.append("v5.css: missing prefers-reduced-motion accessibility media query")
+        failures.append("v6.css: missing prefers-reduced-motion accessibility media query")
 
-    # 3. Contrast verification, read from v5.css itself so a palette change
+    # 3. Contrast verification, read from v6.css itself so a palette change
     # is checked rather than a copy of last palette's numbers.
     def token(name: str) -> str:
         m = re.search(rf"{re.escape(name)}:\s*(#[0-9a-fA-F]{{6}})\b", site_css)
@@ -301,6 +303,20 @@ def test_responsive_and_contrast() -> list[str]:
     return failures
 
 
+def test_logo_and_support_widget() -> list[str]:
+    """Every page carries the desktop app's scorpion and the Buy Me a Coffee widget."""
+    failures = []
+    pages = [LANDING_DIR / "index.html", *sorted(LANDING_DIR.glob("*/index.html")), *sorted(LANDING_DIR.glob("departments/*/index.html"))]
+    for f in pages:
+        content = f.read_text(encoding="utf-8")
+        rel = f.relative_to(LANDING_DIR)
+        if 'src="/logo.png"' not in content:
+            failures.append(f"{rel}: the desktop app's scorpion (/logo.png) is missing from the header")
+        if 'data-name="BMC-Widget"' not in content or 'data-id="alacran"' not in content:
+            failures.append(f"{rel}: the Buy Me a Coffee widget script is missing")
+    return failures
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -311,6 +327,7 @@ def main() -> int:
         ("Em-Dash Cleanliness (0 \u2014 allowed)", test_em_dashes),
         ("HTML / DOM Integrity & Local Assets", test_html_dom_and_assets),
         ("Responsive Layout & WCAG Contrast", test_responsive_and_contrast),
+        ("Desktop Logo & Support Widget", test_logo_and_support_widget),
     ]
 
     total_failures = []
