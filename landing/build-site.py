@@ -39,19 +39,19 @@ DOWNLOAD_LABEL = "Download Alacrán"
 # read from the files. The detail crop (fractions left, top, right, bottom) is
 # what a phone shows, because a whole desktop window at 360px is unreadable;
 # build_details() cuts it to <name>-detail.webp. Sample-company shots carry the
-# copy's disclosure; shots of Alacrán's own workspace say so instead, because
-# "Sample data" would be false on them.
-SAMPLE, OWN = "Example company · Sample data", "Alacrán's own workspace"
+# copy's disclosure. Every shot comes from a throwaway example company, never a
+# real workspace, so each carries it.
+SAMPLE = "Example company · Sample data"
 SHOTS = {
     "content": ("Content and social screen with approved post drafts for an example company", SAMPLE, (.22, .11, .71, .96)),
     "memory": ("Company memory map linking definitions, decisions, records and agents", SAMPLE, (.2, .27, .98, .93)),
     "finances": ("Finances screen showing cash on hand, monthly burn and estimated runway for an example company", SAMPLE, (.2, .27, .97, .9)),
-    "office-dark": ("Home screen greeting with one item needing attention, a 3D office showing which agents are working, a change ready for review, and the voice assistant open beside it", OWN, (.17, .28, .7, .93)),
-    "office-light": ("Home screen in the light theme: the agent office, one agent waiting for approval, and a session summary ready to review", OWN, (.32, .3, .82, .93)),
-    "approvals": ("Approvals screen with one pending review marked high risk, listing files the run changed outside its own folder", OWN, (.32, .15, 1, 1)),
-    "departments": ("Departments screen listing each department with its record files, and the people who sign off on changes", OWN, (.14, .1, .99, .75)),
-    "workflows": ("Workflows screen with daily cadence and governance workflows, each with Run in Terminal and Prepare draft buttons", OWN, (.14, .12, .99, .75)),
-    "preferences": ("Preferences screen where you name the assistant, choose the languages you each speak, and pick its voice", OWN, (.38, .2, .76, .85)),
+    "office-dark": ("Home screen in the dark theme: one item needing attention, the 3D agent office with an agent waiting for approval, and a weekly summary ready to review", SAMPLE, (.17, .28, .7, .93)),
+    "office-light": ("Home screen in the light theme: the agent office, one agent waiting for approval, and a weekly summary ready to review", SAMPLE, (.32, .3, .82, .93)),
+    "approvals": ("Approvals screen with one pending review marked high risk, listing files the run changed outside its own folder", SAMPLE, (.32, .15, 1, 1)),
+    "departments": ("Departments screen listing each department with its record files, and the people who sign off on changes", SAMPLE, (.14, .1, .99, .75)),
+    "workflows": ("Workflows screen with daily cadence and governance workflows, each with Run in Terminal and Prepare draft buttons", SAMPLE, (.14, .12, .99, .75)),
+    "preferences": ("Preferences screen where you name the assistant, choose the languages you each speak, and pick its voice", SAMPLE, (.38, .2, .76, .85)),
     # The tour's four captures: one sample company (Brightside Studio) and one
     # inquiry (Northstar Café), captured from the real app. Until all four
     # exist the tour runs in interim mode; see tour().
