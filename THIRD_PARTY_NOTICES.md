@@ -16,6 +16,9 @@ lines below are read from each font file's own metadata.
 | `franklin.woff2` | Libre Franklin | Copyright 2020 The Libre Franklin Project Authors (https://github.com/googlefonts/Libre-Franklin) | SIL Open Font License 1.1 (https://openfontlicense.org) |
 | `specialelite.woff2` | Special Elite | Copyright (c) 2010 by Brian J. Bonislawsky DBA Astigmatic (AOETI) | Apache License 2.0 (http://www.apache.org/licenses/LICENSE-2.0) |
 
+The full licence text for each font sits beside the files, in `landing/fonts/` (see the
+README there).
+
 The desktop app also uses JetBrains Mono, loaded through `next/font`, which
 downloads and self-hosts it at build time. It is licensed under the SIL Open Font
 License 1.1 and is not committed to this repository.
