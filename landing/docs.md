@@ -24,7 +24,7 @@ Validation can detect malformed data. It cannot establish that a customer statem
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Agent execution
 
@@ -72,7 +72,7 @@ Scheduled work requires the local application and relevant dependencies to remai
 
 Alacrán
 
-Alacrán's own workspace
+Example company · Sample data
 
 ## Data and connections
 

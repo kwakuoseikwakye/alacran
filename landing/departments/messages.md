@@ -1,4 +1,4 @@
-Departments / Messages
+[Home](https://www.alacran.app/) / [Departments](https://www.alacran.app/#departments) / Messages
 
 # Find the conversations that need you.
 
@@ -21,6 +21,10 @@ Debian / Ubuntu
 .deb](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb) [Read the setup guide](https://www.alacran.app/getting-started)
 
 [Explore messaging connections](https://www.alacran.app/integrations)
+
+Alacrán
+
+Example company · Sample data
 
 ## Catch up across connected services.
 

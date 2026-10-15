@@ -1,4 +1,4 @@
-Departments / Customers
+[Home](https://www.alacran.app/) / [Departments](https://www.alacran.app/#departments) / Customers
 
 # Keep customer context with the next action.
 
@@ -21,6 +21,10 @@ Debian / Ubuntu
 .deb](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb) [Read the setup guide](https://www.alacran.app/getting-started)
 
 [See customer workflow examples](https://www.alacran.app/use-cases)
+
+Alacrán
+
+Example company · Sample data
 
 ## See where each opportunity stands.
 

@@ -1,4 +1,4 @@
-Departments / Finances
+[Home](https://www.alacran.app/) / [Departments](https://www.alacran.app/#departments) / Finances
 
 # See the numbers behind your next decision.
 
