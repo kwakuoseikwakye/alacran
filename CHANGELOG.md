@@ -13971,6 +13971,11 @@ Engineering notes: a run of a command with `alsoWrites` (apply-session-facts) th
 
 ## Removed the team-report integration (2026-10-14)
 
+### What's new for you (improvement, v0.94.0)
+The built-in team-report agent and its buttons are gone.
+- It was one company's internal workflow, not something Alacrán needs, so it no longer appears in the app.
+- Your own companies, agents, departments and records are unchanged.
+
 The built-in agent for one company's internal team-report workflow, its
 "Run now" and "Install" buttons, its activity adapter and its skill
 installer are gone from the public repo. It was another company's internal
