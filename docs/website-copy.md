@@ -262,7 +262,7 @@ Company records are stored locally. Relevant information may be sent to connecte
 
 **Does Alacrán send messages or publish posts automatically?**
 
-The standard communications and content workflows prepare work for your review and manual sending or publishing. Capabilities of additional tools depend on their connection and permissions. Approving a local draft does not itself mean it has been sent.
+Not unless you set it up. Everything starts as a draft for your review. If you create an unattended job, it can send only a message you approved once, within the limits you set: how often, how many, and who never to contact. Change the message and sending stops until you approve it again. Approving a local draft does not itself mean it has been sent.
 
 **Can I use more than one business?**
 
