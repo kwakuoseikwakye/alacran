@@ -45,6 +45,7 @@ vi.mock("@/lib/company-commands/pending-reviews", () => ({
 }))
 
 vi.mock("@/lib/guide/observe", () => ({ guidePendingCount: async () => 1 }))
+vi.mock("@/lib/jobs/view", () => ({ openFlagCount: async () => 0 }))
 
 let agentReady = false
 vi.mock("@/lib/voice/settings-impl", () => ({

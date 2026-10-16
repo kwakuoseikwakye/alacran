@@ -67,6 +67,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { slug: "terminal", advancedOnly: true, label: "Terminal", icon: "Terminal", scope: "company" },
       { slug: "org", advancedOnly: true, label: "Departments", icon: "Users", scope: "company" },
       { slug: "workflows", advancedOnly: true, label: "Automations", icon: "Workflow", scope: "company" },
+      { slug: "jobs", advancedOnly: true, label: "Unattended jobs", icon: "CalendarClock", scope: "company" },
       { slug: "skills", advancedOnly: true, label: "Skills", icon: "Sparkles", scope: "company" },
       { slug: "analytics", advancedOnly: true, label: "Analytics", icon: "BarChart3", scope: "company" },
       { slug: "doctor", advancedOnly: true, label: "Diagnostics", icon: "Activity", scope: "company" },

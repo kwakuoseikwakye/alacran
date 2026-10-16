@@ -9,6 +9,10 @@ vi.mock("@/lib/company-commands/pending-reviews", () => ({
 vi.mock("@/lib/guide/observe", () => ({
   guidePendingCount: (...args: unknown[]) => guidePendingCount(...args),
 }))
+const openFlagCount = vi.fn(async () => 0)
+vi.mock("@/lib/jobs/view", () => ({
+  openFlagCount: () => openFlagCount(),
+}))
 
 import { countWaitingApprovals } from "./pending-approvals"
 
@@ -36,6 +40,13 @@ describe("countWaitingApprovals", () => {
   it("adds the guide update to the command reviews", async () => {
     listPendingReviews.mockResolvedValue([review("digest"), review("retro")])
     guidePendingCount.mockResolvedValue(1)
+    expect(await countWaitingApprovals(agent)).toBe(3)
+  })
+
+  it("adds what unattended jobs flagged for a person", async () => {
+    listPendingReviews.mockResolvedValue([review("digest")])
+    guidePendingCount.mockResolvedValue(0)
+    openFlagCount.mockResolvedValueOnce(2)
     expect(await countWaitingApprovals(agent)).toBe(3)
   })
 

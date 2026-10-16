@@ -24,10 +24,10 @@ describe("NAV_GROUPS", () => {
     const developer = NAV_GROUPS.find((group) => group.id === "advanced")!
     expect(developer.label).toBe("Developer")
     expect(developer.items.map((item) => item.label)).toEqual([
-      "Terminal", "Departments", "Automations", "Skills", "Analytics", "Diagnostics",
+      "Terminal", "Departments", "Automations", "Unattended jobs", "Skills", "Analytics", "Diagnostics",
     ])
     expect(developer.items.map((item) => item.slug)).toEqual([
-      "terminal", "org", "workflows", "skills", "analytics", "doctor",
+      "terminal", "org", "workflows", "jobs", "skills", "analytics", "doctor",
     ])
     expect(developer.items.every((item) => item.advancedOnly)).toBe(true)
   })
@@ -112,7 +112,7 @@ describe("visibleGroups", () => {
     expect(visibleGroups(true).flatMap((group) => group.items)).toHaveLength(
       NAV_GROUPS.flatMap((group) => group.items).length
     )
-    expect(visibleGroups(true).find((group) => group.id === "advanced")?.items).toHaveLength(6)
+    expect(visibleGroups(true).find((group) => group.id === "advanced")?.items).toHaveLength(7)
   })
 
   it("drops groups that would render empty", () => {

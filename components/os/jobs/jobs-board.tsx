@@ -1,0 +1,269 @@
+"use client"
+
+import { useState, useTransition } from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import {
+  approvePolicyAction,
+  revokePolicyAction,
+  runJobNowAction,
+  sendTestAction,
+  setJobEnabledAction,
+  setJobModeAction,
+} from "@/lib/jobs/actions"
+import type { JobsView, JobView, PolicyView } from "@/lib/jobs/view"
+import { JobFlagList } from "./job-flag-list"
+
+type Notice = { ok: boolean; message: string } | null
+type Act = (fn: () => Promise<{ ok: boolean; message: string }>, done?: () => void) => void
+
+function useAct(): [Act, boolean, Notice] {
+  const router = useRouter()
+  const [pending, start] = useTransition()
+  const [notice, setNotice] = useState<Notice>(null)
+  const act: Act = (fn, done) =>
+    start(async () => {
+      setNotice(null)
+      const result = await fn().catch(() => ({ ok: false, message: "That didn't work. Try again." }))
+      setNotice(result)
+      done?.()
+      router.refresh()
+    })
+  return [act, pending, notice]
+}
+
+function NoticeLine({ notice }: { notice: Notice }) {
+  if (!notice) return null
+  return (
+    <p role="status" className={`text-sm ${notice.ok ? "text-os-ok" : "text-os-err"}`}>
+      {notice.message}
+    </p>
+  )
+}
+
+const EXAMPLE = `# definitions/jobs.yaml
+jobs:
+  - id: welcome-followup
+    run: scripts/welcome_followup.py   # a script in your company's scripts folder
+    at: "08:15"                        # every day, your local time
+    note: Re-send the invite to anyone who hasn't joined yet`
+
+function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
+  const [act, pending, notice] = useAct()
+  const [confirmLive, setConfirmLive] = useState(false)
+  const last = job.lastRun
+  return (
+    <article className="rounded-lg border border-os-border bg-os-surface p-4 space-y-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-os-text">{job.id}</h3>
+          <p className="text-sm text-os-muted">
+            Every day at {job.at}
+            {job.note ? ` · ${job.note}` : ""}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {!job.enabled && <span className="rounded border border-os-border px-2 py-0.5 text-os-dim">Off</span>}
+          <span className={`rounded px-2 py-0.5 ${job.mode === "live" ? "bg-os-accent text-white" : "border border-os-border text-os-muted"}`}>
+            {job.mode === "live" ? "Live" : "Practice"}
+          </span>
+        </div>
+      </header>
+
+      {job.missed && <p className="text-sm text-os-warn">Didn&apos;t run yesterday. Alacrán has to be open at {job.at} for a job to run.</p>}
+      {last ? (
+        <div className="text-sm space-y-1">
+          <p className={last.status === "ok" ? "text-os-text" : "text-os-err"}>
+            {last.date}: {last.message}
+          </p>
+          {last.outcome && (
+            <p className="text-os-muted">
+              {last.outcome.label}: <b className="text-os-text">{last.outcome.value}</b>
+            </p>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-os-muted">Hasn&apos;t run yet.</p>
+      )}
+
+      <div className="flex flex-wrap gap-2">
+        <Button size="sm" variant="outline" disabled={pending} title="Run this job now, whatever the time. In practice mode it sends nothing." onClick={() => act(() => runJobNowAction(companyId, job.id))}>
+          {pending ? "Working…" : "Run now"}
+        </Button>
+        {job.mode === "shadow" ? (
+          confirmLive ? (
+            <>
+              <Button size="sm" disabled={pending} title="From the next run, this job may send messages under your approved send policies." onClick={() => act(() => setJobModeAction(companyId, job.id, "live"), () => setConfirmLive(false))}>
+                Yes, go live
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setConfirmLive(false)} title="Keep practising">
+                Not yet
+              </Button>
+            </>
+          ) : (
+            <Button size="sm" variant="outline" disabled={pending} title="Let this job act for real. Check its practice runs below first." onClick={() => setConfirmLive(true)}>
+              Go live…
+            </Button>
+          )
+        ) : (
+          <Button size="sm" variant="outline" disabled={pending} title="Keep running it, but send nothing." onClick={() => act(() => setJobModeAction(companyId, job.id, "shadow"))}>
+            Back to practice
+          </Button>
+        )}
+        <Button size="sm" variant="ghost" disabled={pending} title={job.enabled ? "Stop this job from running at all." : "Let this job run on its schedule again."} onClick={() => act(() => setJobEnabledAction(companyId, job.id, !job.enabled))}>
+          {job.enabled ? "Turn off" : "Turn on"}
+        </Button>
+      </div>
+      {confirmLive && <p className="text-sm text-os-warn">Going live lets this job send messages without you reading each one, but only under send policies you have approved.</p>}
+      <NoticeLine notice={notice} />
+
+      {job.recent.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-os-muted">Recent runs</summary>
+          <ul className="mt-2 space-y-2">
+            {job.recent.map((run) => (
+              <li key={run.runId} className="border-l-2 border-os-border pl-3">
+                <p className={run.status === "ok" ? "text-os-text" : "text-os-err"}>
+                  {run.date} · {run.mode === "live" ? "Live" : "Practice"} · {run.message}
+                </p>
+                {run.did.length > 0 && <p className="text-os-muted">{run.did.join(" · ")}</p>}
+                {run.sends.length > 0 && (
+                  <p className="text-os-dim">
+                    {run.sends.map((s) => `${s.to}: ${s.result === "would-send" ? "would send" : s.result}${s.reason ? ` (${s.reason})` : ""}`).join(" · ")}
+                  </p>
+                )}
+                {run.stderrTail && <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap text-xs text-os-dim">{run.stderrTail}</pre>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </article>
+  )
+}
+
+function PolicyCard({ companyId, policy }: { companyId: string; policy: PolicyView }) {
+  const [act, pending, notice] = useAct()
+  const [confirm, setConfirm] = useState(false)
+  const [testTo, setTestTo] = useState("")
+  return (
+    <article className="rounded-lg border border-os-border bg-os-surface p-4 space-y-3">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-os-text">{policy.id}</h3>
+          <p className="text-sm text-os-muted">
+            Email through Outlook · message in {policy.template} · at most {policy.max_per_recipient} per person, {policy.min_days_between} days apart, {policy.max_per_run} per run
+            {policy.stop_list ? ` · stop list ${policy.stop_list}` : ""}
+          </p>
+        </div>
+        <span className={`rounded px-2 py-0.5 text-xs ${policy.approved ? "bg-os-ok text-white" : "border border-os-border text-os-muted"}`}>
+          {policy.approved ? "Approved" : "Not approved"}
+        </span>
+      </header>
+      {policy.reason && <p className="text-sm text-os-warn">{policy.reason}</p>}
+      <p className="text-sm text-os-muted">Sent so far: {policy.sentTotal}</p>
+      <div className="flex flex-wrap gap-2">
+        {policy.approved ? (
+          <Button size="sm" variant="outline" disabled={pending} title="Stop all sending under this policy at once." onClick={() => act(() => revokePolicyAction(companyId, policy.id))}>
+            Stop sending
+          </Button>
+        ) : confirm ? (
+          <>
+            <Button size="sm" disabled={pending} title="Live jobs may send this exact message, within these limits, without asking each time." onClick={() => act(() => approvePolicyAction(companyId, policy.id), () => setConfirm(false))}>
+              Yes, approve this message
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setConfirm(false)} title="Don't approve it now">
+              Not now
+            </Button>
+          </>
+        ) : (
+          <Button size="sm" variant="outline" disabled={pending} title="Read the message and its limits, then approve it once." onClick={() => setConfirm(true)}>
+            Approve…
+          </Button>
+        )}
+      </div>
+      {confirm && (
+        <p className="text-sm text-os-warn">
+          This approves the message in {policy.template} exactly as it is now. Send yourself a test first. If the message or these limits change, sending stops until you approve again.
+        </p>
+      )}
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          act(() => sendTestAction(companyId, policy.id, testTo))
+        }}
+      >
+        <input
+          type="email"
+          required
+          value={testTo}
+          onChange={(e) => setTestTo(e.target.value)}
+          placeholder="you@example.com"
+          aria-label="Address for a test message"
+          className="h-8 min-w-0 flex-1 rounded-md border border-os-border bg-os-bg px-2 text-sm text-os-text"
+        />
+        <Button size="sm" variant="outline" type="submit" disabled={pending} title="Send this message once to one address, marked [TEST], with sample values. It doesn't count toward anyone's limit.">
+          Send a test
+        </Button>
+      </form>
+      <NoticeLine notice={notice} />
+    </article>
+  )
+}
+
+export function JobsBoard({ companyId, view }: { companyId: string; view: JobsView }) {
+  if (!view.ok) {
+    return <p className="text-sm text-os-err">The jobs file needs fixing: {view.reason}</p>
+  }
+  const invalid = [...view.invalidJobs.map((i) => ({ ...i, file: "jobs" })), ...view.invalidPolicies.map((i) => ({ ...i, file: "send policies" }))]
+  return (
+    <div className="space-y-8">
+      {view.flags.length > 0 && (
+        <section aria-labelledby="jobs-need-you" className="space-y-3">
+          <h2 id="jobs-need-you" className="text-lg font-semibold text-os-text">Needs you</h2>
+          <JobFlagList companyId={companyId} flags={view.flags} />
+        </section>
+      )}
+
+      <section aria-labelledby="jobs-list" className="space-y-3">
+        <h2 id="jobs-list" className="text-lg font-semibold text-os-text">Jobs</h2>
+        {view.jobs.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-os-border p-4 text-sm text-os-muted space-y-2">
+            <p>No jobs yet. A job is a script in your company&apos;s scripts folder, listed in definitions/jobs.yaml. Ask your AI to write one, or add it yourself:</p>
+            <pre className="overflow-auto rounded bg-os-bg p-3 text-xs text-os-text">{EXAMPLE}</pre>
+            <p>Each new job practises first: it runs, shows what it would have done, and sends nothing until you put it live.</p>
+          </div>
+        ) : (
+          view.jobs.map((job) => <JobCard key={job.id} companyId={companyId} job={job} />)
+        )}
+      </section>
+
+      <section aria-labelledby="jobs-policies" className="space-y-3">
+        <h2 id="jobs-policies" className="text-lg font-semibold text-os-text">Messages jobs may send</h2>
+        {view.policiesError && <p className="text-sm text-os-err">The send policies file needs fixing: {view.policiesError}</p>}
+        {view.policies.length === 0 ? (
+          <p className="text-sm text-os-muted">
+            None. Without an approved send policy in definitions/send-policies.yaml, no job can send anything, live or not.
+          </p>
+        ) : (
+          view.policies.map((p) => <PolicyCard key={p.id} companyId={companyId} policy={p} />)
+        )}
+      </section>
+
+      {invalid.length > 0 && (
+        <section aria-labelledby="jobs-invalid" className="space-y-2">
+          <h2 id="jobs-invalid" className="text-lg font-semibold text-os-text">Not valid</h2>
+          <ul className="text-sm text-os-err space-y-1">
+            {invalid.map((i) => (
+              <li key={`${i.file}-${i.index}`}>
+                In {i.file}, entry {i.index + 1}
+                {i.id ? ` (${i.id})` : ""}: {i.reason}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+    </div>
+  )
+}

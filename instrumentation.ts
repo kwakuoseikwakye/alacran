@@ -26,6 +26,7 @@ export async function register(): Promise<void> {
     const { catchUpSessionNotes } = await import("./lib/terminal/auto-session-note")
     const { syncAllSharedKnowledge } = await import("./lib/sharing/shared-sync")
     const { ensureOutlookLauncher } = await import("./lib/outlook/outlook")
+    const { runDueJobsImpl } = await import("./lib/jobs/sweep")
     // Once per launch: points `alacran-outlook` at THIS install's node and
     // script, so an app update or move never leaves every AI a dead command.
     // Writes nothing when it is already right, and never replaces a file that
@@ -46,6 +47,9 @@ export async function register(): Promise<void> {
       // it shares with (lib/sharing/shared-file.ts). File reads and, only on a
       // change, one write: no AI run.
       void syncAllSharedKnowledge().catch(() => {})
+      // Unattended jobs (lib/jobs/sweep.ts): the company's own scripts, no AI. A send needs a
+      // policy approved in THIS install's data, so a second server on another data dir sends nothing.
+      void runDueJobsImpl().catch(() => {})
     }
     // unref so the timer alone never keeps the process alive.
     setInterval(tick, 60_000).unref()

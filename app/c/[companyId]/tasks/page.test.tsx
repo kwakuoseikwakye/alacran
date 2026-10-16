@@ -16,6 +16,8 @@ vi.mock("@/components/os/tasks-board", () => ({ TasksBoard: () => null }))
 vi.mock("@/components/content-social/post-list", () => ({ PostList: () => null }))
 vi.mock("@/components/os/loop-strip", () => ({ LoopStrip: () => null }))
 vi.mock("@/components/os/guide/guide-proposal-card", () => ({ GuideProposalCard: () => null }))
+vi.mock("@/lib/jobs/view", () => ({ openFlags: vi.fn(async () => []) }))
+vi.mock("@/components/os/jobs/job-flag-list", () => ({ JobFlagList: () => null }))
 
 import TasksPage from "./page"
 import { TasksBoard } from "@/components/os/tasks-board"

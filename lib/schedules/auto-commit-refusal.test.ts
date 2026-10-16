@@ -77,4 +77,22 @@ describe("commitFinishedRun", () => {
     expect(outcome?.message).toMatch(/couldn't verify/i)
     expect(commitSpy).not.toHaveBeenCalled()
   })
+
+  /** v240: a person's field is never overwritten with nobody looking. */
+  it("refuses when the run changed a field people own in a records file", async () => {
+    const before = "schema_version: 1\nhuman_fields: [notes]\nrecords:\n  - { id: l1, name: A, notes: call Tuesday }\n"
+    const after = "schema_version: 1\nhuman_fields: [notes]\nrecords:\n  - { id: l1, name: A, notes: '' }\n"
+    const { commitFinishedRun, commitSpy } = await loadWith({
+      changed: true,
+      outputPath: "records/leads.yaml",
+      oldText: before,
+      newText: after,
+      extraFiles: [],
+      strays: [],
+    })
+    const outcome = await commitFinishedRun("acme", "sync-funnel")
+    expect(outcome?.committed).toBe(false)
+    expect(outcome?.message).toContain("changed notes on l1")
+    expect(commitSpy).not.toHaveBeenCalled()
+  })
 })

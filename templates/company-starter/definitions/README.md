@@ -11,6 +11,8 @@ changed.
 | `triage/senders.yaml` | Allowlist of who `/triage-email` will act on. Copy from `senders.example.yaml`. |
 | `triage/repos.yaml` | Repos `/triage-email` may route a request to. Copy from `repos.example.yaml`. |
 | `integrations/google.yaml` | Which Google accounts this company uses. Written by Alacrán's account picker. |
+| `jobs.yaml` | Scripts in `scripts/` that Alacrán runs every day, with no AI. Each starts in practice mode and sends nothing until put live from the Jobs page. |
+| `send-policies.yaml` | The messages jobs may send without asking each time: a template, a per-person cap, days apart, an optional stop list. Nothing sends until the owner approves the policy in Alacrán. |
 
 ## Rules
 

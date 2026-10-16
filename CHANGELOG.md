@@ -13982,3 +13982,22 @@ installer are gone from the public repo. It was another company's internal
 workflow wired in as a built-in. `ai-company-starter-main` and every
 registered company are unchanged. The earlier entries above that describe the
 integration are kept as history, with its names replaced by neutral wording.
+
+## v240 (2026-10-16): unattended jobs
+
+### What's new for you (feature)
+Alacrán can now run your own daily jobs with nobody watching, and only bother you with what they couldn't decide.
+- A job is a small script your company keeps. It runs every day at the time you choose, with no AI, so it costs nothing to run and does the same thing every time.
+- Every new job practises first. It shows what it would have done and sends nothing until you put it live.
+- You approve a message once, with its limits: how many times one person can get it, how many days apart, and a do-not-contact list. Jobs can then send it without asking each time. If the message or the limits change, sending stops until you approve again.
+- Send yourself a test before approving. Tests never count toward anyone's limit.
+- Anything a job can't decide shows up in Approvals. A day with nothing to decide stays quiet.
+- Each job shows its last run, one number that says whether it's working, and a warning if it didn't run.
+- Fields people write in your records are now protected: an automatic save never changes them.
+- Find it under Unattended jobs in the Developer section (Advanced mode).
+
+Why: Alacrán could only work through an AI, and every result waited for a person, so it could not run a real business process on its own. The reference was an outreach job that runs every morning in production with no AI: a script on a timer, one approved template, caps and a sent-log, a human stop mark, dry-run by default and a one-address test mode, and an exceptions list for the cases that need a call. This slice builds those parts into the app.
+
+Engineering notes: `lib/jobs/` holds the feature. `definitions/jobs.yaml` and `definitions/send-policies.yaml` are parsed with zod (one bad entry is reported, never hides the rest; unparsable is reported, never guessed). The sweep (`runDueJobsImpl`) rides the existing 60-second tick in `instrumentation.ts`, with the same local-time, today-only catch-up as daily schedules; a job first seen after its time waits for tomorrow, and the day is stamped before the script starts so a crash cannot fire it twice. Scripts run with `execFile` (no shell), the company folder as cwd, a fixed environment (PATH, HOME, LANG, TZ, a private TMPDIR, `ALACRAN_JOB_ID`, `ALACRAN_REPORT`, and `ALACRAN_DRY_RUN=1` in practice mode), a 10-minute timeout, and a realpath check that the file is still inside `scripts/` after symlinks. A script never sends: its report lists requests and the send lane (`send-lane.ts`) checks each against an approved policy, then sends with `alacran-outlook mail send ... --confirm` added by the app. Approval stores SHA-256 hashes of the policy entry and the template in app data (`<data>/jobs/<company>/approvals.json`, outside any AI's write scope) and commits a decision note; any drift stops the policy. Per-recipient cap and days apart are counted from an append-only `sent.jsonl`; the per-run cap, field allowlist, email check, duplicate guard and stop list (re-read before every run; unreadable stops the policy) are enforced in code. Quiet refusals (too soon, stop list, duplicate) are recorded but not flagged; everything else becomes a flag. A failed run sends nothing. Practice mode is enforced by the lane, not by trusting the script to read the variable. Flags from each job's latest run count toward the Approvals badge in all three sum sites and show in Approvals; "Mark handled" records the flag key. A records file may declare `human_fields:`, and `owner: human` marks a whole record; `commitFinishedRun` refuses an auto-commit that changed either (matched by `id`) and leaves it for the owner. The company template's `AGENTS.md` (§2, §3, §6), `definitions/README.md` and a new `scripts/README.md` (added to the template manifest) describe the protocol. A second server on another data dir sends nothing, because approvals live in each install's own data.
+
+Not yet run live: a real Outlook send through the lane (tests use a stand-in sender) and a browser pass of the Jobs page. Channels other than Outlook, HTML templates, sub-daily jobs and app-closed runs are out of scope. Standing orders (#38) remain the next slice.

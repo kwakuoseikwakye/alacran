@@ -14,6 +14,7 @@ import { SIDEBAR_WIDTH_KEY, SIDEBAR_COLLAPSED_KEY } from "@/components/os/sideba
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
 import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 import { guidePendingCount } from "@/lib/guide/observe"
+import { openFlagCount } from "@/lib/jobs/view"
 import { ACTIVE_COMPANY_COOKIE, resolveActiveCompany } from "@/lib/os/active-company"
 import { buildCommands } from "@/lib/os/palette-sources"
 import { buildShellAssistant } from "@/lib/os/shell-assistant"
@@ -73,7 +74,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // is the one thing the user didn't ask for and so isn't already looking at.
   const [agents, voice] = await Promise.all([getEffectiveAgents(), readVoiceSettingsViewImpl()])
   const guidePending = (await Promise.all(agents.map((a) => guidePendingCount(a.id)))).reduce<number>((sum, n) => sum + n, 0)
-  const pendingReviews = (await listPendingReviews(agents)).length + guidePending
+  const jobFlags = (await Promise.all(agents.map((a) => openFlagCount(a.id)))).reduce<number>((sum, n) => sum + n, 0)
+  const pendingReviews = (await listPendingReviews(agents)).length + guidePending + jobFlags
   // The active company for the rail on non-company routes (`/`, `/system/*`).
   // A `/c/[companyId]` route mounts its own <Shell> keyed off the URL instead —
   // see app/c/[companyId]/layout.tsx — and this instance steps aside there.

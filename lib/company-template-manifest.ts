@@ -36,6 +36,8 @@ export const TEMPLATE_MANIFEST: string[] = [
   "docs/decisions/README.md",
   "docs/retros/README.md",
   "scripts/verify.py",
+  // How unattended jobs and send policies work (v240): a folder README, not a manual.
+  "scripts/README.md",
   // Nothing from ".github" — see v55/v56 in CHANGELOG.md.
   //
   // The workflows folder is the one that mattered: that CI wrapper around
