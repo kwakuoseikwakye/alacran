@@ -6,12 +6,74 @@
 
 **Give your AI a memory of your business, on your own machine.**
 
+Free and open source. No account, no cloud, no telemetry.
+
 [![CI](https://github.com/kwakuoseikwakye/alacran/actions/workflows/ci.yml/badge.svg)](https://github.com/kwakuoseikwakye/alacran/actions/workflows/ci.yml)
 [![Download](https://img.shields.io/github/v/release/kwakuoseikwakye/alacran-releases?label=download)](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest)
+[![Licence: MIT](https://img.shields.io/badge/licence-MIT-blue)](LICENSE)
+![Platforms](https://img.shields.io/badge/macOS%20%C2%B7%20Linux-lightgrey)
 
-[Download](#install) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Report a problem](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
+[Install](#install-in-3-steps) | [Screenshots](#a-look-inside) | [Quick start](#quick-start) | [How it works](#how-it-works) | [Report a problem](CONTRIBUTING.md) | [Changelog](CHANGELOG.md)
+
+<br />
+
+<img src="landing/screens/office-dark-1200.webp" alt="Alacrán's home screen: a greeting, a live map of the AI team at work, and one change waiting for approval" width="880" />
+
+<sub>Sample company, sample data.</sub>
 
 </div>
+
+---
+
+## Install in 3 steps
+
+**On a Mac** (about two minutes):
+
+1. **Download the right file for your Mac.** Not sure which? Click the Apple menu, then **About This Mac**. If it says *Chip: Apple M1* (or M2, M3, M4), take Apple Silicon. If it says *Processor: Intel*, take Intel.
+
+   | Your Mac | Download |
+   |---|---|
+   | Apple Silicon (M1 or newer) | [**Alacran-arm64.dmg**](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-arm64.dmg) |
+   | Intel | [**Alacran-x64.dmg**](https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran-x64.dmg) |
+
+2. **Open the `.dmg` and drag Alacrán into Applications.**
+3. **Open Terminal, paste this once, press Return, then open Alacrán:**
+
+   ```bash
+   xattr -cr "/Applications/Alacran.app"
+   ```
+
+   Why: the app isn't notarized yet, so without this step macOS may say *"Alacrán is damaged and can't be opened."* It isn't damaged. This clears the flag your browser attached to the download. You only do it once. [More detail below](#install).
+
+**On Debian or Ubuntu:**
+
+```bash
+curl -LO https://github.com/kwakuoseikwakye/alacran-releases/releases/latest/download/Alacran.deb
+sudo apt install ./Alacran.deb
+```
+
+Then open **Alacrán** from your applications menu.
+
+**First launch:** a short checklist makes sure you have Git and one AI tool (Claude Code is the default and installs from a button). Then you add your company and answer four questions. [Quick start](#quick-start) walks through it. Prefer to build it yourself? See [Development](#development).
+
+## A look inside
+
+Every screenshot is a made-up sample company, not real data.
+
+<table>
+  <tr>
+    <td width="50%"><img src="landing/screens/home-1200.webp" alt="Home: ask anything about your company, and see what is waiting for you" /><br /><sub><b>Home.</b> Ask anything about your company. When nothing is waiting, it says so.</sub></td>
+    <td width="50%"><img src="landing/screens/approvals-1200.webp" alt="Approvals: a drafted weekly summary waiting for your yes, with a plain-language preview" /><br /><sub><b>Approvals.</b> Every change the AI proposes waits for your yes, with a plain-language preview.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="landing/screens/memory-1200.webp" alt="Brain: a map of the company's pillars, definitions, decisions and records" /><br /><sub><b>Brain.</b> A map of everything the company's memory holds: pillars, definitions, decisions and records.</sub></td>
+    <td width="50%"><img src="landing/screens/departments-1200.webp" alt="Departments: seven departments and the people who sign off" /><br /><sub><b>Departments.</b> Each department's records, and who signs off on what.</sub></td>
+  </tr>
+  <tr>
+    <td width="50%"><img src="landing/screens/workflows-1200.webp" alt="Workflows: ready-made jobs grouped by track, each with a draft or terminal option" /><br /><sub><b>Workflows.</b> Ready-made jobs, grouped by track. Prepare a draft, or run one in a terminal.</sub></td>
+    <td width="50%"><img src="landing/screens/finances-1200.webp" alt="Finances: cash on hand, monthly burn and estimated runway" /><br /><sub><b>Finances.</b> Cash on hand, monthly burn and runway, kept as plain records.</sub></td>
+  </tr>
+</table>
 
 ---
 
