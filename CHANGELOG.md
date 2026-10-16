@@ -13985,7 +13985,7 @@ integration are kept as history, with its names replaced by neutral wording.
 
 ## v240 (2026-10-16): unattended jobs
 
-### What's new for you (feature)
+### What's new for you (feature, v0.95.0)
 Alacrán can now run your own daily jobs with nobody watching, and only bother you with what they couldn't decide.
 - A job is a small script your company keeps. It runs every day at the time you choose, with no AI, so it costs nothing to run and does the same thing every time.
 - Every new job practises first. It shows what it would have done and sends nothing until you put it live.
