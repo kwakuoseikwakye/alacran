@@ -11,6 +11,8 @@ import { readFirstRun } from "@/lib/os/first-run-state"
 import { savedRecently } from "@/lib/os/first-run"
 import { observeGuide } from "@/lib/guide/observe"
 import { GuideProposalCard } from "@/components/os/guide/guide-proposal-card"
+import { openFlags } from "@/lib/jobs/view"
+import { JobFlagList } from "@/components/os/jobs/job-flag-list"
 
 export const dynamic = "force-dynamic"
 
@@ -30,6 +32,8 @@ export default async function TasksPage({ params }: { params: Promise<{ companyI
   // A stale guide waits here too, as a card of its own (it is not a command run). Read-only; "Not now" hides it.
   const guide = await observeGuide(agent)
   const guideProposal = guide.result.kind === "proposal" && !guide.dismissed ? guide.result.proposal : null
+  // What unattended jobs couldn't decide (v240). Counted in the badge, so it has to be visible here.
+  const jobFlags = await openFlags(agent.id).catch(() => [])
   const postReviews = reviews.filter((r) => r.commandId === "make-posts")
   const otherReviews = reviews.filter((r) => r.commandId !== "make-posts")
   const waitingPosts = postReviews.length
@@ -50,12 +54,15 @@ export default async function TasksPage({ params }: { params: Promise<{ companyI
         {waitingPosts.length > 0 && (
           <section aria-labelledby="posts-waiting"><h2 id="posts-waiting">Posts to approve</h2><PostList posts={waitingPosts} agentId={agent.id} empty="" /></section>
         )}
+        {jobFlags.length > 0 && (
+          <section aria-labelledby="jobs-need-you"><h2 id="jobs-need-you">Unattended jobs need you</h2><JobFlagList companyId={companyId} flags={jobFlags} linkToJobs /></section>
+        )}
         <GuideProposalCard companyId={companyId} proposal={guideProposal} />
         <TasksBoard
           reviews={waitingPosts.length > 0 ? otherReviews : reviews}
           companyId={companyId}
           justSaved={savedRecently(firstRun.firstSavedAt)}
-          suppressEmpty={guideProposal !== null}
+          suppressEmpty={guideProposal !== null || jobFlags.length > 0}
         />
       </div>
     </>

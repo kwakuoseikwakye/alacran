@@ -22,9 +22,12 @@ pointer to it, not a second source of truth.
   reorganises notes is two commits.
 - **Facts change in `definitions/`, never in a note.** A note may *propose*
   a change to a definition; the definition file is where it lands.
-- **A record in `records/` is machine-maintained.** A human edit to `records/`
-  is legitimate but will be reconciled by the owning agent on its next run.
-  Facts that other files depend on still belong in `definitions/`.
+- **A record in `records/` is machine-maintained, except what people own.**
+  A records file may list `human_fields:` at its top, and a record with
+  `owner: human` belongs to people entirely. Never change those; update the
+  rest. Match records by `id`, never by their position in the list. Alacrán
+  refuses to auto-commit a run that crossed this line. Facts that other files
+  depend on still belong in `definitions/`.
 
 ## 3. Where things go
 
@@ -36,6 +39,8 @@ pointer to it, not a second source of truth.
 | a decision, with reasoning | `docs/decisions/YYYY-MM-DD-<slug>.md` |
 | a look back at how something went | `docs/retros/YYYY-MM-DD-retro.md` |
 | generated output | `state/` |
+| a script that runs every day with no AI | `scripts/`, listed in `definitions/jobs.yaml` |
+| a message a job may send without asking each time | `definitions/send-policies.yaml`, approved in Alacrán |
 | a credential | nowhere in this repo. `secrets/`, untracked, or a keychain |
 
 ## 4. Session flow
@@ -92,6 +97,14 @@ with the rest of the task while you wait. Approval covers the thing shown.
   is the safe default and a loud one. If "purchases over X" serves you
   better, record it in `definitions/` where the agent will read it, and say
   so in a `/decision`. A threshold that lives only in your head isn't one.
+- **A standing approval is a policy, approved once in Alacrán.** An
+  unattended job (`definitions/jobs.yaml`) may send a message only under a
+  send policy (`definitions/send-policies.yaml`) the owner approved on the
+  Jobs page: one template, a per-person cap, days apart, a stop list.
+  Alacrán checks every send against it and stops the policy if the template
+  or the limits change. Editing either file does not approve anything. A job
+  script never sends by itself; it lists who to send to in its report, and
+  anything it can't decide goes in `flagged` for a person.
 
 ## 7. The company's chats
 

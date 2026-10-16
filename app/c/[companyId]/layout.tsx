@@ -3,6 +3,7 @@ import { Shell } from "@/components/os/shell"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
 import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 import { guidePendingCount } from "@/lib/guide/observe"
+import { openFlagCount } from "@/lib/jobs/view"
 import { buildCommands } from "@/lib/os/palette-sources"
 import { buildShellAssistant } from "@/lib/os/shell-assistant"
 import { readVoiceSettingsViewImpl } from "@/lib/voice/settings-impl"
@@ -43,8 +44,11 @@ export default async function CompanyLayout({
   const persona = (await resolvePersona(agent?.rootPath ?? null)).persona
 
   // A stale guide waiting in Approvals counts too: a file read, no scan (see lib/guide/observe.ts).
+  // So do flags unattended jobs raised for a person (lib/jobs/view.ts): two small file reads.
   const pendingReviews =
-    (await listPendingReviews(agents)).filter((p) => p.agentId === companyId).length + (await guidePendingCount(companyId))
+    (await listPendingReviews(agents)).filter((p) => p.agentId === companyId).length +
+    (await guidePendingCount(companyId)) +
+    (await openFlagCount(companyId))
 
   // "agents" in the palette sense (a sub-agent WITHIN a company) has no data
   // source yet — `getEffectiveAgents()` here is the company list, not that.

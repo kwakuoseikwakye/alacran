@@ -8,6 +8,7 @@ import { checkRunLockStatus } from "../company-commands/run-lock"
 import { getCompanyCommandResultImpl } from "../company-commands/company-command-result-impl"
 import { commitCompanyCommandResultImpl } from "../company-commands/commit-company-command-result-impl"
 import { getEffectiveAgents } from "../get-effective-agents"
+import { humanFieldChanges } from "../os/records/human-fields"
 
 export type Schedule = {
   agentId: string
@@ -264,6 +265,15 @@ export async function commitFinishedRun(
         .slice(0, 5)
         .join(", ")}`,
     }
+  }
+  // v240: people own some record fields (and some whole records). Unattended commit never
+  // overwrites them; a run that tried waits for the owner, who can still approve it by hand.
+  const crossings = [
+    { path: result.outputPath, oldText: result.oldText, newText: result.newText },
+    ...(result.ownedFiles ?? []),
+  ].flatMap((f) => humanFieldChanges(f.path, f.oldText, f.newText))
+  if (crossings.length > 0) {
+    return { committed: false, message: `Waiting for you — this run changed what people own: ${crossings.slice(0, 3).join(" ")}` }
   }
   return commitCompanyCommandResultImpl(commandId, result.outputPath, agentId)
 }
