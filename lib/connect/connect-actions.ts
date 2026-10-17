@@ -39,7 +39,9 @@ export async function recheckAllConnectionsState(): Promise<{
 
   const [connectStatus, statuses, mcpPool] = await Promise.all([
     getConnectStatusImpl(),
-    allConnectorStatuses(null),
+    // This catalog has its own cache in addition to the underlying CLI probes.
+    // An explicit re-check must bypass both, including immediately after setup.
+    allConnectorStatuses(null, true),
     readMcpPool(),
   ])
 

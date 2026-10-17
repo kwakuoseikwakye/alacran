@@ -25,11 +25,13 @@ export function ConnectionCard({
   guidance,
   connectStatus,
   onRecheck,
+  onOpenMachineSetup,
 }: {
   entry: CatalogEntry
   guidance?: string
   connectStatus?: ConnectStatus
   onRecheck?: () => Promise<void>
+  onOpenMachineSetup?: (slug: string) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [mcpModalOpen, setMcpModalOpen] = useState(false)
@@ -111,7 +113,7 @@ export function ConnectionCard({
 
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => onOpenMachineSetup ? onOpenMachineSetup(entry.slug) : setModalOpen(true)}
             className={`rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer ${
               entry.connected
                 ? "border border-os-border text-os-dim hover:border-os-border-strong hover:text-os-text"
@@ -121,14 +123,14 @@ export function ConnectionCard({
             {entry.connected ? "Manage" : "+ Connect"}
           </button>
 
-          <MachineSetupModal
+          {!onOpenMachineSetup && <MachineSetupModal
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             slug={entry.slug}
             name={entry.name}
             connectStatus={connectStatus}
             onRecheck={onRecheck}
-          />
+          />}
         </div>
       ) : (
         <ConnectFlow

@@ -41,12 +41,28 @@ export function MachineSetupModal({
   const [apiKey, setApiKey] = useState("")
   const [saveSuccess, setSaveSuccess] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [checkResult, setCheckResult] = useState<"success" | "error" | null>(null)
 
   // Install State
   const [installBusy, setInstallBusy] = useState(false)
   const [installLog, setInstallLog] = useState<string | null>(null)
 
   if (!open) return null
+
+  const handleRecheck = async () => {
+    if (!onRecheck || checking) return
+    setChecking(true)
+    setCheckResult(null)
+    try {
+      await onRecheck()
+      setCheckResult("success")
+    } catch {
+      setCheckResult("error")
+    } finally {
+      setChecking(false)
+    }
+  }
 
   const handleSaveKey = async (keyName: string, value: string) => {
     setBusy(true)
@@ -64,7 +80,7 @@ export function MachineSetupModal({
       const data = (await res.json()) as { ok: boolean; error?: string }
       if (!data.ok) throw new Error(data.error ?? "Failed to save key")
       setSaveSuccess(true)
-      if (onRecheck) await onRecheck()
+      await handleRecheck()
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Failed to save key")
     } finally {
@@ -78,7 +94,7 @@ export function MachineSetupModal({
     try {
       const res = await installTool(toolId)
       if (res.ok) {
-        if (onRecheck) await onRecheck()
+        await handleRecheck()
       } else {
         setInstallLog(res.log || "Install failed")
       }
@@ -90,10 +106,11 @@ export function MachineSetupModal({
   }
 
   const claudeTool = connectStatus?.aiExecutors.find((e) => e.id === "claude-code")
+  const executor = connectStatus?.aiExecutors.find((e) => e.id === (slug === "antigravity" ? "google-antigravity" : slug))
   const google = connectStatus?.google
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
+    <div role="dialog" aria-modal="true" aria-label={`${name} setup`} className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xs">
       {/* Header and footer stay put; only the body scrolls, so a long setup never pushes Close off screen. */}
       <div className="relative flex max-h-[90vh] w-full max-w-2xl flex-col gap-5 overflow-hidden rounded-2xl border border-os-border bg-os-surface p-6 shadow-2xl">
         {/* Header */}
@@ -268,7 +285,7 @@ export function MachineSetupModal({
               </>
             ) : (
               <div className="space-y-3">
-                {google?.installId && <InstallButton id={google.installId} onDone={() => void onRecheck?.()} />}
+                {google?.installId && <InstallButton id={google.installId} onDone={() => void handleRecheck()} />}
                 {(google?.googleStage === "client" || google?.googleStage === "account") && (
                   <GoogleSetup
                     stage={google.googleStage}
@@ -376,7 +393,7 @@ export function MachineSetupModal({
         )}
 
         {/* BEEPER */}
-        {slug === "outlook" && <OutlookSetup connectStatus={connectStatus} onRecheck={onRecheck} />}
+        {slug === "outlook" && <OutlookSetup connectStatus={connectStatus} onRecheck={handleRecheck} />}
 
         {slug === "beeper" && (
           <div className="space-y-4 text-xs">
@@ -520,10 +537,17 @@ export function MachineSetupModal({
             <div className="rounded-xl border border-os-border bg-os-surface2 p-3">
               <div className="flex items-center justify-between">
                 <span className="font-mono text-os-dim uppercase tracking-wider text-[11px]">Status</span>
-                <span className="flex items-center gap-1.5 font-mono text-os-ok">
-                  <CheckCircle2 className="h-3.5 w-3.5" />
-                  CLI Engine Ready
-                </span>
+                {executor?.connected ? (
+                  <span className="flex items-center gap-1.5 font-mono text-os-ok">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    CLI Engine Ready
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 font-mono text-os-dim">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Not connected
+                  </span>
+                )}
               </div>
             </div>
 
@@ -560,6 +584,9 @@ export function MachineSetupModal({
 
         </div>
 
+        {checkResult === "success" && <p role="status" className="text-xs text-os-ok">Status checked. Connection details are up to date.</p>}
+        {checkResult === "error" && <p role="alert" className="text-xs text-os-err">Could not re-check connections. Please try again.</p>}
+
         {/* Footer */}
         <div className="flex shrink-0 items-center justify-between border-t border-os-border pt-3">
           <Button
@@ -576,11 +603,12 @@ export function MachineSetupModal({
               type="button"
               variant="outline"
               size="sm"
-              onClick={onRecheck}
+              onClick={handleRecheck}
+              disabled={checking}
               className="h-8 border-os-border bg-os-surface text-xs text-os-text hover:bg-os-surface2"
             >
-              <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
-              Re-check status
+              <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${checking ? "animate-spin" : ""}`} />
+              {checking ? "Checking…" : "Re-check status"}
             </Button>
           )}
         </div>
