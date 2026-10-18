@@ -14001,3 +14001,44 @@ Why: Alacrán could only work through an AI, and every result waited for a perso
 Engineering notes: `lib/jobs/` holds the feature. `definitions/jobs.yaml` and `definitions/send-policies.yaml` are parsed with zod (one bad entry is reported, never hides the rest; unparsable is reported, never guessed). The sweep (`runDueJobsImpl`) rides the existing 60-second tick in `instrumentation.ts`, with the same local-time, today-only catch-up as daily schedules; a job first seen after its time waits for tomorrow, and the day is stamped before the script starts so a crash cannot fire it twice. Scripts run with `execFile` (no shell), the company folder as cwd, a fixed environment (PATH, HOME, LANG, TZ, a private TMPDIR, `ALACRAN_JOB_ID`, `ALACRAN_REPORT`, and `ALACRAN_DRY_RUN=1` in practice mode), a 10-minute timeout, and a realpath check that the file is still inside `scripts/` after symlinks. A script never sends: its report lists requests and the send lane (`send-lane.ts`) checks each against an approved policy, then sends with `alacran-outlook mail send ... --confirm` added by the app. Approval stores SHA-256 hashes of the policy entry and the template in app data (`<data>/jobs/<company>/approvals.json`, outside any AI's write scope) and commits a decision note; any drift stops the policy. Per-recipient cap and days apart are counted from an append-only `sent.jsonl`; the per-run cap, field allowlist, email check, duplicate guard and stop list (re-read before every run; unreadable stops the policy) are enforced in code. Quiet refusals (too soon, stop list, duplicate) are recorded but not flagged; everything else becomes a flag. A failed run sends nothing. Practice mode is enforced by the lane, not by trusting the script to read the variable. Flags from each job's latest run count toward the Approvals badge in all three sum sites and show in Approvals; "Mark handled" records the flag key. A records file may declare `human_fields:`, and `owner: human` marks a whole record; `commitFinishedRun` refuses an auto-commit that changed either (matched by `id`) and leaves it for the owner. The company template's `AGENTS.md` (§2, §3, §6), `definitions/README.md` and a new `scripts/README.md` (added to the template manifest) describe the protocol. A second server on another data dir sends nothing, because approvals live in each install's own data.
 
 Not yet run live: a real Outlook send through the lane (tests use a stand-in sender) and a browser pass of the Jobs page. Channels other than Outlook, HTML templates, sub-daily jobs and app-closed runs are out of scope. Standing orders (#38) remain the next slice.
+
+
+## v241 (2026-10-17): Connected Tools modal actions
+
+### What's new for you (fix)
+Checking a tool's connection and copying its setup commands now give clear results.
+- Re-check status checks again right away and shows when it is checking, done, or needs another try.
+- Your setup window stays open when a tool becomes connected.
+- Copy works in desktop windows that restrict clipboard access, and tells you how to copy manually if it cannot.
+
+Engineering notes: explicit rechecks now bypass both the command-probe memo and
+the separate 15-second connector-status cache while preserving machine-wide
+scope. Refresh errors reach the active dialog, rather than only a banner behind
+it. Machine dialogs are owned by the board so a card moving from Popular to Your
+tools does not unmount the dialog. Kiro, Kimi and Antigravity show their measured
+executor status. The shared command-copy button falls back from the Clipboard
+API to a temporary selected textarea and the user-initiated browser copy command,
+restores focus, removes the temporary node, and exposes failure without claiming
+success. No native permissions or credential flows changed.
+
+
+## v242 (2026-10-18): assisted setup for every AI executor
+
+### What's new for you (fix)
+Every AI assistant in Connected Tools now helps you set it up, not only Claude Code.
+- Codex, Kiro, Kimi and Google Antigravity show the steps, the install command to copy, and a link to their own instructions.
+- Codex and Kiro also get Install it for me, which installs them without opening a terminal.
+- An assistant that is installed but signed out offers Sign in.
+- The Codex card has a button again, so its setup window can be opened.
+
+Engineering notes: `MachineSetupModal` hardcoded the install panel for Claude Code only. Kiro, Kimi and Antigravity rendered a status line and a description; Codex matched no branch and rendered an empty body. The old Connect page's `ToolCard` drove the same panel from each executor's `ToolStatus` (`installId`, `needsSignIn`, `guidance.steps/command/link`), which `connect-status-impl` still produces for every executor. The modal now renders that status for Codex, Kiro, Kimi and Antigravity, reusing `InstallButton` and `SignInButton` from `connect-panel`. Install it for me appears only where `installId` is set, which `isInstallableId` limits to executors with a verified installer (Claude Code, Codex, Kiro); Kimi and Antigravity get the copy command and link, because no installer of theirs has been verified here. Claude Code's own panel is unchanged. Separately, the Codex card fell through `ConnectionCard`'s hand-written `MACHINE_SLUGS` list and rendered no button, so the modal was unreachable for it; the list now derives its executor slugs from a `Record<AiExecutorId, string>`, so a newly registered executor fails `tsc` until its card can open setup. Live check: Codex and Kimi setup windows open from their cards on a machine where both are installed; the not-installed panel is covered by tests only, because every executor is installed on the machine that checked it.
+
+
+## v243 (2026-10-18): a second terminal opens beside the first
+
+### What's new for you (fix)
+Opening another terminal now shows it next to the one you already have, instead of hiding it behind a tab.
+- When a workspace already has a terminal open, a new assistant or command line switches the view to the grid, so you see both at once.
+- Focus is still one click away, and still shows one terminal at a time.
+
+Engineering notes: the terminal code is identical in 0.93.0 and 0.95.0; the difference people saw came from the remembered layout. In Focus layout `openTab` added a tab and made it active, which hid the terminal already open; a double-click on a pane header or its Focus button switches to Focus and remembers it, after which every new terminal behaved that way. `layoutAfterOpen` (`lib/terminal/grid-layout.ts`) now returns `grid` when the workspace already has a terminal, and `openTab` applies and remembers it. The first terminal of a workspace, including the one opened on mount, keeps the chosen layout. Live check: on an isolated dev server, starting in Focus with one pane, Command line produced two visible panes with Grid selected.

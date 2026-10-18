@@ -7,29 +7,33 @@ import { ConnectFlow } from "./connect-flow"
 import { MachineSetupModal } from "./machine-setup-modal"
 import { McpSetupModal } from "./mcp-setup-modal"
 import type { ConnectStatus } from "@/lib/connect/connect-status-impl"
+import type { AiExecutorId } from "@/lib/ai-executors"
 
-const MACHINE_SLUGS = new Set([
-  "claude-code",
-  "google",
-  "outlook",
-  "github",
-  "beeper",
-  "notion",
-  "kiro",
-  "kimi",
-  "antigravity",
-])
+/** Each AI executor's card slug in the catalog. A total record, so a newly
+ *  registered executor fails `tsc` here until its card can open setup: Codex
+ *  was once left off a hand-written list and its card had no button at all. */
+const EXECUTOR_SLUGS: Record<AiExecutorId, string> = {
+  "claude-code": "claude-code",
+  codex: "codex",
+  kiro: "kiro",
+  kimi: "kimi",
+  "google-antigravity": "antigravity",
+}
+
+const MACHINE_SLUGS = new Set([...Object.values(EXECUTOR_SLUGS), "google", "outlook", "github", "beeper", "notion"])
 
 export function ConnectionCard({
   entry,
   guidance,
   connectStatus,
   onRecheck,
+  onOpenMachineSetup,
 }: {
   entry: CatalogEntry
   guidance?: string
   connectStatus?: ConnectStatus
   onRecheck?: () => Promise<void>
+  onOpenMachineSetup?: (slug: string) => void
 }) {
   const [modalOpen, setModalOpen] = useState(false)
   const [mcpModalOpen, setMcpModalOpen] = useState(false)
@@ -111,7 +115,7 @@ export function ConnectionCard({
 
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => onOpenMachineSetup ? onOpenMachineSetup(entry.slug) : setModalOpen(true)}
             className={`rounded-full px-3 py-1 font-mono text-[10px] uppercase tracking-[0.1em] transition-colors cursor-pointer ${
               entry.connected
                 ? "border border-os-border text-os-dim hover:border-os-border-strong hover:text-os-text"
@@ -121,14 +125,14 @@ export function ConnectionCard({
             {entry.connected ? "Manage" : "+ Connect"}
           </button>
 
-          <MachineSetupModal
+          {!onOpenMachineSetup && <MachineSetupModal
             open={modalOpen}
             onClose={() => setModalOpen(false)}
             slug={entry.slug}
             name={entry.name}
             connectStatus={connectStatus}
             onRecheck={onRecheck}
-          />
+          />}
         </div>
       ) : (
         <ConnectFlow

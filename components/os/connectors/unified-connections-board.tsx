@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/os/dashboard/page-header"
 import { SectionHead } from "@/components/os/terminal"
 import { ConnectHelp } from "@/components/connect-help"
 import { ConnectionCard } from "./connection-card"
+import { MachineSetupModal } from "./machine-setup-modal"
 import { IntegrationCategory } from "./integration-category"
 import { ApiKeys } from "./api-keys"
 import { useAdvancedMode } from "@/components/advanced-only"
@@ -33,6 +34,9 @@ export function UnifiedConnectionsBoard({
   const [mechanismFilter, setMechanismFilter] = useState<"all" | ConnectionMechanism>("all")
   const [pending, setPending] = useState(false)
   const [error, setError] = useState(false)
+  // Cards move between Popular and Your tools after a check. Keep the dialog
+  // here so that regrouping cannot close it or discard its feedback.
+  const [activeMachineSlug, setActiveMachineSlug] = useState<string | null>(null)
 
   async function handleRecheck() {
     setPending(true)
@@ -41,8 +45,9 @@ export function UnifiedConnectionsBoard({
       const refreshed = await recheckAllConnectionsState()
       setConnectStatus(refreshed.connectStatus)
       setCatalog(refreshed.catalog)
-    } catch {
+    } catch (cause) {
       setError(true)
+      throw cause
     } finally {
       setPending(false)
     }
@@ -50,6 +55,7 @@ export function UnifiedConnectionsBoard({
 
   const advanced = useAdvancedMode()
   const byId = new Map(catalog.map((c) => [c.slug, c]))
+  const activeMachineTool = activeMachineSlug ? byId.get(activeMachineSlug) : undefined
   // The three that gate a first win, first — they used to be indistinguishable
   // from 60 others, grouped by how they connect rather than what they're for.
   const essentialSlugs = ["claude-code", "google", "beeper"]
@@ -83,7 +89,7 @@ export function UnifiedConnectionsBoard({
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleRecheck}
+              onClick={async () => { await handleRecheck().catch(() => {}) }}
               disabled={pending}
               className="h-8 border-os-border bg-os-surface text-xs text-os-text hover:border-os-border-strong hover:bg-os-surface2 cursor-pointer"
             >
@@ -201,6 +207,7 @@ export function UnifiedConnectionsBoard({
                 entry={entry}
                 connectStatus={connectStatus}
                 onRecheck={handleRecheck}
+                onOpenMachineSetup={setActiveMachineSlug}
               />
             ))}
           </div>
@@ -219,6 +226,7 @@ export function UnifiedConnectionsBoard({
                   entry={entry}
                   connectStatus={connectStatus}
                   onRecheck={handleRecheck}
+                  onOpenMachineSetup={setActiveMachineSlug}
                 />
               ))}
             </div>
@@ -234,6 +242,7 @@ export function UnifiedConnectionsBoard({
                     entry={entry}
                     connectStatus={connectStatus}
                     onRecheck={handleRecheck}
+                    onOpenMachineSetup={setActiveMachineSlug}
                   />
                 ))}
               </div>
@@ -250,6 +259,7 @@ export function UnifiedConnectionsBoard({
                   entry={entry}
                   connectStatus={connectStatus}
                   onRecheck={handleRecheck}
+                  onOpenMachineSetup={setActiveMachineSlug}
                 />
               ))}
             </div>
@@ -277,6 +287,7 @@ export function UnifiedConnectionsBoard({
                           entry={liveEntry}
                           connectStatus={connectStatus}
                           onRecheck={handleRecheck}
+                          onOpenMachineSetup={setActiveMachineSlug}
                         />
                       )
                     })}
@@ -286,6 +297,18 @@ export function UnifiedConnectionsBoard({
             </div>
           </section>
         </>
+      )}
+
+      {activeMachineTool && (
+        <MachineSetupModal
+          key={activeMachineTool.slug}
+          open
+          onClose={() => setActiveMachineSlug(null)}
+          slug={activeMachineTool.slug}
+          name={activeMachineTool.name}
+          connectStatus={connectStatus}
+          onRecheck={handleRecheck}
+        />
       )}
 
       {/* Direct .env.local API Keys Slot Manager — a raw file editor, Advanced only */}
