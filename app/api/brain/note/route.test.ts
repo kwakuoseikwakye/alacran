@@ -58,6 +58,9 @@ describe("GET /api/brain/note", () => {
     ["dotfile outside skills", ".env"],
     ["git internals", ".git/config"],
     ["skill dir escape", ".claude/../secrets.md"],
+    ["glob star", "notes/*.md"],
+    ["glob question mark", "notes/a?.md"],
+    ["glob bracket", "notes/[ab].md"],
   ])("rejects %s with 400, before touching git", async (_n, p) => {
     const res = await GET(get(q(p)))
     expect(res.status).toBe(400)
@@ -78,6 +81,14 @@ describe("GET /api/brain/note", () => {
     const [cmd, args] = exec.mock.calls[0]
     expect(cmd).toBe("git")
     expect(args).toEqual(expect.arrayContaining(["-C", "/abs/secret/root", "show", "HEAD:./notes/a.md"]))
+  })
+
+  it("ends git's argv with -- so nothing after the object name is read as an option or path", async () => {
+    exec.mockRejectedValueOnce(new Error("fatal: path does not exist in HEAD"))
+    const res = await GET(get(q("notes/missing.md")))
+    expect(res.status).toBe(404)
+    const [, args] = exec.mock.calls[0]
+    expect(args.slice(-2)).toEqual(["HEAD:./notes/missing.md", "--"])
   })
 
   it("untracked or missing file is 404 with a generic message", async () => {

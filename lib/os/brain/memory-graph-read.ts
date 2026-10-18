@@ -11,6 +11,8 @@ const KIND: Record<"session" | "note" | "decision" | "fact", MemoryKind> = { ses
 
 const CONCURRENCY = 8
 
+const empty = (): MemoryGraph => ({ nodes: [], edges: [], counts: { alwaysFiles: 0, lookupFiles: 0, unsureFacts: 0 } })
+
 // A page that auto-refreshes must not fork hundreds of git processes per render:
 // a spawn failure would look the same as "not committed" and drop nodes.
 async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -37,7 +39,7 @@ export function resetMemoryGraphCache() {
 /**
  * The company's memory map, from committed content only: files come from
  * `git ls-files` and are read at HEAD, so a draft nobody approved is never a
- * node. A git failure gives an empty graph rather than an error.
+ * node. A git or parse failure gives an empty graph rather than an error.
  */
 export async function readMemoryGraph(
   rootPath: string,
@@ -45,7 +47,7 @@ export async function readMemoryGraph(
   opts: { execFn?: ExecFileFn; readSkills?: typeof readSkillsCatalog } = {}
 ): Promise<MemoryGraph> {
   const { execFn = defaultExecFile, readSkills = readSkillsCatalog } = opts
-  const git = (args: string[]) => execFn("git", ["-C", rootPath, "-c", "core.quotepath=false", ...args])
+  const git = (args: string[]) => execFn("git", ["--no-optional-locks", "-C", rootPath, "-c", "core.quotepath=false", ...args])
   // A file that is listed but not committed yet fails here: it is not memory yet.
   const show = async (rel: string) => {
     try {
@@ -63,7 +65,7 @@ export async function readMemoryGraph(
     if (hit && hit.sha === sha) return hit.graph
     listed = (await git(["ls-files", "--", ...LISTED])).stdout.split("\n").map((s) => s.trim()).filter(Boolean)
   } catch {
-    return buildMemoryGraph({ files: [], skills: [] })
+    return empty()
   }
 
   const files = (
@@ -72,8 +74,13 @@ export async function readMemoryGraph(
       if (!type) return null
       const text = await show(rel)
       if (text === null) return null
-      const { title, statement } = readMemoryText(rel, KIND[type as keyof typeof KIND], text)
-      return { path: rel, text, title, summary: statement }
+      try {
+        const { title, statement } = readMemoryText(rel, KIND[type as keyof typeof KIND], text)
+        return { path: rel, text, title, summary: statement }
+      } catch {
+        // one file that won't parse is a missing node, not a broken page
+        return null
+      }
     })
   ).filter((f): f is GraphFile => f !== null)
 
@@ -95,7 +102,13 @@ export async function readMemoryGraph(
     }
   )
 
-  const graph = buildMemoryGraph({ files, skills })
+  let graph: MemoryGraph
+  try {
+    graph = buildMemoryGraph({ files, skills })
+  } catch {
+    // The page renders this; a throw here would be a 500 on every refresh. Not cached, so the next render retries.
+    return empty()
+  }
   cache.set(rootPath, { sha, graph })
   return graph
 }

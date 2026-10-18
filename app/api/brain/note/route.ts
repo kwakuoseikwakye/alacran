@@ -14,7 +14,8 @@ const SKILL_MD = /^\.(claude|agents)\/(?:[^/]+\/)*[^/]+\.md$/
 // memory map actually shows.
 function isReadablePath(p: string): boolean {
   if (!p || p.startsWith("/") || p.startsWith("-") || p.includes("\\")) return false
-  if (/[\x00-\x1f\x7f]/.test(p)) return false
+  // Glob characters too: git reads a pathspec after `--` as a pattern, and no memory file needs one.
+  if (/[\x00-\x1f\x7f*?[]/.test(p)) return false
   if (p.split("/").some((seg) => seg === "" || seg === "." || seg === "..")) return false
   return typeOfPath(p) !== null || SKILL_MD.test(p)
 }
@@ -42,7 +43,7 @@ export async function GET(request: Request) {
 
   try {
     // Committed text only, never the working tree; `HEAD:./` stays inside `-C`.
-    const { stdout } = await defaultExecFile("git", ["--no-optional-locks", "-C", root, "show", `HEAD:./${path}`])
+    const { stdout } = await defaultExecFile("git", ["--no-optional-locks", "-C", root, "show", `HEAD:./${path}`, "--"])
     return NextResponse.json({ path, text: stdout })
   } catch {
     // git's stderr names the absolute root; don't echo it.
