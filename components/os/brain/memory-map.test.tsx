@@ -102,6 +102,36 @@ describe("MemoryMap", () => {
     expect(failed).toContain("Back to the map")
   })
 
+  it("names the always-known files by file name", () => {
+    const g: MemoryGraph = {
+      ...graph,
+      nodes: [...graph.nodes, { id: "definitions/ontology/company.yaml", type: "fact", label: "Your company profile", path: "definitions/ontology/company.yaml", summary: "", state: "always" }],
+    }
+    expect(render(g)).toContain("AGENTS.md · company.yaml")
+  })
+
+  it("tells the person when the AI reads a skill", () => {
+    const g: MemoryGraph = {
+      ...graph,
+      nodes: [...graph.nodes, { id: "skill:ship", type: "skill", label: "/ship", path: ".claude/commands/ship.md", summary: "", state: "lookup" }],
+    }
+    expect(render(g, "skill:ship")).toContain("The AI reads this skill when a task calls for it.")
+  })
+
+  it("keeps the search with the chips, not on a row of its own", () => {
+    const html = render(graph)
+    expect(html.indexOf("Search what the AI knows")).toBeGreaterThan(html.indexOf("Unsure about"))
+    expect(html.indexOf("Search what the AI knows")).toBeLessThan(html.indexOf(">Facts<"))
+  })
+
+  it("keeps the map mounted, hidden, under an open note", () => {
+    const html = renderToStaticMarkup(
+      React.createElement(MemoryMap, { companyId: "acme", graph, initialNote: { id: "AGENTS.md", text: "x" } })
+    )
+    expect(html).toContain("Back to the map")
+    expect(html).toMatch(/class="hidden [^"]*"[^>]*>.*Always knows/)
+  })
+
   it("says nothing is saved instead of drawing an empty canvas", () => {
     const html = render({ nodes: [], edges: [], counts: { alwaysFiles: 0, lookupFiles: 0, unsureFacts: 0 } })
     expect(html).toContain("Nothing saved yet.")

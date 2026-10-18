@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { confirmFactPrompt, linkify, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import { confirmFactPrompt, fitTransform, linkify, litNodes, neighbours, panInto, shouldLabel, visibleNodes } from "./memory-map-state"
 import { buildLinkIndex } from "@/lib/os/brain/memory-links"
 import type { MemoryNode } from "@/lib/os/brain/memory-graph-types"
 
@@ -57,10 +57,74 @@ describe("litNodes", () => {
 })
 
 describe("confirmFactPrompt", () => {
-  it("names the fact and where it lives", () => {
-    expect(confirmFactPrompt(node({ label: "Release bottleneck", path: "definitions/ontology/company.yaml" }))).toBe(
-      "Let's settle this unconfirmed fact in company.yaml: Release bottleneck (definitions/ontology/company.yaml). Ask me what's true, then propose the edit for approval."
+  it("names the fact, its yaml key and what it says now", () => {
+    expect(
+      confirmFactPrompt(
+        node({ id: "yaml:product.bottleneck", label: "bottleneck", path: "definitions/ontology/company.yaml", summary: "Oven capacity" })
+      )
+    ).toBe(
+      "Let's settle this unconfirmed fact in definitions/ontology/company.yaml: bottleneck (key product.bottleneck), which currently says \"Oven capacity\". Ask me what's true, then propose the edit for approval."
     )
+  })
+
+  it("leaves out an empty summary", () => {
+    expect(confirmFactPrompt(node({ id: "yaml:a.b", label: "b", path: "definitions/ontology/company.yaml" }))).toBe(
+      "Let's settle this unconfirmed fact in definitions/ontology/company.yaml: b (key a.b). Ask me what's true, then propose the edit for approval."
+    )
+  })
+})
+
+describe("fitTransform", () => {
+  it("centres the padded bounding box and scales it to fit", () => {
+    // box 0..100 x 0..50, pad 10 -> 120 x 70 into 240 x 280: k = min(2, 4) = 2
+    const v = fitTransform([{ x: 0, y: 0 }, { x: 100, y: 50 }], 240, 280, 10)!
+    expect(v.k).toBe(2)
+    expect(v.x + 50 * v.k).toBe(120)
+    expect(v.y + 25 * v.k).toBe(140)
+  })
+
+  it("clamps the scale between 0.3 and 2", () => {
+    expect(fitTransform([{ x: 0, y: 0 }], 800, 600, 10)!.k).toBe(2)
+    expect(fitTransform([{ x: 0, y: 0 }, { x: 100000, y: 0 }], 800, 600, 10)!.k).toBe(0.3)
+  })
+
+  it("gives nothing for no points", () => {
+    expect(fitTransform([], 800, 600, 10)).toBeNull()
+  })
+})
+
+describe("panInto", () => {
+  const view = { x: 0, y: 0, k: 2 }
+
+  it("keeps the view when the point is already inside", () => {
+    expect(panInto({ x: 100, y: 100 }, view, 800, 600, 40)).toBe(view)
+  })
+
+  it("pans (never zooms) to centre a point outside the view", () => {
+    expect(panInto({ x: 1000, y: 100 }, view, 800, 600, 40)).toEqual({ x: 400 - 2000, y: 300 - 200, k: 2 })
+  })
+})
+
+describe("shouldLabel", () => {
+  const ctx = { k: 1, selectedId: null, near: null, matches: null }
+
+  it("always labels hubs, always-known, unsure and skill nodes", () => {
+    expect(shouldLabel(node({ type: "hub" }), ctx)).toBe(true)
+    expect(shouldLabel(node({ state: "always" }), ctx)).toBe(true)
+    expect(shouldLabel(node({ state: "unsure" }), ctx)).toBe(true)
+    expect(shouldLabel(node({ type: "skill" }), ctx)).toBe(true)
+    expect(shouldLabel(node({ type: "session" }), ctx)).toBe(false)
+  })
+
+  it("labels the selected node, the active neighbourhood and search matches", () => {
+    expect(shouldLabel(node({ id: "s" }), { ...ctx, selectedId: "s" })).toBe(true)
+    expect(shouldLabel(node({ id: "n" }), { ...ctx, near: new Set(["n"]) })).toBe(true)
+    expect(shouldLabel(node({ id: "m" }), { ...ctx, matches: new Set(["m"]) })).toBe(true)
+  })
+
+  it("labels everything once zoomed in to 1.4", () => {
+    expect(shouldLabel(node({}), { ...ctx, k: 1.39 })).toBe(false)
+    expect(shouldLabel(node({}), { ...ctx, k: 1.4 })).toBe(true)
   })
 })
 

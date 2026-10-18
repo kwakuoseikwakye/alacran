@@ -5,25 +5,38 @@ import {
   forceSimulation,
   forceLink,
   forceManyBody,
-  forceCenter,
   forceCollide,
+  forceX,
+  forceY,
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from "d3-force"
 import { ASSISTANT_OPEN_EVENT } from "@/components/os/assistant-dock"
-import { HUB_FOLDERS } from "@/lib/os/brain/memory-graph"
+import { HUB_FOLDERS } from "@/lib/os/brain/memory-hubs"
 import type { KnowledgeState, MemoryGraph, MemoryNode, MemoryNodeType } from "@/lib/os/brain/memory-graph-types"
 import { buildLinkIndex } from "@/lib/os/brain/memory-links"
-import { TYPE_COLOR, confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import {
+  TYPE_COLOR,
+  confirmFactPrompt,
+  fitTransform,
+  isLandmark,
+  litNodes,
+  neighbours,
+  panInto,
+  shouldLabel,
+  visibleNodes,
+  type View,
+} from "./memory-map-state"
 import { MemoryNoteView } from "./memory-note-view"
 
 type SimNode = MemoryNode & SimulationNodeDatum
 
-const WIDTH = 900
-const HEIGHT = 560
+/** Room around the framed nodes for the labels under them. */
+const LABEL_PAD = 60
 const MAX_LABEL = 22
 /** Mono advance at the 10px label size. */
 const CHAR_W = 6
+const radius = (n: MemoryNode) => (n.type === "hub" ? 12 : n.state === "always" ? 9 : 7)
 const truncate = (label: string) => (label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label)
 
 const TYPE_NAME: Record<MemoryNodeType, string> = {
@@ -102,10 +115,12 @@ export function MemoryMap({
   const linkIndex = useMemo(() => {
     const files = graph.nodes.filter((n) => n.type !== "hub" && n.type !== "skill" && !n.id.startsWith("yaml:")).map((n) => n.id)
     const skills = graph.nodes.filter((n) => n.type === "skill").map((n) => ({ id: n.id.slice("skill:".length), nodeId: n.id }))
-    return buildLinkIndex(files, skills, HUB_FOLDERS)
-  }, [graph])
+    // Only the hubs this map draws, or a link to an empty folder would point at nothing.
+    const hubs = Object.fromEntries(Object.entries(HUB_FOLDERS).filter(([, hub]) => byId.has(hub)))
+    return buildLinkIndex(files, skills, hubs)
+  }, [graph, byId])
 
-  const always = graph.nodes.filter((n) => n.state === "always" && isFile(n)).map((n) => n.label)
+  const always = graph.nodes.filter((n) => n.state === "always" && isFile(n)).map((n) => n.path.split("/").pop())
   const lookupByType = CHIPS.map(({ type }) => [type, graph.nodes.filter((n) => n.state === "lookup" && isFile(n) && n.type === type).length] as const)
     .filter(([, count]) => count > 0)
     .map(([type, count]) => plural(count, PLURAL[type]))
@@ -178,109 +193,109 @@ export function MemoryMap({
     return () => window.removeEventListener("keydown", onKey)
   }, [noteOpen])
 
-  if (noteNode && note) {
-    return (
-      <MemoryNoteView
-        graph={graph}
-        node={noteNode}
-        text={note.text}
-        failed={note.failed}
-        index={linkIndex}
-        onOpen={openNote}
-        onBack={closeNote}
-      />
-    )
-  }
-
   return (
-    <div className="flex h-full min-h-[560px] flex-col text-[13px] text-os-text">
-      <div className="flex items-center gap-3 border-b border-os-border px-4 py-3">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search what the AI knows…"
-          title="Find any fact, note, decision or skill"
-          aria-label="Search what the AI knows"
-          className="ml-auto w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
+    <>
+      {noteNode && note && (
+        <MemoryNoteView
+          graph={graph}
+          node={noteNode}
+          text={note.text}
+          failed={note.failed}
+          index={linkIndex}
+          onOpen={openNote}
+          onBack={closeNote}
         />
-      </div>
-
-      <div className="flex flex-wrap gap-2.5 border-b border-os-border px-4 py-3">
-        {stats.map((s) => (
-          <button
-            key={s.state}
-            type="button"
-            title={s.title}
-            aria-pressed={focusState === s.state}
-            onClick={() => {
-              setSelectedId(null)
-              setFocusState((prev) => (prev === s.state ? null : s.state))
-            }}
-            className={`min-w-[190px] rounded-[10px] border bg-os-surface px-3.5 py-2.5 text-left ${focusState === s.state ? "border-os-accent" : "border-os-border"}`}
-          >
-            <span className="flex items-center gap-2 text-xs text-os-muted">
-              <StateDot state={s.state} />
-              {s.label}
-            </span>
-            <b className="block text-xl font-semibold text-os-text">{s.value}</b>
-            <span className="block text-xs text-os-muted">{s.detail}</span>
-          </button>
-        ))}
-        <div className="ml-auto flex items-center gap-1.5">
-          {CHIPS.map((c) => (
+      )}
+      {/* Hidden, not unmounted, under the note: Esc comes back to the same layout, pan and zoom. */}
+      <div className={`${noteOpen ? "hidden" : "flex"} h-full min-h-[560px] flex-col text-[13px] text-os-text`}>
+        <div className="flex flex-wrap items-start gap-2.5 border-b border-os-border px-4 py-3">
+          {stats.map((s) => (
             <button
-              key={c.type}
+              key={s.state}
               type="button"
-              title={c.title}
-              aria-pressed={!hidden.has(c.type)}
-              onClick={() => toggleType(c.type)}
-              className={`flex items-center gap-1.5 rounded-full border border-os-border bg-os-surface px-2.5 py-1 text-xs text-os-text ${hidden.has(c.type) ? "opacity-45" : ""}`}
+              title={s.title}
+              aria-pressed={focusState === s.state}
+              onClick={() => {
+                setSelectedId(null)
+                setFocusState((prev) => (prev === s.state ? null : s.state))
+              }}
+              className={`min-w-[190px] rounded-[10px] border bg-os-surface px-3.5 py-2.5 text-left ${focusState === s.state ? "border-os-accent" : "border-os-border"}`}
             >
-              <TypeDot type={c.type} />
-              <span>{c.label}</span>
+              <span className="flex items-center gap-2 text-xs text-os-muted">
+                <StateDot state={s.state} />
+                {s.label}
+              </span>
+              <b className="block text-xl font-semibold text-os-text">{s.value}</b>
+              <span className="block text-xs text-os-muted">{s.detail}</span>
             </button>
           ))}
+          <div className="ml-auto flex flex-col items-end gap-2">
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search what the AI knows…"
+              title="Find any fact, note, decision or skill"
+              aria-label="Search what the AI knows"
+              className="w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
+            />
+            <div className="flex flex-wrap justify-end gap-1.5">
+              {CHIPS.map((c) => (
+                <button
+                  key={c.type}
+                  type="button"
+                  title={c.title}
+                  aria-pressed={!hidden.has(c.type)}
+                  onClick={() => toggleType(c.type)}
+                  className={`flex items-center gap-1.5 rounded-full border border-os-border bg-os-surface px-2.5 py-1 text-xs text-os-text ${hidden.has(c.type) ? "opacity-45" : ""}`}
+                >
+                  <TypeDot type={c.type} />
+                  <span>{c.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex min-h-0 flex-1">
+          <div className="relative min-w-0 flex-1">
+            {graph.nodes.length ? (
+              <MapCanvas
+                graph={graph}
+                visible={visible}
+                query={query}
+                activeId={hoverId ?? selectedId}
+                selectedId={selectedId}
+                focusState={focusState}
+                onHover={setHoverId}
+                onSelect={select}
+              />
+            ) : (
+              <p className="p-6 text-sm text-os-muted">Nothing saved yet.</p>
+            )}
+            {graph.nodes.length > 0 && (
+              <p className="pointer-events-none absolute bottom-3.5 left-4 rounded bg-os-surface/85 px-2 py-0.5 text-xs text-os-muted">
+                Hover a dot to see what it links to · click to open it · scroll to zoom, drag to move
+              </p>
+            )}
+          </div>
+
+          <aside className="w-[340px] shrink-0 overflow-auto border-l border-os-border bg-os-surface p-[18px]">
+            {selected ? (
+              <SidePanel
+                node={selected}
+                linked={[...neighbours(graph.edges, selected.id)].flatMap((id) => byId.get(id) ?? [])}
+                onSelect={select}
+                onConfirm={confirmFact}
+                onOpenNote={openNote}
+              />
+            ) : (
+              <p className="text-os-muted">Click a dot to see what the AI knows about it.</p>
+            )}
+          </aside>
         </div>
       </div>
-
-      <div className="flex min-h-0 flex-1">
-        <div className="relative min-w-0 flex-1">
-          {graph.nodes.length ? (
-            <MapCanvas
-              graph={graph}
-              visible={visible}
-              activeId={hoverId ?? selectedId}
-              selectedId={selectedId}
-              focusState={focusState}
-              onHover={setHoverId}
-              onSelect={select}
-            />
-          ) : (
-            <p className="p-6 text-sm text-os-muted">Nothing saved yet.</p>
-          )}
-          {graph.nodes.length > 0 && (
-            <p className="pointer-events-none absolute bottom-3.5 left-4 text-xs text-os-muted">
-              Hover a dot to see what it links to · click to open it · scroll to zoom, drag to move
-            </p>
-          )}
-        </div>
-
-        <aside className="w-[340px] shrink-0 overflow-auto border-l border-os-border bg-os-surface p-[18px]">
-          {selected ? (
-            <SidePanel
-              node={selected}
-              linked={[...neighbours(graph.edges, selected.id)].flatMap((id) => byId.get(id) ?? [])}
-              onSelect={select}
-              onConfirm={confirmFact}
-              onOpenNote={openNote}
-            />
-          ) : (
-            <p className="text-os-muted">Click a dot to see what the AI knows about it.</p>
-          )}
-        </aside>
-      </div>
-    </div>
+    </>
   )
 }
 
@@ -299,7 +314,7 @@ function SidePanel({
 }) {
   const unsure = node.state === "unsure"
   const isYaml = node.id.startsWith("yaml:")
-  const badge = BADGE[node.state]
+  const badge = node.type === "skill" ? { ...BADGE.lookup, text: "The AI reads this skill when a task calls for it." } : BADGE[node.state]
   return (
     <div>
       <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-[.06em] text-os-muted">
@@ -370,6 +385,7 @@ function SidePanel({
 function MapCanvas({
   graph,
   visible,
+  query,
   activeId,
   selectedId,
   focusState,
@@ -378,6 +394,7 @@ function MapCanvas({
 }: {
   graph: MemoryGraph
   visible: Set<string>
+  query: string
   activeId: string | null
   selectedId: string | null
   focusState: KnowledgeState | null
@@ -385,9 +402,32 @@ function MapCanvas({
   onSelect: (id: string | null) => void
 }) {
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 })
-  const svgRef = useRef<SVGSVGElement>(null)
+  const [view, setView] = useState<View>({ x: 0, y: 0, k: 1 })
+  // Unknown until measured: the server and the first client render draw no
+  // svg at all, so there is nothing to mismatch on hydration.
+  const [size, setSize] = useState<{ w: number; h: number } | null>(null)
+  const sizeRef = useRef(size)
+  const boxRef = useRef<HTMLDivElement>(null)
   const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null)
+
+  useEffect(() => {
+    sizeRef.current = size
+  }, [size])
+
+  // viewBox = the measured box, so screen and svg units are 1:1 and pan and zoom need no rescaling.
+  useEffect(() => {
+    const box = boxRef.current
+    if (!box) return
+    const measure = () => {
+      const { width, height } = box.getBoundingClientRect()
+      // Hidden under the note view the box measures 0; keep the last size so nothing refits.
+      if (width > 0 && height > 0) setSize((s) => (s && s.w === width && s.h === height ? s : { w: width, h: height }))
+    }
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(box)
+    return () => ro.disconnect()
+  }, [])
 
   // Content-keyed for the same reason as graph-canvas.tsx: a router.refresh()
   // hands over an identical graph in a new object, and relaying out on that
@@ -398,38 +438,83 @@ function MapCanvas({
     // Copies: `graph` may be a shared cached instance, and d3-force writes x/y into what it's given.
     const nodes: SimNode[] = graph.nodes.map((n) => ({ ...n }))
     const ids = new Set(nodes.map((n) => n.id))
+    const hubs = new Set(nodes.filter((n) => n.type === "hub").map((n) => n.id))
     const links: SimulationLinkDatum<SimNode>[] = graph.edges
       .filter((e) => ids.has(e.source) && ids.has(e.target))
       .map((e) => ({ source: e.source, target: e.target }))
+    const isHubLink = (l: SimulationLinkDatum<SimNode>) =>
+      hubs.has((l.source as SimNode).id) || hubs.has((l.target as SimNode).id)
+    // Laid out once, off screen: no settling animation to sit through (or to switch off for reduced motion).
     const simulation = forceSimulation(nodes)
-      .force("link", forceLink<SimNode, SimulationLinkDatum<SimNode>>(links).id((d) => d.id).distance(72))
-      .force("charge", forceManyBody().strength(-170))
-      .force("center", forceCenter(WIDTH / 2, HEIGHT / 2))
-      // Label-sized, as in graph-canvas.tsx: a fixed radius can't separate labels of very different widths.
-      .force("collide", forceCollide<SimNode>((d) => Math.max(26, (truncate(d.label).length * CHAR_W) / 2 + 10)))
-      .on("tick", () => setSimNodes([...nodes]))
-    return () => {
-      simulation.stop()
-    }
+      .force(
+        "link",
+        forceLink<SimNode, SimulationLinkDatum<SimNode>>(links)
+          .id((d) => d.id)
+          .distance((l) => (isHubLink(l) ? 30 : 72))
+      )
+      .force("charge", forceManyBody<SimNode>().strength((d) => (d.type === "hub" ? -500 : -50)))
+      .force("x", forceX<SimNode>(0).strength(0.05))
+      .force("y", forceY<SimNode>(0).strength(0.05))
+      // Label-sized only where a label shows at every zoom; the rest pack tight so clusters read as clusters.
+      .force(
+        "collide",
+        forceCollide<SimNode>((d) => (isLandmark(d) ? Math.max(26, (truncate(d.label).length * CHAR_W) / 2 + 10) : radius(d) + 4))
+      )
+      .stop()
+    simulation.tick(300)
+    setSimNodes(nodes)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphKey])
 
+  const pos = useMemo(() => new Map(simNodes.map((n) => [n.id, n])), [simNodes])
+  const matches = useMemo(
+    () => (query.trim() ? new Set([...visible].filter((id) => pos.get(id)?.type !== "hub")) : null),
+    [query, visible, pos]
+  )
+
+  // What to frame: a stat's lit nodes, else the search matches (hubs left out), else everything shown.
+  const fitIds = useMemo(() => {
+    const focused = focusState ? litNodes(graph.nodes, graph.edges, null, focusState) : null
+    if (focused) return [...focused].filter((id) => visible.has(id))
+    return [...(matches ?? visible)]
+  }, [graph, focusState, matches, visible])
+  const fitKey = fitIds.join("\n")
+  const measured = size !== null
+
+  useEffect(() => {
+    const box = sizeRef.current
+    if (!box) return
+    const points = fitIds.flatMap((id) => pos.get(id) ?? []).map((n) => ({ x: n.x ?? 0, y: n.y ?? 0 }))
+    const next = fitTransform(points, box.w, box.h, LABEL_PAD)
+    if (next) setView(next)
+    // Refit only when the layout or the framed set changes: never on an identical refresh or a resize.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pos, fitKey, measured])
+
+  // A node picked from the side panel or a link is panned into view, at the current zoom.
+  useEffect(() => {
+    const box = sizeRef.current
+    const n = selectedId ? pos.get(selectedId) : undefined
+    if (!box || !n) return
+    setView((v) => panInto({ x: n.x ?? 0, y: n.y ?? 0 }, v, box.w, box.h, LABEL_PAD))
+  }, [selectedId, pos, measured])
+
   // React's onWheel is passive, so preventDefault (to stop the page scrolling) needs a native listener.
   useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
+    const box = boxRef.current
+    if (!box) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const rect = svg.getBoundingClientRect()
-      const px = ((e.clientX - rect.left) / rect.width) * WIDTH
-      const py = ((e.clientY - rect.top) / rect.height) * HEIGHT
+      const rect = box.getBoundingClientRect()
+      const px = e.clientX - rect.left
+      const py = e.clientY - rect.top
       setView((v) => {
         const k = Math.min(4, Math.max(0.3, v.k * Math.exp(-e.deltaY * 0.0015)))
         return { k, x: px - ((px - v.x) * k) / v.k, y: py - ((py - v.y) * k) / v.k }
       })
     }
-    svg.addEventListener("wheel", onWheel, { passive: false })
-    return () => svg.removeEventListener("wheel", onWheel)
+    box.addEventListener("wheel", onWheel, { passive: false })
+    return () => box.removeEventListener("wheel", onWheel)
   }, [])
 
   const startPan = (e: ReactPointerEvent<SVGRectElement>) => {
@@ -437,10 +522,9 @@ function MapCanvas({
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   const pan = (e: ReactPointerEvent<SVGRectElement>) => {
-    if (!drag.current || !svgRef.current) return
-    const scale = WIDTH / svgRef.current.getBoundingClientRect().width
-    const dx = (e.clientX - drag.current.x) * scale
-    const dy = (e.clientY - drag.current.y) * scale
+    if (!drag.current) return
+    const dx = e.clientX - drag.current.x
+    const dy = e.clientY - drag.current.y
     drag.current = { x: e.clientX, y: e.clientY, moved: drag.current.moved || dx !== 0 || dy !== 0 }
     setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }))
   }
@@ -457,97 +541,106 @@ function MapCanvas({
   const lit = litNodes(graph.nodes, graph.edges, activeId, focusState)
   const isLit = (id: string) => !lit || lit.has(id)
   const near = activeId ? lit : null
-  const pos = new Map(simNodes.map((n) => [n.id, n]))
+  const labelCtx = { k: view.k, selectedId, near, matches }
 
   return (
-    <svg
-      ref={svgRef}
-      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-      className="block h-full w-full"
-      role="group"
-      aria-label="Map of what the AI knows"
-    >
-      <rect
-        width={WIDTH}
-        height={HEIGHT}
-        fill="transparent"
-        className="cursor-grab active:cursor-grabbing"
-        onPointerDown={startPan}
-        onPointerMove={pan}
-        onPointerUp={endPan}
-        onPointerCancel={cancelPan}
-        onLostPointerCapture={cancelPan}
-      />
-      <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
-        {graph.edges.map((e, i) => {
-          const a = pos.get(e.source)
-          const b = pos.get(e.target)
-          if (!a || !b || !visible.has(a.id) || !visible.has(b.id)) return null
-          const on = activeId !== null && (e.source === activeId || e.target === activeId)
-          const faded = activeId ? !on : !(isLit(a.id) && isLit(b.id))
-          return (
-            <line
-              key={i}
-              x1={a.x ?? 0}
-              y1={a.y ?? 0}
-              x2={b.x ?? 0}
-              y2={b.y ?? 0}
-              stroke={on ? "var(--accent)" : "var(--border-strong)"}
-              strokeWidth={on ? 1.6 : 1}
-              opacity={faded ? 0.15 : 1}
-              className="transition-opacity"
-            />
-          )
-        })}
-        {simNodes.map((n) => {
-          if (!visible.has(n.id)) return null
-          const r = n.type === "hub" ? 12 : n.state === "always" ? 9 : 7
-          const color = TYPE_COLOR[n.type]
-          const strong = n.id === selectedId || (near?.has(n.id) ?? false) || n.id === activeId
-          return (
-            <g
-              key={n.id}
-              transform={`translate(${n.x ?? 0}, ${n.y ?? 0})`}
-              opacity={isLit(n.id) ? 1 : 0.15}
-              className="cursor-pointer transition-opacity focus-visible:outline-none"
-              onPointerEnter={() => onHover(n.id)}
-              onPointerLeave={() => onHover(null)}
-              onClick={() => onSelect(n.id)}
-              tabIndex={0}
-              role="button"
-              aria-label={`${TYPE_NAME[n.type]}: ${n.label}`}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault()
-                  onSelect(n.id)
-                }
-              }}
-            >
-              {n.type === "hub" ? (
-                <circle r={r} fill={color} />
-              ) : n.state === "unsure" ? (
-                <circle r={r} fill="none" stroke="var(--destructive)" strokeWidth={1.6} strokeDasharray="3 2" />
-              ) : (
-                <>
-                  {n.state === "always" && <circle r={r + 6} fill={color} opacity={0.18} />}
-                  <circle r={r} fill={color} style={{ opacity: n.state === "always" ? 1 : "var(--mm-lookup-opacity)" }} />
-                </>
-              )}
-              {n.id === selectedId && <circle r={r + 3} fill="none" stroke="var(--accent)" strokeWidth={1} />}
-              <text
-                y={r + 13}
-                textAnchor="middle"
-                fontSize={10}
-                className="pointer-events-none font-mono"
-                fill={strong ? "var(--text)" : "var(--text-2)"}
-              >
-                {truncate(n.label)}
-                <title>{n.label}</title>
-              </text>
-            </g>
-          )
-        })}
-      </g>
-    </svg>
+    <div ref={boxRef} className="h-full w-full overflow-hidden">
+      {size && (
+        <svg
+          viewBox={`0 0 ${size.w} ${size.h}`}
+          width={size.w}
+          height={size.h}
+          className="block"
+          role="group"
+          aria-label="Map of what the AI knows"
+        >
+          <rect
+            width={size.w}
+            height={size.h}
+            fill="transparent"
+            className="cursor-grab active:cursor-grabbing"
+            onPointerDown={startPan}
+            onPointerMove={pan}
+            onPointerUp={endPan}
+            onPointerCancel={cancelPan}
+            onLostPointerCapture={cancelPan}
+          />
+          <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+            {graph.edges.map((e, i) => {
+              const a = pos.get(e.source)
+              const b = pos.get(e.target)
+              if (!a || !b || !visible.has(a.id) || !visible.has(b.id)) return null
+              const on = activeId !== null && (e.source === activeId || e.target === activeId)
+              const faded = activeId ? !on : !(isLit(a.id) && isLit(b.id))
+              return (
+                <line
+                  key={i}
+                  x1={a.x ?? 0}
+                  y1={a.y ?? 0}
+                  x2={b.x ?? 0}
+                  y2={b.y ?? 0}
+                  stroke={on ? "var(--accent)" : "var(--border-strong)"}
+                  strokeWidth={on ? 1.6 : 1}
+                  opacity={faded ? 0.15 : 1}
+                  className="motion-safe:transition-opacity"
+                />
+              )
+            })}
+            {simNodes.map((n) => {
+              if (!visible.has(n.id)) return null
+              const r = radius(n)
+              const color = TYPE_COLOR[n.type]
+              const strong = n.id === selectedId || (near?.has(n.id) ?? false) || n.id === activeId
+              return (
+                <g
+                  key={n.id}
+                  transform={`translate(${n.x ?? 0}, ${n.y ?? 0})`}
+                  opacity={isLit(n.id) ? 1 : 0.15}
+                  className="cursor-pointer motion-safe:transition-opacity focus-visible:outline-none"
+                  onPointerEnter={() => onHover(n.id)}
+                  onPointerLeave={() => onHover(null)}
+                  onClick={() => onSelect(n.id)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${TYPE_NAME[n.type]}: ${n.label}`}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault()
+                      onSelect(n.id)
+                    }
+                  }}
+                >
+                  {n.type === "hub" ? (
+                    <circle r={r} fill={color} />
+                  ) : n.state === "unsure" ? (
+                    <circle r={r} fill="none" stroke="var(--destructive)" strokeWidth={1.6} strokeDasharray="3 2" />
+                  ) : (
+                    <>
+                      {n.state === "always" && <circle r={r + 6} fill={color} opacity={0.18} />}
+                      <circle r={r} fill={color} style={{ opacity: n.state === "always" ? 1 : "var(--mm-lookup-opacity)" }} />
+                    </>
+                  )}
+                  {n.id === selectedId && <circle r={r + 3} fill="none" stroke="var(--accent)" strokeWidth={1} />}
+                  {shouldLabel(n, labelCtx) ? (
+                    <text
+                      y={r + 13}
+                      textAnchor="middle"
+                      fontSize={10}
+                      className="pointer-events-none font-mono"
+                      fill={strong ? "var(--text)" : "var(--text-2)"}
+                    >
+                      {truncate(n.label)}
+                      <title>{n.label}</title>
+                    </text>
+                  ) : (
+                    <title>{n.label}</title>
+                  )}
+                </g>
+              )
+            })}
+          </g>
+        </svg>
+      )}
+    </div>
   )
 }

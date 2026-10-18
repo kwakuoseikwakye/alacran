@@ -1,20 +1,14 @@
 import { readCompanyFacts } from "./company-facts"
 import type { MemoryEdge, MemoryGraph, MemoryNode, MemoryNodeType } from "./memory-graph-types"
 import { buildLinkIndex, extractLinks } from "./memory-links"
+import { HUB_FOLDERS, hubOf } from "./memory-hubs"
+
+export { HUB_FOLDERS, hubOf }
 
 export type GraphFile = { path: string; text: string; title: string; summary: string }
 export type GraphSkill = { id: string; name: string; description: string; filePath: string; text: string }
 
 export const ALWAYS_PATHS = ["AGENTS.md", "CLAUDE.md", "definitions/ontology/company.yaml", "HANDOFF.md"] as const
-
-// A file belongs to the hub of its longest matching prefix, so sessions land
-// in hub:sessions rather than hub:notes.
-export const HUB_FOLDERS: Record<string, string> = {
-  "definitions/": "hub:facts",
-  "docs/decisions/": "hub:decisions",
-  "notes/": "hub:notes",
-  "notes/company/sessions/": "hub:sessions",
-}
 
 const HUB_LABELS: Record<string, string> = {
   "hub:facts": "Facts",
@@ -31,14 +25,6 @@ export function typeOfPath(path: string): MemoryNodeType | null {
   if (/^docs\/decisions\/[^/]+\.md$/.test(path) && path !== "docs/decisions/README.md") return "decision"
   if (path.startsWith("definitions/") || path === "AGENTS.md" || path === "CLAUDE.md") return "fact"
   return null
-}
-
-export function hubOf(path: string): string | null {
-  let best = ""
-  for (const prefix of Object.keys(HUB_FOLDERS)) {
-    if (path.startsWith(prefix) && prefix.length > best.length) best = prefix
-  }
-  return best ? HUB_FOLDERS[best] : null
 }
 
 export function buildMemoryGraph(input: { files: GraphFile[]; skills: GraphSkill[] }): MemoryGraph {

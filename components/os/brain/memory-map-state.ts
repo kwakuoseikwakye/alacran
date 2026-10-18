@@ -50,8 +50,49 @@ export function litNodes(
   return null
 }
 
-export const confirmFactPrompt = (node: MemoryNode) =>
-  `Let's settle this unconfirmed fact in company.yaml: ${node.label} (${node.path}). Ask me what's true, then propose the edit for approval.`
+/** The yaml key path and current text make the fact unambiguous: labels like "bottleneck" repeat. */
+export function confirmFactPrompt(node: MemoryNode): string {
+  const key = node.id.startsWith("yaml:") ? ` (key ${node.id.slice("yaml:".length)})` : ""
+  const says = node.summary ? `, which currently says "${node.summary}"` : ""
+  return `Let's settle this unconfirmed fact in ${node.path}: ${node.label}${key}${says}. Ask me what's true, then propose the edit for approval.`
+}
+
+export type View = { x: number; y: number; k: number }
+
+/** The view that centres these points in a w x h canvas, padded for labels, scale clamped to 0.3..2. */
+export function fitTransform(points: { x: number; y: number }[], w: number, h: number, pad: number): View | null {
+  if (!points.length) return null
+  const xs = points.map((p) => p.x)
+  const ys = points.map((p) => p.y)
+  const [x0, x1, y0, y1] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)]
+  const k = Math.min(2, Math.max(0.3, Math.min(w / (x1 - x0 + 2 * pad), h / (y1 - y0 + 2 * pad))))
+  return { k, x: w / 2 - ((x0 + x1) / 2) * k, y: h / 2 - ((y0 + y1) / 2) * k }
+}
+
+/** Pans (never zooms) so a point outside the view, less a margin, lands in the centre. */
+export function panInto(p: { x: number; y: number }, view: View, w: number, h: number, margin: number): View {
+  const sx = p.x * view.k + view.x
+  const sy = p.y * view.k + view.y
+  if (sx >= margin && sx <= w - margin && sy >= margin && sy <= h - margin) return view
+  return { k: view.k, x: w / 2 - p.x * view.k, y: h / 2 - p.y * view.k }
+}
+
+/** Labelled at any zoom: the nodes that say what the map is. */
+export const isLandmark = (n: MemoryNode) => n.type === "hub" || n.type === "skill" || n.state !== "lookup"
+
+/** Obsidian-style: landmarks, what the person is pointing at and what they searched for; everything once zoomed in. */
+export function shouldLabel(
+  n: MemoryNode,
+  ctx: { k: number; selectedId: string | null; near: Set<string> | null; matches: Set<string> | null }
+): boolean {
+  return (
+    ctx.k >= 1.4 ||
+    isLandmark(n) ||
+    n.id === ctx.selectedId ||
+    (ctx.near?.has(n.id) ?? false) ||
+    (ctx.matches?.has(n.id) ?? false)
+  )
+}
 
 export type NoteSegment = { text: string } | { text: string; nodeId: string }
 

@@ -1,6 +1,6 @@
 "use client"
 
-import { hubOf } from "@/lib/os/brain/memory-graph"
+import { hubOf } from "@/lib/os/brain/memory-hubs"
 import type { MemoryGraph, MemoryNode } from "@/lib/os/brain/memory-graph-types"
 import type { LinkIndex } from "@/lib/os/brain/memory-links"
 import { TYPE_COLOR, linkify, neighbours } from "./memory-map-state"
