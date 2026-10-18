@@ -66,7 +66,7 @@ Every screenshot is a made-up sample company, not real data.
     <td width="50%"><img src="landing/screens/approvals-1200.webp" alt="Approvals: a drafted weekly summary waiting for your yes, with a plain-language preview" /><br /><sub><b>Approvals.</b> Every change the AI proposes waits for your yes, with a plain-language preview.</sub></td>
   </tr>
   <tr>
-    <td width="50%"><img src="landing/screens/memory-1200.webp" alt="Brain: a map of the company's pillars, definitions, decisions and records" /><br /><sub><b>Brain.</b> A map of everything the company's memory holds: pillars, definitions, decisions and records.</sub></td>
+    <td width="50%"><img src="landing/screens/memory-1200.webp" alt="Brain: a map of what the AI knows about the company, from its facts, decisions, notes, past sessions and skills" /><br /><sub><b>Brain.</b> A map of what the AI knows: the company's facts, decisions, notes, past sessions and skills, and which of them it is unsure about.</sub></td>
     <td width="50%"><img src="landing/screens/departments-1200.webp" alt="Departments: seven departments and the people who sign off" /><br /><sub><b>Departments.</b> Each department's records, and who signs off on what.</sub></td>
   </tr>
   <tr>
