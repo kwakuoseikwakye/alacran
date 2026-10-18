@@ -14,7 +14,8 @@ const graph: MemoryGraph = {
   edges: [{ source: "AGENTS.md", target: "hub:decisions" }],
   counts: { alwaysFiles: 2, lookupFiles: 143, unsureFacts: 7 },
 }
-const render = (g: MemoryGraph) => renderToStaticMarkup(React.createElement(MemoryMap, { companyId: "acme", graph: g }))
+const render = (g: MemoryGraph, initialSelectedId?: string) =>
+  renderToStaticMarkup(React.createElement(MemoryMap, { companyId: "acme", graph: g, initialSelectedId }))
 
 describe("MemoryMap", () => {
   it("summarises what the AI always knows, can look up and is unsure about", () => {
@@ -36,6 +37,22 @@ describe("MemoryMap", () => {
     const buttons = render(graph).match(/<button[^>]*>/g) ?? []
     expect(buttons.length).toBeGreaterThan(0)
     for (const b of buttons) expect(b).toMatch(/title="[^"]+"/)
+  })
+
+  it("gives the side panel's buttons tooltips, and offers confirm and company.yaml for an unsure fact", () => {
+    const html = render(graph, "yaml:product.bottleneck")
+    expect(html).toContain("Confirm this fact")
+    expect(html).toContain("Open company.yaml")
+    expect(html).not.toContain("Open the full note")
+    for (const b of html.match(/<button[^>]*>/g) ?? []) expect(b).toMatch(/title="[^"]+"/)
+  })
+
+  it("titles linked-node buttons and hides confirm for a known fact", () => {
+    const html = render(graph, "AGENTS.md")
+    expect(html).toContain("Open the full note")
+    expect(html).not.toContain("Confirm this fact")
+    expect(html).toContain('title="Show Decisions on the map"')
+    for (const b of html.match(/<button[^>]*>/g) ?? []) expect(b).toMatch(/title="[^"]+"/)
   })
 
   it("says nothing is saved instead of drawing an empty canvas", () => {

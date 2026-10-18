@@ -12,7 +12,7 @@ import {
 } from "d3-force"
 import { ASSISTANT_OPEN_EVENT } from "@/components/os/assistant-dock"
 import type { KnowledgeState, MemoryGraph, MemoryNode, MemoryNodeType } from "@/lib/os/brain/memory-graph-types"
-import { neighbours, visibleNodes } from "./memory-map-state"
+import { confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
 
 type SimNode = MemoryNode & SimulationNodeDatum
 
@@ -23,14 +23,14 @@ const MAX_LABEL = 22
 const CHAR_W = 6
 const truncate = (label: string) => (label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label)
 
-/** Type hues come from the app's row-glyph tones so both themes carry them; red stays reserved for "unsure". */
+/** Map-scoped hues (globals.css) so both themes read; red stays reserved for "unsure". */
 const TYPE_COLOR: Record<MemoryNodeType, string> = {
-  fact: "var(--tone-blue)",
-  decision: "var(--warning)",
-  note: "var(--tone-lime)",
-  session: "var(--tone-cyan)",
-  skill: "var(--tone-violet)",
-  hub: "var(--text-3)",
+  fact: "var(--mm-fact)",
+  decision: "var(--mm-decision)",
+  note: "var(--mm-note)",
+  session: "var(--mm-session)",
+  skill: "var(--mm-skill)",
+  hub: "var(--mm-hub)",
 }
 const TYPE_NAME: Record<MemoryNodeType, string> = {
   fact: "Fact",
@@ -78,16 +78,19 @@ export function MemoryMap({
   companyId,
   graph,
   onOpenNote,
+  initialSelectedId = null,
 }: {
   companyId: string
   graph: MemoryGraph
+  /** Lets a static render show the side panel; the page leaves it unset. */
+  initialSelectedId?: string | null
   /** The note view (Task 7) hooks in here; hubs never call it, `yaml:` items pass a node whose path is company.yaml. */
   onOpenNote?: (node: MemoryNode) => void
 }) {
   const [hidden, setHidden] = useState<Set<MemoryNodeType>>(new Set())
   const [query, setQuery] = useState("")
   const [hoverId, setHoverId] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId)
   const [focusState, setFocusState] = useState<KnowledgeState | null>(null)
 
   const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph])
@@ -113,14 +116,22 @@ export function MemoryMap({
     })
 
   const confirmFact = (node: MemoryNode) =>
-    window.dispatchEvent(
-      new CustomEvent(ASSISTANT_OPEN_EVENT, {
-        detail: {
-          companyId,
-          prompt: `Let's settle this unconfirmed fact in company.yaml: ${node.label} (${node.path}). Ask me what's true, then propose the edit for approval.`,
-        },
-      })
-    )
+    window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT, { detail: { companyId, prompt: confirmFactPrompt(node) } }))
+
+  // Selecting a node and focusing a stat clear each other, so whichever the person did last is what lights up.
+  const select = (id: string | null) => {
+    setSelectedId(id)
+    if (id) setFocusState(null)
+  }
+
+  // One window handler so the note view (Task 7) can add its own Escape step here.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSelectedId(null)
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
 
   return (
     <div className="flex h-full min-h-[560px] flex-col text-[13px] text-os-text">
@@ -143,7 +154,10 @@ export function MemoryMap({
             type="button"
             title={s.title}
             aria-pressed={focusState === s.state}
-            onClick={() => setFocusState((prev) => (prev === s.state ? null : s.state))}
+            onClick={() => {
+              setSelectedId(null)
+              setFocusState((prev) => (prev === s.state ? null : s.state))
+            }}
             className={`min-w-[190px] rounded-[10px] border bg-os-surface px-3.5 py-2.5 text-left ${focusState === s.state ? "border-os-accent" : "border-os-border"}`}
           >
             <span className="flex items-center gap-2 text-xs text-os-muted">
@@ -181,7 +195,7 @@ export function MemoryMap({
               selectedId={selectedId}
               focusState={focusState}
               onHover={setHoverId}
-              onSelect={setSelectedId}
+              onSelect={select}
             />
           ) : (
             <p className="p-6 text-sm text-os-muted">Nothing saved yet.</p>
@@ -198,7 +212,7 @@ export function MemoryMap({
             <SidePanel
               node={selected}
               linked={[...neighbours(graph.edges, selected.id)].flatMap((id) => byId.get(id) ?? [])}
-              onSelect={setSelectedId}
+              onSelect={select}
               onConfirm={confirmFact}
               onOpenNote={onOpenNote}
             />
@@ -309,17 +323,17 @@ function MapCanvas({
   selectedId: string | null
   focusState: KnowledgeState | null
   onHover: (id: string | null) => void
-  onSelect: (id: string) => void
+  onSelect: (id: string | null) => void
 }) {
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
   const svgRef = useRef<SVGSVGElement>(null)
-  const drag = useRef<{ x: number; y: number } | null>(null)
+  const drag = useRef<{ x: number; y: number; moved: boolean } | null>(null)
 
   // Content-keyed for the same reason as graph-canvas.tsx: a router.refresh()
   // hands over an identical graph in a new object, and relaying out on that
   // would re-scramble the map every 15 seconds.
-  const graphKey = JSON.stringify([graph.nodes, graph.edges])
+  const graphKey = useMemo(() => JSON.stringify([graph.nodes, graph.edges]), [graph])
 
   useEffect(() => {
     // Copies: `graph` may be a shared cached instance, and d3-force writes x/y into what it's given.
@@ -360,7 +374,7 @@ function MapCanvas({
   }, [])
 
   const startPan = (e: ReactPointerEvent<SVGRectElement>) => {
-    drag.current = { x: e.clientX, y: e.clientY }
+    drag.current = { x: e.clientX, y: e.clientY, moved: false }
     e.currentTarget.setPointerCapture(e.pointerId)
   }
   const pan = (e: ReactPointerEvent<SVGRectElement>) => {
@@ -368,13 +382,22 @@ function MapCanvas({
     const scale = WIDTH / svgRef.current.getBoundingClientRect().width
     const dx = (e.clientX - drag.current.x) * scale
     const dy = (e.clientY - drag.current.y) * scale
-    drag.current = { x: e.clientX, y: e.clientY }
+    drag.current = { x: e.clientX, y: e.clientY, moved: drag.current.moved || dx !== 0 || dy !== 0 }
     setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }))
   }
 
-  const near = activeId ? neighbours(graph.edges, activeId) : null
-  const lit = (id: string, state: KnowledgeState) =>
-    near ? id === activeId || near.has(id) : focusState ? state === focusState : true
+  // A click on empty canvas (no drag) clears the selection.
+  const endPan = () => {
+    if (drag.current && !drag.current.moved) onSelect(null)
+    drag.current = null
+  }
+  const cancelPan = () => {
+    drag.current = null
+  }
+
+  const lit = litNodes(graph.nodes, graph.edges, activeId, focusState)
+  const isLit = (id: string) => !lit || lit.has(id)
+  const near = activeId ? lit : null
   const pos = new Map(simNodes.map((n) => [n.id, n]))
 
   return (
@@ -392,7 +415,9 @@ function MapCanvas({
         className="cursor-grab active:cursor-grabbing"
         onPointerDown={startPan}
         onPointerMove={pan}
-        onPointerUp={() => (drag.current = null)}
+        onPointerUp={endPan}
+        onPointerCancel={cancelPan}
+        onLostPointerCapture={cancelPan}
       />
       <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
         {graph.edges.map((e, i) => {
@@ -400,7 +425,7 @@ function MapCanvas({
           const b = pos.get(e.target)
           if (!a || !b || !visible.has(a.id) || !visible.has(b.id)) return null
           const on = activeId !== null && (e.source === activeId || e.target === activeId)
-          const faded = near ? !on : focusState ? !(lit(a.id, a.state) && lit(b.id, b.state)) : false
+          const faded = activeId ? !on : !(isLit(a.id) && isLit(b.id))
           return (
             <line
               key={i}
@@ -424,7 +449,7 @@ function MapCanvas({
             <g
               key={n.id}
               transform={`translate(${n.x ?? 0}, ${n.y ?? 0})`}
-              opacity={lit(n.id, n.state) ? 1 : 0.15}
+              opacity={isLit(n.id) ? 1 : 0.15}
               className="cursor-pointer transition-opacity focus-visible:outline-none"
               onPointerEnter={() => onHover(n.id)}
               onPointerLeave={() => onHover(null)}
@@ -433,7 +458,10 @@ function MapCanvas({
               role="button"
               aria-label={`${TYPE_NAME[n.type]}: ${n.label}`}
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") onSelect(n.id)
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault()
+                  onSelect(n.id)
+                }
               }}
             >
               {n.type === "hub" ? (

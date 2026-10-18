@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { neighbours, visibleNodes } from "./memory-map-state"
+import { confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
 import type { MemoryNode } from "@/lib/os/brain/memory-graph-types"
 
 const node = (over: Partial<MemoryNode>): MemoryNode => ({ id: "a", type: "note", label: "A", path: "notes/a.md", summary: "", state: "lookup", ...over })
@@ -31,5 +31,34 @@ describe("visibleNodes", () => {
   it("matches the query against the path, case-insensitive", () => {
     expect(visibleNodes(nodes, new Set(), "SUPPLIER.md")).toEqual(new Set(["hub", "n"]))
     expect(visibleNodes(nodes, new Set(), "price")).toEqual(new Set(["hub", "d"]))
+  })
+})
+
+describe("litNodes", () => {
+  const nodes = [
+    node({ id: "a", state: "always" }),
+    node({ id: "b", state: "unsure" }),
+    node({ id: "c", state: "lookup" }),
+  ]
+  const edges = [{ source: "a", target: "c" }]
+
+  it("lights everything when nothing is hovered, selected or focused", () => {
+    expect(litNodes(nodes, edges, null, null)).toBeNull()
+  })
+
+  it("lights the focused state when no node is active", () => {
+    expect(litNodes(nodes, edges, null, "unsure")).toEqual(new Set(["b"]))
+  })
+
+  it("lets an active node's neighbourhood win over a stat focus", () => {
+    expect(litNodes(nodes, edges, "a", "unsure")).toEqual(new Set(["a", "c"]))
+  })
+})
+
+describe("confirmFactPrompt", () => {
+  it("names the fact and where it lives", () => {
+    expect(confirmFactPrompt(node({ label: "Release bottleneck", path: "definitions/ontology/company.yaml" }))).toBe(
+      "Let's settle this unconfirmed fact in company.yaml: Release bottleneck (definitions/ontology/company.yaml). Ask me what's true, then propose the edit for approval."
+    )
   })
 })
