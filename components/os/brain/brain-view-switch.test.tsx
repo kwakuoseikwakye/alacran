@@ -10,15 +10,17 @@ import { BrainViewSwitch } from "./brain-view-switch"
 const render = (active: "list" | "map") => renderToStaticMarkup(React.createElement(BrainViewSwitch, { companyId: "acme", active }))
 
 describe("BrainViewSwitch", () => {
-  it("links to the list and the map, and marks the one you are on", () => {
-    const html = render("list")
+  it("lists Map first, then List, and links each to its view", () => {
+    const html = render("map")
+    expect(html.indexOf(">Map<")).toBeGreaterThan(-1)
+    expect(html.indexOf(">Map<")).toBeLessThan(html.indexOf(">List<"))
     expect(html).toContain('href="/c/acme/brain"')
-    expect(html).toContain('href="/c/acme/brain?view=map"')
+    expect(html).toContain('href="/c/acme/brain?view=list"')
     expect(html).toMatch(/href="\/c\/acme\/brain"[^>]*aria-current="page"/)
-    expect(html).not.toMatch(/href="\/c\/acme\/brain\?view=map"[^>]*aria-current/)
+    expect(html).not.toMatch(/href="\/c\/acme\/brain\?view=list"[^>]*aria-current/)
   })
 
-  it("marks the map when the map is showing", () => {
-    expect(render("map")).toMatch(/href="\/c\/acme\/brain\?view=map"[^>]*aria-current="page"/)
+  it("marks the list when the list is showing", () => {
+    expect(render("list")).toMatch(/href="\/c\/acme\/brain\?view=list"[^>]*aria-current="page"/)
   })
 })

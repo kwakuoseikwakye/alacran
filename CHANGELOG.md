@@ -14020,3 +14020,21 @@ executor status. The shared command-copy button falls back from the Clipboard
 API to a temporary selected textarea and the user-initiated browser copy command,
 restores focus, removes the temporary node, and exposes failure without claiming
 success. No native permissions or credential flows changed.
+
+## v242 (2026-10-18): brain memory map
+
+### What's new for you (feature)
+The brain page now opens on a map of what your AI knows about your company.
+- Every fact and note is a dot, joined to the things it links to, so you can see at a glance what your AI has to work with.
+- Dots show what it always knows, what it can look up when it needs to, and what it is unsure about.
+- Filter the map by kind, or search to find a dot by name.
+- Click a dot to see what it says and what it links to.
+- Open the full note to read it with its links and the notes around it.
+- When your AI is unsure about a fact, you can confirm it with the assistant from the same panel.
+- The plain list is one click away if you prefer it.
+
+Why: the brain page showed a list and an agent graph, which said little about what the AI actually knows. The design is in the brain memory map spec: show the company's own memory, the way an Obsidian vault shows its notes, and make the unsure parts easy to settle.
+
+Engineering notes: `lib/os/brain/` holds the data side. `company-facts.ts` and `memory-links.ts` read the facts and the links between files; `memory-graph.ts` builds nodes and edges (always known, look-up, unsure); `memory-graph-read.ts` reads files from git, committed content only, so an uncommitted edit never shows up as something the AI knows. The result is cached per HEAD, with a bounded number of concurrent git reads, so a large company folder does not spawn hundreds of processes and an unchanged HEAD costs nothing. `app/api/brain/note/route.ts` serves one note to the note view: read-only, the path is checked to stay inside the company folder and to be a tracked file, anything else is refused. `components/os/brain/memory-map.tsx` (with `memory-map-state.ts` for the pure filter, search and selection logic) is the map; `memory-note-view.tsx` is the note view with links and a local map of neighbours. The map's colours are variables scoped to the map in `globals.css`, with values for both themes, so light and dark stay readable without touching the shared palette. The brain page now defaults to the map and `brain-view-switch` keeps the list one click away. The old graph components (`knowledge-graph.tsx` and friends) are left in place, unused by the default view, for a later cleanup.
+
+Live result: a production build was checked against the real Alacrán company. The counts (4 always known, 184 look-up, 2 unsure), the type filters, the side panel, the note view and Esc back to the map all worked. That check found no fit-to-view, a hairball of about 190 overlapping labels, a hydration warning, and a hint sitting over the dots, so a fix wave followed. The canvas is now measured so screen and map units match (drag and zoom track the cursor). The layout is computed once, off screen, with no settling animation. The map fits itself to what is shown, searched for or focused, and pans a picked node into view. Labels show only for folders, always-known, unsure and skill dots, the dot in focus and its neighbours, and search matches, with the rest appearing once zoomed in. Folder children cluster tightly. The map stays mounted under an open note, so Esc returns to the same view. The svg is not drawn until the canvas is measured, so the server render has nothing to mismatch. Hardening: the note route refuses glob characters and ends git's argv with `--`, and the loader passes `--no-optional-locks` and degrades to an empty graph instead of a 500. The hub table moved to `memory-hubs.ts`, so the yaml parser leaves the client bundle. Known gaps: "Confirm this fact" with the ElevenLabs voice dock opens the voice dock without the prompt. Untracked company skills still show as nodes. The old map components are no longer reachable and await a cleanup slice.

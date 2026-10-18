@@ -130,6 +130,16 @@
   --tone-lime: #9fd356;
   --tone-violet: #a78bfa;
   --tone-rose: #fb7185;
+  /* Memory map node types (components/os/brain/memory-map.tsx). Map-scoped
+     rather than reusing --tone-* directly: those are dark-only, and lime/cyan
+     at the map's 55% "look up" opacity vanish on the light canvas. */
+  --mm-fact: var(--tone-blue);
+  --mm-decision: var(--warning);
+  --mm-note: var(--tone-lime);
+  --mm-session: var(--tone-cyan);
+  --mm-skill: var(--tone-violet);
+  --mm-hub: var(--text-3);
+  --mm-lookup-opacity: 0.55;
 
   /* semantics: destructive is a flatter, less pink red than the brand accent
      so an error never reads as a call to action */
@@ -278,6 +288,16 @@
   --field-lip: rgba(0, 0, 0, 0.02);
   --field-sheen: rgba(255, 255, 255, 0.6);
   --destructive: #d70015;
+  /* Memory map node types, darkened to hold >=3:1 on the white canvas. */
+  --mm-fact: #2563eb;
+  --mm-decision: #b25e00;
+  --mm-note: #4d7c0f;
+  --mm-session: #0e7490;
+  --mm-skill: #7c3aed;
+  --mm-hub: #71717a;
+  /* "Can look up" dimming: 0.8 keeps every type >=3:1 blended over #f4f4f5;
+     0.55 fell to ~2.1:1 on white. */
+  --mm-lookup-opacity: 0.8;
   --success: #1a7f37;
   --warning: #b25e00;
 }
