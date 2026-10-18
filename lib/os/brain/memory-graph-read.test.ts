@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 import type { CatalogSkill } from "@/lib/os/skills/types"
-import { readMemoryGraph } from "./memory-graph-read"
+import { readMemoryGraph, resetMemoryGraphCache } from "./memory-graph-read"
 
 const skill = (id: string, provenance: CatalogSkill["provenance"], filePath: string) =>
   ({ id, name: id, description: `${id} desc`, category: "General", provenance, provenanceLabel: "", filePath, isEditable: false, status: "live" }) as CatalogSkill
@@ -9,6 +9,7 @@ const skill = (id: string, provenance: CatalogSkill["provenance"], filePath: str
 function fakeGit(opts: { files: string[]; show: Record<string, string>; fail?: boolean }) {
   return vi.fn(async (_command: string, args: string[]) => {
     if (opts.fail) throw new Error("not a git repository")
+    if (args[4] === "rev-parse") return { stdout: "abc123\n", stderr: "" }
     if (args[4] === "ls-files") return { stdout: opts.files.join("\n"), stderr: "" }
     if (args[4] === "show") {
       const rel = args[5].replace("HEAD:./", "")
@@ -27,6 +28,8 @@ const SHOW = {
 }
 
 describe("readMemoryGraph", () => {
+  beforeEach(resetMemoryGraphCache)
+
   it("lists tracked files with git ls-files and reads HEAD content, not the working tree", async () => {
     const execFn = fakeGit({ files: ["notes/a.md", "notes/b.md"], show: SHOW })
     const g = await readMemoryGraph("/co", "Co", { execFn, readSkills: async () => [] })
@@ -78,5 +81,33 @@ describe("readMemoryGraph", () => {
     const g = await readMemoryGraph("/co", "Co", { execFn, readSkills: async () => [] })
     expect(g.nodes).toEqual([])
     expect(g.edges).toEqual([])
+  })
+
+  it("never has more than 8 git show calls in flight", async () => {
+    const files = Array.from({ length: 40 }, (_, i) => `notes/n${i}.md`)
+    let inFlight = 0
+    let peak = 0
+    const execFn = vi.fn(async (_c: string, args: string[]) => {
+      if (args[4] === "rev-parse") return { stdout: "abc123", stderr: "" }
+      if (args[4] === "ls-files") return { stdout: files.join("\n"), stderr: "" }
+      inFlight++
+      peak = Math.max(peak, inFlight)
+      await new Promise((r) => setTimeout(r, 1))
+      inFlight--
+      return { stdout: "# T\n", stderr: "" }
+    })
+    const g = await readMemoryGraph("/co", "Co", { execFn, readSkills: async () => [] })
+    expect(g.nodes.filter((n) => n.type === "note")).toHaveLength(40)
+    expect(peak).toBeLessThanOrEqual(8)
+    expect(peak).toBeGreaterThan(1)
+  })
+
+  it("serves the same HEAD sha from cache without listing again", async () => {
+    const execFn = fakeGit({ files: ["notes/a.md"], show: SHOW })
+    const first = await readMemoryGraph("/co", "Co", { execFn, readSkills: async () => [] })
+    execFn.mockClear()
+    const second = await readMemoryGraph("/co", "Co", { execFn, readSkills: async () => [] })
+    expect(second).toBe(first)
+    expect(execFn.mock.calls.map((c) => c[1][4])).toEqual(["rev-parse"])
   })
 })

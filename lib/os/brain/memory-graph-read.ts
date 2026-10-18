@@ -9,6 +9,31 @@ import type { MemoryGraph } from "./memory-graph-types"
 const LISTED = ["AGENTS.md", "CLAUDE.md", "HANDOFF.md", "definitions", "notes", "docs/decisions"]
 const KIND: Record<"session" | "note" | "decision" | "fact", MemoryKind> = { session: "note", note: "note", decision: "decision", fact: "fact" }
 
+const CONCURRENCY = 8
+
+// A page that auto-refreshes must not fork hundreds of git processes per render:
+// a spawn failure would look the same as "not committed" and drop nodes.
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length)
+  let next = 0
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++
+      out[i] = await fn(items[i])
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker))
+  return out
+}
+
+// ponytail: keyed by root + HEAD sha, so the skills catalog (read from disk) is
+// not re-read until the next commit, and entries are never evicted. Fine for a
+// handful of companies; add eviction if one process serves many.
+const cache = new Map<string, { sha: string; graph: MemoryGraph }>()
+export function resetMemoryGraphCache() {
+  cache.clear()
+}
+
 /**
  * The company's memory map, from committed content only: files come from
  * `git ls-files` and are read at HEAD, so a draft nobody approved is never a
@@ -31,23 +56,25 @@ export async function readMemoryGraph(
   }
 
   let listed: string[]
+  let sha: string
   try {
+    sha = (await git(["rev-parse", "HEAD"])).stdout.trim()
+    const hit = cache.get(rootPath)
+    if (hit && hit.sha === sha) return hit.graph
     listed = (await git(["ls-files", "--", ...LISTED])).stdout.split("\n").map((s) => s.trim()).filter(Boolean)
   } catch {
     return buildMemoryGraph({ files: [], skills: [] })
   }
 
   const files = (
-    await Promise.all(
-      listed.map(async (rel): Promise<GraphFile | null> => {
-        const type = typeOfPath(rel)
-        if (!type) return null
-        const text = await show(rel)
-        if (text === null) return null
-        const { title, statement } = readMemoryText(rel, KIND[type as keyof typeof KIND], text)
-        return { path: rel, text, title, summary: statement }
-      })
-    )
+    await mapLimit(listed, CONCURRENCY, async (rel): Promise<GraphFile | null> => {
+      const type = typeOfPath(rel)
+      if (!type) return null
+      const text = await show(rel)
+      if (text === null) return null
+      const { title, statement } = readMemoryText(rel, KIND[type as keyof typeof KIND], text)
+      return { path: rel, text, title, summary: statement }
+    })
   ).filter((f): f is GraphFile => f !== null)
 
   let catalog: Awaited<ReturnType<typeof readSkillsCatalog>> = []
@@ -56,17 +83,19 @@ export async function readMemoryGraph(
   } catch {
     // no skills is a smaller map, not a broken one
   }
-  const skills = await Promise.all(
-    catalog
-      .filter((s) => s.provenance !== "global")
-      .map(async (s): Promise<GraphSkill> => {
-        // Pack skills carry absolute paths; only a file inside the company folder is committed content.
-        const rel = path.isAbsolute(s.filePath) ? path.relative(rootPath, s.filePath) : s.filePath
-        const inside = !rel.startsWith("..") && !path.isAbsolute(rel)
-        const text = inside ? ((await show(rel)) ?? "") : ""
-        return { id: s.id, name: s.name, description: s.description, filePath: inside ? rel : s.filePath, text }
-      })
+  const skills = await mapLimit(
+    catalog.filter((s) => s.provenance !== "global"),
+    CONCURRENCY,
+    async (s): Promise<GraphSkill> => {
+      // Pack skills carry absolute paths; only a file inside the company folder is committed content.
+      const rel = path.isAbsolute(s.filePath) ? path.relative(rootPath, s.filePath) : s.filePath
+      const inside = rel !== ".." && !rel.startsWith(".." + path.sep) && !path.isAbsolute(rel)
+      const text = inside ? ((await show(rel)) ?? "") : ""
+      return { id: s.id, name: s.name, description: s.description, filePath: inside ? rel : s.filePath, text }
+    }
   )
 
-  return buildMemoryGraph({ files, skills })
+  const graph = buildMemoryGraph({ files, skills })
+  cache.set(rootPath, { sha, graph })
+  return graph
 }
