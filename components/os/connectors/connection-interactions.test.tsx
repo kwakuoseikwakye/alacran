@@ -134,6 +134,17 @@ describe("Connected Tools board re-check", () => {
     expect(view.nodes().some((node) => node.type === MachineSetupModal)).toBe(false)
   })
 
+  // Codex was left off the card's list of setup-window tools, so its card had no
+  // button at all: not installed, there was no way to reach Install or the command.
+  it("gives every AI executor's card a button that opens its setup window", async () => {
+    for (const slug of ["claude-code", "codex", "kiro", "kimi", "antigravity"]) {
+      const onOpenMachineSetup = vi.fn()
+      const view = mount(ConnectionCard, { entry: { ...entry(), slug, name: slug }, connectStatus: status(), onOpenMachineSetup })
+      await click(button(view, "+ Connect"))
+      expect(onOpenMachineSetup).toHaveBeenCalledWith(slug)
+    }
+  })
+
   it("keeps a selected tool's modal open and updates its status when it moves into Your tools", async () => {
     vi.mocked(recheckAllConnectionsState).mockResolvedValue({ connectStatus: status(true), catalog: [entry(true)] })
     const view = mount(UnifiedConnectionsBoard, { initialConnectStatus: status(), initialCatalog: [entry()] })
