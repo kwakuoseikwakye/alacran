@@ -15,7 +15,7 @@ import type { Terminal as XTerm } from "@xterm/xterm"
 import { createStreamHub, openEventSource } from "@/lib/terminal/stream-hub"
 import { createInputQueue } from "@/lib/terminal/input-queue"
 import { shouldFit } from "@/lib/terminal/fit"
-import { gridFor, tracksFor } from "@/lib/terminal/grid-layout"
+import { gridFor, layoutAfterOpen, tracksFor } from "@/lib/terminal/grid-layout"
 import { TerminalGutters, type TrackAxis } from "@/components/terminal-gutters"
 import { elapsed, plainSummary, shouldNotify, shouldPollRuns, statusView, TAKEOVER_PREFIX } from "@/lib/agent-runs/run-view"
 import type { RunStatus } from "@/lib/agent-runs/records"
@@ -448,6 +448,15 @@ export function TerminalWorkspace({
           return
         }
         const session = (await response.json()) as Tab
+        const next = layoutAfterOpen(layoutRef.current, tabsRef.current.filter((t) => workspaceOf(t) === workspaceId).length)
+        if (next !== layoutRef.current) {
+          setLayout(next)
+          try {
+            window.localStorage.setItem("alacran-terminal-layout", next)
+          } catch {
+            /* not remembered, still applied */
+          }
+        }
         setTabs((current) => [...current, { id, kind, label: session.label, workspaceId }])
         setActiveId(id)
         setActiveWorkspaceId(workspaceId)
