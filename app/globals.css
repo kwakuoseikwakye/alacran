@@ -139,6 +139,7 @@
   --mm-session: var(--tone-cyan);
   --mm-skill: var(--tone-violet);
   --mm-hub: var(--text-3);
+  --mm-lookup-opacity: 0.55;
 
   /* semantics: destructive is a flatter, less pink red than the brand accent
      so an error never reads as a call to action */
@@ -294,6 +295,9 @@
   --mm-session: #0e7490;
   --mm-skill: #7c3aed;
   --mm-hub: #71717a;
+  /* "Can look up" dimming: 0.8 keeps every type >=3:1 blended over #f4f4f5;
+     0.55 fell to ~2.1:1 on white. */
+  --mm-lookup-opacity: 0.8;
   --success: #1a7f37;
   --warning: #b25e00;
 }

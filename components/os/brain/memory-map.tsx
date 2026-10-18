@@ -127,6 +127,9 @@ export function MemoryMap({
   // One window handler so the note view (Task 7) can add its own Escape step here.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Esc in the search box (or anything editable) belongs to that field.
+      const t = e.target as HTMLElement | null
+      if (e.defaultPrevented || t?.closest?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return
       if (e.key === "Escape") setSelectedId(null)
     }
     window.addEventListener("keydown", onKey)
@@ -471,7 +474,7 @@ function MapCanvas({
               ) : (
                 <>
                   {n.state === "always" && <circle r={r + 6} fill={color} opacity={0.18} />}
-                  <circle r={r} fill={color} opacity={n.state === "always" ? 1 : 0.55} />
+                  <circle r={r} fill={color} style={{ opacity: n.state === "always" ? 1 : "var(--mm-lookup-opacity)" }} />
                 </>
               )}
               {n.id === selectedId && <circle r={r + 3} fill="none" stroke="var(--accent)" strokeWidth={1} />}
