@@ -3,6 +3,8 @@ import React from "react"
 import { renderToStaticMarkup } from "react-dom/server"
 globalThis.React = React
 import { MemoryMap } from "./memory-map"
+import { MemoryNoteView } from "./memory-note-view"
+import { buildLinkIndex } from "@/lib/os/brain/memory-links"
 import type { MemoryGraph } from "@/lib/os/brain/memory-graph-types"
 
 const graph: MemoryGraph = {
@@ -53,6 +55,51 @@ describe("MemoryMap", () => {
     expect(html).not.toContain("Confirm this fact")
     expect(html).toContain('title="Show Decisions on the map"')
     for (const b of html.match(/<button[^>]*>/g) ?? []) expect(b).toMatch(/title="[^"]+"/)
+  })
+
+  it("opens a note in three panes: files by folder, the linked note, and a local map", () => {
+    const g: MemoryGraph = {
+      ...graph,
+      nodes: [
+        ...graph.nodes,
+        { id: "docs/decisions/a.md", type: "decision", label: "Price by size", path: "docs/decisions/a.md", summary: "", state: "lookup" },
+        { id: "notes/far.md", type: "note", label: "Far away note", path: "notes/far.md", summary: "", state: "lookup" },
+        { id: "hub:notes", type: "hub", label: "Notes", path: "", summary: "", state: "lookup" },
+      ],
+      edges: [...graph.edges, { source: "docs/decisions/a.md", target: "hub:decisions" }, { source: "AGENTS.md", target: "docs/decisions/a.md" }, { source: "notes/far.md", target: "hub:notes" }],
+    }
+    const html = renderToStaticMarkup(
+      React.createElement(MemoryMap, { companyId: "acme", graph: g, initialNote: { id: "AGENTS.md", text: "Start with docs/decisions/a.md <b>" } })
+    )
+    const files = html.slice(html.indexOf('aria-label="Files"'), html.indexOf("</nav>"))
+    expect(files).toContain("Decisions")
+    expect(files).toContain("Price by size")
+    expect(files).toContain("Far away note")
+    expect(html).toMatch(/white-space:pre-wrap/)
+    expect(html).toContain("Start with ")
+    expect(html).toContain("&lt;b&gt;")
+    expect(html).toMatch(/<button[^>]*title="Open Price by size"[^>]*>docs\/decisions\/a\.md<\/button>/)
+    expect(html).toContain("Back to the map")
+    const local = html.slice(html.indexOf('aria-label="What AGENTS.md links to"'), html.lastIndexOf("</svg>"))
+    expect(local).toContain("AGENTS.md")
+    expect(local).toContain("Price by size")
+    expect(local).toContain("Decisions")
+    expect(local).not.toContain("Far away note")
+    expect(local).not.toContain("Release bottleneck")
+    for (const b of html.match(/<button[^>]*>/g) ?? []) expect(b).toMatch(/title="[^"]+"/)
+  })
+
+  it("shows a loading line, then a plain error with the way back, never a blank pane", () => {
+    const view = (text: string | null, failed: boolean) =>
+      renderToStaticMarkup(
+        React.createElement(MemoryNoteView, {
+          graph, node: graph.nodes[0], text, failed, index: buildLinkIndex([], [], {}), onOpen: () => {}, onBack: () => {},
+        })
+      )
+    expect(view(null, false)).toContain("Opening the note…")
+    const failed = view(null, true)
+    expect(failed).toContain("Couldn&#x27;t open this note.")
+    expect(failed).toContain("Back to the map")
   })
 
   it("says nothing is saved instead of drawing an empty canvas", () => {

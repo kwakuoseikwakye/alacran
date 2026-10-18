@@ -11,8 +11,11 @@ import {
   type SimulationLinkDatum,
 } from "d3-force"
 import { ASSISTANT_OPEN_EVENT } from "@/components/os/assistant-dock"
+import { HUB_FOLDERS } from "@/lib/os/brain/memory-graph"
 import type { KnowledgeState, MemoryGraph, MemoryNode, MemoryNodeType } from "@/lib/os/brain/memory-graph-types"
-import { confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import { buildLinkIndex } from "@/lib/os/brain/memory-links"
+import { TYPE_COLOR, confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import { MemoryNoteView } from "./memory-note-view"
 
 type SimNode = MemoryNode & SimulationNodeDatum
 
@@ -23,15 +26,6 @@ const MAX_LABEL = 22
 const CHAR_W = 6
 const truncate = (label: string) => (label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label)
 
-/** Map-scoped hues (globals.css) so both themes read; red stays reserved for "unsure". */
-const TYPE_COLOR: Record<MemoryNodeType, string> = {
-  fact: "var(--mm-fact)",
-  decision: "var(--mm-decision)",
-  note: "var(--mm-note)",
-  session: "var(--mm-session)",
-  skill: "var(--mm-skill)",
-  hub: "var(--mm-hub)",
-}
 const TYPE_NAME: Record<MemoryNodeType, string> = {
   fact: "Fact",
   decision: "Decision",
@@ -77,25 +71,39 @@ function TypeDot({ type }: { type: MemoryNodeType }) {
 export function MemoryMap({
   companyId,
   graph,
-  onOpenNote,
   initialSelectedId = null,
+  initialNote,
 }: {
   companyId: string
   graph: MemoryGraph
   /** Lets a static render show the side panel; the page leaves it unset. */
   initialSelectedId?: string | null
-  /** The note view (Task 7) hooks in here; hubs never call it, `yaml:` items pass a node whose path is company.yaml. */
-  onOpenNote?: (node: MemoryNode) => void
+  /** Opens straight into the note view, for tests and deep links. */
+  initialNote?: { id: string; text: string }
 }) {
   const [hidden, setHidden] = useState<Set<MemoryNodeType>>(new Set())
   const [query, setQuery] = useState("")
   const [hoverId, setHoverId] = useState<string | null>(null)
-  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId)
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? initialNote?.id ?? null)
   const [focusState, setFocusState] = useState<KnowledgeState | null>(null)
+  const [note, setNote] = useState<{ id: string; text: string | null; failed: boolean } | null>(
+    initialNote ? { ...initialNote, failed: false } : null
+  )
+  // Bumped on every open and close, so a slow response for a note the person already left is dropped.
+  const noteRequest = useRef(0)
 
   const byId = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph])
   const visible = useMemo(() => visibleNodes(graph.nodes, hidden, query), [graph, hidden, query])
   const selected = selectedId ? byId.get(selectedId) ?? null : null
+  const noteNode = note ? byId.get(note.id) ?? null : null
+  const noteOpen = noteNode !== null
+
+  // Built here from the graph's own nodes, so the note's links resolve exactly as the map's edges did.
+  const linkIndex = useMemo(() => {
+    const files = graph.nodes.filter((n) => n.type !== "hub" && n.type !== "skill" && !n.id.startsWith("yaml:")).map((n) => n.id)
+    const skills = graph.nodes.filter((n) => n.type === "skill").map((n) => ({ id: n.id.slice("skill:".length), nodeId: n.id }))
+    return buildLinkIndex(files, skills, HUB_FOLDERS)
+  }, [graph])
 
   const always = graph.nodes.filter((n) => n.state === "always" && isFile(n)).map((n) => n.label)
   const lookupByType = CHIPS.map(({ type }) => [type, graph.nodes.filter((n) => n.state === "lookup" && isFile(n) && n.type === type).length] as const)
@@ -124,17 +132,65 @@ export function MemoryMap({
     if (id) setFocusState(null)
   }
 
-  // One window handler so the note view (Task 7) can add its own Escape step here.
+  const closeNote = () => {
+    noteRequest.current++
+    setNote(null)
+  }
+
+  const openNote = (id: string) => {
+    const node = byId.get(id)
+    if (!node) return
+    // A folder has no note of its own: show it on the map instead.
+    if (node.type === "hub") {
+      closeNote()
+      select(id)
+      return
+    }
+    select(id)
+    setNote({ id, text: null, failed: false })
+    const request = ++noteRequest.current
+    // `yaml:` facts carry company.yaml as their path, so they open that file.
+    fetch(`/api/brain/note?${new URLSearchParams({ companyId, path: node.path })}`)
+      .then(async (res) => {
+        const body = (await res.json()) as { text?: unknown }
+        if (!res.ok || typeof body.text !== "string") throw new Error("note not readable")
+        return body.text
+      })
+      .then(
+        (text) => request === noteRequest.current && setNote({ id, text, failed: false }),
+        () => request === noteRequest.current && setNote({ id, text: null, failed: true })
+      )
+  }
+
+  // The one window Esc handler: it leaves the note first (keeping the node selected), then clears the selection.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Esc in the search box (or anything editable) belongs to that field.
       const t = e.target as HTMLElement | null
       if (e.defaultPrevented || t?.closest?.("input, textarea, select, [contenteditable]:not([contenteditable='false'])")) return
-      if (e.key === "Escape") setSelectedId(null)
+      if (e.key !== "Escape") return
+      if (noteOpen) {
+        noteRequest.current++
+        setNote(null)
+      } else setSelectedId(null)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  }, [noteOpen])
+
+  if (noteNode && note) {
+    return (
+      <MemoryNoteView
+        graph={graph}
+        node={noteNode}
+        text={note.text}
+        failed={note.failed}
+        index={linkIndex}
+        onOpen={openNote}
+        onBack={closeNote}
+      />
+    )
+  }
 
   return (
     <div className="flex h-full min-h-[560px] flex-col text-[13px] text-os-text">
@@ -217,7 +273,7 @@ export function MemoryMap({
               linked={[...neighbours(graph.edges, selected.id)].flatMap((id) => byId.get(id) ?? [])}
               onSelect={select}
               onConfirm={confirmFact}
-              onOpenNote={onOpenNote}
+              onOpenNote={openNote}
             />
           ) : (
             <p className="text-os-muted">Click a dot to see what the AI knows about it.</p>
@@ -239,7 +295,7 @@ function SidePanel({
   linked: MemoryNode[]
   onSelect: (id: string) => void
   onConfirm: (node: MemoryNode) => void
-  onOpenNote?: (node: MemoryNode) => void
+  onOpenNote: (id: string) => void
 }) {
   const unsure = node.state === "unsure"
   const isYaml = node.id.startsWith("yaml:")
@@ -296,7 +352,7 @@ function SidePanel({
           <button
             type="button"
             title={isYaml ? "Read the whole company.yaml this fact lives in" : "Read the whole file with its links"}
-            onClick={() => onOpenNote?.(node)}
+            onClick={() => onOpenNote(node.id)}
             className={
               unsure
                 ? "rounded-lg border border-os-border px-3 py-2 text-os-text"

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { confirmFactPrompt, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import { confirmFactPrompt, linkify, litNodes, neighbours, visibleNodes } from "./memory-map-state"
+import { buildLinkIndex } from "@/lib/os/brain/memory-links"
 import type { MemoryNode } from "@/lib/os/brain/memory-graph-types"
 
 const node = (over: Partial<MemoryNode>): MemoryNode => ({ id: "a", type: "note", label: "A", path: "notes/a.md", summary: "", state: "lookup", ...over })
@@ -60,5 +61,32 @@ describe("confirmFactPrompt", () => {
     expect(confirmFactPrompt(node({ label: "Release bottleneck", path: "definitions/ontology/company.yaml" }))).toBe(
       "Let's settle this unconfirmed fact in company.yaml: Release bottleneck (definitions/ontology/company.yaml). Ask me what's true, then propose the edit for approval."
     )
+  })
+})
+
+describe("linkify", () => {
+  const index = buildLinkIndex(["notes/pricing.md", "docs/decisions/a.md"], [], { "notes/": "hub:notes" })
+
+  it("splits text around resolved wiki links and paths", () => {
+    expect(linkify("see [[pricing]] and docs/decisions/a.md", index, "notes/self.md")).toEqual([
+      { text: "see " },
+      { text: "[[pricing]]", nodeId: "notes/pricing.md" },
+      { text: " and " },
+      { text: "docs/decisions/a.md", nodeId: "docs/decisions/a.md" },
+    ])
+  })
+
+  it("leaves unresolved links, dead paths and self-links as plain text", () => {
+    const text = "[[x]] docs/decisions/gone.md [[pricing]]."
+    expect(linkify(text, index, "notes/pricing.md")).toEqual([{ text }])
+  })
+
+  it("keeps trailing punctuation out of a path link and falls back to a folder hub", () => {
+    expect(linkify("read docs/decisions/a.md, then notes/company/", index, "x")).toEqual([
+      { text: "read " },
+      { text: "docs/decisions/a.md", nodeId: "docs/decisions/a.md" },
+      { text: ", then " },
+      { text: "notes/company/", nodeId: "hub:notes" },
+    ])
   })
 })

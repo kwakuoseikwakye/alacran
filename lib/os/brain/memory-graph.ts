@@ -33,7 +33,7 @@ export function typeOfPath(path: string): MemoryNodeType | null {
   return null
 }
 
-function hubOf(path: string): string | null {
+export function hubOf(path: string): string | null {
   let best = ""
   for (const prefix of Object.keys(HUB_FOLDERS)) {
     if (path.startsWith(prefix) && prefix.length > best.length) best = prefix
