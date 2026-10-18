@@ -14020,3 +14020,14 @@ executor status. The shared command-copy button falls back from the Clipboard
 API to a temporary selected textarea and the user-initiated browser copy command,
 restores focus, removes the temporary node, and exposes failure without claiming
 success. No native permissions or credential flows changed.
+
+
+## v242 (2026-10-18): assisted setup for every AI executor
+
+### What's new for you (fix)
+Every AI assistant in Connected Tools now helps you set it up, not only Claude Code.
+- Codex, Kiro, Kimi and Google Antigravity show the steps, the install command to copy, and a link to their own instructions.
+- Codex and Kiro also get Install it for me, which installs them without opening a terminal.
+- An assistant that is installed but signed out offers Sign in.
+
+Engineering notes: `MachineSetupModal` hardcoded the install panel for Claude Code only. Kiro, Kimi and Antigravity rendered a status line and a description; Codex matched no branch and rendered an empty body. The old Connect page's `ToolCard` drove the same panel from each executor's `ToolStatus` (`installId`, `needsSignIn`, `guidance.steps/command/link`), which `connect-status-impl` still produces for every executor. The modal now renders that status for Codex, Kiro, Kimi and Antigravity, reusing `InstallButton` and `SignInButton` from `connect-panel`. Install it for me appears only where `installId` is set, which `isInstallableId` limits to executors with a verified installer (Claude Code, Codex, Kiro); Kimi and Antigravity get the copy command and link, because no installer of theirs has been verified here. Claude Code's own panel is unchanged.

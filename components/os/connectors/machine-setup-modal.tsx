@@ -11,12 +11,13 @@ import {
   Download,
   Loader2,
   Chrome,
+  ExternalLink,
 } from "lucide-react"
 import { BrandLogo } from "@/lib/os/connectors/brand-logos"
 import { Button } from "@/components/ui/button"
 import { CommandLine } from "@/components/copy-button"
 import { OutlookSetup } from "@/components/os/connectors/outlook-setup"
-import { ConnectGoogleApps, GoogleSetup, InstallButton, KeychainNote } from "@/components/connect-panel"
+import { ConnectGoogleApps, GoogleSetup, InstallButton, KeychainNote, SignInButton } from "@/components/connect-panel"
 import { openChromePairing } from "@/lib/setup-google"
 import { installTool } from "@/lib/install-tool"
 import type { ConnectStatus } from "@/lib/connect/connect-status-impl"
@@ -531,8 +532,8 @@ export function MachineSetupModal({
           </div>
         )}
 
-        {/* KIRO / KIMI / ANTIGRAVITY */}
-        {(slug === "kiro" || slug === "kimi" || slug === "antigravity") && (
+        {/* CODEX / KIRO / KIMI / ANTIGRAVITY */}
+        {(slug === "codex" || slug === "kiro" || slug === "kimi" || slug === "antigravity") && (
           <div className="space-y-4 text-xs">
             <div className="rounded-xl border border-os-border bg-os-surface2 p-3">
               <div className="flex items-center justify-between">
@@ -554,6 +555,41 @@ export function MachineSetupModal({
             <p className="text-os-dim">
               Local AI execution engine. Runs tasks locally on your terminal without third-party cloud routing.
             </p>
+
+            {/* The same assisted setup Claude Code gets, driven by the executor's own
+                status (connect-status-impl) rather than hardcoded per slug, so a newly
+                registered executor arrives with it too. */}
+            {executor && !executor.connected && (
+              <div className="space-y-3 rounded-xl border border-os-border bg-os-surface2/60 p-4">
+                <h4 className="font-semibold text-os-text">Installation &amp; Setup</h4>
+                {executor.installId && <InstallButton id={executor.installId} onDone={() => void handleRecheck()} />}
+                {executor.needsSignIn && <SignInButton executorId={executor.id} />}
+                {executor.guidance.steps.length > 0 && (
+                  <ol className="list-decimal space-y-1 pl-5 text-os-dim">
+                    {executor.guidance.steps.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                )}
+                {executor.guidance.command && (
+                  <>
+                    <p className="text-[11px] text-os-dim">{executor.installId ? "Or install via terminal:" : "Install via terminal:"}</p>
+                    <CommandLine command={executor.guidance.command} />
+                  </>
+                )}
+                {executor.guidance.link && (
+                  <a
+                    className="inline-flex items-center gap-1 text-[11px] text-os-accent underline-offset-4 hover:underline"
+                    href={executor.guidance.link}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={`Open ${name}'s own install instructions`}
+                  >
+                    Install instructions <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </div>
+            )}
 
             {slug === "antigravity" && (
               <div className="space-y-2 rounded-xl border border-os-border bg-os-surface2/60 p-3.5">
