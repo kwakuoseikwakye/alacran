@@ -30,6 +30,14 @@ describe("readCompanyFacts", () => {
     expect(facts[3].summary).toBe("Oven capacity")
   })
 
+  it("labels a plain list item by its value, not the list's key", () => {
+    const facts = readCompanyFacts("channels:\n  - email\n  - phone\n")
+    expect(facts.map((f) => [f.id, f.label])).toEqual([
+      ["yaml:channels.0", "email"],
+      ["yaml:channels.1", "phone"],
+    ])
+  })
+
   it("flags a trailing # unconfirmed comment and <<TODO>> as unsure", () => {
     const withTodo = YAML.replace('name: "Cafes"', 'name: "<<TODO>>"')
     const unsure = Object.fromEntries(readCompanyFacts(withTodo).map((f) => [f.id, f.unsure]))

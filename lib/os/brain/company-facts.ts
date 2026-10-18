@@ -36,7 +36,7 @@ export function readCompanyFacts(raw: string): CompanyFact[] {
     return UNSURE.test(raw.slice(start, eol === -1 ? raw.length : eol))
   }
 
-  const push = (keyPath: string, lastKey: string, node: Node) => {
+  const push = (keyPath: string, lastKey: string, node: Node, listItem = false) => {
     const value = node.toJSON() as unknown
     const map = isMap(node) ? node : undefined
     const label = map ? LABEL_KEYS.map((k) => str(map, k)).find(Boolean) : undefined
@@ -47,7 +47,8 @@ export function readCompanyFacts(raw: string): CompanyFact[] {
         : undefined
     facts.push({
       id: `yaml:${keyPath}`,
-      label: label ?? lastKey,
+      // Ten items all called "channels" say nothing; a plain list item is its value.
+      label: label ?? (listItem && summary ? clip(summary) : lastKey),
       keyPath,
       summary: clip(summary ?? ""),
       unsure: unsureAt(node),
@@ -59,7 +60,7 @@ export function readCompanyFacts(raw: string): CompanyFact[] {
       const key = String(isScalar(pair.key) ? pair.key.value : pair.key)
       const keyPath = prefix ? `${prefix}.${key}` : key
       const v = pair.value as Node | null
-      if (isSeq(v)) v.items.forEach((item, i) => push(`${keyPath}.${i}`, key, item as Node))
+      if (isSeq(v)) v.items.forEach((item, i) => push(`${keyPath}.${i}`, key, item as Node, true))
       else if (isMap(v)) walk(v.items, keyPath)
       else if (isScalar(v)) push(keyPath, key, v)
     }
