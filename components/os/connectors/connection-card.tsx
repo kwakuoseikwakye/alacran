@@ -7,18 +7,20 @@ import { ConnectFlow } from "./connect-flow"
 import { MachineSetupModal } from "./machine-setup-modal"
 import { McpSetupModal } from "./mcp-setup-modal"
 import type { ConnectStatus } from "@/lib/connect/connect-status-impl"
+import type { AiExecutorId } from "@/lib/ai-executors"
 
-const MACHINE_SLUGS = new Set([
-  "claude-code",
-  "google",
-  "outlook",
-  "github",
-  "beeper",
-  "notion",
-  "kiro",
-  "kimi",
-  "antigravity",
-])
+/** Each AI executor's card slug in the catalog. A total record, so a newly
+ *  registered executor fails `tsc` here until its card can open setup: Codex
+ *  was once left off a hand-written list and its card had no button at all. */
+const EXECUTOR_SLUGS: Record<AiExecutorId, string> = {
+  "claude-code": "claude-code",
+  codex: "codex",
+  kiro: "kiro",
+  kimi: "kimi",
+  "google-antigravity": "antigravity",
+}
+
+const MACHINE_SLUGS = new Set([...Object.values(EXECUTOR_SLUGS), "google", "outlook", "github", "beeper", "notion"])
 
 export function ConnectionCard({
   entry,

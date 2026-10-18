@@ -52,3 +52,13 @@ export function tracksFor(count: number, saved: unknown): number[] {
   }
   return evenTracks(n)
 }
+
+/**
+ * The layout once a terminal has been opened, given how many were already open
+ * in its workspace. A second terminal goes beside the first, in the grid: in
+ * focus it became a tab that hid the one you were working in, which is not
+ * what opening "another terminal" asks for. The first keeps the chosen layout.
+ */
+export function layoutAfterOpen(current: "grid" | "focus", alreadyOpenHere: number): "grid" | "focus" {
+  return alreadyOpenHere > 0 ? "grid" : current
+}

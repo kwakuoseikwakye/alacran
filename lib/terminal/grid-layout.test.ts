@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { dragTrack, evenTracks, gridFor, MIN_TRACK, tracksFor } from "./grid-layout"
+import { dragTrack, evenTracks, gridFor, layoutAfterOpen, MIN_TRACK, tracksFor } from "./grid-layout"
 
 const sum = (tracks: number[]) => tracks.reduce((a, b) => a + b, 0)
 
@@ -72,5 +72,17 @@ describe("gridFor", () => {
   it("adds rows of four past eight (finished runs whose sessions are gone are slots too)", () => {
     expect(gridFor(10)).toEqual({ cols: 4, rows: 3 })
     expect(gridFor(0)).toEqual({ cols: 1, rows: 1 })
+  })
+})
+
+describe("layoutAfterOpen", () => {
+  it("a second terminal in the same workspace opens beside the first, in the grid", () => {
+    expect(layoutAfterOpen("focus", 1)).toBe("grid")
+    expect(layoutAfterOpen("grid", 3)).toBe("grid")
+  })
+
+  it("the first terminal keeps whatever layout was chosen", () => {
+    expect(layoutAfterOpen("focus", 0)).toBe("focus")
+    expect(layoutAfterOpen("grid", 0)).toBe("grid")
   })
 })
