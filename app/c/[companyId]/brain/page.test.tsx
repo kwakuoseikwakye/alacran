@@ -15,21 +15,18 @@ vi.mock("@/lib/os/memory-items", async (importOriginal) => ({
 }))
 vi.mock("@/lib/os/memory-health/load", () => ({ loadMemoryHealth: vi.fn(async () => ({ state: "none" })) }))
 vi.mock("@/components/os/brain/brain-dump", () => ({ BrainDump: () => null }))
-vi.mock("@/components/os/brain/brain-graph-view", () => ({ BrainGraphView: () => null }))
-vi.mock("@/lib/os/brain/adapter", () => ({ buildBrainViewModel: vi.fn(() => ({})) }))
-vi.mock("@/lib/os/brain/definitions-files", () => ({ readDefinitionsTree: vi.fn(async () => []) }))
-vi.mock("@/lib/assistant/gather-all-companies", () => ({ gatherCrossCompanyDecisions: vi.fn(async () => []) }))
-vi.mock("@/lib/os/ontology/read", () => ({ readOntology: vi.fn(async () => ({ ok: false })) }))
-vi.mock("@/lib/os/departments/registry", () => ({ getCompanyDepartments: vi.fn(() => [{ id: "d", roles: [] }]) }))
+const graph = { nodes: [], edges: [] }
+vi.mock("@/lib/os/brain/memory-graph-read", () => ({ readMemoryGraph: vi.fn(async () => graph) }))
+vi.mock("@/components/os/brain/memory-map", () => ({ MemoryMap: () => null }))
 
 import BrainPage from "./page"
 import { MemoryList } from "@/components/os/brain/memory-list"
-import { BrainGraphView } from "@/components/os/brain/brain-graph-view"
+import { MemoryMap } from "@/components/os/brain/memory-map"
 import { MemoryHealthCard } from "@/components/os/memory-health-card"
 import { loadMemoryHealth } from "@/lib/os/memory-health/load"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
 import { listMemoryItems } from "@/lib/os/memory-items"
-import { buildBrainViewModel } from "@/lib/os/brain/adapter"
+import { readMemoryGraph } from "@/lib/os/brain/memory-graph-read"
 
 function findAll(node: unknown, match: (el: React.ReactElement) => boolean, out: React.ReactElement[] = []): React.ReactElement[] {
   if (Array.isArray(node)) {
@@ -54,25 +51,38 @@ async function render(view?: string) {
 describe("Brain page", () => {
   beforeEach(() => vi.clearAllMocks())
 
-  it("opens on the plain list, named for what it is, without building the map", async () => {
+  it("opens on the memory map for this company, built from its committed content", async () => {
     const tree = await render()
-    expect(ofType(tree, MemoryList)).toHaveLength(1)
-    expect(ofType(tree, BrainGraphView)).toHaveLength(0)
-    expect(buildBrainViewModel).not.toHaveBeenCalled()
-    expect(listMemoryItems).toHaveBeenCalledWith("/fake/acme")
+    const map = ofType(tree, MemoryMap)
+    expect(map).toHaveLength(1)
+    expect(map[0].props).toMatchObject({ companyId: "acme", graph })
+    expect(readMemoryGraph).toHaveBeenCalledWith("/fake/acme", "Acme")
+    expect(ofType(tree, MemoryList)).toHaveLength(0)
+    expect(listMemoryItems).not.toHaveBeenCalled()
     expect(JSON.stringify(tree)).toContain("What Alacrán knows")
   })
 
-  it("keeps the existing map behind ?view=map", async () => {
-    const tree = await render("map")
-    expect(ofType(tree, BrainGraphView)).toHaveLength(1)
-    expect(ofType(tree, MemoryList)).toHaveLength(0)
-    expect(listMemoryItems).not.toHaveBeenCalled()
+  it("falls back to the company id when the company has no name", async () => {
+    vi.mocked(getEffectiveAgents).mockResolvedValue([{ id: "acme", rootPath: "/fake/acme", kind: "command-set" }] as never)
+    await BrainPage({ params: Promise.resolve({ companyId: "acme" }), searchParams: Promise.resolve({}) })
+    expect(readMemoryGraph).toHaveBeenCalledWith("/fake/acme", "acme")
+  })
+
+  it("shows the plain list behind ?view=list", async () => {
+    const tree = await render("list")
+    expect(ofType(tree, MemoryList)).toHaveLength(1)
+    expect(ofType(tree, MemoryMap)).toHaveLength(0)
+    expect(readMemoryGraph).not.toHaveBeenCalled()
+    expect(listMemoryItems).toHaveBeenCalledWith("/fake/acme")
+  })
+
+  it("shows the map for the old ?view=map and any other value", async () => {
+    for (const v of ["map", "nonsense"]) expect(ofType(await render(v), MemoryMap)).toHaveLength(1)
   })
 
   it("puts memory health above the list, loaded for this company", async () => {
     vi.mocked(loadMemoryHealth).mockResolvedValueOnce({ state: "unknown" })
-    const tree = await render()
+    const tree = await render("list")
     expect(loadMemoryHealth).toHaveBeenCalledWith("/fake/acme")
     const card = ofType(tree, MemoryHealthCard)
     expect(card).toHaveLength(1)
@@ -83,13 +93,8 @@ describe("Brain page", () => {
   })
 
   it("does not check memory health for the map view", async () => {
-    await render("map")
+    await render()
     expect(loadMemoryHealth).not.toHaveBeenCalled()
-  })
-
-  it("falls back to the list for a view it does not know", async () => {
-    const tree = await render("nonsense")
-    expect(ofType(tree, MemoryList)).toHaveLength(1)
   })
 
   it("is not found for a company that does not exist", async () => {
