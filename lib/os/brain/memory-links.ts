@@ -34,7 +34,8 @@ export function buildLinkIndex(
   return {
     paths: new Set(paths),
     stems,
-    folders: new Map(Object.entries(folderHubs)),
+    // Sorted longest-first once, so notes/company/sessions/ beats notes/.
+    folders: new Map(Object.entries(folderHubs).sort((a, b) => b[0].length - a[0].length)),
     commands: new Map(skills.map((s) => [`/${s.id}`, s.nodeId])),
   }
 }
@@ -47,17 +48,23 @@ export function extractLinks(text: string, index: LinkIndex, selfId: string): st
     if (hit) out.add(hit)
   }
 
-  // Longest folder prefix first, so notes/company/sessions/ beats notes/.
-  const prefixes = [...index.folders.keys()].sort((a, b) => b.length - a.length)
   for (const m of text.matchAll(fresh(PATH_RE))) {
     const path = m[1].replace(/[.,;:]+$/, "")
     if (index.paths.has(path)) {
       out.add(path)
       continue
     }
+    // A dotted last segment is a file that doesn't exist: drop it, don't
+    // let it fall back to its folder's hub.
+    const folderShaped = path.endsWith("/") || !path.slice(path.lastIndexOf("/") + 1).includes(".")
+    if (!folderShaped) continue
     const dir = path.endsWith("/") ? path : `${path}/`
-    const prefix = prefixes.find((p) => dir.startsWith(p))
-    if (prefix) out.add(index.folders.get(prefix)!)
+    for (const [prefix, hub] of index.folders) {
+      if (dir.startsWith(prefix)) {
+        out.add(hub)
+        break
+      }
+    }
   }
 
   for (const m of text.matchAll(fresh(COMMAND_RE))) {

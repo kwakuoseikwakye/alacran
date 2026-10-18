@@ -9,6 +9,8 @@ const paths = [
 ]
 const skills = [{ id: "digest", nodeId: "skill:digest" }]
 const folders = {
+  "definitions/": "hub:facts",
+  "docs/decisions/": "hub:decisions",
   "notes/": "hub:notes",
   "notes/company/sessions/": "hub:sessions",
 }
@@ -37,6 +39,11 @@ describe("extractLinks", () => {
   it("a folder mention links to that folder's hub", () => {
     expect(extractLinks("writes into notes/company/sessions/", index, "x")).toEqual(["hub:sessions"])
     expect(extractLinks("see (notes/other/)", index, "x")).toEqual(["hub:notes"])
+  })
+
+  it("a dead file path is dropped, not linked to its folder's hub", () => {
+    expect(extractLinks("docs/decisions/nope.md", index, "x")).toEqual([])
+    expect(extractLinks("notes/other/x.md", index, "x")).toEqual([])
   })
 
   it("/command mentions link to the skill", () => {
