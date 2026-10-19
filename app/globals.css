@@ -3726,209 +3726,10 @@ select option {
   border-bottom-color: var(--primary);
 }
 
-.brain-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 300px);
-  gap: 20px;
-  align-items: start;
-}
-/* Narrow container (dock open+expanded at a laptop width, or a phone): the
-   rail drops below the main pane instead of squeezing it to nothing. */
-@container (max-width: 720px) {
-  .brain-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-.brain-main {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-data);
-  background: var(--card);
-  padding: 16px;
-}
-
-.brain-rail {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-data);
-  background: var(--card);
-  padding: 14px;
-  min-width: 0;
-}
-
 .brain-empty {
   color: var(--muted-foreground);
   font-size: 0.8125rem;
   padding: 8px 2px;
-}
-
-/* Graph tab */
-.brain-graph {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 880 / 560;
-}
-.brain-graph-node {
-  cursor: pointer;
-}
-.brain-graph-node:focus-visible circle {
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-.brain-graph-label {
-  font-size: 9px;
-  font-family: var(--typeface-mono);
-  fill: var(--muted-foreground);
-  pointer-events: none;
-}
-.brain-node-detail-close {
-  float: right;
-  color: var(--muted-foreground);
-  font-size: 1rem;
-  line-height: 1;
-}
-.brain-node-detail-close:hover {
-  color: var(--foreground);
-}
-.brain-node-detail-state {
-  font-size: 0.8125rem;
-  color: var(--muted-foreground);
-  margin-top: 4px;
-}
-
-/* Lifecycle tab */
-.brain-lifecycle {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-}
-@container (max-width: 720px) {
-  .brain-lifecycle {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-.brain-lifecycle-col {
-  min-width: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 10px;
-}
-.brain-lifecycle-col-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted-foreground);
-  margin-bottom: 8px;
-}
-.brain-lifecycle-count {
-  font-family: var(--typeface-mono);
-  color: var(--foreground);
-}
-/* The claim column's count is the promotion gate, so it earns the one
-   accent colour in this board. */
-.brain-lifecycle-col[data-stage="claim"] .brain-lifecycle-count {
-  color: var(--graph-claim);
-}
-.brain-lifecycle-cards {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.brain-lifecycle-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 8px;
-}
-.brain-lifecycle-card-label {
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-.brain-lifecycle-card-detail {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-
-/* Files tab */
-.brain-tree {
-  font-family: var(--typeface-mono);
-  font-size: 0.8125rem;
-}
-.brain-tree-row {
-  display: block;
-  width: 100%;
-  text-align: left;
-  padding: 4px 8px;
-  border-radius: var(--radius-sm);
-}
-.brain-tree-row:hover {
-  background: var(--muted);
-}
-.brain-tree-content {
-  margin: 4px 0 8px;
-  padding: 10px;
-  border-radius: var(--radius-sm);
-  background: var(--muted);
-  font-size: 0.75rem;
-  overflow-x: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-/* Review rail */
-.brain-review-rail-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 8px;
-}
-.brain-review-rail-count {
-  font-family: var(--typeface-mono);
-  color: var(--graph-claim);
-}
-.brain-review-rail-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.brain-review-rail-item {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  text-align: left;
-  padding: 8px;
-  border-radius: var(--radius-sm);
-  border: 1px solid transparent;
-}
-.brain-review-rail-item:hover {
-  background: var(--muted);
-}
-.brain-review-rail-item[aria-current="true"] {
-  border-color: var(--primary);
-  background: var(--muted);
-}
-.brain-review-rail-item-label {
-  font-family: var(--typeface-mono);
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-.brain-review-rail-detail {
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-}
-.brain-review-rail-diff {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
-}
-.brain-review-rail-path {
-  font-family: var(--typeface-mono);
-  font-size: 0.75rem;
-  color: var(--muted-foreground);
-  margin-bottom: 6px;
 }
 
 /* ------------------------------------------------------------- Agents roster
@@ -3974,8 +3775,8 @@ select option {
 }
 
 /* ------------------------------------------------------------------- Comms
-   Container query, not `md:`/`@media` — same reasoning as `.brain-lifecycle`
-   just above, which this reuses the card styling from. */
+   Container query, not `md:`/`@media`, so the layout follows the pane it sits
+   in rather than the viewport. */
 .comms-page {
   container-type: inline-size;
 }
@@ -4679,10 +4480,6 @@ select option {
 .ai-chip-pop > p { margin-bottom:10px; color:var(--text-2); font-size:13px; }
 @media (prefers-reduced-motion: reduce) { .ai-tile, .ai-chip-btn { transition:none; } }
 
-/* Brain graphs: a soft outline in the canvas colour keeps a name readable where
-   an edge or a neighbouring node passes behind it. Counter-scaled like the font
-   inside the Map; the Flow view has no zoom variable, so it draws at 3.5px. */
-.kg-halo { paint-order: stroke; stroke: var(--surface); stroke-width: calc(3.5px * var(--kg-cam-k, 1)); stroke-linejoin: round; }
 /* The workspace switcher beside the toolbar buttons. A native select, so the
    list, keyboard and screen-reader behaviour are the platform's own. The global
    `:is(input, textarea, select):not(...)` rule (five attribute selectors of
