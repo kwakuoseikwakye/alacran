@@ -14005,7 +14005,7 @@ Not yet run live: a real Outlook send through the lane (tests use a stand-in sen
 
 ## v241 (2026-10-17): Connected Tools modal actions
 
-### What's new for you (fix)
+### What's new for you (fix, v0.96.0)
 Checking a tool's connection and copying its setup commands now give clear results.
 - Re-check status checks again right away and shows when it is checking, done, or needs another try.
 - Your setup window stays open when a tool becomes connected.
@@ -14024,7 +14024,7 @@ success. No native permissions or credential flows changed.
 
 ## v242 (2026-10-18): assisted setup for every AI executor
 
-### What's new for you (fix)
+### What's new for you (fix, v0.96.0)
 Every AI assistant in Connected Tools now helps you set it up, not only Claude Code.
 - Codex, Kiro, Kimi and Google Antigravity show the steps, the install command to copy, and a link to their own instructions.
 - Codex and Kiro also get Install it for me, which installs them without opening a terminal.
@@ -14036,7 +14036,7 @@ Engineering notes: `MachineSetupModal` hardcoded the install panel for Claude Co
 
 ## v243 (2026-10-18): a second terminal opens beside the first
 
-### What's new for you (fix)
+### What's new for you (fix, v0.96.0)
 Opening another terminal now shows it next to the one you already have, instead of hiding it behind a tab.
 - When a workspace already has a terminal open, a new assistant or command line switches the view to the grid, so you see both at once.
 - Focus is still one click away, and still shows one terminal at a time.
@@ -14045,7 +14045,7 @@ Engineering notes: the terminal code is identical in 0.93.0 and 0.95.0; the diff
 
 ## v244 (2026-10-19): brain memory map
 
-### What's new for you (feature)
+### What's new for you (feature, v0.96.0)
 The brain page now opens on a map of what your AI knows about your company.
 - Every fact and note is a dot, joined to the things it links to, so you can see at a glance what your AI has to work with.
 - Dots show what it always knows, what it can look up when it needs to, and what it is unsure about.
