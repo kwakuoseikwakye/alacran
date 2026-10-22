@@ -171,7 +171,6 @@ export function AssistantDock({
       <aside id="assistant-dock" className="os-dock" aria-label={`Assistant — ${companyId}`}>
         {open ? (
           voiceProviderId === "elevenlabs" && voiceReady && elevenlabsAgentReady ? (
-            // initialPrompt (a question handed over from the Ask page) is not forwarded to the agent screen in this slice.
             <AgentStage
               key={`${companyId}:agent:${persona ? "ready" : "setup"}`}
               companies={companies}
@@ -179,6 +178,8 @@ export function AssistantDock({
               initialScope={companyId}
               initialExecutorId={initialExecutorId}
               autoDispatchCompanies={autoDispatchCompanies}
+              initialPrompt={initialPrompt}
+              onInitialPromptUsed={() => setInitialPrompt("")}
               onClose={toggleOpen}
             />
           ) : (

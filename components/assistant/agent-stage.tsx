@@ -37,13 +37,16 @@ function usePrefs(): [AgentPrefs, (patch: Partial<AgentPrefs>) => void, boolean,
 }
 
 export function AgentStage({
-  companies, persona, initialScope, initialExecutorId, autoDispatchCompanies = [], onClose,
+  companies, persona, initialScope, initialExecutorId, autoDispatchCompanies = [], initialPrompt = "", onInitialPromptUsed, onClose,
 }: {
   companies: AssistantCompany[]
   persona: AssistantPersona | null
   initialScope: string
   initialExecutorId: AiExecutorId
   autoDispatchCompanies?: string[]
+  /** A question handed over by another page (the brain map's "Confirm this fact"); sent once, as if typed. */
+  initialPrompt?: string
+  onInitialPromptUsed?: () => void
   onClose?: () => void
 }) {
   const [prefs, updatePrefs, osReduced, ready] = usePrefs()
@@ -80,6 +83,19 @@ export function AgentStage({
     window.addEventListener("keydown", onDown)
     return () => window.removeEventListener("keydown", onDown)
   }, [])
+
+  // Deferred a tick and cancelled on cleanup, like AssistantStage's: React's development double-mount
+  // would otherwise send it twice. Sending wakes the agent, which the click that handed it over asked for.
+  useEffect(() => {
+    if (!initialPrompt) return
+    const timer = setTimeout(() => {
+      latest.current.agent.sendText(initialPrompt)
+      onInitialPromptUsed?.()
+    }, 0)
+    return () => clearTimeout(timer)
+    // Once per handed-over prompt, not whenever the agent's callbacks change identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt])
 
   const send = (text: string) => {
     if (agent.sendText(text) && text === typed) setTyped("")

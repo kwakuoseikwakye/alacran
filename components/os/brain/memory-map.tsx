@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react"
 import {
   forceSimulation,
   forceLink,
@@ -27,6 +27,7 @@ import {
   visibleNodes,
   type View,
 } from "./memory-map-state"
+import { phase, useAliveMotion } from "./memory-map-motion"
 import { MemoryNoteView } from "./memory-note-view"
 
 type SimNode = MemoryNode & SimulationNodeDatum
@@ -37,6 +38,8 @@ const MAX_LABEL = 22
 /** Mono advance at the 10px label size. */
 const CHAR_W = 6
 const radius = (n: MemoryNode) => (n.type === "hub" ? 12 : n.state === "always" ? 9 : 7)
+/** The round cloud the map packs into: about the area its dots and their spacing need. */
+const cloudRadius = (count: number) => 60 + 24 * Math.sqrt(count)
 const truncate = (label: string) => (label.length > MAX_LABEL ? `${label.slice(0, MAX_LABEL - 1)}…` : label)
 
 const TYPE_NAME: Record<MemoryNodeType, string> = {
@@ -99,6 +102,7 @@ export function MemoryMap({
   const [hoverId, setHoverId] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId ?? initialNote?.id ?? null)
   const [focusState, setFocusState] = useState<KnowledgeState | null>(null)
+  const [full, setFull] = useState(false)
   const [note, setNote] = useState<{ id: string; text: string | null; failed: boolean } | null>(
     initialNote ? { ...initialNote, failed: false } : null
   )
@@ -138,8 +142,11 @@ export function MemoryMap({
       return next
     })
 
-  const confirmFact = (node: MemoryNode) =>
+  const confirmFact = (node: MemoryNode) => {
+    // The assistant docks beside the page, so leave full page or it opens out of sight.
+    setFull(false)
     window.dispatchEvent(new CustomEvent(ASSISTANT_OPEN_EVENT, { detail: { companyId, prompt: confirmFactPrompt(node) } }))
+  }
 
   // Selecting a node and focusing a stat clear each other, so whichever the person did last is what lights up.
   const select = (id: string | null) => {
@@ -177,7 +184,7 @@ export function MemoryMap({
       )
   }
 
-  // The one window Esc handler: it leaves the note first (keeping the node selected), then clears the selection.
+  // The one window Esc handler: it leaves the note first (keeping the node selected), then clears the selection, then leaves full page.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // Esc in the search box (or anything editable) belongs to that field.
@@ -187,14 +194,16 @@ export function MemoryMap({
       if (noteOpen) {
         noteRequest.current++
         setNote(null)
-      } else setSelectedId(null)
+      } else if (selectedId) setSelectedId(null)
+      else setFull(false)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [noteOpen])
+  }, [noteOpen, selectedId])
 
   return (
-    <>
+    // Full page lifts the map (and any note opened from it) over the whole window, above the assistant dock.
+    <div className={full ? "fixed inset-0 z-[55] flex flex-col bg-os-bg" : "contents"}>
       {noteNode && note && (
         <MemoryNoteView
           graph={graph}
@@ -230,15 +239,27 @@ export function MemoryMap({
             </button>
           ))}
           <div className="ml-auto flex flex-col items-end gap-2">
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search what the AI knows…"
-              title="Find any fact, note, decision or skill"
-              aria-label="Search what the AI knows"
-              className="w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
-            />
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                title={full ? "Go back to the normal page (Esc)" : "Fill the whole window with the map"}
+                aria-pressed={full}
+                onClick={() => setFull((f) => !f)}
+                className="flex items-center gap-1.5 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-xs text-os-text hover:border-os-text/40"
+              >
+                <span aria-hidden>{full ? "⤡" : "⤢"}</span>
+                {full ? "Exit full page" : "Full page"}
+              </button>
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search what the AI knows…"
+                title="Find any fact, note, decision or skill"
+                aria-label="Search what the AI knows"
+                className="w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
+              />
+            </div>
             <div className="flex flex-wrap justify-end gap-1.5">
               {CHIPS.map((c) => (
                 <button
@@ -261,12 +282,15 @@ export function MemoryMap({
           <div className="relative min-w-0 flex-1">
             {graph.nodes.length ? (
               <MapCanvas
+                // A fresh canvas for full page and back: it measures the new box and frames the map in it.
+                key={full ? "full" : "page"}
                 graph={graph}
                 visible={visible}
                 query={query}
                 activeId={hoverId ?? selectedId}
                 selectedId={selectedId}
                 focusState={focusState}
+                paused={noteOpen}
                 onHover={setHoverId}
                 onSelect={select}
               />
@@ -295,7 +319,7 @@ export function MemoryMap({
           </aside>
         </div>
       </div>
-    </>
+    </div>
   )
 }
 
@@ -389,6 +413,7 @@ function MapCanvas({
   activeId,
   selectedId,
   focusState,
+  paused,
   onHover,
   onSelect,
 }: {
@@ -398,10 +423,14 @@ function MapCanvas({
   activeId: string | null
   selectedId: string | null
   focusState: KnowledgeState | null
+  /** True while the map is hidden under a note: nothing to animate. */
+  paused: boolean
   onHover: (id: string | null) => void
   onSelect: (id: string | null) => void
 }) {
   const [simNodes, setSimNodes] = useState<SimNode[]>([])
+  const [cloud, setCloud] = useState(0)
+  const layerRef = useRef<SVGGElement>(null)
   const [view, setView] = useState<View>({ x: 0, y: 0, k: 1 })
   // Unknown until measured: the server and the first client render draw no
   // svg at all, so there is nothing to mismatch on hydration.
@@ -444,7 +473,18 @@ function MapCanvas({
       .map((e) => ({ source: e.source, target: e.target }))
     const isHubLink = (l: SimulationLinkDatum<SimNode>) =>
       hubs.has((l.source as SimNode).id) || hubs.has((l.target as SimNode).id)
-    // Laid out once, off screen: no settling animation to sit through (or to switch off for reduced motion).
+    // Anything past the cloud's edge is pulled back in, so the whole map reads as one round brain.
+    const R = cloudRadius(nodes.length)
+    const round = (alpha: number) => {
+      for (const n of nodes) {
+        const d = Math.hypot(n.x ?? 0, n.y ?? 0)
+        if (d <= R) continue
+        const pull = ((d - R) / d) * alpha
+        n.vx = (n.vx ?? 0) - (n.x ?? 0) * pull
+        n.vy = (n.vy ?? 0) - (n.y ?? 0) * pull
+      }
+    }
+    // Laid out once, off screen: no settling animation to sit through. The drift afterwards is useAliveMotion's.
     const simulation = forceSimulation(nodes)
       .force(
         "link",
@@ -460,13 +500,18 @@ function MapCanvas({
         "collide",
         forceCollide<SimNode>((d) => (isLandmark(d) ? Math.max(26, (truncate(d.label).length * CHAR_W) / 2 + 10) : radius(d) + 4))
       )
+      .force("round", round)
       .stop()
     simulation.tick(300)
     setSimNodes(nodes)
+    setCloud(R)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphKey])
 
   const pos = useMemo(() => new Map(simNodes.map((n) => [n.id, n])), [simNodes])
+  const colorOf = useCallback((id: string) => TYPE_COLOR[pos.get(id)?.type ?? "hub"], [pos])
+  // No svg until the box is measured, so nothing to move before then.
+  useAliveMotion(layerRef, pos, colorOf, paused || size === null)
   const matches = useMemo(
     () => (query.trim() ? new Set([...visible].filter((id) => pos.get(id)?.type !== "hub")) : null),
     [query, visible, pos]
@@ -565,7 +610,14 @@ function MapCanvas({
             onPointerCancel={cancelPan}
             onLostPointerCapture={cancelPan}
           />
-          <g transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+          <defs>
+            <radialGradient id="mm-cloud">
+              <stop offset="0" stopColor="var(--text)" stopOpacity={0.06} />
+              <stop offset="1" stopColor="var(--text)" stopOpacity={0} />
+            </radialGradient>
+          </defs>
+          <g ref={layerRef} transform={`translate(${view.x} ${view.y}) scale(${view.k})`}>
+            {cloud > 0 && <circle r={cloud + LABEL_PAD} fill="url(#mm-cloud)" className="pointer-events-none" />}
             {graph.edges.map((e, i) => {
               const a = pos.get(e.source)
               const b = pos.get(e.target)
@@ -575,6 +627,9 @@ function MapCanvas({
               return (
                 <line
                   key={i}
+                  data-edge=""
+                  data-source={a.id}
+                  data-target={b.id}
                   x1={a.x ?? 0}
                   y1={a.y ?? 0}
                   x2={b.x ?? 0}
@@ -594,6 +649,7 @@ function MapCanvas({
               return (
                 <g
                   key={n.id}
+                  data-node={n.id}
                   transform={`translate(${n.x ?? 0}, ${n.y ?? 0})`}
                   opacity={isLit(n.id) ? 1 : 0.15}
                   className="cursor-pointer motion-safe:transition-opacity focus-visible:outline-none"
@@ -613,10 +669,10 @@ function MapCanvas({
                   {n.type === "hub" ? (
                     <circle r={r} fill={color} />
                   ) : n.state === "unsure" ? (
-                    <circle r={r} fill="none" stroke="var(--destructive)" strokeWidth={1.6} strokeDasharray="3 2" />
+                    <circle r={r} fill="none" stroke="var(--destructive)" strokeWidth={1.6} strokeDasharray="3 2" className="mm-flicker" style={{ animationDelay: `-${phase(n.id) * 3}s` }} />
                   ) : (
                     <>
-                      {n.state === "always" && <circle r={r + 6} fill={color} opacity={0.18} />}
+                      {n.state === "always" && <circle r={r + 6} fill={color} opacity={0.18} className="mm-breathe" style={{ animationDelay: `-${phase(n.id) * 4}s` }} />}
                       <circle r={r} fill={color} style={{ opacity: n.state === "always" ? 1 : "var(--mm-lookup-opacity)" }} />
                     </>
                   )}
@@ -638,6 +694,7 @@ function MapCanvas({
                 </g>
               )
             })}
+            <g data-sparks="" className="pointer-events-none" />
           </g>
         </svg>
       )}

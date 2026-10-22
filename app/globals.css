@@ -4760,3 +4760,17 @@ select option {
 .pref-offer small { color: var(--muted-foreground); font-size: 12px; }
 .pref-btn { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--r-control); background: transparent; color: var(--foreground); font-size: 12.5px; font-weight: 600; cursor: pointer; }
 .pref-btn:disabled { opacity: 0.6; cursor: default; }
+
+/* Memory map, alive (components/os/brain/memory-map-motion.ts): "always knows"
+   halos breathe, unsure facts flicker, sparks cross links and the dot they
+   reach flares. Reduced motion keeps the map still. */
+.mm-spark { fill: var(--spark); filter: drop-shadow(0 0 3px var(--spark)); }
+.mm-flare { fill: var(--spark); opacity: 0; transform-box: fill-box; transform-origin: center; }
+@media (prefers-reduced-motion: no-preference) {
+  .mm-breathe { transform-box: fill-box; transform-origin: center; animation: mm-breathe 4s ease-in-out infinite; }
+  .mm-flicker { animation: mm-flicker 3s ease-in-out infinite; }
+  .mm-flare { animation: mm-flare 0.9s ease-out forwards; }
+}
+@keyframes mm-breathe { 0%, 100% { transform: scale(0.85); opacity: 0.1; } 50% { transform: scale(1.25); opacity: 0.26; } }
+@keyframes mm-flicker { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+@keyframes mm-flare { 0% { transform: scale(0.4); opacity: 0.55; } 100% { transform: scale(1.6); opacity: 0; } }
