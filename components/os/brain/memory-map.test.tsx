@@ -30,6 +30,10 @@ describe("MemoryMap", () => {
     expect(html).toContain("7 facts")
   })
 
+  it("offers a full-page view", () => {
+    expect(render(graph)).toContain('title="Fill the whole window with the map"')
+  })
+
   it("offers the five type chips", () => {
     const html = render(graph)
     for (const chip of ["Facts", "Decisions", "Notes", "Sessions", "Skills"]) expect(html).toContain(`>${chip}<`)
