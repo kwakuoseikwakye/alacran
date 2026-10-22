@@ -20,6 +20,7 @@ import {
   confirmFactPrompt,
   fitTransform,
   isLandmark,
+  labelSize,
   litNodes,
   neighbours,
   panInto,
@@ -679,9 +680,13 @@ function MapCanvas({
                   {n.id === selectedId && <circle r={r + 3} fill="none" stroke="var(--accent)" strokeWidth={1} />}
                   {shouldLabel(n, labelCtx) ? (
                     <text
-                      y={r + 13}
+                      y={r + labelSize(view.k, strong) * 1.3}
                       textAnchor="middle"
-                      fontSize={10}
+                      fontSize={labelSize(view.k, strong)}
+                      // A halo in the page colour keeps an enlarged label readable over the dots behind it.
+                      stroke="var(--bg)"
+                      strokeWidth={3 / view.k}
+                      paintOrder="stroke"
                       className="pointer-events-none font-mono"
                       fill={strong ? "var(--text)" : "var(--text-2)"}
                     >
