@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { confirmFactPrompt, fitTransform, linkify, litNodes, neighbours, panInto, shouldLabel, visibleNodes } from "./memory-map-state"
+import { confirmFactPrompt, fitTransform, labelSize, linkify, litNodes, neighbours, panInto, shouldLabel, visibleNodes } from "./memory-map-state"
 import { buildLinkIndex } from "@/lib/os/brain/memory-links"
 import type { MemoryNode } from "@/lib/os/brain/memory-graph-types"
 
@@ -152,5 +152,16 @@ describe("linkify", () => {
       { text: ", then " },
       { text: "notes/company/", nodeId: "hub:notes" },
     ])
+  })
+})
+
+describe("labelSize", () => {
+  it("is 10 map units when zoomed in", () => {
+    expect(labelSize(1.5, false)).toBe(10)
+    expect(labelSize(1.5, true)).toBe(10)
+  })
+  it("keeps labels at least 9 screen px, and the focused dot's at 11, when zoomed out", () => {
+    expect(labelSize(0.3, false) * 0.3).toBeCloseTo(9)
+    expect(labelSize(0.3, true) * 0.3).toBeCloseTo(11)
   })
 })

@@ -81,6 +81,15 @@ export function panInto(p: { x: number; y: number }, view: View, w: number, h: n
 export const isLandmark = (n: MemoryNode) => n.type === "hub" || n.type === "skill" || n.state !== "lookup"
 
 /** Obsidian-style: landmarks, what the person is pointing at and what they searched for; everything once zoomed in. */
+/**
+ * Label size in map units at zoom k: 10 when zoomed in, never under 9 screen
+ * pixels (11 for the dot in focus and its neighbours) when zoomed out, so a
+ * picked dot's name stays readable at full-map zoom.
+ */
+export function labelSize(k: number, strong: boolean): number {
+  return Math.max(10, (strong ? 11 : 9) / k)
+}
+
 export function shouldLabel(
   n: MemoryNode,
   ctx: { k: number; selectedId: string | null; near: Set<string> | null; matches: Set<string> | null }
