@@ -58,9 +58,6 @@ describe("GET /api/brain/note", () => {
     ["dotfile outside skills", ".env"],
     ["git internals", ".git/config"],
     ["skill dir escape", ".claude/../secrets.md"],
-    ["glob star", "notes/*.md"],
-    ["glob question mark", "notes/a?.md"],
-    ["glob bracket", "notes/[ab].md"],
   ])("rejects %s with 400, before touching git", async (_n, p) => {
     const res = await GET(get(q(p)))
     expect(res.status).toBe(400)
@@ -72,6 +69,17 @@ describe("GET /api/brain/note", () => {
     expect((await GET(get(q(".claude/skills/a/SKILL.md")))).status).toBe(200)
     expect((await GET(get(q(".agents/skills/a/SKILL.md")))).status).toBe(200)
   })
+
+  it.each(["notes/what*now.md", "notes/ready?.md", "notes/[draft] plan.md"])(
+    "opens a note whose name has a glob character (%s), passed to git literally",
+    async (p) => {
+      exec.mockResolvedValue({ stdout: "x", stderr: "" })
+      expect((await GET(get(q(p)))).status).toBe(200)
+      const [, args] = exec.mock.calls[0]
+      expect(args).toContain("--literal-pathspecs")
+      expect(args.slice(-2)).toEqual([`HEAD:./${p}`, "--"])
+    }
+  )
 
   it("returns HEAD text for a tracked note, read via HEAD:./ inside the root", async () => {
     exec.mockResolvedValue({ stdout: "# Hello\n", stderr: "" })
