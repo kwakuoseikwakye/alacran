@@ -16,7 +16,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@elevenlabs/client": "^1.27.0",
+    "@elevenlabs/client": "^1.28.0",
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
     "@types/d3-force": "^3.0.10",
     "@xterm/addon-fit": "^0.11.0",
@@ -27,22 +27,22 @@
     "diff": "^9.0.0",
     "lucide-react": "^0.460.0",
     "next": "^15.0.0",
-    "radix-ui": "^1.6.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "radix-ui": "^1.8.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "tailwind-merge": "^2.5.0",
     "three": "^0.186.1",
     "tw-animate-css": "^1.2.0",
-    "yaml": "^2.9.0",
-    "zod": "^4.6.1"
+    "yaml": "^2.9.1",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.1.0",
     "@tailwindcss/postcss": "^4.0.0",
     "@types/diff": "^7.0.2",
     "@types/node": "^22.0.0",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/three": "^0.186.0",
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.0.0",
