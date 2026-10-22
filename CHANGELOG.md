@@ -14069,7 +14069,7 @@ Orphans were found by walking the import graph of `app/`, `components/` and `lib
 
 ## v246 (2026-10-22): a living brain map, full page, and confirm by voice
 
-### What's new for you (feature)
+### What's new for you (feature, v0.97.0)
 The brain map now feels alive, and you can open it full page.
 - Dots drift gently, the things your AI always knows glow and breathe, and sparks run along the links like neurons firing.
 - The whole map sits in one round cloud.
