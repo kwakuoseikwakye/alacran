@@ -282,6 +282,8 @@ export function MemoryMap({
           <div className="relative min-w-0 flex-1">
             {graph.nodes.length ? (
               <MapCanvas
+                // A fresh canvas for full page and back: it measures the new box and frames the map in it.
+                key={full ? "full" : "page"}
                 graph={graph}
                 visible={visible}
                 query={query}

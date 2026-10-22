@@ -4764,7 +4764,7 @@ select option {
 /* Memory map, alive (components/os/brain/memory-map-motion.ts): "always knows"
    halos breathe, unsure facts flicker, sparks cross links and the dot they
    reach flares. Reduced motion keeps the map still. */
-.mm-spark { fill: #fff; filter: drop-shadow(0 0 4px var(--spark)); }
+.mm-spark { fill: var(--spark); filter: drop-shadow(0 0 3px var(--spark)); }
 .mm-flare { fill: var(--spark); opacity: 0; transform-box: fill-box; transform-origin: center; }
 @media (prefers-reduced-motion: no-preference) {
   .mm-breathe { transform-box: fill-box; transform-origin: center; animation: mm-breathe 4s ease-in-out infinite; }
