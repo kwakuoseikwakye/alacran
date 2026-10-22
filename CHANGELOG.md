@@ -14085,7 +14085,7 @@ Live result: checked on an isolated dev server (fresh worktree, scratch data dir
 
 ## v247 (2026-10-22): readable map labels and notes with brackets in their names
 
-### What's new for you (fix)
+### What's new for you (fix, v0.97.1)
 Names on the brain map stay readable, and every note can be opened.
 - When you pick a dot on a zoomed-out map, its name and its neighbours' names are now easy to read instead of tiny.
 - Notes with a star, a question mark or a square bracket in their names (like "[draft] plan") now open like any other note.
