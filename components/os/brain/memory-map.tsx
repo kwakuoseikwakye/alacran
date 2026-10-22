@@ -251,13 +251,13 @@ export function MemoryMap({
                 {full ? "Exit full page" : "Full page"}
               </button>
               <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search what the AI knows…"
-              title="Find any fact, note, decision or skill"
-              aria-label="Search what the AI knows"
-              className="w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search what the AI knows…"
+                title="Find any fact, note, decision or skill"
+                aria-label="Search what the AI knows"
+                className="w-60 rounded-lg border border-os-border bg-os-surface px-2.5 py-1.5 text-os-text placeholder:text-os-muted"
               />
             </div>
             <div className="flex flex-wrap justify-end gap-1.5">
@@ -510,7 +510,8 @@ function MapCanvas({
 
   const pos = useMemo(() => new Map(simNodes.map((n) => [n.id, n])), [simNodes])
   const colorOf = useCallback((id: string) => TYPE_COLOR[pos.get(id)?.type ?? "hub"], [pos])
-  useAliveMotion(layerRef, pos, colorOf, paused)
+  // No svg until the box is measured, so nothing to move before then.
+  useAliveMotion(layerRef, pos, colorOf, paused || size === null)
   const matches = useMemo(
     () => (query.trim() ? new Set([...visible].filter((id) => pos.get(id)?.type !== "hub")) : null),
     [query, visible, pos]
