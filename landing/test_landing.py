@@ -746,6 +746,19 @@ def test_steps_layout() -> list[str]:
     return out
 
 
+def test_mac_dialog_scope() -> list[str]:
+    """The Copy button ships on every page, so every page's dialog says what the command is for."""
+    scope = "Use it only on the app you downloaded from this site or the official releases page."
+    out = []
+    for route, content in all_pages().items():
+        dialog = re.search(r'<dialog class="mac-help".*?</dialog>', content, re.S)
+        if not dialog or "data-copy" not in dialog[0]:
+            out.append(f"{route}: no Mac help dialog with a Copy button")
+        elif scope not in dialog[0]:
+            out.append(f"{route}: the Mac help dialog has a Copy button but no scope sentence")
+    return out
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -769,6 +782,7 @@ def main() -> int:
         ("No undisclosed third-party loads", test_third_party_loads),
         ("Static accessibility: focus outlines kept", test_a11y_static),
         ("Terms page has its text and headings", test_terms_page),
+        ("Mac help dialog says what its command is for, on every page", test_mac_dialog_scope),
         ("Numbered steps are one box each, Mac copy box inside step 4", test_steps_layout),
     ]
 

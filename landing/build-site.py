@@ -945,6 +945,7 @@ DIALOG = """<dialog class="viewer" aria-label="Full screenshot">
 </dialog>"""
 
 MAC_CMD = 'xattr -cr "/Applications/Alacran.app"'
+MAC_SCOPE = "Use it only on the app you downloaded from this site or the official releases page."
 MAC_DIALOG = f"""<dialog class="mac-help" aria-labelledby="mac-title">
   <form method="dialog" class="viewer-bar"><button class="btn btn-ghost viewer-close" value="close">Close</button></form>
   <div class="mac-body">
@@ -952,7 +953,7 @@ MAC_DIALOG = f"""<dialog class="mac-help" aria-labelledby="mac-title">
     <p class="lede">Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you do this once, macOS may block the app, often with the message "Alacrán is damaged and can't be opened". It is not damaged.</p>
     <ol class="mac-steps">
       <li><b>Install.</b> Open the downloaded <code>.dmg</code> and drag Alacrán into Applications.</li>
-      <li><b>Run this in Terminal, once.</b> It clears the quarantine flag macOS puts on downloaded files.
+      <li><b>Run this in Terminal, once.</b> It clears the quarantine flag macOS puts on downloaded files. {MAC_SCOPE}
         {cmd_block(MAC_CMD)}
       </li>
       <li><b>Open Alacrán</b> from Applications.</li>
