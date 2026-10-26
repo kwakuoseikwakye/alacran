@@ -26,7 +26,8 @@ import { GuideProposalCard } from "@/components/os/guide/guide-proposal-card"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
 import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 import { observeGuide } from "@/lib/guide/observe"
-import { openHeld } from "@/lib/jobs/view"
+import { openFlags, openHeld } from "@/lib/jobs/view"
+import { JobFlagList } from "@/components/os/jobs/job-flag-list"
 import { HeldActionList } from "@/components/os/jobs/held-action-list"
 
 const PROPOSAL = {
@@ -98,20 +99,28 @@ describe("Approvals page and the guide update", () => {
     expect(observeGuide).not.toHaveBeenCalled()
   })
 
-  it("AC5: held steps are listed in the existing 'Unattended jobs need you' section", async () => {
+  it("AC5: held steps are listed in the 'Unattended jobs need you' section, with the job flags inside it", async () => {
     const items = [{ id: "1", status: "pending" }]
     vi.mocked(openHeld).mockResolvedValueOnce({ ok: true, items } as never)
+    vi.mocked(openFlags).mockResolvedValueOnce([{ key: "k" }] as never)
     const tree = await render({ guide: "none" })
-    expect(ofType(tree, HeldActionList)[0].props).toMatchObject({ companyId: "acme", items })
-    expect(findAll(tree, (el) => el.type === "h2" && (el.props as { children?: unknown }).children === "Unattended jobs need you")).toHaveLength(1)
+    const [list] = ofType(tree, HeldActionList)
+    expect(list.props).toMatchObject({ companyId: "acme", items, unreadable: false, now: expect.any(Number) })
+    expect(ofType((list.props as { children?: unknown }).children, JobFlagList)).toHaveLength(1)
     expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: true })
   })
 
-  it("AC12: an unreadable queue is said plainly, not shown as an empty queue", async () => {
+  it("the held list stays mounted with an empty queue, so a decision's result survives the refresh", async () => {
+    const tree = await render({ guide: "none" })
+    expect(ofType(tree, HeldActionList)).toHaveLength(1)
+    expect(ofType(tree, HeldActionList)[0].props).toMatchObject({ items: [], unreadable: false })
+    expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: false })
+  })
+
+  it("AC12: an unreadable queue is passed on to be said plainly, not shown as an empty queue", async () => {
     vi.mocked(openHeld).mockResolvedValueOnce({ ok: false })
     const tree = await render({ guide: "none" })
-    expect(ofType(tree, HeldActionList)).toHaveLength(0)
-    expect(findAll(tree, (el) => el.type === "p" && String((el.props as { children?: unknown }).children).includes("can't be read"))).toHaveLength(1)
+    expect(ofType(tree, HeldActionList)[0].props).toMatchObject({ items: [], unreadable: true })
     expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: true })
   })
 })

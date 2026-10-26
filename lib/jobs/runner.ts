@@ -15,6 +15,9 @@ import { EMAIL } from "./send-lane"
 export const JOB_TIMEOUT_MS = 10 * 60 * 1000
 const STDERR_TAIL = 2048
 
+// Zero-width and text-direction controls: they make what Approvals shows differ from what is sent.
+const HIDDEN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/
+
 /**
  * A one-off step the job wants a person to OK first (AGENTS.md §6: Publication, Money, Credentials).
  * It is stored, never carried out; only the owner's approval in the app can send a held mail.
@@ -28,9 +31,11 @@ const HoldSchema = z
   })
   .superRefine((hold, ctx) => {
     const issue = (message: string) => ctx.addIssue({ code: "custom", message })
+    const texts = [hold.title, hold.detail, hold.mail?.subject ?? "", hold.mail?.body ?? ""]
+    if (texts.some((t) => HIDDEN.test(t))) issue("A held step can't contain hidden zero-width or text-direction characters.")
     if (!hold.mail) return
     if (hold.row !== "publication") return issue("Only a publication hold can carry a mail.")
-    if (!EMAIL.test(hold.mail.to)) issue(`A held mail needs one usable email address, not "${hold.mail.to}".`)
+    if (!/^[\x21-\x7e]+$/.test(hold.mail.to) || !EMAIL.test(hold.mail.to)) issue(`A held mail needs one usable email address, not "${hold.mail.to}".`)
     if (!hold.mail.subject.trim()) issue("A held mail needs a subject.")
     if (/[\r\n]/.test(hold.mail.subject)) issue("A held mail's subject must be one line.")
     // The mail command's flag parser would read a leading dash as another flag.

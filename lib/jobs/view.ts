@@ -1,5 +1,6 @@
 import { readJobs, readPolicies, type Invalid, type Job, type Policy } from "./definitions"
 import { checkPolicy } from "./send-lane"
+import { isOpenHeld } from "./held-words"
 import { localStamp } from "../schedules/schedules-impl"
 import { flagKey, jobStore, jobsDir, type Flag, type HeldAction, type RunEntry } from "./store"
 
@@ -47,8 +48,6 @@ export async function openFlags(companyId: string, storeRoot?: string): Promise<
   return openFlagsFrom(runs, handled)
 }
 
-/** What Approvals lists from the held queue: waiting, mid-send, and failed sends the owner hasn't cleared. */
-export const isOpenHeld = (h: HeldAction) => h.status === "pending" || h.status === "sending" || (h.status === "failed" && !h.clearedAt)
 
 /** Never throws. `ok: false` means the queue file can't be read, which the page says rather than showing an empty list. */
 export async function openHeld(companyId: string, storeRoot?: string): Promise<{ ok: true; items: HeldAction[] } | { ok: false }> {

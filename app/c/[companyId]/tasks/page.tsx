@@ -37,6 +37,7 @@ export default async function TasksPage({ params }: { params: Promise<{ companyI
   const jobFlags = await openFlags(agent.id).catch(() => [])
   // Steps jobs held for the owner's OK (v248). Also counted in the badge; an unreadable queue is said, not shown as empty.
   const held = await openHeld(agent.id)
+  const now = Date.now()
   const jobsNeedYou = jobFlags.length > 0 || !held.ok || held.items.length > 0
   const postReviews = reviews.filter((r) => r.commandId === "make-posts")
   const otherReviews = reviews.filter((r) => r.commandId !== "make-posts")
@@ -58,17 +59,10 @@ export default async function TasksPage({ params }: { params: Promise<{ companyI
         {waitingPosts.length > 0 && (
           <section aria-labelledby="posts-waiting"><h2 id="posts-waiting">Posts to approve</h2><PostList posts={waitingPosts} agentId={agent.id} empty="" /></section>
         )}
-        {jobsNeedYou && (
-          <section aria-labelledby="jobs-need-you">
-            <h2 id="jobs-need-you">Unattended jobs need you</h2>
-            {held.ok ? (
-              held.items.length > 0 && <HeldActionList companyId={companyId} items={held.items} />
-            ) : (
-              <p className="text-sm text-os-err">The list of held steps can&apos;t be read right now, so some may be missing.</p>
-            )}
-            {jobFlags.length > 0 && <JobFlagList companyId={companyId} flags={jobFlags} linkToJobs />}
-          </section>
-        )}
+        {/* Always mounted, so the result of the owner's last decision survives the queue emptying. */}
+        <HeldActionList companyId={companyId} items={held.ok ? held.items : []} unreadable={!held.ok} now={now}>
+          {jobFlags.length > 0 && <JobFlagList companyId={companyId} flags={jobFlags} linkToJobs />}
+        </HeldActionList>
         <GuideProposalCard companyId={companyId} proposal={guideProposal} />
         <TasksBoard
           reviews={waitingPosts.length > 0 ? otherReviews : reviews}

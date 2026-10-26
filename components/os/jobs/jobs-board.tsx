@@ -13,8 +13,7 @@ import {
 } from "@/lib/jobs/actions"
 import type { JobsView, JobView, PolicyView } from "@/lib/jobs/view"
 import { JobFlagList } from "./job-flag-list"
-import { heldStatusWords } from "./held-action-list"
-import { rowWords } from "@/lib/jobs/held-words"
+import { heldStatusWords, rowWords, shortDate } from "@/lib/jobs/held-words"
 
 type Notice = { ok: boolean; message: string } | null
 type Act = (fn: () => Promise<{ ok: boolean; message: string }>, done?: () => void) => void
@@ -145,11 +144,11 @@ function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
           <summary className="cursor-pointer text-os-muted">Held for your OK</summary>
           <ul className="mt-2 space-y-2">
             {job.held.map((h) => (
-              <li key={h.id} className="border-l-2 border-os-border pl-3">
+              <li key={h.id} className="border-l-2 border-os-border pl-3 [overflow-wrap:anywhere]">
                 <p className="text-os-text">
-                  {h.createdAt.slice(0, 10)} · {rowWords(h)} · {h.title}
+                  {shortDate(h.createdAt)} · {rowWords(h)} · {h.title}
                 </p>
-                {h.mail && <p className="text-os-dim break-all">To {h.mail.to}: {h.mail.subject}</p>}
+                {h.mail && <p className="text-os-dim">To {h.mail.to}: {h.mail.subject}</p>}
                 <p className={h.status === "failed" ? "text-os-err" : "text-os-muted"}>{heldStatusWords(h)}</p>
               </li>
             ))}

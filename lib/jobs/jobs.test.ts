@@ -147,6 +147,22 @@ describe("runner", () => {
     bad({ row: "money", title: "x".repeat(301), detail: "d" }, /./)
     bad({ row: "money", title: "t", detail: "x".repeat(2001) }, /./)
   })
+
+  it("security: a held mail's address is plain printable ASCII, and no shown text hides direction or zero-width tricks", () => {
+    const mail = { to: "owner@acme.com", subject: "Hello", body: "Hi" }
+    const parse = (hold: object) => parseReport(JSON.stringify({ hold: [hold] }))
+    expect(parse({ row: "publication", title: "t", detail: "d", mail }).error).toBeNull()
+    for (const to of ["owner\u200b@acme.com", "\u202emoc.lieve@renwo.com", "a@b.c\u202etest", "ownér@acme.com"]) {
+      expect(parse({ row: "publication", title: "t", detail: "d", mail: { ...mail, to: JSON.parse(`"${to}"`) } }).error).toMatch(/usable email address/)
+    }
+    for (const field of ["subject", "body"] as const) {
+      for (const ch of ["\u200b", "\u202e", "\u2066", "\ufeff"]) {
+        expect(parse({ row: "publication", title: "t", detail: "d", mail: { ...mail, [field]: `Pay ${JSON.parse(`"${ch}"`)}now` } }).error).toMatch(/hidden zero-width/)
+      }
+    }
+    expect(parse({ row: "money", title: "Pay \u202e021£", detail: "d" }).error).toMatch(/hidden zero-width/)
+    expect(parse({ row: "money", title: "t", detail: "a\u200bb" }).error).toMatch(/hidden zero-width/)
+  })
 })
 
 describe("send lane", () => {

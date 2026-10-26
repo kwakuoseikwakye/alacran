@@ -13,7 +13,7 @@ import { decideHeld, decideMessage } from "./held"
  * The owner's actions on the Jobs page, kept out of the "use server" file so tests can drive them
  * with a temp company and a fake git. Every one answers with a plain sentence and never throws.
  */
-export type Result = { ok: true; message: string } | { ok: false; message: string }
+export type Result = { ok: true; message: string } | { ok: false; message: string; note?: string }
 export type Ctx = { companyId: string; root: string; storeRoot?: string; exec?: ExecFileFn; now?: Date }
 
 const fail = (message: string): Result => ({ ok: false, message })
@@ -134,7 +134,7 @@ export async function decideHeldActions(ctx: Ctx, ids: unknown, decision: "appro
   } catch {
     return fail("The list of held steps can't be read right now, so nothing was changed or sent.")
   }
-  const message = decideMessage(r)
-  const tail = r.recorded ? " Alacrán can't carry these steps out itself: you do them." : ""
-  return { ok: r.failed === 0, message: message + tail }
+  const { problem, rest } = decideMessage(r)
+  if (!problem) return { ok: true, message: rest }
+  return rest ? { ok: false, message: problem, note: rest } : { ok: false, message: problem }
 }

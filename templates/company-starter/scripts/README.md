@@ -55,7 +55,10 @@ The owner puts a job live from the Jobs page.
   else: a held mail is sent only when the owner approves that one message,
   exactly as written. A `money` or `credentials` step is never carried out by
   Alacrán; approving it records the owner's yes and the owner does the step.
-  The same step held again while it still waits is not added twice. One
+  The same step held again while it still waits is not added twice; one
+  whose send failed is offered again when the job holds it on a later run.
+  Hidden zero-width or text-direction characters are refused, so the owner
+  approves exactly what is sent. One
   malformed entry rejects the whole report, so nothing from it is held or sent.
 
 A run that exits with an error sends nothing. Match records by `id`, never by

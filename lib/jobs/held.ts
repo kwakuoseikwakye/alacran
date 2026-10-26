@@ -3,6 +3,8 @@ import type { HoldRequest } from "./runner"
 import { outlookSend, sha256, type SendFn } from "./send-lane"
 import type { HeldAction, HoldOutcome, JobStore } from "./store"
 
+import { isOpenHeld, isStuckSending } from "./held-words"
+
 export { bulkSummary, rowWords } from "./held-words"
 
 /**
@@ -17,15 +19,17 @@ export function holdKey(jobId: string, hold: HoldRequest): string {
 }
 
 const KEEP_DECIDED = 500
-// ponytail: keeps the newest 500 decided items and drops older ones; archive them if long history matters.
+// ponytail: keeps the newest 500 settled items and drops older ones; archive them if long history matters.
+// Never drops one still open in Approvals (a step the owner still owes, say).
 function prune(held: HeldAction[]): HeldAction[] {
-  const decided = held.filter((h) => h.status !== "pending" && h.status !== "sending")
+  const decided = held.filter((h) => !isOpenHeld(h))
   if (decided.length <= KEEP_DECIDED) return held
   const drop = new Set(decided.slice(0, decided.length - KEEP_DECIDED))
   return held.filter((h) => !drop.has(h))
 }
 
-const waiting = (h: HeldAction) => h.status === "pending" || h.status === "sending"
+/** Blocks the same step being held twice. A failed or cleared send doesn't, so the job can offer it again. */
+const waiting = (h: HeldAction) => (h.status === "pending" || h.status === "sending") && !h.clearedAt
 
 export async function recordHolds(
   store: JobStore,
@@ -56,16 +60,22 @@ export async function recordHolds(
       })
       outcomes.push({ row: entry.row, title: entry.title, result: "held" })
     }
-    return { held: prune([...held, ...added]), result: outcomes }
+    // The job offered a failed send again: the new card replaces the old failure in Approvals.
+    const again = new Set(added.map((a) => a.key))
+    const at = input.now.toISOString()
+    const kept = held.map((h) => (h.status === "failed" && !h.clearedAt && again.has(h.key) ? { ...h, clearedAt: at } : h))
+    return { held: prune([...kept, ...added]), result: outcomes }
   })
 }
 
-export type DecideResult = { sent: number; failed: number; recorded: number; rejected: number; cleared: number; skipped: number }
+export type DecideResult = { sent: number; failed: number; unrecorded: number; recorded: number; rejected: number; cleared: number; skipped: number }
 
 /**
  * The owner's yes or no to the ids they were shown. Phase 1 claims under the lock (only one caller
  * can see an item `pending`), phase 2 sends outside it so a slow Outlook never blocks the tick, and
- * phase 3 records the result. A failed send is never retried; rejecting it clears it from Approvals.
+ * phase 3 records the result. Only phase 1 throws: past it a mail may have gone, so a failed record
+ * is counted in `unrecorded` and the rest carry on. A failed send is never retried; rejecting a
+ * failed send, an approved step the owner has done, or a send stuck past its timeout clears it.
  */
 export async function decideHeld(
   store: JobStore,
@@ -74,16 +84,18 @@ export async function decideHeld(
   send: SendFn = outlookSend,
   now: () => Date = () => new Date()
 ): Promise<DecideResult> {
-  const result: DecideResult = { sent: 0, failed: 0, recorded: 0, rejected: 0, cleared: 0, skipped: 0 }
+  const result: DecideResult = { sent: 0, failed: 0, unrecorded: 0, recorded: 0, rejected: 0, cleared: 0, skipped: 0 }
   const wanted = new Set(ids)
   const claimed = await store.updateHeld((held) => {
     const at = now().toISOString()
+    const nowMs = now().getTime()
     const mine: HeldAction[] = []
     const seen = new Set<string>()
     const next = held.map((h) => {
       if (!wanted.has(h.id) || seen.has(h.id)) return h
       seen.add(h.id)
-      if (decision === "reject" && h.status === "failed" && !h.clearedAt) {
+      const clearable = (h.status === "failed" || h.status === "approved") && !h.clearedAt
+      if (decision === "reject" && (clearable || isStuckSending(h, nowMs))) {
         result.cleared++
         return { ...h, clearedAt: at }
       }
@@ -110,27 +122,45 @@ export async function decideHeld(
 
   for (const item of claimed) {
     let outcome: Partial<HeldAction>
+    let sent = false
     try {
       await send(item.mail!)
-      result.sent++
+      sent = true
       outcome = { status: "sent", sentAt: now().toISOString() }
     } catch (error) {
-      result.failed++
-      outcome = { status: "failed", reason: `Sending failed: ${(error as Error).message}` }
+      // The owner is pointed at Connected tools; the CLI's own "or run: ..." is for a terminal, not them.
+      const reason = (error as Error).message.replace(/,? or run: [\s\S]*$/, "").trim() || "Outlook didn't say why"
+      outcome = { status: "failed", reason: /[.!?]$/.test(reason) ? reason : `${reason}.` }
     }
-    await store.updateHeld((held) => ({ held: prune(held.map((h) => (h.id === item.id ? { ...h, ...outcome } : h))), result: null }))
+    try {
+      await store.updateHeld((held) => ({ held: prune(held.map((h) => (h.id === item.id ? { ...h, ...outcome } : h))), result: null }))
+      if (sent) result.sent++
+      else result.failed++
+    } catch {
+      // It stays `sending`; once past the send timeout the owner can clear it after checking Outlook.
+      result.unrecorded++
+    }
   }
   return result
 }
 
-export function decideMessage(r: DecideResult): string {
+/** The result in two sentences: what went wrong (shown as an error) and everything else (shown plainly). */
+export function decideMessage(r: DecideResult): { problem: string; rest: string } {
+  const sentence = (parts: string[]) => (parts.length ? `${parts.join(", ")}.` : "")
+  const problem = sentence(
+    [
+      r.failed ? `${r.failed} failed to send` : "",
+      r.unrecorded ? `${r.unrecorded} may have been sent but couldn't be recorded: check Outlook's Sent folder before doing anything else` : "",
+    ].filter(Boolean)
+  )
   const parts = [
     r.sent ? `Sent ${r.sent}` : "",
-    r.failed ? `${r.failed} failed to send` : "",
     r.recorded ? `${r.recorded} approved for you to do yourself` : "",
     r.rejected ? `Rejected ${r.rejected}` : "",
     r.cleared ? `Cleared ${r.cleared}` : "",
     r.skipped ? `${r.skipped} already decided` : "",
   ].filter(Boolean)
-  return parts.length ? `${parts.join(", ")}.` : "Nothing changed."
+  const tail = r.recorded ? " Alacrán can't carry these steps out itself: you do them." : ""
+  const rest = sentence(parts) + tail
+  return { problem, rest: rest || (problem ? "" : "Nothing changed.") }
 }
