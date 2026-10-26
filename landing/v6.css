@@ -89,7 +89,7 @@ details[open] > summary .caret { transform: translateY(1px) rotate(-135deg); }
 .dl .menu a strong { font-weight: 500; }
 .dl .menu a small { grid-column: 1; }
 .dl .menu a .tag { display: inline; grid-column: 2; grid-row: 1 / span 2; font: 500 .78rem var(--mono); color: var(--text-3); }
-.dl .menu .menu-foot { grid-template-columns: 1fr; border-top: 1px solid var(--rule); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; color: var(--text-2); font-size: .92rem; }
+.dl .menu .menu-foot { display: block; border-top: 1px solid var(--rule); border-radius: 0 0 8px 8px; margin-top: 4px; padding-top: 12px; color: var(--text-2); font-size: .92rem; }
 .nav-toggle { display: none; margin-left: 8px; width: 44px; height: 44px; border: 1px solid var(--rule-2); border-radius: var(--r); background: var(--sheet); cursor: pointer; padding: 0; position: relative; }
 .nav-toggle span { position: absolute; left: 13px; right: 13px; height: 1.5px; background: var(--text); transition: transform .3s var(--ease); }
 .nav-toggle span:first-child { top: 18px; } .nav-toggle span:last-child { top: 25px; }
@@ -247,7 +247,8 @@ details[open] > summary .plus::after { transform: scaleY(0); }
 /* The card does not clip, so the download menu can open in it. Only the decorative scorpion is clipped, in its own box. */
 .cta-art { position: absolute; inset: 0; z-index: -1; overflow: hidden; border-radius: inherit; pointer-events: none; }
 .cta .actions { align-items: flex-start; }
-.cta .dl .menu { position: static; margin-top: 10px; box-shadow: none; scroll-margin: 90px 0 24px; }
+.cta .dl > summary { min-width: 232px; } /* wide enough that the open menu keeps "Read the setup guide" on one line */
+.cta .dl .menu { position: static; width: 0; min-width: 100%; margin-top: 10px; box-shadow: none; scroll-margin: 90px 0 24px; } /* as wide as the button, so opening it does not push its neighbour away */
 .cta-card h2 { font-weight: 300; font-size: clamp(2rem, 4.4vw, 3.6rem); line-height: 1.04; letter-spacing: -.034em; max-width: 16ch; color: #fff; }
 .cta-card p { color: rgba(255, 255, 255, .78); max-width: 34em; font-size: 1.14rem; margin-top: 20px; }
 .cta-card .btn-ghost { background: transparent; color: #fff; border-color: rgba(255, 255, 255, .35); }
@@ -449,6 +450,7 @@ html[data-motion="off"] .art .slab { animation: none; }
   .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
   .tabs button { white-space: nowrap; }
   .cta-card { border-radius: 18px; }
+  .foot { padding-bottom: 104px; } /* room for the fixed Buy Me a Coffee button, so it never covers the last line */
   .cta-mark { display: none; }
   .mac-body { padding: 4px 20px 24px; }
   .prose h2 { margin-top: 44px; }

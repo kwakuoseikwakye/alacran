@@ -806,6 +806,33 @@ def test_department_copy() -> list[str]:
     return out
 
 
+def test_buttons_and_menus() -> list[str]:
+    """Small polish rules that a render showed were wrong: arrow wrap, red Copy buttons, bare icons, widget overlap."""
+    out = []
+    css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
+    if "display: block" not in css_rule(css, ".dl .menu .menu-foot"):
+        out.append("v6.css: the 'Read the setup guide' link is a grid, so its arrow wraps onto its own line")
+    cta = css_rule(css, ".cta .dl .menu")
+    if "min-width: 100%" not in cta or "width: 0" not in cta:
+        out.append("v6.css: the open CTA menu sizes the Download button's box, pushing 'Read the setup guide' away")
+    narrow = re.search(r"@media \(max-width: 720px\) \{(.*?)\n\}", css, re.S)
+    pad = re.search(r"\.foot \{ padding-bottom: (\d+)px", narrow[1] if narrow else "")
+    if not pad or int(pad[1]) < 80:
+        out.append("v6.css: on a phone the footer has no bottom room, so the support button covers its last line")
+    for route, content in all_pages().items():
+        for btn in re.findall(r"<button\b[^>]*data-copy[^>]*>", content):
+            if "btn-primary" in btn:
+                out.append(f"{route}: a Copy button is brand red, competing with the Download button")
+            if "title=" not in btn:
+                out.append(f"{route}: a Copy button has no tooltip")
+        for summ in re.findall(r'<summary class="btn[^>]*>', content):
+            if "title=" not in summ:
+                out.append(f"{route}: a Download summary has no tooltip")
+        if not re.search(r'<button class="nav-toggle"[^>]*title="', content):
+            out.append(f"{route}: the nav hamburger has no title, only an aria-label")
+    return out
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -830,6 +857,7 @@ def main() -> int:
         ("Static accessibility: focus outlines kept", test_a11y_static),
         ("Terms page has its text and headings", test_terms_page),
         ("Department pages open each section with the visitor's problem", test_department_copy),
+        ("Menu arrow, neutral Copy buttons, tooltips, footer room for the widget", test_buttons_and_menus),
         ("Mac help dialog says what its command is for, on every page", test_mac_dialog_scope),
         ("Numbered steps are one box each, Mac copy box inside step 4", test_steps_layout),
     ]

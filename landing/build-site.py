@@ -210,7 +210,7 @@ def dl_items() -> str:
 
 
 def dl_menu(cls: str = "") -> str:
-    return (f'<details class="dl {cls}"><summary class="btn btn-primary">{DOWNLOAD_LABEL}<span class="caret" aria-hidden="true"></span></summary>'
+    return (f'<details class="dl {cls}"><summary class="btn btn-primary" title="Choose Mac or Linux, then download Alacrán">{DOWNLOAD_LABEL}<span class="caret" aria-hidden="true"></span></summary>'
             f'<div class="menu">{dl_items()}</div></details>')
 
 
@@ -226,7 +226,7 @@ def nav(route: str) -> str:
   {BRAND}
   <nav class="nav-links" id="navlinks" aria-label="Main navigation">{links}<details class="guides"><summary{on}>Guides<span class="caret" aria-hidden="true"></span></summary><div class="menu">{guides}</div></details></nav>
   {dl_menu("dl-nav")}
-  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu"><span></span><span></span></button>
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu" title="Open the menu"><span></span><span></span></button>
 </div></header>"""
 
 
@@ -273,7 +273,7 @@ def lone_link(s: str) -> bool:
 def cmd_block(cmd: str) -> str:
     """A command with a Copy button; the guide and the Mac dialog share it so they cannot drift."""
     return (f'<div class="cmd"><code>{html.escape(cmd, quote=False)}</code>'
-            f'<button type="button" class="btn btn-primary" data-copy>Copy command</button></div>')
+            f'<button type="button" class="btn" data-copy title="Copy this line, then paste it into Terminal">Copy command</button></div>')
 
 
 def prompt(label: str, quotes: list[str]) -> str:
