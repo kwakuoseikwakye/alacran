@@ -294,6 +294,13 @@ def table(rows: list[list[str]]) -> str:
     return f'<div class="table-wrap{" is-catalogue" if chips else ""}"><table><thead><tr>{th}</tr></thead><tbody>{"".join(trs)}</tbody></table></div>'
 
 
+def step(x: str) -> str:
+    """One numbered step. Its content is a single box, so the grid sees the number and one cell, never one cell per inline piece.
+    '... Command: `x`' puts the Copy box inside the step it belongs to."""
+    m = re.match(r"^(.*?) Command: `(.+)`$", x)
+    return f"<li><div>{inl(m[1]) + cmd_block(m[2]) if m else inl(x)}</div></li>"
+
+
 def render_flow(bl: list[dict]) -> str:
     """Generic blocks -> HTML, used inside heroes, cards and plain sections."""
     out, i = [], 0
@@ -328,7 +335,7 @@ def render_flow(bl: list[dict]) -> str:
         elif t == "ul":
             out.append("<ul>" + "".join(f"<li>{inl(x)}</li>" for x in b["items"]) + "</ul>")
         elif t == "ol":
-            out.append('<ol class="steps">' + "".join(f"<li>{inl(x)}</li>" for x in b["items"]) + "</ol>")
+            out.append('<ol class="steps">' + "".join(step(x) for x in b["items"]) + "</ol>")
         elif t == "table":
             out.append(table(b["rows"]))
         elif t == "h1":

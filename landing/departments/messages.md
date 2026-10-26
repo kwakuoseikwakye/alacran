@@ -48,15 +48,15 @@ Find customer inquiries that appear to need a response. Draft replies using our 
 
 ## How the standard reply workflow works
 
-- Connect a supported inbox or messaging source.
+Connect a supported inbox or messaging source.
 
-- Review the catch-up summary and inquiries.
+Review the catch-up summary and inquiries.
 
-- Inspect or revise a proposed reply.
+Inspect or revise a proposed reply.
 
-- Copy and send the approved wording through your usual account.
+Copy and send the approved wording through your usual account.
 
-- Keep the response status and company record up to date.
+Keep the response status and company record up to date.
 
 ## Questions
 

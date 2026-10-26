@@ -681,6 +681,71 @@ def test_terms_page() -> list[str]:
     return out
 
 
+def steps_failures(content: str, route: str) -> list[str]:
+    """Every step in a numbered list is one box (its marker is drawn by CSS), so the 2-column grid cannot split it."""
+    out = []
+    for ol in re.findall(r'<ol class="steps">(.*?)</ol>', content, re.S):
+        depth_items = re.split(r"(?=<li>)", ol)[1:]
+        for n, li in enumerate(depth_items, 1):
+            inner = re.fullmatch(r"<li>(.*)</li>", li, re.S)
+            body = inner[1] if inner else li
+            kids = DirectKids.count(body)
+            if kids != 1:
+                out.append(f"{route}: a numbered step has {kids} content boxes (step {n}); the grid would split it into columns")
+    return out
+
+
+class DirectKids(HTMLParser):
+    """Counts the grid cells a list item's content makes: each direct child element, and each run of loose text."""
+    VOID = {"br", "img", "input", "meta", "link", "hr"}
+
+    def __init__(self):
+        super().__init__()
+        self.depth, self.n = 0, 0
+
+    def handle_starttag(self, tag, attrs):
+        if self.depth == 0:
+            self.n += 1
+        if tag not in self.VOID:
+            self.depth += 1
+
+    def handle_endtag(self, tag):
+        self.depth -= 1
+
+    def handle_data(self, data):
+        if self.depth == 0 and data.strip():
+            self.n += 1
+
+    @classmethod
+    def count(cls, html: str) -> int:
+        p = cls()
+        p.feed(html)
+        return p.n
+
+
+def test_steps_layout() -> list[str]:
+    out = []
+    for route, content in all_pages().items():
+        out += steps_failures(content, route)
+    gs = page_html("/getting-started")
+    mac = re.search(r'<ol class="steps">(.*?)</ol>', gs, re.S)
+    if not mac or mac[1].count("<li>") != 5:
+        out.append("/getting-started: the Mac list should have 5 numbered steps")
+    elif "data-copy" not in re.split(r"</li>", mac[1])[3]:
+        out.append("/getting-started: the Copy box belongs inside step 4, not below the list")
+    if "five things" not in gs:
+        out.append("/getting-started: the text must count the five Mac steps")
+    css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
+    cols = re.search(r"grid-template-columns:\s*([^;]+);", css_rule(css, ".steps li"))
+    if not cols or len(re.findall(r"minmax\([^)]*\)|\S+", cols[1])) != 2:
+        out.append("v6.css: .steps li must be a marker column plus exactly one content column")
+    # Self-test: the old shape (inline pieces as separate children) must fail.
+    old = '<ol class="steps"><li>Click <strong>About This Mac</strong> to see <code>Chip</code></li></ol>'
+    if not steps_failures(old, "x"):
+        out.append("steps check did not notice a step made of loose inline pieces")
+    return out
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -704,6 +769,7 @@ def main() -> int:
         ("No undisclosed third-party loads", test_third_party_loads),
         ("Static accessibility: focus outlines kept", test_a11y_static),
         ("Terms page has its text and headings", test_terms_page),
+        ("Numbered steps are one box each, Mac copy box inside step 4", test_steps_layout),
     ]
 
     total_failures = []

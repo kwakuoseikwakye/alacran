@@ -40,19 +40,19 @@ A sentence or two is enough to begin. You can improve the details as you work.
 
 Pick the instructions for your computer. You do not need an Alacrán account to create your local workspace.
 
-On a Mac Follow these four things in order.
+On a Mac Follow these five things in order.
 
-- Find your chip. Click the Apple menu, then **About This Mac**. If it says “Chip: Apple M1” (or M2, M3, M4), you have Apple Silicon. If it says “Processor: Intel”, you have Intel.
+Find your chip. Click the Apple menu, then **About This Mac**. If it says “Chip: Apple M1” (or M2, M3, M4), you have Apple Silicon. If it says “Processor: Intel”, you have Intel.
 
-- Download the matching file with **Download Alacrán**: Mac Apple Silicon or Mac Intel.
+Download the matching file with **Download Alacrán**: Mac Apple Silicon or Mac Intel.
 
-- Open the downloaded `.dmg` and drag Alacrán into Applications.
+Open the downloaded `.dmg` and drag Alacrán into Applications.
 
-- Open Terminal (press Cmd+Space, type Terminal, press Return). Paste the line below and press Return.
+Open Terminal (press Cmd+Space, type Terminal, press Return). Paste the line below and press Return.
 
 `xattr -cr "/Applications/Alacran.app"`
 
-Then open Alacrán from your Applications folder.
+Open Alacrán from your Applications folder.
 
 Why this step exists Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you run the line above once, macOS may say “Alacrán is damaged and can’t be opened”. It is not damaged. The command clears the flag your browser attached to this one download, so macOS lets the app open. Right-click and Open is not enough on its own. Use it only on the app you downloaded from this site or the official releases page. Updates inside the app do not need it again.
 

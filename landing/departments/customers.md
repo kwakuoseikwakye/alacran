@@ -44,15 +44,15 @@ Log contact activity and update the lead stage as the conversation develops. Add
 
 ## A practical workflow
 
-- Add or select a prospect.
+Add or select a prospect.
 
-- Review the available context and request research or a draft.
+Review the available context and request research or a draft.
 
-- Correct assumptions and approve useful record changes.
+Correct assumptions and approve useful record changes.
 
-- Send the message from your usual account.
+Send the message from your usual account.
 
-- Record what happened and the next step.
+Record what happened and the next step.
 
 Try asking
 
