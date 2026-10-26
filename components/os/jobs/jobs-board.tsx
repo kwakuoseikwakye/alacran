@@ -49,7 +49,7 @@ jobs:
     at: "08:15"                        # every day, your local time
     note: Re-send the invite to anyone who hasn't joined yet`
 
-function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
+function JobCard({ companyId, job, now }: { companyId: string; job: JobView; now: number }) {
   const [act, pending, notice] = useAct()
   const [confirmLive, setConfirmLive] = useState(false)
   const last = job.lastRun
@@ -149,7 +149,7 @@ function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
                   {shortDate(h.createdAt)} · {rowWords(h)} · {h.title}
                 </p>
                 {h.mail && <p className="text-os-dim">To {h.mail.to}: {h.mail.subject}</p>}
-                <p className={h.status === "failed" ? "text-os-err" : "text-os-muted"}>{heldStatusWords(h)}</p>
+                <p className={h.status === "failed" ? "text-os-err" : "text-os-muted"}>{heldStatusWords(h, now)}</p>
               </li>
             ))}
           </ul>
@@ -229,7 +229,7 @@ function PolicyCard({ companyId, policy }: { companyId: string; policy: PolicyVi
   )
 }
 
-export function JobsBoard({ companyId, view }: { companyId: string; view: JobsView }) {
+export function JobsBoard({ companyId, view, now }: { companyId: string; view: JobsView; now: number }) {
   if (!view.ok) {
     return <p className="text-sm text-os-err">The jobs file needs fixing: {view.reason}</p>
   }
@@ -253,7 +253,7 @@ export function JobsBoard({ companyId, view }: { companyId: string; view: JobsVi
             <p>Each new job practises first: it runs, shows what it would have done, and sends nothing until you put it live.</p>
           </div>
         ) : (
-          view.jobs.map((job) => <JobCard key={job.id} companyId={companyId} job={job} />)
+          view.jobs.map((job) => <JobCard key={job.id} companyId={companyId} job={job} now={now} />)
         )}
       </section>
 

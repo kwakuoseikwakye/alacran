@@ -36,12 +36,13 @@ export function bulkSummary(items: Pick<HeldAction, "row" | "mail">[]): string {
 }
 
 /** One line per held step, for the job's history on the Jobs page. Never claims a step Alacrán can't do was done. */
-export function heldStatusWords(item: HeldAction): string {
+export function heldStatusWords(item: HeldAction, nowMs: number): string {
   switch (item.status) {
     case "pending":
       return "Waiting in Approvals"
     case "sending":
-      return item.clearedAt ? "Cleared while sending: check Outlook's Sent folder to see if it went" : "Sending…"
+      if (item.clearedAt) return "Cleared while sending: check Outlook's Sent folder to see if it went"
+      return isStuckSending(item, nowMs) ? "Stuck while sending: check Outlook's Sent folder" : "Sending…"
     case "sent":
       return `Sent ${shortDate(item.sentAt)}`
     case "failed":

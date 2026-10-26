@@ -103,6 +103,19 @@ describe("held queue", () => {
     expect((await store.readHeld())[0].status).toBe("failed")
   })
 
+  it("an approved money step not yet cleared blocks a re-hold; once cleared it can be held again", async () => {
+    const [item] = await hold([money])
+    const send = vi.fn()
+    await decideHeld(store, [item.id], "approve", send)
+    expect(await recordHolds(store, { jobId: "followup", runId: "r2", entries: [money], now })).toEqual([expect.objectContaining({ result: "already-waiting" })])
+    expect(await store.readHeld()).toHaveLength(1)
+    // "Done, clear it"
+    expect(await decideHeld(store, [item.id], "reject", send)).toMatchObject({ cleared: 1 })
+    expect(await recordHolds(store, { jobId: "followup", runId: "r3", entries: [money], now })).toEqual([expect.objectContaining({ result: "held" })])
+    expect((await store.readHeld()).map((h) => h.status)).toEqual(["approved", "pending"])
+    expect(send).not.toHaveBeenCalled()
+  })
+
   it("AC9: approving money or credentials records the decision and executes nothing", async () => {
     const items = await hold([money, access])
     const send = vi.fn()

@@ -58,6 +58,7 @@ describe("HeldActionList", () => {
     expect(h).toContain("Didn't send: Not signed in to Outlook. Connect it in Alacrán (Connected tools). If the job still wants to send it, it will offer it again on its next run.")
     expect(h.match(/failed|didn't send/gi)).toHaveLength(1)
     expect(buttons(h).map((x) => x.text)).toEqual(["Clear"])
+    expect(buttons(h)[0].title).toBe("Take this off the list. Clearing doesn't send it; the job may offer it again on its next run.")
   })
 
   it("AC9: an approved money or access step stays as a settled card the owner clears when done", () => {
@@ -96,16 +97,21 @@ describe("HeldActionList", () => {
     const h = html([], { unreadable: true })
     expect(h).toContain("can't be read right now")
     expect(h).toContain("Reload the page")
+    expect(h).toContain("they'll show up in this section as needing you")
+    expect(h).not.toContain("below")
   })
 
   it("AC9/AC13: history words never claim a step Alacrán can't do was done, and dates are local '26 Oct'", () => {
-    expect(heldStatusWords({ ...money, status: "approved", decidedAt: "2026-10-26T10:00:00Z" })).toBe("Approved 26 Oct, you do this step yourself")
-    expect(heldStatusWords({ ...money, status: "approved", decidedAt: "2026-10-26T10:00:00Z", clearedAt: "2026-10-27T10:00:00Z" })).toBe(
+    expect(heldStatusWords({ ...money, status: "approved", decidedAt: "2026-10-26T10:00:00Z" }, NOW)).toBe("Approved 26 Oct, you do this step yourself")
+    expect(heldStatusWords({ ...money, status: "approved", decidedAt: "2026-10-26T10:00:00Z", clearedAt: "2026-10-27T10:00:00Z" }, NOW)).toBe(
       "Approved 26 Oct, you do this step yourself; you marked it done 27 Oct"
     )
-    expect(heldStatusWords({ ...mail, status: "sent", sentAt: "2026-10-26T10:00:00Z" })).toBe("Sent 26 Oct")
-    expect(heldStatusWords({ ...mail, status: "failed", reason: "Not signed in." })).toBe("Didn't send: Not signed in.")
-    expect(heldStatusWords({ ...mail, status: "rejected", decidedAt: "2026-10-26T10:00:00Z" })).toBe("Rejected 26 Oct")
-    expect(heldStatusWords({ ...mail, status: "sending", clearedAt: "2026-10-26T10:00:00Z" })).toMatch(/check Outlook's Sent folder/)
+    expect(heldStatusWords({ ...mail, status: "sent", sentAt: "2026-10-26T10:00:00Z" }, NOW)).toBe("Sent 26 Oct")
+    expect(heldStatusWords({ ...mail, status: "failed", reason: "Not signed in." }, NOW)).toBe("Didn't send: Not signed in.")
+    expect(heldStatusWords({ ...mail, status: "rejected", decidedAt: "2026-10-26T10:00:00Z" }, NOW)).toBe("Rejected 26 Oct")
+    expect(heldStatusWords({ ...mail, status: "sending", clearedAt: "2026-10-26T10:00:00Z" }, NOW)).toMatch(/check Outlook's Sent folder/)
+    // Stuck past the send timeout: history says so too, matching Approvals.
+    expect(heldStatusWords({ ...mail, status: "sending", decidedAt: new Date(NOW - 30_000).toISOString() }, NOW)).toBe("Sending…")
+    expect(heldStatusWords({ ...mail, status: "sending", decidedAt: new Date(NOW - 61_000).toISOString() }, NOW)).toBe("Stuck while sending: check Outlook's Sent folder")
   })
 })

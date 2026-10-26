@@ -28,8 +28,11 @@ function prune(held: HeldAction[]): HeldAction[] {
   return held.filter((h) => !drop.has(h))
 }
 
-/** Blocks the same step being held twice. A failed or cleared send doesn't, so the job can offer it again. */
-const waiting = (h: HeldAction) => (h.status === "pending" || h.status === "sending") && !h.clearedAt
+/**
+ * Blocks the same step being held twice, including an approved step the owner hasn't cleared yet
+ * (else they might pay twice by hand). A failed or cleared one doesn't, so the job can offer it again.
+ */
+const waiting = (h: HeldAction) => (h.status === "pending" || h.status === "sending" || h.status === "approved") && !h.clearedAt
 
 export async function recordHolds(
   store: JobStore,

@@ -63,7 +63,7 @@ export function HeldActionList({
         {unreadable && (
           <p className="text-sm text-os-err">
             The list of held steps can&apos;t be read right now, so some may be missing. Reload the page in a minute. If this stays, jobs can&apos;t hold new
-            steps either: they&apos;ll show up below as needing you, with details on the Jobs page.
+            steps either: they&apos;ll show up in this section as needing you, with details on the Jobs page.
           </p>
         )}
         {decidable.length > 1 &&
@@ -180,7 +180,7 @@ export function HeldActionList({
                       disabled={busy}
                       title={
                         item.status === "failed"
-                          ? "Take this off the list. It stays in the job's history, and it isn't sent again."
+                          ? "Take this off the list. Clearing doesn't send it; the job may offer it again on its next run."
                           : "Take this off the list after checking Outlook's Sent folder. Nothing is sent or stopped."
                       }
                       onClick={() => clear(item)}
