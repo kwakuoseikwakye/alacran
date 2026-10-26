@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Turn the supplied scorpion artwork into the red Alacrán logo.
 
-    python3 scripts/generate-logo.py
+    python3 scripts/generate-logo.py              # everything below
+    python3 scripts/generate-logo.py --web-icons  # only the two browser icons, from the committed landing/logo.png
 
 Source:  landing/scorpion.png  (despite the name it is a JPEG: 840x916, RGB,
          NO alpha — what looks like transparency is a checkerboard pattern
@@ -13,6 +14,10 @@ Outputs (committed, so the build needs neither PIL nor this script):
                                 Next emits it into .next/static/media, which
                                 scripts/package-macos.sh already copies
     landing/favicon.png         128px
+    landing/favicon-32.png      32x32, transparent, the scorpion padded to a square
+    landing/apple-touch-icon.png
+                                180x180, opaque on the site's background colour
+                                (iOS paints transparency black)
     app/icon.png                512px (Next.js file convention; a browser
                                 favicon source only now — see below for what
                                 the Linux .deb's own icon actually uses)
@@ -47,6 +52,7 @@ Two problems have to be solved to use this artwork on a dark surface:
 """
 
 import os
+import sys
 from collections import deque
 
 import numpy as np
@@ -129,7 +135,33 @@ def colourise(a):
     return out
 
 
+SITE_BG = (244, 242, 238)  # #f4f2ee, --bg in landing/v6.css
+
+
+def web_icons():
+    """The browser and iPhone home-screen icons, cut from the committed logo so no keying is rerun."""
+    logo = Image.open("landing/logo.png").convert("RGBA")
+    side = max(logo.size)
+    square = Image.new("RGBA", (side, side), (0, 0, 0, 0))
+    square.paste(logo, ((side - logo.size[0]) // 2, (side - logo.size[1]) // 2), logo)
+
+    path = "landing/favicon-32.png"
+    square.resize((32, 32), Image.LANCZOS).save(path, optimize=True)
+    print(f"  wrote {path} (32x32, {os.path.getsize(path) / 1024:.1f} KB)")
+
+    inner = round(180 * 0.82)
+    touch = Image.new("RGB", (180, 180), SITE_BG)
+    mark = square.resize((inner, inner), Image.LANCZOS)
+    touch.paste(mark, ((180 - inner) // 2, (180 - inner) // 2), mark)
+    path = "landing/apple-touch-icon.png"
+    touch.save(path, optimize=True)
+    print(f"  wrote {path} (180x180, {os.path.getsize(path) / 1024:.1f} KB)")
+
+
 def main():
+    if "--web-icons" in sys.argv[1:]:
+        web_icons()
+        return
     grey = np.asarray(Image.open(SRC).convert("L")).astype(np.int16)
     lab, comps = label_light_components(grey)
     alpha = build_alpha(grey, lab, comps)
@@ -188,6 +220,7 @@ def main():
 
     save_square_icon("components/alacran-icon-master.png", 1024)  # macOS .icns, up to the 512@2x tier
     save_square_icon("components/alacran-icon-512.png", 512)  # Linux .deb's hicolor/512x512 icon
+    web_icons()
 
 
 if __name__ == "__main__":
