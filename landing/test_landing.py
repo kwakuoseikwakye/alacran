@@ -660,6 +660,27 @@ def test_a11y_static() -> list[str]:
     return ["v6.css removes a focus outline"] if re.search(r"outline\s*:\s*(none|0)\b", css) else []
 
 
+def terms_failures(content: str) -> list[str]:
+    body = re.search(r'<article class="prose">(.*?)</article>', content, re.S)
+    text = re.sub(r"<[^>]+>", " ", body[1]) if body else ""
+    toc = re.search(r'<aside class="toc".*?</aside>', content, re.S)
+    out = []
+    if len(text.split()) < 150:
+        out.append(f"/terms: the article holds {len(text.split())} words; the terms text is missing")
+    if len(re.findall(r"<li", toc[0] if toc else "")) < 5:
+        out.append("/terms: the 'On this page' list has fewer than 5 headings")
+    return out
+
+
+def test_terms_page() -> list[str]:
+    real = page_html("/terms")
+    out = terms_failures(real)
+    emptied = re.sub(r'(<article class="prose">).*?(</article>)', r"\1\2", real, flags=re.S)
+    if not terms_failures(emptied):
+        out.append("terms check did not notice an empty article")
+    return out
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -682,6 +703,7 @@ def main() -> int:
         ("Copy rules: no borrowed vendor name, no invented claims", test_copy_rules),
         ("No undisclosed third-party loads", test_third_party_loads),
         ("Static accessibility: focus outlines kept", test_a11y_static),
+        ("Terms page has its text and headings", test_terms_page),
     ]
 
     total_failures = []

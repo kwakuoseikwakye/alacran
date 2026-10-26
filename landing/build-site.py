@@ -177,7 +177,7 @@ def read_pages(src: str) -> list[dict]:
             "route": re.search(r"^Route: `([^`]+)`", body, re.M)[1],
             "title": re.search(r"^SEO title: \*\*(.+)\*\*", body, re.M)[1],
             "desc": re.search(r"^Meta description: \*\*(.+)\*\*", body, re.M)[1],
-            "blocks": blocks(re.search(r"^### Website copy.*?$(.*?)(?=^### (?:Implementation notes|Release checks)|^## .*not website copy|\Z)", body, re.M | re.S)[1]),
+            "blocks": blocks(re.search(r"^### Website copy.*?$(.*?)(?=^### (?:Implementation notes|Release checks)|^## [^\n]*not website copy|\Z)", body, re.M | re.S)[1]),
         })
     return pages
 
