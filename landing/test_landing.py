@@ -555,6 +555,13 @@ def test_vendor_marks() -> list[str]:
             out.append(f"/: the agents list has no mark for {name}")
     if not any("Codex" in i and "<svg" not in i for i in items):
         out.append("/: Codex must be listed without a mark")
+    css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
+    if re.search(r"\.agents li:not\(", css) or re.search(r"\.agents li[^{]*\{[^}]*padding-left", css):
+        out.append("v6.css: an unmarked agent row is indented to leave a blank icon slot, which reads as a missing icon")
+    if "Not every tool shows a logo" not in content:
+        out.append("/integrations: no visible line saying that not every tool shows a logo")
+    if "<strong>" in content and re.search(r"other tools\.\s*<strong>", content):
+        out.append("/integrations: a bold label is glued to the sentence before it")
     return out
 
 

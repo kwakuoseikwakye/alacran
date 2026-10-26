@@ -12,7 +12,9 @@ Choose an executor for each company while keeping its underlying business record
 
 ## Connect the information behind your work.
 
-Useful answers need information that sits in other tools. **Communication and inboxes**
+Useful answers need information that sits in other tools.
+
+### Communication and inboxes
 
 Bring supported messaging and email information into catch-up and reply-preparation workflows. Beeper provides access to supported networks connected to your Beeper account; other tools may use separate connections.
 
@@ -86,7 +88,7 @@ FigmaCanvaLovableDocuSignMiroArcadsLoomTypeform
 
 Catalogue availability does not mean every tool has a built-in department workflow. Review each connection’s status before relying on it.
 
-Logos belong to their owners and appear only to name the tool. Their use does not imply endorsement or partnership.
+Logos belong to their owners and appear only to name the tool. Their use does not imply endorsement or partnership. Not every tool shows a logo.
 
 ## Know what a connection can do.
 
