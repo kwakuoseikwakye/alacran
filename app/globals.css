@@ -1086,8 +1086,9 @@ body { font-family: var(--typeface-body); background: var(--bg); }
 }
 @media (max-width: 640px) {
   /* Same breakpoint the rail/subnav fold at. A fixed-width dock next to a
-     full-width mobile layout has nowhere to go, so it takes the screen. */
-  .os-dock { width: 100vw; }
+     full-width mobile layout has nowhere to go, so it takes the screen —
+     only while open: closed, it must not cover the page or take its taps. */
+  .os-dock[data-open="true"] { width: 100vw; }
 }
 
 /* One fixed-position stack riding the dock's left edge, holding the
