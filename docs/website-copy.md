@@ -262,7 +262,7 @@ Company records are stored locally. Relevant information may be sent to connecte
 
 **Does Alacrán send messages or publish posts automatically?**
 
-Not unless you set it up. Everything starts as a draft for your review. If you create an unattended job, it can send only a message you approved once, within the limits you set: how often, how many, and who never to contact. Change the message and sending stops until you approve it again. Approving a local draft does not itself mean it has been sent.
+Not unless you set it up. Everything starts as a draft for your review. If you create an unattended job, it can send a message on its own only if you approved that message once, within the limits you set: how often, how many, and who never to contact. Change the message and sending stops until you approve it again. Anything else it wants to send, pay for or change access to waits in Approvals, and a one-off message is sent only after you approve that exact message. Approving a local draft does not itself mean it has been sent.
 
 **Can I use more than one business?**
 

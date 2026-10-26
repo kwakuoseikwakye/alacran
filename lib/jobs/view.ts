@@ -1,7 +1,8 @@
 import { readJobs, readPolicies, type Invalid, type Job, type Policy } from "./definitions"
 import { checkPolicy } from "./send-lane"
+import { isOpenHeld } from "./held-words"
 import { localStamp } from "../schedules/schedules-impl"
-import { flagKey, jobStore, jobsDir, type Flag, type RunEntry } from "./store"
+import { flagKey, jobStore, jobsDir, type Flag, type HeldAction, type RunEntry } from "./store"
 
 /**
  * What the Jobs page and Approvals read. Everything here is a file read; no script runs and no
@@ -10,6 +11,8 @@ import { flagKey, jobStore, jobsDir, type Flag, type RunEntry } from "./store"
 export type OpenFlag = Flag & { key: string; jobId: string; runId: string; date: string }
 
 export type JobView = Job & {
+  /** This job's held steps, newest first: the history of what the owner decided (v248). */
+  held: HeldAction[]
   lastRun: RunEntry | null
   recent: RunEntry[]
   missed: boolean
@@ -19,7 +22,7 @@ export type PolicyView = Policy & { approved: boolean; reason: string | null; ap
 
 export type JobsView =
   | { ok: false; reason: string }
-  | { ok: true; jobs: JobView[]; invalidJobs: Invalid[]; policies: PolicyView[]; invalidPolicies: Invalid[]; policiesError: string | null; flags: OpenFlag[] }
+  | { ok: true; jobs: JobView[]; invalidJobs: Invalid[]; policies: PolicyView[]; invalidPolicies: Invalid[]; policiesError: string | null; flags: OpenFlag[]; heldError: boolean }
 
 function yesterday(now: Date): string {
   const d = new Date(now)
@@ -45,9 +48,24 @@ export async function openFlags(companyId: string, storeRoot?: string): Promise<
   return openFlagsFrom(runs, handled)
 }
 
-/** For the Approvals badge. Never throws: a broken log must not take down every page's layout. */
+
+/** Never throws. `ok: false` means the queue file can't be read, which the page says rather than showing an empty list. */
+export async function openHeld(companyId: string, storeRoot?: string): Promise<{ ok: true; items: HeldAction[] } | { ok: false }> {
+  try {
+    return { ok: true, items: (await jobStore(jobsDir(companyId, storeRoot)).readHeld()).filter(isOpenHeld) }
+  } catch {
+    return { ok: false }
+  }
+}
+
+/**
+ * For the Approvals badge: open flags plus open held steps. Every sum site goes through here, so
+ * the totals agree. Never throws: a broken file counts 0 rather than take down every page's layout.
+ */
 export async function openFlagCount(companyId: string, storeRoot?: string): Promise<number> {
-  return (await openFlags(companyId, storeRoot).catch(() => [])).length
+  const flags = (await openFlags(companyId, storeRoot).catch(() => [])).length
+  const held = await openHeld(companyId, storeRoot)
+  return flags + (held.ok ? held.items.length : 0)
 }
 
 export async function readJobsView(companyId: string, root: string, now: Date = new Date(), storeRoot?: string): Promise<JobsView> {
@@ -55,12 +73,13 @@ export async function readJobsView(companyId: string, root: string, now: Date = 
   if (!jobs.ok) return { ok: false, reason: jobs.reason }
   const policies = await readPolicies(root).catch((e: Error) => ({ ok: false as const, reason: e.message }))
   const store = jobStore(jobsDir(companyId, storeRoot))
-  const [runs, state, approvals, sent, handled] = await Promise.all([
+  const [runs, state, approvals, sent, handled, held] = await Promise.all([
     store.readRuns(),
     store.readState(),
     store.readApprovals(),
     store.readSent(),
     store.readHandled(),
+    store.readHeld().catch(() => null),
   ])
   const before = yesterday(now)
   const jobViews: JobView[] = jobs.items.map((job) => {
@@ -69,7 +88,8 @@ export async function readJobsView(companyId: string, root: string, now: Date = 
     const seen = state.firstSeen[job.id]?.split(" ")[0]
     // "Didn't run": on, known since before yesterday, and no run yesterday or since.
     const missed = job.enabled && seen !== undefined && seen < before && (lastDate === undefined || lastDate < before)
-    return { ...job, lastRun: mine.at(-1) ?? null, recent: mine.slice(-10).reverse(), missed }
+    const heldHere = (held ?? []).filter((h) => h.jobId === job.id).reverse().slice(0, 20)
+    return { ...job, held: heldHere, lastRun: mine.at(-1) ?? null, recent: mine.slice(-10).reverse(), missed }
   })
   const policyViews: PolicyView[] = policies.ok
     ? await Promise.all(
@@ -93,5 +113,6 @@ export async function readJobsView(companyId: string, root: string, now: Date = 
     invalidPolicies: policies.ok ? policies.invalid : [],
     policiesError: policies.ok ? null : policies.reason,
     flags: openFlagsFrom(runs, handled),
+    heldError: held === null,
   }
 }

@@ -13,6 +13,7 @@ import {
 } from "@/lib/jobs/actions"
 import type { JobsView, JobView, PolicyView } from "@/lib/jobs/view"
 import { JobFlagList } from "./job-flag-list"
+import { heldStatusWords, rowWords, shortDate } from "@/lib/jobs/held-words"
 
 type Notice = { ok: boolean; message: string } | null
 type Act = (fn: () => Promise<{ ok: boolean; message: string }>, done?: () => void) => void
@@ -48,7 +49,7 @@ jobs:
     at: "08:15"                        # every day, your local time
     note: Re-send the invite to anyone who hasn't joined yet`
 
-function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
+function JobCard({ companyId, job, now }: { companyId: string; job: JobView; now: number }) {
   const [act, pending, notice] = useAct()
   const [confirmLive, setConfirmLive] = useState(false)
   const last = job.lastRun
@@ -138,6 +139,22 @@ function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
           </ul>
         </details>
       )}
+      {job.held.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-os-muted">Held for your OK</summary>
+          <ul className="mt-2 space-y-2">
+            {job.held.map((h) => (
+              <li key={h.id} className="border-l-2 border-os-border pl-3 [overflow-wrap:anywhere]">
+                <p className="text-os-text">
+                  {shortDate(h.createdAt)} · {rowWords(h)} · {h.title}
+                </p>
+                {h.mail && <p className="text-os-dim">To {h.mail.to}: {h.mail.subject}</p>}
+                <p className={h.status === "failed" ? "text-os-err" : "text-os-muted"}>{heldStatusWords(h, now)}</p>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </article>
   )
 }
@@ -212,13 +229,14 @@ function PolicyCard({ companyId, policy }: { companyId: string; policy: PolicyVi
   )
 }
 
-export function JobsBoard({ companyId, view }: { companyId: string; view: JobsView }) {
+export function JobsBoard({ companyId, view, now }: { companyId: string; view: JobsView; now: number }) {
   if (!view.ok) {
     return <p className="text-sm text-os-err">The jobs file needs fixing: {view.reason}</p>
   }
   const invalid = [...view.invalidJobs.map((i) => ({ ...i, file: "jobs" })), ...view.invalidPolicies.map((i) => ({ ...i, file: "send policies" }))]
   return (
     <div className="space-y-8">
+      {view.heldError && <p className="text-sm text-os-err">The list of steps jobs held for your OK can&apos;t be read right now, so their history is missing.</p>}
       {view.flags.length > 0 && (
         <section aria-labelledby="jobs-need-you" className="space-y-3">
           <h2 id="jobs-need-you" className="text-lg font-semibold text-os-text">Needs you</h2>
@@ -235,7 +253,7 @@ export function JobsBoard({ companyId, view }: { companyId: string; view: JobsVi
             <p>Each new job practises first: it runs, shows what it would have done, and sends nothing until you put it live.</p>
           </div>
         ) : (
-          view.jobs.map((job) => <JobCard key={job.id} companyId={companyId} job={job} />)
+          view.jobs.map((job) => <JobCard key={job.id} companyId={companyId} job={job} now={now} />)
         )}
       </section>
 

@@ -4,6 +4,7 @@ import os from "node:os"
 import path from "node:path"
 import { z } from "zod"
 import type { Job } from "./definitions"
+import { EMAIL } from "./send-lane"
 
 /**
  * Runs one job's script: no AI, no shell. The script is a file the company keeps in its own
@@ -14,6 +15,33 @@ import type { Job } from "./definitions"
 export const JOB_TIMEOUT_MS = 10 * 60 * 1000
 const STDERR_TAIL = 2048
 
+// Zero-width and text-direction controls: they make what Approvals shows differ from what is sent.
+const HIDDEN = /[\u200B-\u200F\u202A-\u202E\u2060-\u2069\uFEFF]/
+
+/**
+ * A one-off step the job wants a person to OK first (AGENTS.md §6: Publication, Money, Credentials).
+ * It is stored, never carried out; only the owner's approval in the app can send a held mail.
+ */
+const HoldSchema = z
+  .object({
+    row: z.enum(["publication", "money", "credentials"]),
+    title: z.string().trim().min(1).max(300),
+    detail: z.string().max(2000),
+    mail: z.object({ to: z.string().trim().toLowerCase(), subject: z.string().max(300), body: z.string().max(20000) }).optional(),
+  })
+  .superRefine((hold, ctx) => {
+    const issue = (message: string) => ctx.addIssue({ code: "custom", message })
+    const texts = [hold.title, hold.detail, hold.mail?.subject ?? "", hold.mail?.body ?? ""]
+    if (texts.some((t) => HIDDEN.test(t))) issue("A held step can't contain hidden zero-width or text-direction characters.")
+    if (!hold.mail) return
+    if (hold.row !== "publication") return issue("Only a publication hold can carry a mail.")
+    if (!/^[\x21-\x7e]+$/.test(hold.mail.to) || !EMAIL.test(hold.mail.to)) issue(`A held mail needs one usable email address, not "${hold.mail.to}".`)
+    if (!hold.mail.subject.trim()) issue("A held mail needs a subject.")
+    if (/[\r\n]/.test(hold.mail.subject)) issue("A held mail's subject must be one line.")
+    // The mail command's flag parser would read a leading dash as another flag.
+    if (hold.mail.subject.startsWith("-") || hold.mail.body.startsWith("-")) issue("A held mail can't start its subject or body with a dash.")
+  })
+
 const ReportSchema = z.object({
   did: z.array(z.string().max(500)).max(200).default([]),
   flagged: z.array(z.object({ item: z.string().max(300), reason: z.string().max(500) })).max(200).default([]),
@@ -22,9 +50,11 @@ const ReportSchema = z.object({
     .array(z.object({ policy: z.string(), to: z.string(), fields: z.record(z.string(), z.string()).default({}) }))
     .max(500)
     .default([]),
+  hold: z.array(HoldSchema).max(50).default([]),
 })
 export type JobReport = z.infer<typeof ReportSchema>
 export type SendRequest = JobReport["send"][number]
+export type HoldRequest = JobReport["hold"][number]
 
 export type ExecResult = { exitCode: number | null; stdout: string; stderr: string; timedOut: boolean }
 export type ExecFn = (cmd: string, args: string[], opts: { cwd: string; env: Record<string, string>; timeout: number }) => Promise<ExecResult>

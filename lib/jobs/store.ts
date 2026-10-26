@@ -2,6 +2,7 @@ import { appendFile, mkdir, readFile, rename, writeFile } from "node:fs/promises
 import path from "node:path"
 import { dataPath } from "../data-dir"
 import { withFileLock } from "../os/records/write"
+import type { Mail } from "./send-lane"
 
 /**
  * Operational state for unattended jobs. It lives in app data, outside the company folder, on
@@ -17,6 +18,32 @@ export type RunStatus = "ok" | "failed" | "refused"
 export type Flag = { item: string; reason: string }
 export type SendOutcome = { policy: string; to: string; result: "sent" | "would-send" | "refused"; reason?: string }
 
+export type HoldRow = "publication" | "money" | "credentials"
+export type HoldOutcome = { row: HoldRow; title: string; result: "held" | "already-waiting" | "would-hold" }
+
+/**
+ * One step a job held for the owner (v248). Only the owner's decision in the app moves it off
+ * `pending`; `sending` is the claim that makes a mail go out at most once. `clearedAt` is a failed
+ * send the owner has seen and cleared from Approvals; it stays in the job's history.
+ */
+export type HeldStatus = "pending" | "sending" | "sent" | "failed" | "approved" | "rejected"
+export type HeldAction = {
+  id: string
+  key: string
+  jobId: string
+  runId: string
+  row: HoldRow
+  title: string
+  detail: string
+  mail?: Mail
+  createdAt: string
+  status: HeldStatus
+  decidedAt?: string
+  sentAt?: string
+  reason?: string
+  clearedAt?: string
+}
+
 export type RunEntry = {
   runId: string
   jobId: string
@@ -31,6 +58,7 @@ export type RunEntry = {
   flagged: Flag[]
   outcome?: { label: string; value: number }
   sends: SendOutcome[]
+  holds?: HoldOutcome[]
   stderrTail?: string
 }
 
@@ -51,6 +79,18 @@ async function readJson<T>(file: string, fallback: T): Promise<T> {
   } catch {
     return fallback
   }
+}
+
+/** Like readJson, but only a missing file is empty: a file that can't be parsed throws instead of reading as nothing. */
+async function readJsonStrict<T>(file: string, fallback: T): Promise<T> {
+  let raw: string
+  try {
+    raw = await readFile(file, "utf-8")
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return fallback
+    throw error
+  }
+  return JSON.parse(raw) as T
 }
 
 /** Write to a sibling and rename, so a crash mid-write never leaves half a file behind. */
@@ -108,6 +148,14 @@ export function jobStore(dir: string) {
     readHandled: () => readJson<string[]>(file("handled.json"), []),
     markHandled: (key: string) =>
       update<string[]>(file("handled.json"), [], (keys) => (keys.includes(key) ? keys : [...keys, key].slice(-2000))),
+    readHeld: () => readJsonStrict<HeldAction[]>(file("held.json"), []),
+    // Never the general `update`: it reads a broken file as empty and would wipe the queue on write.
+    updateHeld: <R>(change: (held: HeldAction[]) => { held: HeldAction[]; result: R }) =>
+      withFileLock(file("held.json"), async () => {
+        const { held, result } = change(await readJsonStrict<HeldAction[]>(file("held.json"), []))
+        await writeJsonAtomic(file("held.json"), held)
+        return result
+      }),
     readRuns: () => readLines<RunEntry>(file("runs.jsonl")),
     appendRun: (entry: RunEntry) => appendLine(file("runs.jsonl"), entry),
     readSent: () => readLines<SentEntry>(file("sent.jsonl")),
