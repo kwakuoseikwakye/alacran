@@ -45,3 +45,12 @@ export async function sendTestAction(companyId: string, policyId: string, to: st
 export async function markFlagHandledAction(companyId: string, key: string) {
   return withCompany(companyId, (ctx) => manage.markHandled(ctx, String(key)))
 }
+
+/** Approve the held steps the owner was shown. A held mail is sent; anything else is recorded for the owner to do. */
+export async function approveHeldAction(companyId: string, ids: string[]) {
+  return withCompany(companyId, (ctx) => manage.decideHeldActions(ctx, ids, "approve"))
+}
+
+export async function rejectHeldAction(companyId: string, ids: string[]) {
+  return withCompany(companyId, (ctx) => manage.decideHeldActions(ctx, ids, "reject"))
+}

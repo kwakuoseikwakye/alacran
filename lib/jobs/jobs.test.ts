@@ -5,9 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { editJob, parseJobs, parsePolicies, type Job, type Policy } from "./definitions"
 import { parseReport, runScript } from "./runner"
 import { approvePolicy, checkPolicy, parseTemplate, processSends, render, sendTest, type Mail } from "./send-lane"
-import { jobStore, type RunEntry } from "./store"
+import { jobStore, jobsDir, type RunEntry } from "./store"
 import { isJobDue, runDueJobsImpl, runJob } from "./sweep"
-import { openFlagsFrom, readJobsView } from "./view"
+import { openFlagCount, openFlagsFrom, openHeld, readJobsView } from "./view"
+import { decideHeld, recordHolds } from "./held"
 import { approve, markHandled, setJobMode } from "./manage"
 
 let root: string
@@ -112,6 +113,39 @@ describe("runner", () => {
     expect(parseReport("not json").error).toBe("The job wrote a report that isn't valid JSON.")
     expect(parseReport('{"did": "x"}').error).toMatch(/wrong shape/)
     expect(parseReport(null)).toEqual({ report: null, error: null })
+  })
+
+  it("AC1: accepts valid held steps and rejects the whole report for one malformed entry", () => {
+    const mail = { to: " Ama@X.com ", subject: "Your invoice", body: "Hi Ama" }
+    const ok = parseReport(
+      JSON.stringify({
+        send: [{ policy: "invite", to: "a@x.com" }],
+        hold: [
+          { row: "publication", title: "Email Ama", detail: "One-off", mail },
+          { row: "money", title: "Pay the printer", detail: "£120" },
+          { row: "credentials", title: "Give Kofi access", detail: "Drive" },
+        ],
+      })
+    )
+    expect(ok.error).toBeNull()
+    expect(ok.report?.hold).toHaveLength(3)
+    expect(ok.report?.hold[0].mail?.to).toBe("ama@x.com")
+    expect(parseReport('{"did":["x"]}').report?.hold).toEqual([])
+
+    const bad = (hold: object, reason: RegExp) => {
+      const parsed = parseReport(JSON.stringify({ send: [{ policy: "invite", to: "a@x.com" }], hold: [{ row: "money", title: "fine", detail: "" }, hold] }))
+      expect(parsed.report).toBeNull()
+      expect(parsed.error).toMatch(/^The job's report has the wrong shape: /)
+      expect(parsed.error).toMatch(reason)
+    }
+    bad({ row: "legal", title: "t", detail: "d" }, /./)
+    bad({ row: "publication", title: "t", detail: "d", mail: { ...mail, to: "a@x.com, b@x.com" } }, /usable email address/)
+    bad({ row: "publication", title: "t", detail: "d", mail: { ...mail, subject: "--confirm" } }, /dash/)
+    bad({ row: "publication", title: "t", detail: "d", mail: { ...mail, body: "-x" } }, /dash/)
+    bad({ row: "publication", title: "t", detail: "d", mail: { ...mail, subject: "a\nBcc: x@y.com" } }, /one line/)
+    bad({ row: "money", title: "t", detail: "d", mail }, /Only a publication hold/)
+    bad({ row: "money", title: "x".repeat(301), detail: "d" }, /./)
+    bad({ row: "money", title: "t", detail: "x".repeat(2001) }, /./)
   })
 })
 
@@ -296,6 +330,57 @@ describe("sweep", () => {
     expect(send).not.toHaveBeenCalled()
   })
 
+  const HOLDS = [
+    { row: "publication", title: "Email Ama", detail: "One-off", mail: { to: "ama@x.com", subject: "Hello", body: "Hi Ama" } },
+    { row: "money", title: "Pay the printer", detail: "£120" },
+  ]
+  const holdScript = () => script(`cat > "$ALACRAN_REPORT" <<'EOF'\n${JSON.stringify({ did: ["checked"], hold: HOLDS })}\nEOF`)
+
+  it("AC2: a live run stores each held step in app data, sends nothing, and says how many wait", async () => {
+    await holdScript()
+    const store = jobStore(storeDir)
+    const send = vi.fn()
+    const entry = await runJob(root, job({ mode: "live" }), store, { send, now: () => new Date("2026-10-26T09:00:00Z") })
+    expect(entry.status).toBe("ok")
+    expect(entry.message).toBe("Ran, 2 waiting for your OK")
+    expect(entry.holds?.map((h) => h.result)).toEqual(["held", "held"])
+    expect(send).not.toHaveBeenCalled()
+    const held = await store.readHeld()
+    expect(held).toHaveLength(2)
+    expect(held[0]).toMatchObject({ jobId: "followup", runId: entry.runId, row: "publication", title: "Email Ama", detail: "One-off", mail: HOLDS[0].mail, createdAt: "2026-10-26T09:00:00.000Z", status: "pending" })
+    expect(held[1]).toMatchObject({ row: "money", status: "pending" })
+    expect(held[1].mail).toBeUndefined()
+    // The queue lives in the store directory, never in the company folder.
+    expect(storeDir.startsWith(root)).toBe(false)
+  })
+
+  it("AC2: a failed run holds nothing; AC4: a second day's identical run doesn't add duplicates", async () => {
+    await script(`echo '${JSON.stringify({ hold: HOLDS })}' > "$ALACRAN_REPORT"; exit 1`)
+    const store = jobStore(storeDir)
+    expect((await runJob(root, job({ mode: "live" }), store)).status).toBe("failed")
+    await expect(store.readHeld()).resolves.toEqual([])
+    await holdScript()
+    await runJob(root, job({ mode: "live" }), store)
+    const again = await runJob(root, job({ mode: "live" }), store)
+    expect(again.holds?.map((h) => h.result)).toEqual(["already-waiting", "already-waiting"])
+    expect(again.message).toBe("Ran, 2 waiting for your OK")
+    expect(await store.readHeld()).toHaveLength(2)
+  })
+
+  it("AC3: a practice run records 'would hold' and creates nothing anyone can approve", async () => {
+    await holdScript()
+    const store = jobStore(storeDir)
+    const send = vi.fn()
+    const entry = await runJob(root, job({ mode: "shadow" }), store, { send })
+    expect(entry.message).toBe("Practice run, would hold 2")
+    expect(entry.holds?.map((h) => h.result)).toEqual(["would-hold", "would-hold"])
+    expect(await store.readHeld()).toEqual([])
+    expect((await readFile(path.join(storeDir, "runs.jsonl"), "utf-8"))).toContain("would-hold")
+    // Nothing from a practice run has an id, so the server has nothing to approve.
+    expect(await decideHeld(store, [entry.runId], "approve", send)).toMatchObject({ sent: 0, skipped: 1 })
+    expect(send).not.toHaveBeenCalled()
+  })
+
   it("the tick runs due jobs only, once", async () => {
     await writeFile(path.join(root, "definitions/jobs.yaml"), "jobs:\n  - { id: followup, run: scripts/followup.sh, at: '08:00' }\n")
     await script(`echo '{"did":["ok"]}' > "$ALACRAN_REPORT"`)
@@ -331,6 +416,45 @@ describe("view and manage", () => {
       ["new#0"]
     )
     expect(flags.map((f) => f.item)).toEqual(["c"])
+  })
+
+  it("AC12: the badge counts open flags plus open held steps, and a broken queue counts 0 without hiding flags", async () => {
+    const store = jobStore(jobsDir("acme", storeDir))
+    await store.appendRun(run({ flagged: [{ item: "row 7", reason: "x" }] }))
+    await recordHolds(store, { jobId: "followup", runId: "r1", entries: [{ row: "money", title: "a", detail: "" }, { row: "credentials", title: "b", detail: "" }], now: new Date() })
+    expect(await openFlagCount("acme", storeDir)).toBe(3)
+    await writeFile(path.join(jobsDir("acme", storeDir), "held.json"), "[broken")
+    expect(await openFlagCount("acme", storeDir)).toBe(1)
+    expect(await openHeld("acme", storeDir)).toEqual({ ok: false })
+  })
+
+  it("AC12: every Approvals badge sum site counts through openFlagCount, so the totals agree", async () => {
+    const app = path.resolve(__dirname, "../..")
+    for (const file of ["lib/os/pending-approvals.ts", "app/layout.tsx", "app/c/[companyId]/layout.tsx"]) {
+      expect(await readFile(path.join(app, file), "utf-8"), file).toMatch(/openFlagCount\(/)
+    }
+  })
+
+  it("AC13: decided held steps stay readable as history under their own job", async () => {
+    await writeFile(path.join(root, "definitions/jobs.yaml"), "jobs:\n  - { id: followup, run: scripts/followup.sh, at: '08:00' }\n  - { id: other, run: scripts/other.sh, at: '09:00' }\n")
+    const store = jobStore(jobsDir("acme", storeDir))
+    const at = new Date()
+    const mk = (title: string, mail = false) => ({ row: "publication" as const, title, detail: "", ...(mail ? { mail: { to: `${title}@x.com`, subject: "s", body: "b" } } : {}) })
+    await recordHolds(store, { jobId: "followup", runId: "r1", entries: [mk("sent", true), mk("failed", true), mk("approved"), mk("rejected")], now: at })
+    await recordHolds(store, { jobId: "other", runId: "r2", entries: [mk("elsewhere")], now: at })
+    const ids = Object.fromEntries((await store.readHeld()).map((h) => [h.title, h.id]))
+    await decideHeld(store, [ids.sent], "approve", async () => {})
+    await decideHeld(store, [ids.failed], "approve", async () => {
+      throw new Error("nope")
+    })
+    await decideHeld(store, [ids.approved], "approve", async () => {})
+    await decideHeld(store, [ids.rejected], "reject", async () => {})
+    const view = await readJobsView("acme", root, at, storeDir)
+    if (!view.ok) throw new Error("view")
+    const followup = view.jobs.find((j) => j.id === "followup")!
+    expect(followup.held.map((h) => `${h.title}:${h.status}`).sort()).toEqual(["approved:approved", "failed:failed", "rejected:rejected", "sent:sent"])
+    expect(view.jobs.find((j) => j.id === "other")!.held.map((h) => h.title)).toEqual(["elsewhere"])
+    expect(view.heldError).toBe(false)
   })
 
   it("marks a job missed when it was known before yesterday and hasn't run since", async () => {

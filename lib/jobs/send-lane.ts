@@ -15,7 +15,7 @@ import { outlookScriptPath } from "../outlook/outlook"
  * person instead of a guess.
  */
 export const DAY_MS = 24 * 60 * 60 * 1000
-const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/
+export const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/
 
 export function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex")

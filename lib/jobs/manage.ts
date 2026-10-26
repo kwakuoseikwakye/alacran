@@ -7,6 +7,7 @@ import { editJob, JOBS_FILE, readJobs, readPolicies } from "./definitions"
 import { approvePolicy, revokePolicy, sendTest, type SendFn } from "./send-lane"
 import { jobStore, jobsDir } from "./store"
 import { runJobNow, type JobDeps } from "./sweep"
+import { decideHeld, decideMessage } from "./held"
 
 /**
  * The owner's actions on the Jobs page, kept out of the "use server" file so tests can drive them
@@ -114,4 +115,26 @@ export async function markHandled(ctx: Ctx, key: string): Promise<Result> {
   if (!/^[\w:.-]+#\d+$/.test(key)) return fail("That item isn't valid.")
   await jobStore(jobsDir(ctx.companyId, ctx.storeRoot)).markHandled(key)
   return { ok: true, message: "Marked handled." }
+}
+
+const HELD_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+
+/**
+ * The owner's decision on held steps, for exactly the ids they were shown (never "whatever is
+ * pending now"). Approving a held mail sends that stored message; nothing else is carried out.
+ */
+export async function decideHeldActions(ctx: Ctx, ids: unknown, decision: "approve" | "reject", send?: SendFn): Promise<Result> {
+  if (!Array.isArray(ids) || ids.length === 0 || ids.length > 200 || !ids.every((id) => typeof id === "string" && HELD_ID.test(id))) {
+    return fail("That item isn't valid.")
+  }
+  const store = jobStore(jobsDir(ctx.companyId, ctx.storeRoot))
+  let r
+  try {
+    r = await decideHeld(store, ids as string[], decision, send)
+  } catch {
+    return fail("The list of held steps can't be read right now, so nothing was changed or sent.")
+  }
+  const message = decideMessage(r)
+  const tail = r.recorded ? " Alacrán can't carry these steps out itself: you do them." : ""
+  return { ok: r.failed === 0, message: message + tail }
 }

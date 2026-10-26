@@ -13,6 +13,8 @@ import {
 } from "@/lib/jobs/actions"
 import type { JobsView, JobView, PolicyView } from "@/lib/jobs/view"
 import { JobFlagList } from "./job-flag-list"
+import { heldStatusWords } from "./held-action-list"
+import { rowWords } from "@/lib/jobs/held-words"
 
 type Notice = { ok: boolean; message: string } | null
 type Act = (fn: () => Promise<{ ok: boolean; message: string }>, done?: () => void) => void
@@ -138,6 +140,22 @@ function JobCard({ companyId, job }: { companyId: string; job: JobView }) {
           </ul>
         </details>
       )}
+      {job.held.length > 0 && (
+        <details className="text-sm">
+          <summary className="cursor-pointer text-os-muted">Held for your OK</summary>
+          <ul className="mt-2 space-y-2">
+            {job.held.map((h) => (
+              <li key={h.id} className="border-l-2 border-os-border pl-3">
+                <p className="text-os-text">
+                  {h.createdAt.slice(0, 10)} · {rowWords(h)} · {h.title}
+                </p>
+                {h.mail && <p className="text-os-dim break-all">To {h.mail.to}: {h.mail.subject}</p>}
+                <p className={h.status === "failed" ? "text-os-err" : "text-os-muted"}>{heldStatusWords(h)}</p>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
     </article>
   )
 }
@@ -219,6 +237,7 @@ export function JobsBoard({ companyId, view }: { companyId: string; view: JobsVi
   const invalid = [...view.invalidJobs.map((i) => ({ ...i, file: "jobs" })), ...view.invalidPolicies.map((i) => ({ ...i, file: "send policies" }))]
   return (
     <div className="space-y-8">
+      {view.heldError && <p className="text-sm text-os-err">The list of steps jobs held for your OK can&apos;t be read right now, so their history is missing.</p>}
       {view.flags.length > 0 && (
         <section aria-labelledby="jobs-need-you" className="space-y-3">
           <h2 id="jobs-need-you" className="text-lg font-semibold text-os-text">Needs you</h2>
