@@ -200,7 +200,7 @@ Disclosure: **Example · illustrative scenario, not a customer result**
 
 **You stay in control:** The summary arrives in Approvals as a draft to read. Nothing is saved until you approve it.
 
-Link: **Learn the daily routine** → `/how-to-use`
+Link: **See the morning briefing** → `/how-to-use#start-with-the-morning-briefing`
 
 ### 2. A customer writes back and you do not want to start over.
 
@@ -222,11 +222,11 @@ Disclosure: **Example · illustrative scenario, not a customer result**
 
 **The situation:** You changed what you charge in a meeting last week, but your AI is still working from the old price.
 
-**You ask:** Press “Save what we learned” at the end of a session with your AI, once you have settled something new.
+**You do:** Press “Save what we learned” at the end of a session with your AI, once you have settled something new.
 
 **You get:** Proposed changes to your company facts, each marked with where it came from. Alacrán also shows which parts of your company profile look out of date, and the Brain map shows what your AI always knows and what it is unsure about.
 
-**You stay in control:** You tick the changes you agree with. Changes to company facts are always reviewed one by one, never approved in bulk.
+**You stay in control:** You tick the changes you agree with, and Alacrán applies them for you to check.
 
 Link: **Record the reason for a decision** → `/how-to-use#decisions`
 
@@ -236,13 +236,13 @@ Disclosure: **Example · illustrative scenario, not a customer result**
 
 **The situation:** Every draft comes back a little too formal, and you keep asking for the same change.
 
-**You ask:** Press “Learn from my feedback” on Home. Alacrán offers it after you have asked for changes to the same kind of work three times.
+**You do:** Press “Learn from my feedback” on Home. Alacrán offers it after you have asked for changes to the same kind of work three times.
 
 **You get:** Short preference lines that quote your own words, kept in a plain file you can read.
 
 **You stay in control:** You approve each line. Delete a line and it stops applying.
 
-Link: **Learn the daily routine** → `/how-to-use`
+Link: **See how to ask for changes** → `/how-to-use#review-proposed-work`
 
 #### Departments
 

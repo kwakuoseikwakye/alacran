@@ -600,11 +600,22 @@ def test_scenarios() -> list[str]:
     if len(items) < 4:
         out.append(f"/: {len(items)} scenarios, want at least 4")
     for n, item in enumerate(items, 1):
-        for label in ("The situation", "You ask", "You get", "You stay in control"):
+        for label in ("The situation", "You get", "You stay in control"):
             if label not in item:
                 out.append(f"/: scenario {n} has no '{label}'")
+        # What goes in the box must match what it is: a prompt is "You ask", a button press is "You do".
+        box = re.search(r"<figcaption>(You ask|You do)</figcaption><blockquote><p>(.*?)</p>", item, re.S)
+        if not box:
+            out.append(f"/: scenario {n} has no 'You ask' or 'You do' box")
+        elif (box[1] == "You do") != box[2].startswith("Press "):
+            out.append(f"/: scenario {n} puts {box[2][:40]!r} under {box[1]!r}; a button press is 'You do', a prompt is 'You ask'")
         if item.count('<a class="go"') != 1:
             out.append(f"/: scenario {n} needs exactly one next-step link")
+    links = re.findall(r'<li class="scn reveal">.*?<a class="go" href="([^"]+)">(.*?) <span', content, re.S)
+    for key, what in ((1, "text"), (0, "target")):
+        seen = [m[key] for m in links]
+        if len(set(seen)) != len(seen):
+            out.append(f"/: two scenarios share the same next-step link {what}")
     return out
 
 

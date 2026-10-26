@@ -324,7 +324,7 @@ def render_flow(bl: list[dict]) -> str:
                 out.append(cmd_block(m[1]))
             elif m := re.match(r"^(Eyebrow|Disclosure): \*\*(.+)\*\*$", s):
                 out.append(f'<p class="{m[1].lower()}">{inl(m[2])}</p>')
-            elif m := re.match(r"^\*\*(Try asking|You ask):\*\* (.+)$", s):
+            elif m := re.match(r"^\*\*(Try asking|You ask|You do):\*\* (.+)$", s):
                 out.append(prompt(m[1], [m[2]]))
             elif m := re.match(r"^\*\*([^*]+?):\*\* (.+)$", s):
                 out.append(f'<p class="lab"><span>{inl(m[1])}</span> {inl(m[2])}</p>')
