@@ -2,6 +2,8 @@
 
 Alacrán becomes useful when company knowledge supports real work. These examples show how to move from a business question to an output you can review.
 
+Most people stall because they do not know what to ask first. Each example starts with a situation you will recognise, shows what you ask, and ends with something you review before anything is kept.
+
 The examples below use illustrative scenarios, not customer results.
 
 ## Prepare for the week.
