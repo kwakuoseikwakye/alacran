@@ -4,6 +4,8 @@
 
 Catch up on connected messages, identify inquiries awaiting attention, and prepare replies using your company’s recorded information.
 
+**Why you need this:** Without it, finding who is waiting on a reply means opening every inbox and chat in turn. Here the catch-up reads your connected messages and prepares drafts, and you send each reply yourself.
+
 Download Alacrán
 
 [**Mac**
@@ -28,25 +30,27 @@ Example company · Sample data
 
 ## Catch up across connected services.
 
-Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
+Messages arrive in many places, and something important is easy to miss. Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
 
 ## See who may need a reply.
 
-Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
+Not every message needs you, and the ones that do should not get buried. Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
 
 ## Prepare a reply with the business facts available.
 
-Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
+A fast reply is only useful if it is right about names, prices, and commitments. Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
 
 ## Keep a record of the conversation.
 
-Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
+A reply you sent last month is easy to forget when the customer writes again. Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
 
 Try asking
 
 Find customer inquiries that appear to need a response. Draft replies using our documented service information, and flag anything that requires my decision.
 
 ## How the standard reply workflow works
+
+A set order for catching up keeps replies from depending on who remembers.
 
 Connect a supported inbox or messaging source.
 

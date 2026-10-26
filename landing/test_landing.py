@@ -766,6 +766,35 @@ def test_mac_dialog_scope() -> list[str]:
     return out
 
 
+# An independent copy of each department page's problem-first openers (one per section) and its "why you need this" line.
+DEPT_OPENERS = {
+    "/departments/customers": ["It is easy to lose track of which prospects are waiting on you", "Researching every prospect by hand takes time",
+                               "Before you write to a customer you have to remember what was said last time", "A record nobody updates stops being useful"],
+    "/departments/finances": ["Your numbers are probably spread across statements", "One month’s figure rarely tells you",
+                              "Costs creep up quietly", "A wrong number that slips into your records is hard to spot later"],
+    "/departments/content": ["A generic post is easy to scroll past", "Ideas, drafts, and half-finished edits tend to end up scattered",
+                             "Copy, previews, and visuals often get prepared in different places", "It is easy to lose track of what is approved",
+                             "Posting more often is not the same as learning what works"],
+    "/departments/messages": ["Messages arrive in many places", "Not every message needs you", "A fast reply is only useful if it is right",
+                              "A reply you sent last month is easy to forget"],
+}
+
+
+def test_department_copy() -> list[str]:
+    out = []
+    for route, openers in DEPT_OPENERS.items():
+        content = htmllib.unescape(page_html(route))
+        if "Why you need this:" not in region(content, "main"):
+            out.append(f"{route}: no 'Why you need this' line")
+        for o in openers:
+            m = re.search(rf"<p>{re.escape(o)}", content)
+            if not m:
+                out.append(f"{route}: a section does not open with its problem sentence: {o[:40]!r}")
+            elif "<h2>" not in content[max(0, m.start() - 400):m.start()]:
+                out.append(f"{route}: {o[:40]!r} is not the first paragraph under a heading")
+    return out
+
+
 def main() -> int:
     print("==================================================================")
     print("Alacrán Landing Page QA & Responsive Verification")
@@ -789,6 +818,7 @@ def main() -> int:
         ("No undisclosed third-party loads", test_third_party_loads),
         ("Static accessibility: focus outlines kept", test_a11y_static),
         ("Terms page has its text and headings", test_terms_page),
+        ("Department pages open each section with the visitor's problem", test_department_copy),
         ("Mac help dialog says what its command is for, on every page", test_mac_dialog_scope),
         ("Numbered steps are one box each, Mac copy box inside step 4", test_steps_layout),
     ]

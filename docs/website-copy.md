@@ -1017,25 +1017,29 @@ Eyebrow: **Departments / Customers**
 
 Research prospects, track opportunities, and prepare follow-ups from what your business already knows. Keep the customer record and the proposed next step in the same workspace.
 
+**Why you need this:** Without it, who said what lives in your inbox, your notes and your memory, and every follow-up starts with digging. Here the customer record and the proposed next step sit together, so your AI drafts from what is already saved instead of from a blank chat.
+
 **Download Alacrán** · **See customer workflow examples** → `/use-cases`
 
 ## See where each opportunity stands.
 
-Track prospects through Discovery, Evaluation, Proposal, and Won or Lost. Review recorded deal values, contact history, and the opportunities that need attention.
+It is easy to lose track of which prospects are waiting on you and which have gone quiet. Track prospects through Discovery, Evaluation, Proposal, and Won or Lost. Review recorded deal values, contact history, and the opportunities that need attention.
 
 ## Research with a relevant offer in mind.
 
-Give your AI a prospect, a set of websites, or a description of the customers you want to reach. Use your company profile to prepare relevant research and an outreach angle for review.
+Researching every prospect by hand takes time, and a message that does not match what you offer is easy to dismiss. Give your AI a prospect, a set of websites, or a description of the customers you want to reach. Use your company profile to prepare relevant research and an outreach angle for review.
 
 ## Prepare a follow-up with the history available.
 
-Use saved notes and approved business information to draft the next message. Check the details and commitments before contacting the customer.
+Before you write to a customer you have to remember what was said last time. Use saved notes and approved business information to draft the next message. Check the details and commitments before contacting the customer.
 
 ## Keep the record useful for next time.
 
-Log contact activity and update the lead stage as the conversation develops. Add records manually or review proposed updates from managed workflows. Export leads when you need them elsewhere.
+A record nobody updates stops being useful, so each conversation starts cold. Log contact activity and update the lead stage as the conversation develops. Add records manually or review proposed updates from managed workflows. Export leads when you need them elsewhere.
 
 ## A practical workflow
+
+A set order of steps keeps follow-ups from depending on memory.
 
 1. Add or select a prospect.
 2. Review the available context and request research or a draft.
@@ -1085,25 +1089,27 @@ Eyebrow: **Departments / Finances**
 
 Bring income, expenses, and cash information into a working view of your business. Track changes, investigate costs, and prepare questions for a more informed financial review.
 
+**Why you need this:** Without it, your income, expenses and cash sit in separate places, and every question to your AI means pasting numbers in again. Here the records you keep are the ones your AI reads, and what it proposes waits for your approval.
+
 **Download Alacrán** · **Explore financial review examples** → `/use-cases`
 
 ## Bring the records together.
 
-Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
+Your numbers are probably spread across statements, payment tools and spreadsheets. Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
 
 ## Understand the recorded trend.
 
-Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
+One month’s figure rarely tells you whether things are getting better or worse. Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
 
 Estimates depend on the completeness of your records and their assumptions. They are not a forecast of guaranteed future results.
 
 ## Investigate potential savings.
 
-Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
+Costs creep up quietly, and nobody has time to read every line. Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
 
 ## Review financial changes carefully.
 
-Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
+A wrong number that slips into your records is hard to spot later. Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
 
 Try asking:
 
@@ -1151,29 +1157,31 @@ Eyebrow: **Departments / Content & social**
 
 Develop ideas, prepare drafts, and keep the review process connected to your company’s voice and priorities. Track what is ready and what has already been published.
 
+**Why you need this:** Without it, every post starts from a blank prompt and you explain your audience and tone again each time. Here your company facts and tone guidance are saved once, and you review each draft before approving it.
+
 **Download Alacrán** · **See a content workflow** → `/use-cases`
 
 ## Start with your audience and your offer.
 
-Use company facts, audience information, and tone guidance to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
+A generic post is easy to scroll past, and writing a good brief every time is slow. Use company facts, audience information, and tone guidance to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
 
 ## Move from idea to reviewed draft.
 
-Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
+Ideas, drafts, and half-finished edits tend to end up scattered across documents and chats. Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
 
 ## Prepare the details in one place.
 
-Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
+Copy, previews, and visuals often get prepared in different places. Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
 
 ## Keep publication status visible.
 
-Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
+It is easy to lose track of what is approved, what is scheduled, and what is actually live. Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
 
 Approval, scheduling, and publication are different states. Confirm what your configured workflow actually does before treating a post as live.
 
 ## Learn from the available signals.
 
-Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
+Posting more often is not the same as learning what works. Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
 
 Try asking:
 
@@ -1221,29 +1229,33 @@ Eyebrow: **Departments / Messages**
 
 Catch up on connected messages, identify inquiries awaiting attention, and prepare replies using your company’s recorded information.
 
+**Why you need this:** Without it, finding who is waiting on a reply means opening every inbox and chat in turn. Here the catch-up reads your connected messages and prepares drafts, and you send each reply yourself.
+
 **Download Alacrán** · **Explore messaging connections** → `/integrations`
 
 ## Catch up across connected services.
 
-Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
+Messages arrive in many places, and something important is easy to miss. Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
 
 ## See who may need a reply.
 
-Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
+Not every message needs you, and the ones that do should not get buried. Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
 
 ## Prepare a reply with the business facts available.
 
-Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
+A fast reply is only useful if it is right about names, prices, and commitments. Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
 
 ## Keep a record of the conversation.
 
-Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
+A reply you sent last month is easy to forget when the customer writes again. Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
 
 Try asking:
 
 > Find customer inquiries that appear to need a response. Draft replies using our documented service information, and flag anything that requires my decision.
 
 ## How the standard reply workflow works
+
+A set order for catching up keeps replies from depending on who remembers.
 
 1. Connect a supported inbox or messaging source.
 2. Review the catch-up summary and inquiries.
