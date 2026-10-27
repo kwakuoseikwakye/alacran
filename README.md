@@ -396,9 +396,10 @@ else:
 - **The app detects what changed; the agent never commits.** Alacrán diffs
   the result itself and shows it to you. Approval is a human step by
   construction, not a setting you could accidentally turn off.
-- **A scheduled run is the same run, minus the click.** Scheduling adds one
-  timer and changes nothing else: same prompt, same tool allowlist, same
-  per-company lock, same diff.
+- **A scheduled run is the same run, minus the click** — with one exception:
+  if you set a monthly limit and this month's estimated cost has reached it,
+  Alacrán won't start it. Same prompt, same tool allowlist, same per-company
+  lock, same diff.
 - **Auto-commit is opt-in, per schedule, and never the default.** Even with
   it on, the agent still doesn't commit: Alacrán diffs the result itself and
   makes the same single-file-scoped commit it would make if you'd clicked

@@ -109,7 +109,7 @@ async function update<T>(file: string, fallback: T, change: (value: T) => T): Pr
   })
 }
 
-async function readLines<T>(file: string): Promise<T[]> {
+export async function readLines<T>(file: string): Promise<T[]> {
   let raw: string
   try {
     raw = await readFile(file, "utf-8")
@@ -128,7 +128,7 @@ async function readLines<T>(file: string): Promise<T[]> {
   return out
 }
 
-async function appendLine(file: string, value: unknown): Promise<void> {
+export async function appendLine(file: string, value: unknown): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true })
   await withFileLock(file, () => appendFile(file, JSON.stringify(value) + "\n", "utf-8"))
 }

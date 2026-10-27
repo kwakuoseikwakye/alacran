@@ -5,12 +5,15 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import {
   approvePolicyAction,
+  removeMonthlyLimitAction,
   revokePolicyAction,
   runJobNowAction,
   sendTestAction,
   setJobEnabledAction,
   setJobModeAction,
+  setMonthlyLimitAction,
 } from "@/lib/jobs/actions"
+import { jobMonthWords, SPENDING_COPY, spendingHeadline, usd, type SpendingView } from "@/lib/jobs/cost-words"
 import type { JobsView, JobView, PolicyView } from "@/lib/jobs/view"
 import { JobFlagList } from "./job-flag-list"
 import { heldStatusWords, rowWords, shortDate } from "@/lib/jobs/held-words"
@@ -229,9 +232,100 @@ function PolicyCard({ companyId, policy }: { companyId: string; policy: PolicyVi
   )
 }
 
-export function JobsBoard({ companyId, view, now }: { companyId: string; view: JobsView; now: number }) {
+function SpendingSection({ companyId, spending, scriptIds }: { companyId: string; spending: SpendingView; scriptIds: string[] }) {
+  const [act, pending, notice] = useAct()
+  const [value, setValue] = useState("")
+  const limit = spending.limit
+  const headline = spendingHeadline(spending)
+  const hasLimit = limit.ok && limit.usd !== null
+  return (
+    <section aria-labelledby="jobs-spending" className="space-y-3">
+      <h2 id="jobs-spending" className="text-lg font-semibold text-os-text">What AI runs cost this month</h2>
+      <div className="rounded-lg border border-os-border bg-os-surface p-4 space-y-3 text-sm">
+        <p className="text-os-text">
+          {headline.before}
+          {headline.figure && <b className="text-base">{headline.figure}</b>}
+          {headline.after}
+        </p>
+        {spending.reached && (
+          // Mixed toward the text colour: the light theme's warning on this surface is just under AA at 14px.
+          <p className="font-medium text-[color-mix(in_oklab,var(--color-os-warn)_80%,var(--color-os-text))]">
+            Limit reached. Alacrán has stopped starting scheduled runs and session notes on its own until next month or until you raise it. You can still press Run yourself.
+          </p>
+        )}
+        <p className="text-os-muted">{SPENDING_COPY.estimate} {SPENDING_COPY.scope}</p>
+        {spending.unknownRuns > 0 && (
+          <p className="text-os-muted">
+            {spending.unknownRuns} {spending.unknownRuns === 1 ? "run" : "runs"} this month with a cost Alacrán couldn&apos;t see.
+          </p>
+        )}
+        {!limit.ok && <p className="text-os-err">The monthly limit in definitions/budget.yaml can&apos;t be read: {limit.reason} Until it&apos;s fixed, Alacrán won&apos;t start AI runs on its own.</p>}
+
+        {spending.jobs.length > 0 ? (
+          <ul className="divide-y divide-os-border">
+            {spending.jobs.map((j) => (
+              <li key={j.job} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2">
+                <span className="min-w-0 text-os-text [overflow-wrap:anywhere]">{j.label}</span>
+                <span className="text-os-muted">
+                  {jobMonthWords(j)} · last run {j.lastCostUsd === null ? "cost not known" : usd(j.lastCostUsd)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-os-muted">No AI runs this month yet.</p>
+        )}
+
+        <form
+          className="flex flex-wrap items-center gap-2"
+          onSubmit={(e) => {
+            e.preventDefault()
+            act(() => setMonthlyLimitAction(companyId, value), () => setValue(""))
+          }}
+        >
+          <label htmlFor="jobs-monthly-limit" className="text-os-muted">Monthly limit in US dollars</label>
+          <input
+            id="jobs-monthly-limit"
+            type="number"
+            inputMode="decimal"
+            min="0"
+            step="0.01"
+            required
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder={hasLimit ? String(limit.usd) : "e.g. 25"}
+            className="h-8 w-28 rounded-md border border-os-border bg-os-bg px-2 text-sm text-os-text outline-none focus-visible:border-ring! focus-visible:ring-[3px]! focus-visible:ring-ring/50"
+          />
+          <Button size="sm" variant="outline" type="submit" disabled={pending} title="Save this amount in the company's definitions. Once this month's estimated cost reaches it, Alacrán stops starting AI runs on its own.">
+            Set monthly limit
+          </Button>
+          {(hasLimit || !limit.ok) && (
+            <Button size="sm" variant="ghost" type="button" disabled={pending} title="Take the limit away. Scheduled runs and session notes start whatever they cost." onClick={() => act(() => removeMonthlyLimitAction(companyId))}>
+              Remove limit
+            </Button>
+          )}
+        </form>
+        {limit.ok && <p className="text-os-muted">{hasLimit ? SPENDING_COPY.softLimit : SPENDING_COPY.noLimit}</p>}
+        {scriptIds.length > 0 && (
+          <p className="text-os-dim">
+            Your scripts ({scriptIds.join(", ")}) {SPENDING_COPY.scripts}
+          </p>
+        )}
+        <NoticeLine notice={notice} />
+      </div>
+    </section>
+  )
+}
+
+export function JobsBoard({ companyId, view, spending, now }: { companyId: string; view: JobsView; spending: SpendingView; now: number }) {
+  const spendingSection = <SpendingSection companyId={companyId} spending={spending} scriptIds={view.ok ? view.jobs.map((j) => j.id) : []} />
   if (!view.ok) {
-    return <p className="text-sm text-os-err">The jobs file needs fixing: {view.reason}</p>
+    return (
+      <div className="space-y-8">
+        <p className="text-sm text-os-err">The jobs file needs fixing: {view.reason}</p>
+        {spendingSection}
+      </div>
+    )
   }
   const invalid = [...view.invalidJobs.map((i) => ({ ...i, file: "jobs" })), ...view.invalidPolicies.map((i) => ({ ...i, file: "send policies" }))]
   return (
@@ -268,6 +362,8 @@ export function JobsBoard({ companyId, view, now }: { companyId: string; view: J
           view.policies.map((p) => <PolicyCard key={p.id} companyId={companyId} policy={p} />)
         )}
       </section>
+
+      {spendingSection}
 
       {invalid.length > 0 && (
         <section aria-labelledby="jobs-invalid" className="space-y-2">

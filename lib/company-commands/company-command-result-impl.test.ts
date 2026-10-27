@@ -74,6 +74,38 @@ describe("getCompanyCommandResultImpl", () => {
     expect(result).toMatchObject({ changed: false, message: expect.stringMatching(/isn't installed on this computer yet/) })
   })
 
+  it("still explains a sign-in failure wrapped in a JSON result, in words rather than JSON (v251)", async () => {
+    await mkdir(path.join(agentRoot, "docs/retros"), { recursive: true })
+    await writeFile(
+      path.join(dataDir, "retro.run.json"),
+      JSON.stringify({ commandId: "retro", outputKind: "new-file-in-dir", outputPath: "docs/retros", before: [] })
+    )
+    await writeFile(
+      path.join(dataDir, "retro.log"),
+      JSON.stringify({ type: "result", subtype: "success", is_error: true, total_cost_usd: 0, result: "Not logged in · Please run /login" }) + "\n"
+    )
+
+    const result = await getCompanyCommandResultImpl("retro", dataDir, agentRoot)
+
+    expect(result).toMatchObject({ changed: false, message: expect.stringMatching(/needs you to sign in/) })
+  })
+
+  it("does not show a successful run's raw JSON result as its explanation (v251)", async () => {
+    await mkdir(path.join(agentRoot, "docs/retros"), { recursive: true })
+    await writeFile(
+      path.join(dataDir, "retro.run.json"),
+      JSON.stringify({ commandId: "retro", outputKind: "new-file-in-dir", outputPath: "docs/retros", before: [] })
+    )
+    await writeFile(
+      path.join(dataDir, "retro.log"),
+      JSON.stringify({ type: "result", subtype: "success", is_error: false, total_cost_usd: 0.01, result: "Nothing to add." }) + "\n"
+    )
+
+    const result = await getCompanyCommandResultImpl("retro", dataDir, agentRoot)
+
+    expect(result).toMatchObject({ changed: false, message: "No changes produced." })
+  })
+
   it("lists extra files beyond the primary one, sorted, if more than one new file appears", async () => {
     await mkdir(path.join(agentRoot, "docs/decisions"), { recursive: true })
     await writeFile(

@@ -473,3 +473,37 @@ describe("alsoEditScopePatterns", () => {
     }
   })
 })
+
+describe("costReport (v251)", () => {
+  const input = { prompt: "do it", editScopePattern: "notes/**", bashPatterns: [] }
+
+  it("is filled in for Claude Code only; every other executor's cost is not known", () => {
+    expect(AI_EXECUTORS["claude-code"].costReport).not.toBeNull()
+    for (const id of ["kiro", "kimi", "codex", "google-antigravity"] as const) {
+      expect(AI_EXECUTORS[id].costReport).toBeNull()
+    }
+  })
+
+  it("leaves the plain-text argv every other caller reads untouched", () => {
+    const claude = AI_EXECUTORS["claude-code"]
+    expect(claude.buildArgs(input).slice(-2)).toEqual(["--output-format", "text"])
+    expect(claude.resume!.buildArgs(input, "s-1").slice(-2)).toEqual(["--output-format", "text"])
+  })
+
+  it("asks for a json result with exactly the same scope as buildArgs and resume", () => {
+    const claude = AI_EXECUTORS["claude-code"]
+    const plain = claude.buildArgs(input)
+    const cut = plain.indexOf("--output-format")
+    const fresh = claude.costReport!.args(input)
+    expect(fresh.slice(0, cut)).toEqual(plain.slice(0, cut))
+    expect(fresh.slice(cut)).toEqual(["--output-format", "json"])
+
+    const resumed = claude.resume!.buildArgs(input, "s-1")
+    const rcut = resumed.indexOf("--output-format")
+    const costResumed = claude.costReport!.resumeArgs(input, "s-1")
+    expect(costResumed.slice(0, rcut)).toEqual(resumed.slice(0, rcut))
+    expect(costResumed.slice(rcut)).toEqual(["--output-format", "json"])
+    expect(claude.costReport!.resumeArgs(input).slice(0, 1)).toEqual(["--continue"])
+  })
+})
+
