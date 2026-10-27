@@ -100,7 +100,7 @@ export async function writeSessionNoteFromLastConversation(
   isLive: (agentId: string, executorId: string) => boolean = hasLiveAssistant,
   now: () => number = Date.now,
   /** The company's monthly limit on unattended AI runs (v251). Asked only once a note is really due. */
-  checkLimit: (agent: Agent) => Promise<LimitCheck> = (a) => checkMonthlyLimit(a, new Date(now()), dataRoot)
+  checkLimit: (agent: Agent) => Promise<LimitCheck> = (a) => checkMonthlyLimit(a, new Date(now()), dataRoot, " The note is written once the limit lifts.")
 ): Promise<{ started: boolean; message: string; quiet?: boolean }> {
   // Whichever AI this company is set to run on — not a hardcoded one. An
   // executor with no `resume` simply has no supported way to hand a prompt back

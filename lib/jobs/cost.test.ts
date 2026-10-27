@@ -132,7 +132,10 @@ describe("checkMonthlyLimit", () => {
     await recordRunCost(path.join(dataRoot, "acme"), entry(new Date(2026, 9, 4), 1))
     const check = await checkMonthlyLimit(agent(), now, dataRoot)
     expect(check.blocked).toBe(true)
-    if (check.blocked) expect(check.message).toMatch(/limit of \$5\.00 is reached.*Press Run/)
+    if (check.blocked) expect(check.message).toMatch(/limit of \$5\.00 is reached \(estimated so far: .*\)\.$/)
+    // The Run hint is the caller's: only a schedule has a Run button.
+    const forSchedule = await checkMonthlyLimit(agent(), now, dataRoot, " Press Run to start it yourself.")
+    if (forSchedule.blocked) expect(forSchedule.message).toMatch(/\)\. Press Run to start it yourself\.$/)
   })
 
   it("lets runs start again in a new month without anything else", async () => {

@@ -498,7 +498,9 @@ describe("what an automatic session note costs (v251)", () => {
     const { fn, calls } = recordingSpawn()
     const result = await writeSessionNoteFromLastConversation(costAgent(), fn, claude, dataRoot, home, undefined, noted())
     expect(result.started).toBe(false)
-    expect(result.message).toMatch(/limit of \$0\.00 is reached/)
+    expect(result.message).toMatch(/limit of \$0\.00 is reached.*The note is written once the limit lifts\.$/)
+    // Session notes have no Run button.
+    expect(result.message).not.toMatch(/Press Run/)
     expect(calls).toHaveLength(0)
   })
 })

@@ -127,7 +127,9 @@ export type LimitCheck = { blocked: false } | { blocked: true; message: string }
 export async function checkMonthlyLimit(
   agent: { id: string; rootPath: string },
   now: Date,
-  dataRoot: string = COMPANY_COMMANDS_DATA_DIR
+  dataRoot: string = COMPANY_COMMANDS_DATA_DIR,
+  /** What the owner can do about it, appended when the limit is reached. Only a schedule has a Run button. */
+  whatNext = ""
 ): Promise<LimitCheck> {
   const limit = await readMonthlyLimit(agent.rootPath).catch((e: unknown) => ({ ok: false as const, reason: e instanceof Error ? e.message : String(e) }))
   if (!limit.ok) {
@@ -141,14 +143,14 @@ export async function checkMonthlyLimit(
   if (knownUsd < limit.limitUsd) return { blocked: false }
   return {
     blocked: true,
-    message: `Not started: this month's limit of ${usd(limit.limitUsd)} is reached (estimated so far: ${spentAgainst(knownUsd, limit.limitUsd)}). Press Run to start it yourself.`,
+    message: `Not started: this month's limit of ${usd(limit.limitUsd)} is reached (estimated so far: ${spentAgainst(knownUsd, limit.limitUsd)}).${whatNext}`,
   }
 }
 
 /** For the schedule ticker, which knows only the company id. An unknown company isn't blocked here; the run itself refuses it. */
 export async function checkMonthlyLimitById(agentId: string, now: Date): Promise<LimitCheck> {
   const agent = (await getEffectiveAgents()).find((a) => a.id === agentId)
-  return agent ? checkMonthlyLimit(agent, now) : { blocked: false }
+  return agent ? checkMonthlyLimit(agent, now, undefined, " Press Run to start it yourself.") : { blocked: false }
 }
 
 /** What the Jobs page shows. Never throws: an unreadable ledger reads as no runs. */
