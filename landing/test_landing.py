@@ -829,6 +829,9 @@ def test_buttons_and_menus() -> list[str]:
     css = (LANDING_DIR / "v6.css").read_text(encoding="utf-8")
     if "display: block" not in css_rule(css, ".dl .menu .menu-foot"):
         out.append("v6.css: the 'Read the setup guide' link is a grid, so its arrow wraps onto its own line")
+    code = css_rule(css, ".cmd code")
+    if "break-all" in code or "nowrap" not in code or "overflow-x: auto" not in code:
+        out.append("v6.css: a command in its box can break mid-word; it must stay on one line and scroll")
     cta = css_rule(css, ".cta .dl .menu")
     if "min-width: 100%" not in cta or "width: 0" not in cta:
         out.append("v6.css: the open CTA menu sizes the Download button's box, pushing 'Read the setup guide' away")
