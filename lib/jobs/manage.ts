@@ -9,6 +9,7 @@ import { jobStore, jobsDir } from "./store"
 import { runJobNow, type JobDeps } from "./sweep"
 import { decideHeld, decideMessage } from "./held"
 import { appendActions } from "./action-log"
+import { checkMonthlyLimit } from "./cost"
 
 /**
  * The owner's actions on the Jobs page, kept out of the "use server" file so tests can drive them
@@ -40,7 +41,7 @@ export async function setJobEnabled(ctx: Ctx, jobId: string, enabled: boolean): 
  * Set (or, with null, remove) the company's monthly limit on unattended AI runs, as a one-file
  * commit to definitions/budget.yaml. The value arrives from the browser, so it is checked here.
  */
-export async function setMonthlyLimit(ctx: Ctx, raw: string | null): Promise<Result> {
+export async function setMonthlyLimit(ctx: Ctx, raw: string | null, costRoot?: string): Promise<Result> {
   let limit: number | null = null
   if (raw !== null) {
     const text = String(raw).trim().replace(/^\$/, "")
@@ -49,13 +50,13 @@ export async function setMonthlyLimit(ctx: Ctx, raw: string | null): Promise<Res
   }
   const edited = await editMonthlyLimit(ctx.root, limit)
   if (!edited.ok) return fail(edited.reason)
+  if (edited.unchanged) return { ok: true, message: limit === null ? "There's no limit to remove." : "That's already the limit." }
   await commitFile(ctx.root, BUDGET_FILE, limit === null ? "Remove the monthly limit on AI runs" : `Set the monthly limit on AI runs to $${limit}`, ctx.exec ?? defaultExecFile)
-  return {
-    ok: true,
-    message: limit === null
-      ? "Limit removed. Alacrán starts scheduled runs and session notes whatever they cost."
-      : `Limit set to $${limit.toFixed(2)} a month. Once this month's estimated cost reaches it, Alacrán stops starting AI runs on its own.`,
+  if (limit === null) return { ok: true, message: "Limit removed. Alacrán starts scheduled runs and session notes whatever they cost." }
+  if ((await checkMonthlyLimit({ id: ctx.companyId, rootPath: ctx.root }, ctx.now ?? new Date(), costRoot)).blocked) {
+    return { ok: true, message: `Limit set to $${limit.toFixed(2)} a month. This month's estimated cost has already reached it, so Alacrán won't start AI runs on its own until next month or until you raise it.` }
   }
+  return { ok: true, message: `Limit set to $${limit.toFixed(2)} a month. Once this month's estimated cost reaches it, Alacrán stops starting AI runs on its own.` }
 }
 
 export async function runNow(ctx: Ctx, jobId: string, deps: JobDeps = {}): Promise<Result> {

@@ -1,7 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, rm, readFile, writeFile } from "node:fs/promises"
 import { tmpdir } from "node:os"
 import path from "node:path"
+// A test that reached the real company list would depend on this machine's real companies.
+vi.mock("../get-effective-agents", () => ({
+  getEffectiveAgents: async () => {
+    throw new Error("a schedules test reached the real company list")
+  },
+}))
+
 import { isDue, localStamp, setScheduleImpl, runDueSchedulesImpl, readSchedulesStrict, readLastRunsStrict, type Schedule, type LastRun } from "./schedules-impl"
 
 let dir: string
@@ -81,6 +88,9 @@ describe("setScheduleImpl", () => {
   })
 })
 
+// Never the real limit check: it would read this machine's real companies.
+const notLimited = async () => ({ blocked: false as const })
+
 describe("runDueSchedulesImpl", () => {
   it("runs only what's due, with no field values, and doesn't repeat it that day", async () => {
     await setScheduleImpl("acme", "digest", "07:00", false, new Date(2026, 7, 17, 6, 0), schedulesPath)
@@ -92,14 +102,14 @@ describe("runDueSchedulesImpl", () => {
       return { started: true, message: "Started" }
     }
 
-    const started = await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 0), runFn, schedulesPath, lastRunPath)
+    const started = await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 0), runFn, schedulesPath, lastRunPath, undefined, notLimited)
     expect(started).toBe(1)
     expect(calls).toEqual([["digest", {}, "acme"]])
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 1), runFn, schedulesPath, lastRunPath)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 1), runFn, schedulesPath, lastRunPath, undefined, notLimited)
     expect(calls).toHaveLength(1)
 
-    const stamped = await runDueSchedulesImpl(new Date(2026, 7, 19, 9, 0), runFn, schedulesPath, lastRunPath)
+    const stamped = await runDueSchedulesImpl(new Date(2026, 7, 19, 9, 0), runFn, schedulesPath, lastRunPath, undefined, notLimited)
     expect(stamped).toBe(1)
     expect(calls).toHaveLength(2)
   })
@@ -113,8 +123,8 @@ describe("runDueSchedulesImpl", () => {
       return { started: false, message: "Unknown company \"acme\"" }
     }
 
-    expect(await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath)).toBe(0)
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath)
+    expect(await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, undefined, notLimited)).toBe(0)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, undefined, notLimited)
     expect(attempts).toBe(1)
 
     const lastRuns = JSON.parse(await readFile(lastRunPath, "utf-8"))
@@ -146,17 +156,17 @@ describe("auto-commit", () => {
       return { committed: true, message: "Committed" }
     }
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, sweepFn)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, sweepFn, notLimited)
     let stamped = JSON.parse(await readFile(lastRunPath, "utf-8")) as Record<string, LastRun>
     expect(sweeps).toBe(0)
     expect(stamped["acme:digest"].pendingCommit).toBe(true)
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, sweepFn)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, sweepFn, notLimited)
     stamped = JSON.parse(await readFile(lastRunPath, "utf-8")) as Record<string, LastRun>
     expect(sweeps).toBe(1)
     expect(stamped["acme:digest"]).toEqual({ date: "2026-08-18", message: "Ran and committed automatically" })
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 2), runFn, schedulesPath, lastRunPath, sweepFn)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 2), runFn, schedulesPath, lastRunPath, sweepFn, notLimited)
     expect(sweeps).toBe(1)
   })
 
@@ -165,8 +175,8 @@ describe("auto-commit", () => {
     const runFn = async () => ({ started: true, message: "Started" })
     const stillRunning = async () => null
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, stillRunning)
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, stillRunning)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, stillRunning, notLimited)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, stillRunning, notLimited)
 
     const stamped = JSON.parse(await readFile(lastRunPath, "utf-8")) as Record<string, LastRun>
     expect(stamped["acme:digest"].pendingCommit).toBe(true)
@@ -181,8 +191,8 @@ describe("auto-commit", () => {
       return { committed: true, message: "Committed" }
     }
 
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, sweepFn)
-    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, sweepFn)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 0), runFn, schedulesPath, lastRunPath, sweepFn, notLimited)
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 7, 1), runFn, schedulesPath, lastRunPath, sweepFn, notLimited)
 
     const stamped = JSON.parse(await readFile(lastRunPath, "utf-8")) as Record<string, LastRun>
     expect(stamped["acme:digest"].pendingCommit).toBeUndefined()

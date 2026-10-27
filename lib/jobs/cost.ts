@@ -5,9 +5,9 @@ import { COMPANY_COMMANDS_DATA_DIR } from "../company-commands/paths"
 import { getCompanyCommand } from "../company-commands/registry"
 import { getEffectiveAgents } from "../get-effective-agents"
 import type { AiExecutorId } from "../ai-executors"
-import { usd, type SpendingView } from "./cost-words"
+import { spentAgainst, usd, type SpendingView } from "./cost-words"
 
-export { SPENDING_COPY, usd, type SpendingView } from "./cost-words"
+export { SPENDING_COPY, usd, spentAgainst, spendingHeadline, jobMonthWords, type SpendingView } from "./cost-words"
 
 /**
  * What each unattended AI run cost, by the AI tool's own account (v251).
@@ -89,7 +89,7 @@ export function localMonth(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
 }
 
-export type JobSpend = { monthUsd: number; lastCostUsd: number | null; lastAt: string; runs: number }
+export type JobSpend = { monthUsd: number; lastCostUsd: number | null; lastAt: string; runs: number; knownRuns: number }
 
 /** This local calendar month's known total, the number of runs whose cost isn't known, and each job's share. */
 export function monthSpending(entries: CostEntry[], now: Date): { knownUsd: number; unknownRuns: number; byJob: Map<string, JobSpend> } {
@@ -104,9 +104,10 @@ export function monthSpending(entries: CostEntry[], now: Date): { knownUsd: numb
     const cost = typeof e.costUsd === "number" && Number.isFinite(e.costUsd) ? e.costUsd : null
     if (cost === null) unknownRuns++
     else knownUsd += cost
-    const job = byJob.get(e.job) ?? { monthUsd: 0, lastCostUsd: null, lastAt: "", runs: 0 }
+    const job = byJob.get(e.job) ?? { monthUsd: 0, lastCostUsd: null, lastAt: "", runs: 0, knownRuns: 0 }
     job.monthUsd += cost ?? 0
     job.runs++
+    if (cost !== null) job.knownRuns++
     if (at >= job.lastAt) {
       job.lastAt = at
       job.lastCostUsd = cost
@@ -140,7 +141,7 @@ export async function checkMonthlyLimit(
   if (knownUsd < limit.limitUsd) return { blocked: false }
   return {
     blocked: true,
-    message: `Not started: this month's limit of ${usd(limit.limitUsd)} is reached (about ${usd(knownUsd)} so far, estimated). Press Run to start it yourself.`,
+    message: `Not started: this month's limit of ${usd(limit.limitUsd)} is reached (estimated so far: ${spentAgainst(knownUsd, limit.limitUsd)}). Press Run to start it yourself.`,
   }
 }
 

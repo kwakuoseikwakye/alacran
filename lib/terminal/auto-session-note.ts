@@ -169,7 +169,8 @@ export async function writeSessionNoteFromLastConversation(
 
   // After the quiet skips, so it is asked only when a note is really due, and before anything is
   // prepared or spawned. Not quiet, so the status shows why; the fingerprint isn't stamped, so the
-  // note is written once the limit lifts.
+  // note is written once the limit lifts. ponytail: the status file is rewritten every tick while
+  // the limit holds; skip the write when the message is unchanged if that churn ever matters.
   const limit = await checkLimit(agent)
   if (limit.blocked) return { started: false, message: limit.message }
 

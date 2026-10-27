@@ -11,6 +11,10 @@ import {
   recordRunCost,
   SESSION_NOTES_JOB,
   SPENDING_COPY,
+  jobMonthWords,
+  spendingHeadline,
+  spentAgainst,
+  usd,
   type CostEntry,
 } from "./cost"
 
@@ -161,13 +165,56 @@ describe("readSpendingView", () => {
     expect(view.reached).toBe(true)
     expect(view.limit).toEqual({ ok: true, usd: 2 })
     const digest = view.jobs.find((j) => j.job === "acme:digest")!
-    expect(digest).toMatchObject({ monthUsd: 2, lastCostUsd: null, runs: 3 })
+    expect(digest).toMatchObject({ monthUsd: 2, lastCostUsd: null, runs: 3, knownRuns: 2 })
     expect(view.jobs.find((j) => j.job === SESSION_NOTES_JOB)).toMatchObject({ label: "Automatic session notes", lastCostUsd: 0.25 })
   })
 
   it("shows nothing spent and no limit for a company with no runs, and never throws", async () => {
     const view = await readSpendingView("nobody", root, new Date(2026, 9, 20), dataRoot)
     expect(view).toMatchObject({ monthUsd: 0, unknownRuns: 0, jobs: [], limit: { ok: true, usd: null }, reached: false })
+  })
+})
+
+describe("how amounts read", () => {
+  it("never shows a job whose costs weren't seen as $0.00", async () => {
+    const dir = path.join(dataRoot, "acme")
+    const unknown = (d: Date): CostEntry => ({ job: "acme:retro", executorId: "codex", startedAt: d.toISOString(), finishedAt: d.toISOString(), costUsd: null })
+    await recordRunCost(dir, unknown(new Date(2026, 9, 1)))
+    await recordRunCost(dir, unknown(new Date(2026, 9, 2)))
+    const view = await readSpendingView("acme", root, new Date(2026, 9, 20), dataRoot)
+    const retro = view.jobs.find((j) => j.job === "acme:retro")!
+    expect(retro).toMatchObject({ runs: 2, knownRuns: 0 })
+    expect(jobMonthWords(retro)).toBe("cost not known this month")
+    expect(jobMonthWords({ monthUsd: 0.03, runs: 2, knownRuns: 1 })).toBe("$0.03 this month, plus 1 run with cost not known")
+    expect(jobMonthWords({ monthUsd: 0.03, runs: 4, knownRuns: 1 })).toBe("$0.03 this month, plus 3 runs with cost not known")
+    expect(jobMonthWords({ monthUsd: 0, runs: 1, knownRuns: 1 })).toBe("$0.00 this month")
+  })
+
+  it("says under a cent for a cost above zero, and $0.00 only for a true zero", () => {
+    expect(usd(0)).toBe("$0.00")
+    expect(usd(0.004)).toBe("under $0.01")
+    expect(usd(0.0099)).toBe("under $0.01")
+    expect(usd(0.01)).toBe("$0.01")
+    expect(usd(1.239)).toBe("$1.24")
+  })
+
+  it("leads with what it couldn't see rather than $0.00 when no cost was seen", () => {
+    const h = spendingHeadline({ monthUsd: 0, unknownRuns: 2, limit: { ok: true, usd: null } })
+    expect(h.before + h.figure + h.after).toBe("No cost Alacrán could see yet this month.")
+    const sub = spendingHeadline({ monthUsd: 0.004, unknownRuns: 0, limit: { ok: true, usd: null } })
+    expect(sub.figure + sub.after).toBe("Under $0.01 so far this month.")
+    const plain = spendingHeadline({ monthUsd: 1.5, unknownRuns: 0, limit: { ok: true, usd: 25 } })
+    expect(plain.before + plain.figure + plain.after).toBe("About $1.50 so far this month of a $25.00 limit.")
+  })
+
+  it("makes a reached limit look reached when both round to the same cents", () => {
+    expect(spentAgainst(0.0423, 0.04)).toBe("just over $0.04")
+    expect(spentAgainst(0.0396, 0.04)).toBe("just under $0.04")
+    expect(spentAgainst(0.04, 0.04)).toBe("$0.04")
+    expect(spentAgainst(0.06, 0.04)).toBe("$0.06")
+    expect(spentAgainst(0.0423, null)).toBe("$0.04")
+    const h = spendingHeadline({ monthUsd: 0.0423, unknownRuns: 0, limit: { ok: true, usd: 0.04 } })
+    expect(h.before + h.figure + h.after).toBe("Just over $0.04 so far this month of a $0.04 limit.")
   })
 })
 
