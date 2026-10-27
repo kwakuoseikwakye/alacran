@@ -588,7 +588,7 @@ def test_getting_started() -> list[str]:
         out.append("/getting-started: each of the 7 steps needs a 'You will see' line")
     if "release-specific" in content:
         out.append("/getting-started: still sends the visitor to 'release-specific' guidance")
-    deb = re.search(r"On Debian or Ubuntu:.*?</p>", content, re.S)
+    deb = re.search(r"On Debian or Ubuntu.*?</p>", content, re.S)
     if not deb or "Use it only on the file you downloaded from this site or the official releases page" not in deb[0]:
         out.append("/getting-started: the Debian Copy command has no scope sentence")
     return out
