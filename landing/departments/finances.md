@@ -4,6 +4,8 @@
 
 Bring income, expenses, and cash information into a working view of your business. Track changes, investigate costs, and prepare questions for a more informed financial review.
 
+**Why you need this:** Without it, your income, expenses and cash sit in separate places, and every question to your AI means pasting numbers in again. Here the records you keep are the ones your AI reads, and by default what it proposes waits for your approval.
+
 Download Alacrán
 
 [**Mac**
@@ -28,21 +30,21 @@ Example company · Sample data
 
 ## Bring the records together.
 
-Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
+Your numbers are probably spread across statements, payment tools and spreadsheets. Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
 
 ## Understand the recorded trend.
 
-Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
+One month’s figure rarely tells you whether things are getting better or worse. Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
 
 Estimates depend on the completeness of your records and their assumptions. They are not a forecast of guaranteed future results.
 
 ## Investigate potential savings.
 
-Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
+Costs creep up quietly, and nobody has time to read every line. Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
 
 ## Review financial changes carefully.
 
-Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
+A wrong number that slips into your records is hard to spot later. Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
 
 Try asking
 

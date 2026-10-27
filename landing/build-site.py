@@ -80,12 +80,27 @@ SECTION_SHOTS = {
     ("/docs", "Departments and structured records"): "departments",
     ("/docs", "Skills and recurring workflows"): "workflows",
 }
-AGENT_MARKS = [("claude", "Claude Code"), ("google-antigravity", "Google Antigravity"),
-               ("kiro", "Kiro"), ("kimi", "Kimi"), (None, "Codex")]
+# Real vendor marks only, from brands.js (Simple Icons, never redrawn). Displayed name -> sprite key.
+# A vendor with no mark here (Slack, OpenAI and so on) is named in text only.
+MARKS = {"Beeper": "beeper", "WhatsApp": "whatsapp", "Discord": "discord", "Telegram": "telegram",
+         "Notion": "notion", "GitHub": "github", "Vercel": "vercel", "Figma": "figma",
+         "Claude Code": "claude", "Google Antigravity": "google-antigravity", "Kiro": "kiro", "Kimi": "kimi",
+         "Anthropic API": "anthropic", "Google Workspace": "google"}
+AGENTS = ("Claude Code", "Google Antigravity", "Kiro", "Kimi", "Codex")  # Codex has no available mark
+IDS = set(re.findall(r'id="([bcd]-[a-z0-9-]+)"', (HERE / "brands.js").read_text(encoding="utf-8")))
+OG_IMAGE = f"{SITE}/og.png"
+OG_ALT = "Alacrán: Your business, organized. Your AI, put to work."
 
 
 def e(s: str) -> str:
     return html.escape(s, quote=True)
+
+
+def mark(key: str, v: str = "b") -> str:
+    """A real vendor mark from the brands.js sprite. A bad key fails the build, not just a test."""
+    if f"{v}-{key}" not in IDS:
+        raise SystemExit(f"brands.js has no #{v}-{key}")
+    return f'<svg class="bi" aria-hidden="true" focusable="false"><use href="#{v}-{key}"/></svg>'
 
 
 def inl(s: str) -> str:
@@ -162,7 +177,7 @@ def read_pages(src: str) -> list[dict]:
             "route": re.search(r"^Route: `([^`]+)`", body, re.M)[1],
             "title": re.search(r"^SEO title: \*\*(.+)\*\*", body, re.M)[1],
             "desc": re.search(r"^Meta description: \*\*(.+)\*\*", body, re.M)[1],
-            "blocks": blocks(re.search(r"^### Website copy.*?$(.*?)(?=^### (?:Implementation notes|Release checks)|^## .*not website copy|\Z)", body, re.M | re.S)[1]),
+            "blocks": blocks(re.search(r"^### Website copy.*?$(.*?)(?=^### (?:Implementation notes|Release checks)|^## [^\n]*not website copy|\Z)", body, re.M | re.S)[1]),
         })
     return pages
 
@@ -186,12 +201,17 @@ GALLERY = {"/templates": "packs", "/use-cases": "cases"}
 HERO_SHOTS.update({"/departments/customers": "departments", "/departments/messages": "approvals"})
 
 
-def dl_menu(cls: str = "") -> str:
+def dl_items() -> str:
+    """The three platform links and the setup-guide link: the one source for every download list on the site."""
     items = "".join(
         f'<a href="{DL}{f}" download><strong>{n}</strong><small>{d}</small><span class="tag">.{f.rsplit(".", 1)[1]}</span></a>'
         for f, n, d in DOWNLOADS)
-    return (f'<details class="dl {cls}"><summary class="btn btn-primary">{DOWNLOAD_LABEL}<span class="caret" aria-hidden="true"></span></summary>'
-            f'<div class="menu">{items}<a class="menu-foot" href="/getting-started">Read the setup guide <span aria-hidden="true">→</span></a></div></details>')
+    return items + '<a class="menu-foot" href="/getting-started">Read the setup guide <span aria-hidden="true">→</span></a>'
+
+
+def dl_menu(cls: str = "") -> str:
+    return (f'<details class="dl {cls}"><summary class="btn btn-primary" title="Choose Mac or Linux, then download Alacrán">{DOWNLOAD_LABEL}<span class="caret" aria-hidden="true"></span></summary>'
+            f'<div class="menu">{dl_items()}</div></details>')
 
 
 def cur(href: str, route: str) -> str:
@@ -206,7 +226,7 @@ def nav(route: str) -> str:
   {BRAND}
   <nav class="nav-links" id="navlinks" aria-label="Main navigation">{links}<details class="guides"><summary{on}>Guides<span class="caret" aria-hidden="true"></span></summary><div class="menu">{guides}</div></details></nav>
   {dl_menu("dl-nav")}
-  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu"><span></span><span></span></button>
+  <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="navlinks" aria-label="Menu" title="Open the menu"><span></span><span></span></button>
 </div></header>"""
 
 
@@ -216,6 +236,7 @@ FOOTER = f"""<footer class="foot"><div class="wrap">
       {BRAND}
       <p class="foot-tag">Your business knowledge. Your AI. Your workspace.</p>
       <p>Alacrán brings business records, AI workflows, and human review together on your desktop.</p>
+      <div class="foot-dl"><h2>{DOWNLOAD_LABEL}</h2>{dl_items()}</div>
     </div>
     <nav class="foot-cols" aria-label="Footer">
       <div><h2>Product</h2><a href="/#features">Features</a><a href="/templates">Starter packs</a><a href="/integrations">Integrations</a><a href="/use-cases">Use cases</a></div>
@@ -249,6 +270,12 @@ def lone_link(s: str) -> bool:
     return bool(re.fullmatch(r"(?:Link: )?\*\*(.+?)\*\* → `([^`]+)`", s))
 
 
+def cmd_block(cmd: str) -> str:
+    """A command with a Copy button; the guide and the Mac dialog share it so they cannot drift."""
+    return (f'<div class="cmd"><code>{html.escape(cmd, quote=False)}</code>'
+            f'<button type="button" class="btn" data-copy title="Copy this line, then paste it into Terminal">Copy command</button></div>')
+
+
 def prompt(label: str, quotes: list[str]) -> str:
     q = "".join(f"<p>{inl(x.strip('“”'))}</p>" for x in quotes)
     return f'<figure class="prompt"><figcaption>{e(label)}</figcaption><blockquote>{q}</blockquote></figure>'
@@ -260,11 +287,18 @@ def table(rows: list[list[str]]) -> str:
     th = "".join(f'<th scope="col">{inl(c)}</th>' for c in head)
     trs = []
     for r in body:
-        last = ('<div class="chips">' + "".join(f"<span>{inl(x)}</span>" for x in r[-1].split(", ")) + "</div>") if chips else inl(r[-1])
+        last = ('<div class="chips">' + "".join(f'<span>{mark(MARKS[x], "c") if x in MARKS else ""}{inl(x)}</span>' for x in r[-1].split(", ")) + "</div>") if chips else inl(r[-1])
         cells = "".join(f'<th scope="row">{inl(c)}</th>' if j == 0 else f"<td>{last if j == len(r) - 1 else inl(c)}</td>"
                         for j, c in enumerate(r))
         trs.append(f"<tr>{cells}</tr>")
     return f'<div class="table-wrap{" is-catalogue" if chips else ""}"><table><thead><tr>{th}</tr></thead><tbody>{"".join(trs)}</tbody></table></div>'
+
+
+def step(x: str) -> str:
+    """One numbered step. Its content is a single box, so the grid sees the number and one cell, never one cell per inline piece.
+    '... Command: `x`' puts the Copy box inside the step it belongs to."""
+    m = re.match(r"^(.*?) Command: `(.+)`$", x)
+    return f"<li><div>{inl(m[1]) + cmd_block(m[2]) if m else inl(x)}</div></li>"
 
 
 def render_flow(bl: list[dict]) -> str:
@@ -286,9 +320,11 @@ def render_flow(bl: list[dict]) -> str:
                 out.append(prompt(s.rstrip(":"), quotes))
             elif m := re.match(r"^(First task to try): “(.+)”$", s):
                 out.append(prompt(m[1], [m[2]]))
+            elif m := re.match(r"^Command: `(.+)`$", s):
+                out.append(cmd_block(m[1]))
             elif m := re.match(r"^(Eyebrow|Disclosure): \*\*(.+)\*\*$", s):
                 out.append(f'<p class="{m[1].lower()}">{inl(m[2])}</p>')
-            elif m := re.match(r"^\*\*(Try asking):\*\* (.+)$", s):
+            elif m := re.match(r"^\*\*(Try asking|You ask|You do):\*\* (.+)$", s):
                 out.append(prompt(m[1], [m[2]]))
             elif m := re.match(r"^\*\*([^*]+?):\*\* (.+)$", s):
                 out.append(f'<p class="lab"><span>{inl(m[1])}</span> {inl(m[2])}</p>')
@@ -299,7 +335,7 @@ def render_flow(bl: list[dict]) -> str:
         elif t == "ul":
             out.append("<ul>" + "".join(f"<li>{inl(x)}</li>" for x in b["items"]) + "</ul>")
         elif t == "ol":
-            out.append('<ol class="steps">' + "".join(f"<li>{inl(x)}</li>" for x in b["items"]) + "</ol>")
+            out.append('<ol class="steps">' + "".join(step(x) for x in b["items"]) + "</ol>")
         elif t == "table":
             out.append(table(b["rows"]))
         elif t == "h1":
@@ -626,11 +662,25 @@ def tour(g: dict, bl: list[dict]) -> str:
 </div></section>"""
 
 
-def features(bl: list[dict]) -> str:
+def features(bl: list[dict], sid: str = "features", cls: str = "") -> str:
     title, rest = head_of(bl)
     intro, groups = groups_of(rest)
+    tail = []
+    last_t, last_b = groups[-1]
+    if last_b and last_b[-1]["t"] == "p" and lone_link(last_b[-1]["s"]):  # a closing link belongs to the section
+        tail, groups[-1] = [last_b[-1]], (last_t, last_b[:-1])
     cols = "".join(f'<article class="reveal" style="--i:{n}"><h3>{inl(t)}</h3>{render_flow(b)}</article>' for n, (t, b) in enumerate(groups))
-    return f'<section class="sec" id="features"><div class="wrap">{sec_head(title, intro)}<div class="feat">{cols}</div></div></section>'
+    more = f'<div class="how-more">{render_flow(tail)}</div>' if tail else ""
+    return f'<section class="sec" id="{sid}"><div class="wrap">{sec_head(title, intro)}<div class="feat{cls}">{cols}</div>{more}</div></section>'
+
+
+def scenarios(bl: list[dict]) -> str:
+    """Numbered real situations: what you ask, what you get, how you stay in control."""
+    title, rest = head_of(bl)
+    intro, groups = groups_of(rest)
+    items = "".join(f'<li class="scn reveal"><h3>{inl(re.sub(r"^[0-9]+[.] ", "", t))}</h3><div class="scn-body">{render_flow(b)}</div></li>'
+                    for t, b in groups)
+    return f'<section class="sec scn-sec" id="scenarios"><div class="wrap">{sec_head(title, intro)}<ol class="scn-list">{items}</ol></div></section>'
 
 
 def depts(bl: list[dict]) -> str:
@@ -659,9 +709,7 @@ def how(bl: list[dict]) -> str:
 
 
 def agents_list() -> str:
-    def mark(k):
-        return f'<svg class="bi" aria-hidden="true"><use href="#b-{k}"/></svg>' if k else ""
-    items = "".join(f"<li>{mark(k)}{n}</li>" for k, n in AGENT_MARKS)
+    items = "".join(f"<li>{mark(MARKS[n]) if n in MARKS else ''}{n}</li>" for n in AGENTS)
     return f'<ul class="agents">{items}</ul>'.replace("<li>", '<li class="on">', 1)
 
 
@@ -688,8 +736,10 @@ def split_section(name: str, sid: str, bl: list[dict], flip: bool) -> str:
 def cta_section(bl: list[dict]) -> str:
     h2 = next(b for b in bl if b["t"] == "h2")
     rest = [b for b in bl if b is not h2]
-    return (f'<section class="cta"><div class="wrap"><div class="cta-card reveal"><h2>{inl(h2["s"])}</h2>{render_flow(rest)}'
-            f'<img class="cta-mark" src="/mark-white.png" width="300" height="313" alt="" aria-hidden="true"></div></div></section>')
+    # The watermark sits in its own clipping box, first, so it paints behind the content and the card itself never clips the menu.
+    return (f'<section class="cta"><div class="wrap"><div class="cta-card reveal">'
+            f'<div class="cta-art" aria-hidden="true"><img class="cta-mark" src="/mark-white.png" width="300" height="313" alt=""></div>'
+            f'<h2>{inl(h2["s"])}</h2>{render_flow(rest)}</div></div></section>')
 
 
 def build_home(p: dict) -> str:
@@ -702,8 +752,12 @@ def build_home(p: dict) -> str:
             out.append(hero(bl))
         elif name.startswith("Product tour"):
             out.append(tour(g, bl))
+        elif name == "Why":
+            out.append(features(bl, "why", " three"))
         elif name == "Benefits":
             out.append(features(bl))
+        elif name == "Scenarios":
+            out.append(scenarios(bl))
         elif name == "Departments":
             out.append(depts(bl))
         elif name == "How it works":
@@ -714,7 +768,7 @@ def build_home(p: dict) -> str:
             sid = {"Multiple companies": "companies", "Ownership": "ownership", "Flexible agents": "agents"}[name]
             out.append(split_section(name, sid, bl, flip))
             flip = not flip
-        else:
+        elif name.startswith("FAQ"):
             q = None
             for b in bl:
                 if is_q(b):
@@ -724,6 +778,8 @@ def build_home(p: dict) -> str:
                     q["acceptedAnswer"]["text"] = (q["acceptedAnswer"]["text"] + " " + b["s"]).strip()
             out.append(f'<section class="sec" id="{g["id"] or "faq"}"><div class="wrap faq-grid">'
                        f'<div class="sec-head reveal"><h2 data-split>{e(name)}</h2></div><div class="reveal">{faq(bl)}</div></div></section>')
+        else:
+            raise SystemExit(f"unknown home section: {name}")
     ld = [{"@type": "SoftwareApplication", "name": "Alacrán", "url": f"{SITE}/", "description": p["desc"],
            "applicationCategory": "BusinessApplication", "operatingSystem": "macOS, Debian, Ubuntu",
            "downloadUrl": "https://github.com/kwakuoseikwakye/alacran-releases/releases/latest",
@@ -786,7 +842,6 @@ def side_nav(route: str) -> str:
 
 def docs_layout(p: dict, pre: list[dict], secs: list, cta: list[dict]) -> str:
     route = p["route"]
-    legal = route in LEGAL
     seen: set = set()
     body, toc = [], []
     for h, bl in secs:
@@ -801,8 +856,7 @@ def docs_layout(p: dict, pre: list[dict], secs: list, cta: list[dict]) -> str:
     out = [phead(pre, route, HERO_SHOTS.get(route)),
            f'<div class="wrap docs">{side_nav(route)}<article class="prose">{"".join(body)}</article>'
            f'<aside class="toc" aria-label="On this page"><h2>On this page</h2><ul>{"".join(toc)}</ul></aside></div>']
-    if not legal:
-        out.append(cta_section(cta))
+    out.append(cta_section(cta))
     return "\n".join(out)
 
 
@@ -862,16 +916,22 @@ def head(p: dict, extra_ld: list) -> str:
   <meta property="og:url" content="{url}">
   <meta property="og:title" content="{e(p["title"])}">
   <meta property="og:description" content="{e(p["desc"])}">
-  <meta property="og:image" content="{SITE}/og.png">
+  <meta property="og:image" content="{OG_IMAGE}">
+  <meta property="og:image:secure_url" content="{OG_IMAGE}">
+  <meta property="og:image:type" content="image/png">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:alt" content="Alacrán: Your business, organized. Your AI, put to work.">
+  <meta property="og:image:alt" content="{OG_ALT}">
+  <meta property="og:locale" content="en_US">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="{e(p["title"])}">
   <meta name="twitter:description" content="{e(p["desc"])}">
-  <meta name="twitter:image" content="{SITE}/og.png">
+  <meta name="twitter:image" content="{OG_IMAGE}">
+  <meta name="twitter:image:alt" content="{OG_ALT}">
   <script type="application/ld+json">{json.dumps(ld, ensure_ascii=False)}</script>
-  <link rel="icon" href="/favicon.png" sizes="128x133">
+  <link rel="icon" href="/favicon.png" sizes="128x133" type="image/png">
+  <link rel="icon" href="/favicon-32.png" sizes="32x32" type="image/png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
   <link rel="preload" href="/fonts/onest.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/v6.css">
   <script src="/v6.js" defer></script>
@@ -885,6 +945,7 @@ DIALOG = """<dialog class="viewer" aria-label="Full screenshot">
 </dialog>"""
 
 MAC_CMD = 'xattr -cr "/Applications/Alacran.app"'
+MAC_SCOPE = "Use it only on the app you downloaded from this site or the official releases page."
 MAC_DIALOG = f"""<dialog class="mac-help" aria-labelledby="mac-title">
   <form method="dialog" class="viewer-bar"><button class="btn btn-ghost viewer-close" value="close">Close</button></form>
   <div class="mac-body">
@@ -892,8 +953,8 @@ MAC_DIALOG = f"""<dialog class="mac-help" aria-labelledby="mac-title">
     <p class="lede">Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you do this once, macOS may block the app, often with the message "Alacrán is damaged and can't be opened". It is not damaged.</p>
     <ol class="mac-steps">
       <li><b>Install.</b> Open the downloaded <code>.dmg</code> and drag Alacrán into Applications.</li>
-      <li><b>Run this in Terminal, once.</b> It clears the quarantine flag macOS puts on downloaded files.
-        <div class="cmd"><code id="mac-cmd">{MAC_CMD}</code><button type="button" class="btn btn-primary" data-copy="#mac-cmd">Copy command</button></div>
+      <li><b>Run this in Terminal, once.</b> It clears the quarantine flag macOS puts on downloaded files. {MAC_SCOPE}
+        {cmd_block(MAC_CMD)}
       </li>
       <li><b>Open Alacrán</b> from Applications.</li>
     </ol>

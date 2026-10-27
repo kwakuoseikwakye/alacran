@@ -6,7 +6,7 @@ New to the app? [Start with installation](https://www.alacran.app/getting-starte
 
 ## Start with the morning briefing.
 
-Open your company workspace to see recent activity and work needing attention. Check when each department was last updated before treating its figures as current.
+You open the app and do not know where to look first. Open your company workspace to see recent activity and work needing attention. Check when each department was last updated before treating its figures as current.
 
 Try asking
 
@@ -18,7 +18,7 @@ Example company · Sample data
 
 ## Choose a department and a concrete task.
 
-In Customers, review the opportunities that need follow-up. In Finances, inspect the latest recorded income and expenses. In Content, move an idea into a draft. In Messages, work through inquiries that need a response.
+A vague request gets a vague answer. In Customers, review the opportunities that need follow-up. In Finances, inspect the latest recorded income and expenses. In Content, move an idea into a draft. In Messages, work through inquiries that need a response.
 
 A clear task gives the agent a useful target
 
@@ -26,7 +26,7 @@ Draft a follow-up for this prospect using our recorded conversation and approved
 
 ## Review proposed work.
 
-Read the result and inspect any proposed file changes. Use the risk indicator to help prioritize review, then approve, request changes, or discard the proposal.
+AI work you cannot check is work you cannot trust. Read the result and inspect any proposed file changes. Use the risk indicator to help prioritize review, then approve, request changes, or discard the proposal.
 
 A revision can be specific
 
@@ -40,11 +40,11 @@ Example company · Sample data
 
 ## Keep your company knowledge useful.
 
-Maintain the company profile as your products, customers, team, and operating rules change. The quality of later work depends on the information available to it.
+Your AI works from what it has been told, so out-of-date facts make out-of-date drafts. Maintain the company profile as your products, customers, team, and operating rules change. The quality of later work depends on the information available to it.
 
 ## Record why a decision was made.
 
-Save the choice, the alternatives considered, and the reason behind it. Include what new information would justify revisiting it.
+Months later, nobody remembers why you chose it. Save the choice, the alternatives considered, and the reason behind it. Include what new information would justify revisiting it.
 
 Try asking
 
@@ -52,11 +52,11 @@ Prepare a decision note from this discussion. Separate the decision, the support
 
 ## Maintain operational records.
 
-Review department updates against their source information. Keep customer stages, content status, and financial entries current so later summaries reflect the business as it is.
+Summaries are only as good as the records behind them. Review department updates against their source information. Keep customer stages, content status, and financial entries current so later summaries reflect the business as it is.
 
 ## Turn useful tasks into repeatable workflows.
 
-Once a task produces a useful result, reuse an appropriate skill or configure a recurring job. Monitor the run status and review its output.
+If you do the same task every week, you should not have to set it up every week. Once a task produces a useful result, reuse an appropriate skill or configure a recurring job. Monitor the run status and review its output.
 
 Local background work depends on the app, computer, and required connections being available. Closing the window can leave work running; quitting the app stops its local processes.
 
@@ -66,7 +66,7 @@ Example company · Sample data
 
 ## Use the assistant your way.
 
-Type a request or use supported voice input. Choose your assistant’s language, tone, and voice settings. Voice processing depends on the selected provider and configuration.
+Some people would rather type and some would rather talk. Type a request or use supported voice input. Choose your assistant’s language, tone, and voice settings. Voice processing depends on the selected provider and configuration.
 
 For technical work, Advanced mode exposes terminals, agent workspaces, skills, and connection configuration.
 
@@ -76,11 +76,11 @@ Example company · Sample data
 
 ## Switch companies deliberately.
 
-Keep each business in its own workspace. Before sharing context through Company Strings, inspect what will become available to the other workspace. Cross-company questions should use only the scope you intend.
+If you run more than one business, one mixed-up workspace gets confusing fast. Keep each business in its own workspace. Before sharing context through Company Strings, inspect what will become available to the other workspace. Cross-company questions should use only the scope you intend.
 
 ## Check the system when something looks wrong.
 
-Use System Doctor to inspect company files, record validation, repository status, and connector readiness. Review suggested repairs before applying them.
+When something looks off, you should not have to guess why. Use System Doctor to inspect company files, record validation, repository status, and connector readiness. Review suggested repairs before applying them.
 
 [Find a workflow to try](https://www.alacran.app/use-cases)
 

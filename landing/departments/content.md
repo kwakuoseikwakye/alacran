@@ -4,6 +4,8 @@
 
 Develop ideas, prepare drafts, and keep the review process connected to your company’s voice and priorities. Track what is ready and what has already been published.
 
+**Why you need this:** Without it, every post starts from a blank prompt and you explain your audience and tone again each time. Here your company facts say what you offer and who it serves, your past posts set the voice, and you review each draft before approving it.
+
 Download Alacrán
 
 [**Mac**
@@ -28,29 +30,29 @@ Example company · Sample data
 
 ## Start with your audience and your offer.
 
-Use company facts, audience information, and tone guidance to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
+A generic post is easy to scroll past, and writing a good brief every time is slow. Use company facts, audience information, and your past posts to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
 
 ## Move from idea to reviewed draft.
 
-Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
+Ideas, drafts, and half-finished edits tend to end up scattered across documents and chats. Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
 
 ## Prepare the details in one place.
 
-Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
+Copy, previews, and visuals often get prepared in different places. Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
 
 ## Keep publication status visible.
 
-Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
+It is easy to lose track of what is approved, what is scheduled, and what is actually live. Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
 
 Approval, scheduling, and publication are different states. Confirm what your configured workflow actually does before treating a post as live.
 
 ## Learn from the available signals.
 
-Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
+Posting more often is not the same as learning what works. Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
 
 Try asking
 
-Draft three posts explaining this service to our target audience. Give each one a different useful angle, follow our saved tone guidance, and flag claims that need proof.
+Draft three posts explaining this service to our target audience. Give each one a different useful angle, match the voice of our past posts, and flag claims that need proof.
 
 ## Questions
 

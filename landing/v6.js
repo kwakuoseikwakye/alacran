@@ -25,6 +25,8 @@
   const menus = $$('details.dl, details.guides');
   menus.forEach((d) => d.addEventListener('toggle', () => {
     if (d.open) menus.forEach((o) => { if (o !== d) o.open = false; });
+    // In the closing call to action the menu opens in flow, so bring it fully into view.
+    if (d.open && d.closest('.cta')) d.querySelector('.menu').scrollIntoView({ block: 'nearest', behavior: reduced ? 'auto' : 'smooth' });
   }));
   document.addEventListener('click', (e) => {
     menus.forEach((d) => { if (!d.contains(e.target)) d.open = false; });
@@ -117,13 +119,18 @@
       if (!mac.open) mac.showModal();
     });
     mac.addEventListener('click', (e) => { if (e.target === mac) mac.close(); });
-    mac.querySelector('[data-copy]')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget, text = mac.querySelector(btn.dataset.copy).textContent;
-      try { await navigator.clipboard.writeText(text); btn.textContent = 'Copied'; }
-      catch (err) { const r = document.createRange(); r.selectNodeContents(mac.querySelector(btn.dataset.copy)); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = 'Press Cmd+C to copy'; }
-      setTimeout(() => { btn.textContent = 'Copy command'; }, 2200);
-    });
   }
+
+  // Copy buttons (the setup guide and the Mac dialog share the same .cmd block).
+  document.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-copy]');
+    if (!btn) return;
+    const code = btn.closest('.cmd').querySelector('code');
+    btn.dataset.label ||= btn.textContent;
+    try { await navigator.clipboard.writeText(code.textContent); btn.textContent = 'Copied'; }
+    catch (err) { const r = document.createRange(); r.selectNodeContents(code); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); btn.textContent = 'Press Cmd+C to copy'; }
+    setTimeout(() => { btn.textContent = btn.dataset.label; }, 2200);
+  });
 
   // Headlines: split into words so each rides up out of a mask.
   $$('[data-split]').forEach((h) => {
