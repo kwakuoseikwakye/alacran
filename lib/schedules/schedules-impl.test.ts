@@ -224,3 +224,43 @@ describe("strict schedule reads, for views that must not mistake broken for empt
     await expect(readSchedulesStrict(file)).resolves.toEqual([{ agentId: "acme", commandId: "digest", time: "07:00" }])
   })
 })
+
+describe("runDueSchedulesImpl and the monthly limit (v251)", () => {
+  const blocked = async () => ({ blocked: true as const, message: "Not started: this month's limit of $5.00 is reached (about $6.00 so far, estimated). Press Run to start it yourself." })
+  const notBlocked = async () => ({ blocked: false as const })
+
+  it("starts nothing over the limit, and stamps the plain reason for the day", async () => {
+    await setScheduleImpl("acme", "digest", "07:00", false, new Date(2026, 7, 17, 6, 0), schedulesPath)
+    const calls: string[] = []
+    const runFn = async (commandId: string) => {
+      calls.push(commandId)
+      return { started: true, message: "Started" }
+    }
+    const checked: string[] = []
+    const check = async (agentId: string) => {
+      checked.push(agentId)
+      return blocked()
+    }
+
+    expect(await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 0), runFn, schedulesPath, lastRunPath, undefined, check)).toBe(0)
+    expect(calls).toEqual([])
+    expect(checked).toEqual(["acme"])
+    const last = await readLastRunsStrict(lastRunPath)
+    expect(last["acme:digest"]).toEqual({ date: "2026-08-18", message: expect.stringMatching(/limit .* is reached/) })
+
+    // Stamped, so the limit isn't re-read every minute that day.
+    await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 1), runFn, schedulesPath, lastRunPath, undefined, check)
+    expect(checked).toHaveLength(1)
+
+    // Next day, with the limit lifted, it starts again with nothing else done.
+    expect(await runDueSchedulesImpl(new Date(2026, 7, 19, 9, 0), runFn, schedulesPath, lastRunPath, undefined, notBlocked)).toBe(1)
+    expect(calls).toEqual(["digest"])
+  })
+
+  it("starts as before when the limit allows it", async () => {
+    await setScheduleImpl("acme", "digest", "07:00", false, new Date(2026, 7, 17, 6, 0), schedulesPath)
+    const runFn = async () => ({ started: true, message: "Started" })
+    expect(await runDueSchedulesImpl(new Date(2026, 7, 18, 9, 0), runFn, schedulesPath, lastRunPath, undefined, notBlocked)).toBe(1)
+  })
+})
+

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
-import { mkdtemp, mkdir, writeFile, appendFile, utimes, stat, rm } from "node:fs/promises"
+import { mkdtemp, mkdir, writeFile, appendFile, utimes, stat, rm, readFile } from "node:fs/promises"
+import { writeSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { writeSessionNoteFromLastConversation, catchUpSessionNotes, type SpawnLike } from "./auto-session-note"
@@ -436,3 +437,69 @@ describe("catchUpSessionNotes", () => {
     expect(r.wrote).toEqual([{ agentId: "a", started: true, message: "Writing up the last session." }])
   })
 })
+
+describe("what an automatic session note costs (v251)", () => {
+  // Its own id: the in-flight guard test above leaves "co" held for the rest of this file.
+  const costAgent = (): Agent => ({ ...agent(), id: "cost-co" }) as Agent
+  const resultLine = JSON.stringify({ type: "result", subtype: "success", is_error: false, total_cost_usd: 0.0123, result: "Wrote the note." }) + "\n"
+
+  /** A run that prints Claude Code's json result into the log fd it was handed, then exits 0. */
+  function costSpawn() {
+    const calls: string[][] = []
+    const fn: SpawnLike = (_command, args, options) => {
+      calls.push(args)
+      writeSync(options.stdio[1], resultLine)
+      return { unref: () => {}, on: (event, cb) => { if (event === "exit") cb(0 as never) } }
+    }
+    return { fn, calls }
+  }
+
+  it("asks Claude Code for its json result on the same resumed session, and records the cost in app data", async () => {
+    await haveConversation()
+    const { fn, calls } = costSpawn()
+    const result = await writeSessionNoteFromLastConversation(costAgent(), fn, claude, dataRoot, home, undefined, noted())
+    expect(result.started).toBe(true)
+    expect(calls[0].slice(0, 2)).toEqual(["--resume", "s-a"])
+    expect(calls[0].join(" ")).toContain("--output-format json")
+    await vi.waitFor(async () => {
+      const ledger = (await readFile(path.join(dataRoot, "cost-co", "costs.jsonl"), "utf-8")).trim().split("\n").map((l) => JSON.parse(l))
+      expect(ledger).toEqual([
+        { job: "session-notes", executorId: "claude-code", startedAt: expect.any(String), finishedAt: expect.any(String), costUsd: 0.0123 },
+      ])
+    })
+    // Recorded outside the company folder.
+    await expect(stat(path.join(root, "costs.jsonl"))).rejects.toThrow()
+  })
+
+  it("does not spawn over the monthly limit, and says why in the status", async () => {
+    await haveConversation()
+    const { fn, calls } = recordingSpawn()
+    const wrote: { started: boolean; message: string }[] = []
+    const overCap = async () => ({ blocked: true as const, message: "Not started: this month's limit of $5.00 is reached (about $5.00 so far, estimated). Press Run to start it yourself." })
+    const started = await catchUpSessionNotes(
+      async () => [costAgent()],
+      (a) => writeSessionNoteFromLastConversation(a, fn, claude, dataRoot, home, undefined, noted(), () => false, Date.now, overCap),
+      async () => true,
+      async (_id, s) => {
+        wrote.push({ started: s.started, message: s.message })
+      }
+    )
+    expect(started).toBe(0)
+    expect(calls).toHaveLength(0)
+    expect(wrote).toEqual([{ started: false, message: expect.stringMatching(/limit/) }])
+    // Not stamped as noted, so it is written once the limit lifts.
+    expect(await getNotedFingerprint("cost-co", noted())).toBeNull()
+  })
+
+  it("reads the limit from the company's definitions by default", async () => {
+    await haveConversation()
+    await mkdir(path.join(root, "definitions"), { recursive: true })
+    await writeFile(path.join(root, "definitions/budget.yaml"), "monthly_limit_usd: 0\n")
+    const { fn, calls } = recordingSpawn()
+    const result = await writeSessionNoteFromLastConversation(costAgent(), fn, claude, dataRoot, home, undefined, noted())
+    expect(result.started).toBe(false)
+    expect(result.message).toMatch(/limit of \$0\.00 is reached/)
+    expect(calls).toHaveLength(0)
+  })
+})
+

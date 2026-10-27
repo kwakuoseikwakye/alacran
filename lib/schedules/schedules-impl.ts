@@ -9,6 +9,7 @@ import { getCompanyCommandResultImpl } from "../company-commands/company-command
 import { commitCompanyCommandResultImpl } from "../company-commands/commit-company-command-result-impl"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { humanFieldChanges } from "../os/records/human-fields"
+import { checkMonthlyLimitById, type LimitCheck } from "../jobs/cost"
 
 export type Schedule = {
   agentId: string
@@ -293,7 +294,9 @@ export async function runDueSchedulesImpl(
   runFn: RunFn = runCompanyCommandImpl,
   schedulesPath: string = SCHEDULES_PATH,
   lastRunPath: string = LAST_RUN_PATH,
-  sweepFn: SweepFn = commitFinishedRun
+  sweepFn: SweepFn = commitFinishedRun,
+  /** The company's monthly limit on unattended AI runs (v251). Only the ticker asks; Run by hand never does. */
+  checkLimit: (agentId: string, now: Date) => Promise<LimitCheck> = checkMonthlyLimitById
 ): Promise<number> {
   const schedules = await readJson<Schedule[]>(schedulesPath, [])
   if (schedules.length === 0) return 0
@@ -333,6 +336,14 @@ export async function runDueSchedulesImpl(
   for (const schedule of schedules) {
     const key = scheduleKey(schedule.agentId, schedule.commandId)
     if (!isDue(schedule, lastRuns[key]?.date, date, time)) continue
+    // Stamped like any other refusal, so the limit isn't re-read every minute: a raised limit lets
+    // it start again at its next daily time, and a new month changes the date by itself.
+    const limit = await checkLimit(schedule.agentId, now)
+    if (limit.blocked) {
+      lastRuns[key] = { date, message: limit.message }
+      dirty = true
+      continue
+    }
     const outcome = await runFn(schedule.commandId, {}, schedule.agentId)
     // Stamped whether or not it started. Stamping only successes would turn a
     // permanent refusal — wrong executor, unknown company — into a retry every

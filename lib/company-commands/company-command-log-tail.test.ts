@@ -79,4 +79,17 @@ describe("getCompanyCommandLogTail", () => {
 
     expect(result).toEqual({ tail: "" })
   })
+
+  it("shows the answer, not Claude Code's JSON result object, when a run reported its cost (v251)", async () => {
+    vi.doMock("./paths", () => ({ COMPANY_COMMANDS_DATA_DIR: dataDir }))
+    vi.doMock("../config", () => ({
+      AGENTS: [{ id: "ai-company-starter-main", name: "AI Company Starter", rootPath: "/irrelevant", kind: "command-set" }],
+    }))
+    await mkdir(path.join(dataDir, "ai-company-starter-main"), { recursive: true })
+    const result = JSON.stringify({ type: "result", subtype: "success", is_error: false, total_cost_usd: 0.0123, result: "Wrote the digest." })
+    await writeFile(path.join(dataDir, "ai-company-starter-main", "digest.log"), `${result}\n`)
+    const { getCompanyCommandLogTail } = await import("./company-command-log-tail")
+
+    expect(await getCompanyCommandLogTail("digest", "ai-company-starter-main")).toEqual({ tail: "Wrote the digest." })
+  })
 })

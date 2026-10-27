@@ -54,3 +54,12 @@ export async function approveHeldAction(companyId: string, ids: string[]) {
 export async function rejectHeldAction(companyId: string, ids: string[]) {
   return withCompany(companyId, (ctx) => manage.decideHeldActions(ctx, ids, "reject"))
 }
+
+/** Set this company's monthly limit on unattended AI runs. */
+export async function setMonthlyLimitAction(companyId: string, value: string) {
+  return withCompany(companyId, (ctx) => manage.setMonthlyLimit(ctx, String(value)))
+}
+
+export async function removeMonthlyLimitAction(companyId: string) {
+  return withCompany(companyId, (ctx) => manage.setMonthlyLimit(ctx, null))
+}
