@@ -733,6 +733,9 @@ class DirectKids(HTMLParser):
         if tag not in self.VOID:
             self.depth += 1
 
+    def handle_startendtag(self, tag, attrs):  # <br/>: a cell if at the top, never a change of depth
+        self.n += self.depth == 0
+
     def handle_endtag(self, tag):
         self.depth -= 1
 
@@ -763,6 +766,8 @@ def test_steps_layout() -> list[str]:
     cols = re.search(r"grid-template-columns:\s*([^;]+);", css_rule(css, ".steps li"))
     if not cols or len(re.findall(r"minmax\([^)]*\)|\S+", cols[1])) != 2:
         out.append("v6.css: .steps li must be a marker column plus exactly one content column")
+    if (DirectKids.count("<div>a<br/>b</div><i>c</i>"), DirectKids.count("<br/><div>a</div>")) != (2, 2):
+        out.append("DirectKids loses its depth on a self-closing tag such as <br/>")
     # Self-test: the old shape (inline pieces as separate children) must fail.
     old = '<ol class="steps"><li>Click <strong>About This Mac</strong> to see <code>Chip</code></li></ol>'
     if not steps_failures(old, "x"):
