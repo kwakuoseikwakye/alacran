@@ -7,6 +7,7 @@ import type { SendRequest } from "./runner"
 import type { Approval, Flag, JobStore, SendOutcome } from "./store"
 import { outlookScriptPath } from "../outlook/outlook"
 import { SEND_TIMEOUT_MS } from "./held-words"
+import type { ActionEvent } from "./action-log"
 
 /**
  * The only way an unattended job reaches another person. A script never sends: it asks, in its
@@ -126,13 +127,15 @@ export type LaneInput = {
  * Check, then send or record, every request one job made. Refusals a person should act on become
  * flags; the ones that are simply "not yet" (too soon since the last send, on the stop list, a
  * duplicate in this run) are recorded and stay quiet, the way the reference job does.
+ * `logged` is what went out, or was tried and failed, for the action log; the caller writes it.
  */
-export async function processSends(input: LaneInput): Promise<{ outcomes: SendOutcome[]; flags: Flag[] }> {
+export async function processSends(input: LaneInput): Promise<{ outcomes: SendOutcome[]; flags: Flag[]; logged: ActionEvent[] }> {
   const now = input.now ?? new Date()
   const send = input.send ?? outlookSend
   const outcomes: SendOutcome[] = []
   const flags: Flag[] = []
-  if (input.requests.length === 0) return { outcomes, flags }
+  const logged: ActionEvent[] = []
+  if (input.requests.length === 0) return { outcomes, flags, logged }
 
   const approvals = await input.store.readApprovals()
   const sent = await input.store.readSent()
@@ -227,11 +230,14 @@ export async function processSends(input: LaneInput): Promise<{ outcomes: SendOu
       await send(mail)
       await input.store.appendSent({ policy: policy.id, to, at: new Date().toISOString(), jobId: input.jobId, subject: mail.subject })
       outcomes.push({ policy: policy.id, to, result: "sent" })
+      // ponytail: lines carry the run's start time; pass a clock in if per-send precision matters.
+      logged.push({ kind: "sent", at: now, jobId: input.jobId, policy: policy.id, to, subject: mail.subject, by: "policy" })
     } catch (error) {
       refuse(policy.id, to, `Sending failed: ${(error as Error).message}`, true)
+      logged.push({ kind: "not-sent", at: now, jobId: input.jobId, policy: policy.id, to, subject: mail.subject, by: "policy", reason: (error as Error).message.replace(/,? or run: [\s\S]*$/, "").trim() || "Outlook didn't say why" })
     }
   }
-  return { outcomes, flags }
+  return { outcomes, flags, logged }
 }
 
 /**

@@ -28,6 +28,11 @@ pointer to it, not a second source of truth.
   rest. Match records by `id`, never by their position in the list. Alacrán
   refuses to auto-commit a run that crossed this line. Facts that other files
   depend on still belong in `definitions/`.
+- **`records/actions/` is written by Alacrán, not by you.** One file per month
+  logs, one line each, every email a job sent or failed to send and every
+  decision the owner made on a held step. It is append-only: never edit,
+  reorder, reconcile or delete a line there. Read it to learn what has already
+  gone out.
 
 ## 3. Where things go
 
@@ -35,6 +40,7 @@ pointer to it, not a second source of truth.
 | --- | --- |
 | a fact that other files depend on | `definitions/` |
 | operational department data an agent maintains | `records/` |
+| what a job sent and what the owner decided on held steps | `records/actions/`, written by Alacrán only |
 | something you're still working out | `notes/` |
 | a decision, with reasoning | `docs/decisions/YYYY-MM-DD-<slug>.md` |
 | a look back at how something went | `docs/retros/YYYY-MM-DD-retro.md` |

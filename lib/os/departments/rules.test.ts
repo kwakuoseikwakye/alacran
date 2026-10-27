@@ -27,6 +27,7 @@ describe("pickSlug", () => {
   it("rejects app-owned slugs", () => {
     expect(pickSlug("Roadmap", new Set())).toEqual({ error: expect.stringContaining("reserved") })
     expect(pickSlug("Workflows", new Set())).toEqual({ error: expect.stringContaining("reserved") })
+    expect(pickSlug("Actions", new Set())).toEqual({ error: expect.stringContaining("reserved") })
   })
   it("falls back to department, department-2, … for names with no Latin letters", () => {
     expect(pickSlug("法務", new Set())).toBe("department")

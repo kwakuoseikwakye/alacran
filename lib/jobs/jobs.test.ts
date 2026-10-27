@@ -221,6 +221,7 @@ describe("send lane", () => {
     const lane = await processSends({ root, jobId: "j", mode: "shadow", requests: [{ policy: "invite", to: "a@x.com", fields: { name: "Ama" } }], policies: [policy()], store, send })
     expect(lane.outcomes).toEqual([{ policy: "invite", to: "a@x.com", result: "would-send" }])
     expect(sends).toEqual([])
+    expect(lane.logged).toEqual([])
     expect(await store.readSent()).toEqual([])
   })
 
@@ -270,6 +271,8 @@ describe("send lane", () => {
     // Quiet: too recent, stop list, duplicate. Everything else needs a person.
     expect(lane.flags.map((f) => f.item)).toEqual(["capped@x.com", "noname@x.com", "extra@x.com", "not-an-email", "three@x.com", "z@x.com"])
     expect(sends.map((s) => s.to)).toEqual(["one@x.com", "two@x.com"])
+    // AC2: only what went out reaches the action log; refusals don't.
+    expect(lane.logged.map((e) => `${e.kind}:${"to" in e ? e.to : ""}`)).toEqual(["sent:one@x.com", "sent:two@x.com"])
     expect((await store.readSent()).filter((s) => s.to === "one@x.com")).toHaveLength(1)
   })
 
@@ -298,6 +301,7 @@ describe("send lane", () => {
       requests: [{ policy: "invite", to: "a@x.com", fields: { name: "A" } }],
     })
     expect(lane.flags).toEqual([{ item: "a@x.com", reason: "Sending failed: Not signed in" }])
+    expect(lane.logged).toMatchObject([{ kind: "not-sent", to: "a@x.com", reason: "Not signed in", by: "policy", policy: "invite" }])
     expect(await store.readSent()).toEqual([])
   })
 
@@ -330,11 +334,114 @@ describe("sweep", () => {
     const parsed = parsePolicies(await readFile(path.join(root, "definitions/send-policies.yaml"), "utf-8"))
     await approvePolicy(root, parsed.ok ? parsed.items[0] : policy(), store)
     const sent: Mail[] = []
-    const entry = await runJob(root, job({ mode: "live" }), store, { send: async (m) => void sent.push(m) })
+    const git: string[][] = []
+    const entry = await runJob(root, job({ mode: "live" }), store, {
+      send: async (m) => void sent.push(m),
+      now: () => new Date(2026, 9, 26, 9, 0),
+      git: async (_cmd, args) => (git.push(args), { stdout: "", stderr: "" }),
+    })
     expect(entry).toMatchObject({ status: "ok", message: "Ran, sent 1, 1 needs you", did: ["found 2 people"] })
     expect(sent.map((m) => m.to)).toEqual(["a@x.com"])
     expect((await store.readRuns()).map((r) => r.runId)).toEqual([entry.runId])
     expect((await store.readState()).lastRun.followup).toMatchObject({ status: "ok" })
+    // AC1: the send is in the company's action log, committed on its own.
+    const log = await readFile(path.join(root, "records/actions/2026-10.md"), "utf-8")
+    expect(log.split("\n").filter((l) => l.startsWith("- "))).toEqual([
+      '- 2026-10-26 09:00 · Sent email "Welcome Ama" to a@x.com · job followup, policy invite · decided by: send policy',
+    ])
+    expect(git).toEqual([
+      ["-C", root, "add", "--", "records/actions/2026-10.md"],
+      ["-C", root, "commit", "-m", "Log 1 action", "--", "records/actions/2026-10.md"],
+    ])
+  })
+
+  async function liveSendJob(to: string[]) {
+    await writeFile(path.join(root, "templates/invite.md"), TEMPLATE)
+    await writeFile(path.join(root, "definitions/send-policies.yaml"), "policies:\n  - id: invite\n    channel: outlook\n    template: templates/invite.md\n    fields: [name]\n")
+    const send = to.map((t) => ({ policy: "invite", to: t, fields: { name: "Ama" } }))
+    await script(`cat > "$ALACRAN_REPORT" <<'EOF'\n${JSON.stringify({ did: ["x"], send })}\nEOF`)
+    const store = jobStore(storeDir)
+    const parsed = parsePolicies(await readFile(path.join(root, "definitions/send-policies.yaml"), "utf-8"))
+    await approvePolicy(root, parsed.ok ? parsed.items[0] : policy(), store)
+    return store
+  }
+  const logLines = async () =>
+    (await readFile(path.join(root, "records/actions/2026-10.md"), "utf-8").catch(() => "")).split("\n").filter((l) => l.startsWith("- "))
+
+  it("AC2/AC6: a failed send logs 'not sent' with the reason; two sends in one run are one commit", async () => {
+    const store = await liveSendJob(["a@x.com", "b@x.com", "c@x.com"])
+    const git: string[][] = []
+    await runJob(root, job({ mode: "live" }), store, {
+      send: async (m) => {
+        if (m.to === "b@x.com") throw new Error("Not signed in")
+      },
+      now: () => new Date(2026, 9, 26, 9, 0),
+      git: async (_cmd, args) => (git.push(args), { stdout: "", stderr: "" }),
+    })
+    const lines = await logLines()
+    expect(lines.filter((l) => l.includes("Sent email"))).toHaveLength(2)
+    expect(lines.filter((l) => l.includes('Email "Welcome Ama" to b@x.com not sent: Not signed in'))).toHaveLength(1)
+    expect(git.filter((a) => a.includes("commit"))).toHaveLength(1)
+  })
+
+  it("AC2: a failed send logs the plain reason, without the CLI's 'or run:' hint", async () => {
+    const store = await liveSendJob(["a@x.com"])
+    await runJob(root, job({ mode: "live" }), store, {
+      send: async () => {
+        throw new Error("Outlook isn't signed in. Sign in from Connected tools, or run: alacran-outlook login")
+      },
+      now: () => new Date(2026, 9, 26, 9, 0),
+      git: async () => ({ stdout: "", stderr: "" }),
+    })
+    const lines = await logLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain("not sent: Outlook isn't signed in. Sign in from Connected tools ·")
+    expect(lines[0]).not.toContain("alacran-outlook")
+  })
+
+  it("a run that starts 23:59 on the month's last day logs into that month's file with that time", async () => {
+    const store = await liveSendJob(["a@x.com"])
+    let t = new Date(2026, 9, 31, 23, 59)
+    const next = new Date(2026, 10, 1, 0, 1)
+    await runJob(root, job({ mode: "live" }), store, {
+      send: async () => {},
+      now: () => {
+        const v = t
+        t = next
+        return v
+      },
+      git: async () => ({ stdout: "", stderr: "" }),
+    })
+    expect((await logLines())[0]).toMatch(/^- 2026-10-31 23:59 · Sent email/)
+    await expect(readFile(path.join(root, "records/actions/2026-11.md"), "utf-8")).rejects.toThrow()
+  })
+
+  it("AC2: a practice run and a run whose sends are all refused log nothing and touch no git", async () => {
+    const store = await liveSendJob(["a@x.com", "not-an-email"])
+    const git = vi.fn(async () => ({ stdout: "", stderr: "" }))
+    const send = vi.fn()
+    await runJob(root, job({ mode: "shadow" }), store, { send, git })
+    await script(`cat > "$ALACRAN_REPORT" <<'EOF'\n${JSON.stringify({ send: [{ policy: "invite", to: "not-an-email", fields: { name: "N" } }] })}\nEOF`)
+    await runJob(root, job({ mode: "live" }), store, { send, git })
+    expect(send).not.toHaveBeenCalled()
+    expect(git).not.toHaveBeenCalled()
+    await expect(readFile(path.join(root, "records/actions/2026-10.md"), "utf-8")).rejects.toThrow()
+  })
+
+  it("AC9: a log that can't be committed flags the run and leaves the send recorded as sent", async () => {
+    const store = await liveSendJob(["a@x.com"])
+    const entry = await runJob(root, job({ mode: "live" }), store, {
+      send: async () => {},
+      now: () => new Date(2026, 9, 26, 9, 0),
+      git: async () => {
+        throw new Error("not a git repository")
+      },
+    })
+    expect(entry.sends?.[0]?.result).toBe("sent")
+    expect(entry.flagged.map((f) => f.reason)).toContain(
+      "The action log in the company folder couldn't be updated (the line was written but couldn't be committed). What was sent is still in this run's history."
+    )
+    expect(await logLines()).toHaveLength(1)
   })
 
   it("a failed script sends nothing even if its report asks to", async () => {
