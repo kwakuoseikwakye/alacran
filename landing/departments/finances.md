@@ -4,7 +4,7 @@
 
 Bring income, expenses, and cash information into a working view of your business. Track changes, investigate costs, and prepare questions for a more informed financial review.
 
-**Why you need this:** Without it, your income, expenses and cash sit in separate places, and every question to your AI means pasting numbers in again. Here the records you keep are the ones your AI reads, and what it proposes waits for your approval.
+**Why you need this:** Without it, your income, expenses and cash sit in separate places, and every question to your AI means pasting numbers in again. Here the records you keep are the ones your AI reads, and by default what it proposes waits for your approval.
 
 Download Alacrán
 

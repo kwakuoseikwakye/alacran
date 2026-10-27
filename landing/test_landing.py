@@ -808,6 +808,8 @@ def test_department_copy() -> list[str]:
                 out.append(f"{route}: {o[:40]!r} is not the first paragraph under a heading")
     if "tone guidance are saved" in page_html("/departments/content") or "past posts set the voice" not in page_html("/departments/content"):
         out.append("/departments/content: the 'why you need this' line names a tone setting the app does not have")
+    if "by default what it proposes waits for your approval" not in page_html("/departments/finances"):
+        out.append("/departments/finances: 'waits for your approval' must say it is the default")
     return out
 
 
