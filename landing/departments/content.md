@@ -30,7 +30,7 @@ Example company · Sample data
 
 ## Start with your audience and your offer.
 
-A generic post is easy to scroll past, and writing a good brief every time is slow. Use company facts, audience information, and tone guidance to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
+A generic post is easy to scroll past, and writing a good brief every time is slow. Use company facts, audience information, and your past posts to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
 
 ## Move from idea to reviewed draft.
 
@@ -52,7 +52,7 @@ Posting more often is not the same as learning what works. Review supported foll
 
 Try asking
 
-Draft three posts explaining this service to our target audience. Give each one a different useful angle, follow our saved tone guidance, and flag claims that need proof.
+Draft three posts explaining this service to our target audience. Give each one a different useful angle, match the voice of our past posts, and flag claims that need proof.
 
 ## Questions
 
