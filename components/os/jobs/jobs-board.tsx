@@ -294,7 +294,7 @@ function SpendingSection({ companyId, spending, scriptIds }: { companyId: string
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={hasLimit ? String(limit.usd) : "e.g. 25"}
-            className="h-8 w-28 rounded-md border border-os-border bg-os-bg px-2 text-sm text-os-text outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="h-8 w-28 rounded-md border border-os-border bg-os-bg px-2 text-sm text-os-text outline-none focus-visible:border-ring! focus-visible:ring-[3px]! focus-visible:ring-ring/50"
           />
           <Button size="sm" variant="outline" type="submit" disabled={pending} title="Save this amount in the company's definitions. Once this month's estimated cost reaches it, Alacrán stops starting AI runs on its own.">
             Set monthly limit
@@ -305,7 +305,7 @@ function SpendingSection({ companyId, spending, scriptIds }: { companyId: string
             </Button>
           )}
         </form>
-        <p className="text-os-muted">{hasLimit ? SPENDING_COPY.softLimit : SPENDING_COPY.noLimit}</p>
+        {limit.ok && <p className="text-os-muted">{hasLimit ? SPENDING_COPY.softLimit : SPENDING_COPY.noLimit}</p>}
         {scriptIds.length > 0 && (
           <p className="text-os-dim">
             Your scripts ({scriptIds.join(", ")}) {SPENDING_COPY.scripts}

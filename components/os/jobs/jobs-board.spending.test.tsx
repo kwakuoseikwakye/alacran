@@ -37,11 +37,13 @@ describe("the spending section (v251 round 2)", () => {
     const bad = html({ limit: { ok: false, reason: "bad value." } })
     expect(bad).toContain(">Remove limit<")
     expect(bad).toContain('placeholder="e.g. 25"')
+    expect(bad).not.toContain("Set a limit to stop scheduled runs")
+    expect(bad).not.toContain("This limit can be passed")
     expect(html({})).not.toContain(">Remove limit<")
   })
 
-  it("gives the limit field the buttons' focus ring", () => {
-    expect(html({})).toMatch(/id="jobs-monthly-limit"[^>]*focus-visible:ring-\[3px\]/)
+  it("gives the limit field the buttons' focus ring, marked important so the unlayered globals.css input rule can't override it", () => {
+    expect(html({})).toMatch(/id="jobs-monthly-limit"[^>]*focus-visible:border-ring! focus-visible:ring-\[3px\]!/)
   })
 
   it("never reads as $0.00 when nothing was seen", () => {
