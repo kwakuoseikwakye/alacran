@@ -226,7 +226,7 @@ Disclosure: **Example · illustrative scenario, not a customer result**
 
 **You get:** Proposed changes to your company facts, each marked with where it came from. Alacrán also shows which parts of your company profile look out of date, and the Brain map shows what your AI always knows and what it is unsure about.
 
-**You stay in control:** You tick the changes you agree with, and Alacrán applies them for you to check.
+**You stay in control:** You see which facts changed and where each one came from, and you approve them together with the note, or keep the note and drop the fact changes. Nothing is added to your company history until you approve.
 
 Link: **Record the reason for a decision** → `/how-to-use#decisions`
 

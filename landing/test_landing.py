@@ -611,6 +611,9 @@ def test_scenarios() -> list[str]:
             out.append(f"/: scenario {n} puts {box[2][:40]!r} under {box[1]!r}; a button press is 'You do', a prompt is 'You ask'")
         if item.count('<a class="go"') != 1:
             out.append(f"/: scenario {n} needs exactly one next-step link")
+    scn3 = re.findall(r'<li class="scn reveal">(.*?)</li>', page_html("/"), re.S)[2]
+    if "bulk" in scn3 or "one by one" in scn3 or "drop the fact changes" not in scn3:
+        out.append("/: scenario 3 must describe the Save what we learned button: approve the facts with the note, or drop the fact changes")
     links = re.findall(r'<li class="scn reveal">.*?<a class="go" href="([^"]+)">(.*?) <span', content, re.S)
     for key, what in ((1, "text"), (0, "target")):
         seen = [m[key] for m in links]
