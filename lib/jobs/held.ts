@@ -3,7 +3,8 @@ import type { HoldRequest } from "./runner"
 import { outlookSend, sha256, type SendFn } from "./send-lane"
 import type { HeldAction, HoldOutcome, JobStore } from "./store"
 
-import { isOpenHeld, isStuckSending } from "./held-words"
+import { isOpenHeld, isStuckSending, rowWords } from "./held-words"
+import type { ActionEvent } from "./action-log"
 
 export { bulkSummary, rowWords } from "./held-words"
 
@@ -71,7 +72,17 @@ export async function recordHolds(
   })
 }
 
-export type DecideResult = { sent: number; failed: number; unrecorded: number; recorded: number; rejected: number; cleared: number; skipped: number }
+export type DecideResult = {
+  sent: number
+  failed: number
+  unrecorded: number
+  recorded: number
+  rejected: number
+  cleared: number
+  skipped: number
+  /** For the action log: one event per step this call actually decided, sent or failed to send. */
+  logged: ActionEvent[]
+}
 
 /**
  * The owner's yes or no to the ids they were shown. Phase 1 claims under the lock (only one caller
@@ -87,12 +98,15 @@ export async function decideHeld(
   send: SendFn = outlookSend,
   now: () => Date = () => new Date()
 ): Promise<DecideResult> {
-  const result: DecideResult = { sent: 0, failed: 0, unrecorded: 0, recorded: 0, rejected: 0, cleared: 0, skipped: 0 }
+  const result: DecideResult = { sent: 0, failed: 0, unrecorded: 0, recorded: 0, rejected: 0, cleared: 0, skipped: 0, logged: [] }
   const wanted = new Set(ids)
-  const claimed = await store.updateHeld((held) => {
+  const { mine: claimed, events } = await store.updateHeld((held) => {
     const at = now().toISOString()
     const nowMs = now().getTime()
     const mine: HeldAction[] = []
+    const events: ActionEvent[] = []
+    const log = (h: HeldAction, kind: "approved" | "done" | "rejected") =>
+      events.push({ kind, at: now(), jobId: h.jobId, what: rowWords(h), title: h.title })
     const seen = new Set<string>()
     const next = held.map((h) => {
       if (!wanted.has(h.id) || seen.has(h.id)) return h
@@ -100,6 +114,8 @@ export async function decideHeld(
       const clearable = (h.status === "failed" || h.status === "approved") && !h.clearedAt
       if (decision === "reject" && (clearable || isStuckSending(h, nowMs))) {
         result.cleared++
+        // "Done, clear it" on a step the owner carries out is their word that it's done.
+        if (h.status === "approved") log(h, "done")
         return { ...h, clearedAt: at }
       }
       if (h.status !== "pending") {
@@ -108,11 +124,13 @@ export async function decideHeld(
       }
       if (decision === "reject") {
         result.rejected++
+        log(h, "rejected")
         return { ...h, status: "rejected" as const, decidedAt: at }
       }
       if (!h.mail) {
         // Nothing Alacrán can carry out: the decision is recorded and the owner does the step.
         result.recorded++
+        log(h, "approved")
         return { ...h, status: "approved" as const, decidedAt: at }
       }
       const claim = { ...h, status: "sending" as const, decidedAt: at }
@@ -120,8 +138,10 @@ export async function decideHeld(
       return claim
     })
     result.skipped += [...wanted].filter((id) => !seen.has(id)).length
-    return { held: next, result: mine }
+    return { held: next, result: { mine, events } }
   })
+  // Logged only once the claim is saved, so a failed phase 1 logs nothing.
+  result.logged.push(...events)
 
   for (const item of claimed) {
     let outcome: Partial<HeldAction>
@@ -135,6 +155,9 @@ export async function decideHeld(
       const reason = (error as Error).message.replace(/,? or run: [\s\S]*$/, "").trim() || "Outlook didn't say why"
       outcome = { status: "failed", reason: /[.!?]$/.test(reason) ? reason : `${reason}.` }
     }
+    // What the send did, whether or not phase 3 manages to record it. Only the claimer gets here.
+    const mailed = { at: now(), jobId: item.jobId, to: item.mail!.to, subject: item.mail!.subject, by: "owner" as const }
+    result.logged.push(sent ? { kind: "sent", ...mailed } : { kind: "not-sent", ...mailed, reason: outcome.reason! })
     try {
       await store.updateHeld((held) => ({ held: prune(held.map((h) => (h.id === item.id ? { ...h, ...outcome } : h))), result: null }))
       if (sent) result.sent++
