@@ -4,7 +4,7 @@
 
 Develop ideas, prepare drafts, and keep the review process connected to your company’s voice and priorities. Track what is ready and what has already been published.
 
-**Why you need this:** Without it, every post starts from a blank prompt and you explain your audience and tone again each time. Here your company facts and tone guidance are saved once, and you review each draft before approving it.
+**Why you need this:** Without it, every post starts from a blank prompt and you explain your audience and tone again each time. Here your company facts say what you offer and who it serves, your past posts set the voice, and you review each draft before approving it.
 
 Download Alacrán
 

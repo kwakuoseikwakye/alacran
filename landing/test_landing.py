@@ -806,6 +806,8 @@ def test_department_copy() -> list[str]:
                 out.append(f"{route}: a section does not open with its problem sentence: {o[:40]!r}")
             elif "<h2>" not in content[max(0, m.start() - 400):m.start()]:
                 out.append(f"{route}: {o[:40]!r} is not the first paragraph under a heading")
+    if "tone guidance are saved" in page_html("/departments/content") or "past posts set the voice" not in page_html("/departments/content"):
+        out.append("/departments/content: the 'why you need this' line names a tone setting the app does not have")
     return out
 
 
