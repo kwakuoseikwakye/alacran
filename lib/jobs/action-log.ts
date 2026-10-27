@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto"
 import { lstat, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
 import path from "node:path"
+import yaml from "yaml"
 import { commitFile, type ExecFileFn } from "../git-commit-file"
 import { defaultExecFile } from "../default-exec-file"
+import { DEFINITIONS_REL } from "../os/departments/definitions"
 import { contained } from "../os/departments/safety"
 import { withFileLock } from "../os/records/write"
 import { localStamp } from "../schedules/schedules-impl"
 
 /**
- * The action log (v249): one line in `records/actions/<YYYY-MM>.md` for every external action an
+ * The action log (v250): one line in `records/actions/<YYYY-MM>.md` for every external action an
  * unattended job took and every decision the owner made on a held step, committed to the company's
  * own history. The app only appends; it never rewrites or removes an earlier line. Local file and
  * local git only: nothing here reaches the network.
@@ -69,6 +71,16 @@ function touchUpdated(text: string, iso: string): string {
   return block + text.slice(front[0].length)
 }
 
+/** A department the owner made before v250 may already be called Actions; its folder is theirs, not the log's. */
+async function ownerHasActionsDepartment(root: string): Promise<boolean> {
+  try {
+    const raw = yaml.parse(await readFile(path.join(root, DEFINITIONS_REL), "utf-8")) as { departments?: unknown } | null
+    return Array.isArray(raw?.departments) && raw.departments.some((d) => (d as { slug?: unknown } | null)?.slug === "actions")
+  } catch {
+    return false
+  }
+}
+
 export type LogResult = { ok: true } | { ok: false; reason: string }
 
 /**
@@ -83,6 +95,9 @@ export async function appendActions(root: string, events: ActionEvent[], deps: {
   const abs = path.join(root, rel)
   let stage = "written"
   try {
+    if (await ownerHasActionsDepartment(root)) {
+      return { ok: false, reason: "a department you made is already called Actions; rename it so the action log can be kept" }
+    }
     if (!(await contained(root, abs))) return { ok: false, reason: "the actions folder isn't a plain folder inside the company folder" }
     await mkdir(path.dirname(abs), { recursive: true })
     return await withFileLock(abs, async (): Promise<LogResult> => {

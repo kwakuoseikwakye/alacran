@@ -384,6 +384,38 @@ describe("sweep", () => {
     expect(git.filter((a) => a.includes("commit"))).toHaveLength(1)
   })
 
+  it("AC2: a failed send logs the plain reason, without the CLI's 'or run:' hint", async () => {
+    const store = await liveSendJob(["a@x.com"])
+    await runJob(root, job({ mode: "live" }), store, {
+      send: async () => {
+        throw new Error("Outlook isn't signed in. Sign in from Connected tools, or run: alacran-outlook login")
+      },
+      now: () => new Date(2026, 9, 26, 9, 0),
+      git: async () => ({ stdout: "", stderr: "" }),
+    })
+    const lines = await logLines()
+    expect(lines).toHaveLength(1)
+    expect(lines[0]).toContain("not sent: Outlook isn't signed in. Sign in from Connected tools ·")
+    expect(lines[0]).not.toContain("alacran-outlook")
+  })
+
+  it("a run that starts 23:59 on the month's last day logs into that month's file with that time", async () => {
+    const store = await liveSendJob(["a@x.com"])
+    let t = new Date(2026, 9, 31, 23, 59)
+    const next = new Date(2026, 10, 1, 0, 1)
+    await runJob(root, job({ mode: "live" }), store, {
+      send: async () => {},
+      now: () => {
+        const v = t
+        t = next
+        return v
+      },
+      git: async () => ({ stdout: "", stderr: "" }),
+    })
+    expect((await logLines())[0]).toMatch(/^- 2026-10-31 23:59 · Sent email/)
+    await expect(readFile(path.join(root, "records/actions/2026-11.md"), "utf-8")).rejects.toThrow()
+  })
+
   it("AC2: a practice run and a run whose sends are all refused log nothing and touch no git", async () => {
     const store = await liveSendJob(["a@x.com", "not-an-email"])
     const git = vi.fn(async () => ({ stdout: "", stderr: "" }))

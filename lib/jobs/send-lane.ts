@@ -234,7 +234,7 @@ export async function processSends(input: LaneInput): Promise<{ outcomes: SendOu
       logged.push({ kind: "sent", at: now, jobId: input.jobId, policy: policy.id, to, subject: mail.subject, by: "policy" })
     } catch (error) {
       refuse(policy.id, to, `Sending failed: ${(error as Error).message}`, true)
-      logged.push({ kind: "not-sent", at: now, jobId: input.jobId, policy: policy.id, to, subject: mail.subject, by: "policy", reason: (error as Error).message })
+      logged.push({ kind: "not-sent", at: now, jobId: input.jobId, policy: policy.id, to, subject: mail.subject, by: "policy", reason: (error as Error).message.replace(/,? or run: [\s\S]*$/, "").trim() || "Outlook didn't say why" })
     }
   }
   return { outcomes, flags, logged }

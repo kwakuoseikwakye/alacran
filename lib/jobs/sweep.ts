@@ -92,7 +92,7 @@ export async function runJob(root: string, job: Job, store: JobStore, deps: JobD
         sends = lane.outcomes
         flagged.push(...lane.flags)
         // One append and one commit per run, however many lines.
-        const log = await appendActions(root, lane.logged, { exec: deps.git, now })
+        const log = await appendActions(root, lane.logged, { exec: deps.git, now: () => started })
         if (!log.ok) {
           flagged.push({ item: job.id, reason: `The action log in the company folder couldn't be updated (${log.reason}). What was sent is still in this run's history.` })
         }

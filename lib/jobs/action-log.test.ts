@@ -161,4 +161,15 @@ describe("action log", () => {
     const src = await readFile(path.join(__dirname, "action-log.ts"), "utf-8")
     expect(src).not.toMatch(/fetch\(|https?:\/\//)
   })
+
+  it("refuses to write into a department the owner already made called Actions", async () => {
+    await mkdir(path.join(root, "definitions"), { recursive: true })
+    await writeFile(path.join(root, "definitions/departments.yaml"), "departments:\n  - slug: actions\n    name: Actions\n    purpose: ours\n    color: '#112233'\n")
+    const result = await appendActions(root, [sent()], { exec, now })
+    expect(result).toEqual({ ok: false, reason: "a department you made is already called Actions; rename it so the action log can be kept" })
+    await expect(readFile(path.join(root, FILE), "utf-8")).rejects.toThrow()
+    expect(calls).toEqual([])
+    await writeFile(path.join(root, "definitions/departments.yaml"), "departments:\n  - slug: sales\n    name: Sales\n    purpose: x\n    color: '#112233'\n")
+    expect(await appendActions(root, [sent()], { exec, now })).toEqual({ ok: true })
+  })
 })
