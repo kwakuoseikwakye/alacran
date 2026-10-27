@@ -62,7 +62,7 @@ Open Alacrán from your Applications folder.
 
 Why this step exists Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you run the line above once, macOS may say “Alacrán is damaged and can’t be opened”. It is not damaged. The command clears the flag your browser attached to this one download, so macOS lets the app open. Right-click and Open is not enough on its own. Use it only on the app you downloaded from this site or the official releases page. Updates inside the app do not need it again.
 
-On Debian or Ubuntu Open Terminal, go to the folder where you saved the download (usually Downloads), and run the line below. Then open Alacrán from your applications menu.
+On Debian or Ubuntu Open Terminal, go to the folder where you saved the download (usually Downloads), and run the line below. Use it only on the file you downloaded from this site or the official releases page. Then open Alacrán from your applications menu.
 
 `sudo apt install ./Alacran.deb`
 
