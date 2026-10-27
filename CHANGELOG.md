@@ -14125,8 +14125,7 @@ Your company now keeps its own record of every message your jobs sent and every 
 - Each time you approve, reject or mark done a step a job held for you, one line says what it was and what you decided. A payment or access change you approved is logged as yours to carry out, never as done.
 - Find it on Records, under Actions: one page per month, newest lines at the bottom.
 - The log lives in the company folder and its history, so any AI working for the company can read what has already gone out.
-- Message text is never logged, only who it went to and the subject.
-- The log records who was emailed and the subject (never the message), and it is kept in the company's history, including any GitHub backup.
+- The log records who was emailed and the subject, never the message text, and it is kept in the company's history, including any GitHub backup.
 - Not logged yet: emails an AI sends itself from its own terminal session, and the test email you send from a send policy.
 
 Why: the owner wants what the AI did for the company to become company memory, reviewable later and readable by any AI. This is the logging half of Cloudflare OS Gatekeepers (`notes/company/cloudflare-os-comparison-2026-10-26.md`, item 2; feature 2 of the agreed four), stacked on v248 because the owner's held-step decisions are exactly what it logs.
