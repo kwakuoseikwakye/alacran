@@ -5,6 +5,8 @@ import { readJobs, readPolicies, type Job } from "./definitions"
 import { runScript, type ExecFn } from "./runner"
 import { processSends, type SendFn } from "./send-lane"
 import { recordHolds } from "./held"
+import { appendActions } from "./action-log"
+import type { ExecFileFn } from "../git-commit-file"
 import { jobStore, jobsDir, type Flag, type JobStore, type RunEntry } from "./store"
 
 /**
@@ -12,7 +14,7 @@ import { jobStore, jobsDir, type Flag, type JobStore, type RunEntry } from "./st
  * no AI. Same local-wall-clock rule as daily schedules (lib/schedules/schedules-impl.ts), same
  * "today only" catch-up when the laptop was asleep, and the same never-throw contract.
  */
-export type JobDeps = { exec?: ExecFn; send?: SendFn; now?: () => Date }
+export type JobDeps = { exec?: ExecFn; send?: SendFn; now?: () => Date; git?: ExecFileFn }
 
 // One run per job at a time in this process: a script can take minutes and the tick comes every 60 s.
 const running = new Set<string>()
@@ -89,6 +91,11 @@ export async function runJob(root: string, job: Job, store: JobStore, deps: JobD
         const lane = await processSends({ root, jobId: job.id, mode: job.mode, requests: report.send, policies: policies.items, store, now: started, send: deps.send })
         sends = lane.outcomes
         flagged.push(...lane.flags)
+        // One append and one commit per run, however many lines.
+        const log = await appendActions(root, lane.logged, { exec: deps.git, now: () => started })
+        if (!log.ok) {
+          flagged.push({ item: job.id, reason: `The action log in the company folder couldn't be updated (${log.reason}). What was sent is still in this run's history.` })
+        }
       }
     }
     if (!failed && report?.hold.length) {

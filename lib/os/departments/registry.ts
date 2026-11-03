@@ -3,7 +3,7 @@ import path from "node:path"
 import type { Department } from "@/lib/os/brain/types"
 import type { Ontology } from "@/lib/os/ontology/schema"
 import { readDefinitions } from "./definitions"
-import { APP_OWNED_SLUGS } from "./rules"
+import { APP_OWNED_SLUGS, APP_RECORD_SLUGS } from "./rules"
 
 export interface DepartmentRole {
   id: string
@@ -64,6 +64,16 @@ const BASE_DEPARTMENTS: Array<Omit<CompanyDepartment, "recordsCount" | "roles" |
     order: 5,
   },
 ]
+
+/** Discovered app folders with their own name and wording. */
+const APP_FOLDERS: Record<string, { name: string; tagline: string; color: string }> = {
+  actions: { name: "Actions", tagline: "What your AI and jobs did outside the company, one line each.", color: "#e11d48" },
+}
+
+/** Read and opened from the Records page: the owner's departments, plain folders, and app logs like Actions. */
+export function showsOnRecords(d: Pick<CompanyDepartment, "source" | "slug">): boolean {
+  return d.source === "custom" || d.source === "discovered" || (d.source === "app" && (APP_RECORD_SLUGS as readonly string[]).includes(d.slug))
+}
 
 function formatDeptName(slug: string): string {
   return slug
@@ -142,13 +152,13 @@ export function getCompanyDepartmentsDetailed(
           if (existing) {
             existing.recordsCount = fileCount
           } else {
-            const name = formatDeptName(slug)
+            const name = APP_FOLDERS[slug]?.name ?? formatDeptName(slug)
             deptMap.set(slug, {
               id: `dept-${slug}`,
               name,
               slug,
-              tagline: `Operational department records for ${name}.`,
-              color: slug === "workflows" ? "#f59e0b" : slug === "roadmap" ? "#14b8a6" : "#a3a3a3",
+              tagline: APP_FOLDERS[slug]?.tagline ?? `Operational department records for ${name}.`,
+              color: APP_FOLDERS[slug]?.color ?? (slug === "workflows" ? "#f59e0b" : slug === "roadmap" ? "#14b8a6" : "#a3a3a3"),
               order: orderCounter++,
               recordsCount: fileCount,
               roles: [],

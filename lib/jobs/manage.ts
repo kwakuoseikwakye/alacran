@@ -8,6 +8,7 @@ import { approvePolicy, revokePolicy, sendTest, type SendFn } from "./send-lane"
 import { jobStore, jobsDir } from "./store"
 import { runJobNow, type JobDeps } from "./sweep"
 import { decideHeld, decideMessage } from "./held"
+import { appendActions } from "./action-log"
 
 /**
  * The owner's actions on the Jobs page, kept out of the "use server" file so tests can drive them
@@ -128,13 +129,18 @@ export async function decideHeldActions(ctx: Ctx, ids: unknown, decision: "appro
     return fail("That item isn't valid.")
   }
   const store = jobStore(jobsDir(ctx.companyId, ctx.storeRoot))
+  const now = ctx.now ? () => ctx.now! : undefined
   let r
   try {
-    r = await decideHeld(store, ids as string[], decision, send)
+    r = await decideHeld(store, ids as string[], decision, send, now)
   } catch {
     return fail("The list of held steps can't be read right now, so nothing was changed or sent.")
   }
-  const { problem, rest } = decideMessage(r)
+  // One append and one commit for the whole decision; a failure changes nothing that was decided.
+  const log = await appendActions(ctx.root, r.logged, { exec: ctx.exec, now })
+  const message = decideMessage(r)
+  const rest = message.rest
+  const problem = [message.problem, log.ok ? "" : "The action log in the company folder couldn't be updated."].filter(Boolean).join(" ")
   if (!problem) return { ok: true, message: rest }
   return rest ? { ok: false, message: problem, note: rest } : { ok: false, message: problem }
 }

@@ -61,6 +61,11 @@ The owner puts a job live from the Jobs page.
   approves exactly what is sent. One
   malformed entry rejects the whole report, so nothing from it is held or sent.
 
+Every email a live job sends, or tries to send and fails, gets one line in
+`records/actions/<YYYY-MM>.md`, committed on its own; so does every yes or no
+the owner gives a held step. Alacrán writes that log and only ever appends to
+it. A script or an AI never writes there, and never edits a line.
+
 A run that exits with an error sends nothing. Match records by `id`, never by
 row position, and never change a field listed in a records file's
 `human_fields:`.

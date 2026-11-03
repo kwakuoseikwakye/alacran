@@ -2,7 +2,9 @@ import { isPaletteColor } from "./palette"
 
 export const BUILT_IN_SLUGS = ["funnel", "comms", "content", "social", "finances"] as const
 /** Folders under records/ that the app itself writes and shows on their own pages. */
-export const APP_OWNED_SLUGS = ["workflows", "roadmap"] as const
+export const APP_OWNED_SLUGS = ["workflows", "roadmap", "actions"] as const
+/** App-owned folders that are read on the Records page rather than on a page of their own. */
+export const APP_RECORD_SLUGS = ["actions"] as const
 export const RESERVED_SLUGS: ReadonlySet<string> = new Set([...BUILT_IN_SLUGS, ...APP_OWNED_SLUGS, "company", "archive"])
 export const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
 export const MAX_NAME = 40

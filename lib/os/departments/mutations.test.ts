@@ -66,7 +66,7 @@ describe("createDepartment", () => {
     fs.writeFileSync(path.join(dir, "records", "Legal", "nda.md"), "x")
     expect(await createDepartment(dir, { ...legal, adopt: true })).toMatchObject({ ok: false, code: "folder-case" })
   })
-  it.each([["Finances"], ["Company"], ["Archive"]])("refuses the reserved name %s", async (name) => {
+  it.each([["Finances"], ["Company"], ["Archive"], ["Actions"]])("refuses the reserved name %s", async (name) => {
     const { dir } = makeRepo()
     expect(await createDepartment(dir, { ...legal, name })).toMatchObject({ ok: false, code: "invalid" })
   })
@@ -286,9 +286,9 @@ describe("addRecord retry", () => {
 })
 
 describe("addRecord app-owned slugs", () => {
-  it("refuses workflows and roadmap even when the folder exists", async () => {
+  it("refuses workflows, roadmap and the actions log even when the folder exists", async () => {
     const { dir } = makeRepo()
-    for (const slug of ["workflows", "roadmap"]) {
+    for (const slug of ["workflows", "roadmap", "actions"]) {
       fs.mkdirSync(path.join(dir, "records", slug), { recursive: true })
       expect(await addRecord(dir, { slug, title: "t", body: "x" })).toMatchObject({ ok: false, code: "invalid" })
       expect(fs.readdirSync(path.join(dir, "records", slug))).toEqual([])

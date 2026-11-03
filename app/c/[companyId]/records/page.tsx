@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
-import { getCompanyDepartmentsDetailed } from "@/lib/os/departments/registry"
+import { getCompanyDepartmentsDetailed, showsOnRecords } from "@/lib/os/departments/registry"
 import { AddDepartmentDialog } from "@/components/os/departments/add-department-dialog"
 import { Button } from "@/components/ui/button"
 import { CANVA_DESIGN_TOOLS } from "@/lib/content-social/canva-tools"
@@ -25,7 +25,7 @@ export default async function RecordsPage({ params }: { params: Promise<{ compan
     </nav>
     {(() => {
       const { departments, definitionsError } = getCompanyDepartmentsDetailed(company.rootPath, null)
-      const mine = departments.filter((d) => d.source === "custom" || d.source === "discovered")
+      const mine = departments.filter(showsOnRecords)
       return (
         <section aria-labelledby="your-departments" className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -41,7 +41,7 @@ export default async function RecordsPage({ params }: { params: Promise<{ compan
                 <li key={d.slug} className="min-w-0">
                   <Link href={`/c/${companyId}/records/${d.slug}`} className="block rounded-xl border border-os-border border-l-4 bg-os-surface p-5 hover:bg-os-surface2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2" style={{ borderLeftColor: d.color }}>
                     <h3 className="font-semibold [overflow-wrap:anywhere]">{d.name}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{d.source === "custom" ? d.purpose : "A folder of records"}</p>
+                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{d.source === "custom" ? d.purpose : d.source === "app" ? d.tagline : "A folder of records"}</p>
                     <span className="mt-3 block text-xs text-muted-foreground">{d.recordsCount} {d.recordsCount === 1 ? "record" : "records"}</span>
                   </Link>
                 </li>

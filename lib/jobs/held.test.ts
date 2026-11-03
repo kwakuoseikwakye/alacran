@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises"
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -10,14 +10,26 @@ import { jobStore, jobsDir, type JobStore } from "./store"
 import { openFlagCount, openHeld } from "./view"
 
 let storeRoot: string
+let companyRoot: string
 let store: JobStore
+let gitCalls: string[][]
 const now = new Date("2026-10-26T09:00:00Z")
+// A stand-in git: the action log commits in the company folder, and a test never runs real git.
+const gitOk = async (_cmd: string, args: string[]) => {
+  gitCalls.push(args)
+  return { stdout: "", stderr: "" }
+}
 
 beforeEach(async () => {
   storeRoot = await mkdtemp(path.join(os.tmpdir(), "held-store-"))
+  companyRoot = await mkdtemp(path.join(os.tmpdir(), "held-company-"))
   store = jobStore(jobsDir("acme", storeRoot))
+  gitCalls = []
 })
-afterEach(() => rm(storeRoot, { recursive: true, force: true }))
+afterEach(async () => {
+  await rm(storeRoot, { recursive: true, force: true })
+  await rm(companyRoot, { recursive: true, force: true })
+})
 
 const mailHold = (to = "ama@x.com", subject = "Your invoice"): HoldRequest => ({
   row: "publication",
@@ -62,7 +74,7 @@ describe("held queue", () => {
   it("AC6: only the server-side decision path, with a valid id, can move an item off pending", async () => {
     const [item] = await hold([mailHold()])
     const send = vi.fn(async () => {})
-    const ctx = { companyId: "acme", root: "/nonexistent", storeRoot }
+    const ctx = { companyId: "acme", root: companyRoot, storeRoot, exec: gitOk }
     expect(await decideHeldActions(ctx, ["../../etc"], "approve", send)).toEqual({ ok: false, message: "That item isn't valid." })
     expect(await decideHeldActions(ctx, "x" as unknown, "approve", send)).toMatchObject({ ok: false })
     expect(send).not.toHaveBeenCalled()
@@ -119,7 +131,7 @@ describe("held queue", () => {
   it("AC9: approving money or credentials records the decision and executes nothing", async () => {
     const items = await hold([money, access])
     const send = vi.fn()
-    const ctx = { companyId: "acme", root: "/nonexistent", storeRoot }
+    const ctx = { companyId: "acme", root: companyRoot, storeRoot, exec: gitOk }
     const r = await decideHeldActions(ctx, items.map((i) => i.id), "approve", send)
     expect(r.message).toBe("2 approved for you to do yourself. Alacrán can't carry these steps out itself: you do them.")
     expect(r.message).not.toMatch(/\b(done|sent|paid)\b/i)
@@ -149,7 +161,7 @@ describe("held queue", () => {
     const send = vi.fn(async (m: Mail) => {
       if (m.to === "b@x.com") throw new Error("Outlook refused it")
     })
-    const ctx = { companyId: "acme", root: "/nonexistent", storeRoot }
+    const ctx = { companyId: "acme", root: companyRoot, storeRoot, exec: gitOk }
     const r = await decideHeldActions(ctx, items.map((i) => i.id), "approve", send)
     expect(send).toHaveBeenCalledTimes(3)
     expect(r).toEqual({ ok: false, message: "1 failed to send.", note: "Sent 2, 1 approved for you to do yourself. Alacrán can't carry these steps out itself: you do them." })
@@ -165,7 +177,7 @@ describe("held queue", () => {
     await expect(store.readHeld()).rejects.toThrow()
     await expect(recordHolds(store, { jobId: "followup", runId: "r9", entries: [money], now })).rejects.toThrow()
     expect(await openHeld("acme", storeRoot)).toEqual({ ok: false })
-    const ctx = { companyId: "acme", root: "/nonexistent", storeRoot }
+    const ctx = { companyId: "acme", root: companyRoot, storeRoot, exec: gitOk }
     expect(await decideHeldActions(ctx, ["00000000-0000-4000-8000-000000000000"], "approve", vi.fn())).toMatchObject({ ok: false })
   })
 
@@ -212,7 +224,7 @@ describe("held queue", () => {
       // The queue file breaks between the send and its record.
       if (m.to === "a@x.com") await writeFile(file, "{ not json")
     })
-    const ctx = { companyId: "acme", root: "/nonexistent", storeRoot }
+    const ctx = { companyId: "acme", root: companyRoot, storeRoot, exec: gitOk }
     const r = await decideHeldActions(ctx, items.map((i) => i.id), "approve", send)
     expect(sent).toEqual(["a@x.com", "b@x.com"])
     expect(r.ok).toBe(false)
@@ -232,5 +244,95 @@ describe("held queue", () => {
     const after = await store.readHeld()
     expect(after.find((h) => h.id === "id-0")).toBeDefined()
     expect(after.filter((h) => h.status === "rejected")).toHaveLength(500)
+  })
+})
+
+describe("action log of held decisions", () => {
+  const at = new Date(2026, 9, 26, 9, 0)
+  const ctx = () => ({ companyId: "acme", root: companyRoot, storeRoot, exec: gitOk, now: at })
+  const lines = async () => {
+    const text = await readFile(path.join(companyRoot, "records/actions/2026-10.md"), "utf-8").catch(() => "")
+    return text.split("\n").filter((l) => l.startsWith("- "))
+  }
+  const commits = () => gitCalls.filter((a) => a.includes("commit"))
+
+  it("AC3: an approved held mail logs one 'sent' line, approved by the owner; a failed one logs the reason", async () => {
+    const [ok, bad] = await hold([mailHold(), mailHold("kofi@x.com", "Reminder")])
+    const send = vi.fn(async (m: Mail) => {
+      if (m.to === "kofi@x.com") throw new Error("Outlook refused it")
+    })
+    await decideHeldActions(ctx(), [ok.id], "approve", send)
+    await decideHeldActions(ctx(), [bad.id], "approve", send)
+    expect(await lines()).toEqual([
+      '- 2026-10-26 09:00 · Sent email "Your invoice" to ama@x.com · job followup · approved by the owner',
+      '- 2026-10-26 09:00 · Email "Reminder" to kofi@x.com not sent: Outlook refused it. · job followup · approved by the owner',
+    ])
+    // The body never reaches the log.
+    expect((await readFile(path.join(companyRoot, "records/actions/2026-10.md"), "utf-8")).includes("please pay")).toBe(false)
+  })
+
+  it("AC3: a double approve logs one line for one mail; approve-all logs one line per mail sent or failed", async () => {
+    const [a] = await hold([mailHold("a@x.com")])
+    let release!: () => void
+    const gate = new Promise<void>((r) => (release = r))
+    const send = vi.fn(async (_: Mail) => gate)
+    const both = Promise.all([decideHeldActions(ctx(), [a.id], "approve", send), decideHeldActions(ctx(), [a.id], "approve", send)])
+    await new Promise((r) => setTimeout(r, 20))
+    release()
+    await both
+    expect(send).toHaveBeenCalledTimes(1)
+    expect(await lines()).toHaveLength(1)
+
+    const items = await hold([mailHold("b@x.com"), mailHold("c@x.com"), mailHold("d@x.com")])
+    gitCalls = []
+    await decideHeldActions(ctx(), items.map((i) => i.id), "approve", async (m: Mail) => {
+      if (m.to === "c@x.com") throw new Error("offline")
+    })
+    const all = await lines()
+    expect(all.filter((l) => l.includes("Sent email"))).toHaveLength(3)
+    expect(all.filter((l) => l.includes("not sent: offline."))).toHaveLength(1)
+    // AC6: approve-all with three mails is one commit.
+    expect(commits()).toHaveLength(1)
+  })
+
+  it("AC4: approving money logs it as the owner's to carry out, never as done; 'Done, clear it' adds a second line", async () => {
+    const [item] = await hold([money])
+    const send = vi.fn()
+    await decideHeldActions(ctx(), [item.id], "approve", send)
+    const [first] = await lines()
+    expect(first).toBe('- 2026-10-26 09:00 · Spends money: "Pay the printer £120" · job followup · approved by the owner, to be carried out by the owner')
+    expect(first).not.toMatch(/Sent|marked done/)
+    await decideHeldActions(ctx(), [item.id], "reject", send)
+    expect((await lines())[1]).toBe('- 2026-10-26 09:00 · Spends money: "Pay the printer £120" · job followup · marked done by the owner')
+    expect(send).not.toHaveBeenCalled()
+  })
+
+  it("AC5/AC6: rejecting several steps logs one 'rejected' line each, sends nothing, and commits once", async () => {
+    const items = await hold([mailHold(), access])
+    const send = vi.fn()
+    expect(await decideHeldActions(ctx(), items.map((i) => i.id), "reject", send)).toEqual({ ok: true, message: "Rejected 2." })
+    const all = await lines()
+    expect(all).toHaveLength(2)
+    for (const l of all) expect(l).toMatch(/· job followup · rejected by the owner$/)
+    expect(all[0]).toContain('Rejected: "Email ama@x.com"')
+    expect(send).not.toHaveBeenCalled()
+    expect(commits()).toHaveLength(1)
+    // A second press decides nothing and logs nothing.
+    await decideHeldActions(ctx(), items.map((i) => i.id), "reject", send)
+    expect(await lines()).toHaveLength(2)
+  })
+
+  it("AC9: a log that can't be committed leaves the send as it was and says so in the result", async () => {
+    const [item] = await hold([mailHold()])
+    const send = vi.fn(async () => {})
+    const broken = async (_cmd: string, args: string[]) => {
+      if (args.includes("commit")) throw new Error("index.lock")
+      return { stdout: "", stderr: "" }
+    }
+    const r = await decideHeldActions({ ...ctx(), exec: broken }, [item.id], "approve", send)
+    expect(r).toEqual({ ok: false, message: "The action log in the company folder couldn't be updated.", note: "Sent 1." })
+    expect(send).toHaveBeenCalledTimes(1)
+    expect((await store.readHeld())[0].status).toBe("sent")
+    expect(await lines()).toHaveLength(1)
   })
 })

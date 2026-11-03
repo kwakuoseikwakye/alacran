@@ -348,7 +348,10 @@ Solid arrows are what happens on every single run, whether you started it or a
 schedule did. Dotted arrows only happen if you turned that particular thing on
 — a service you connected, or a schedule you told to commit for itself.
 Nothing reaches Google, GitHub, or Notion unless you told it to, and nothing is
-committed without you unless you asked for that too. Walked through in words:
+committed without you unless you asked for that too. The one exception is the
+action log: when a live job sends an email, or you decide on a step a job
+held for you, Alacrán appends one line to `records/actions/<YYYY-MM>.md` and
+commits that one file, so the company's history says what went out. Walked through in words:
 
 1. You click something in the app window. Alacrán, a plain local web server
    behind that window, handles the click. (Or nobody clicks anything: a schedule you set earlier

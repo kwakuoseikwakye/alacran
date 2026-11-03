@@ -58,7 +58,7 @@ describe("getCompanyDepartments", () => {
   })
 })
 
-import { getCompanyDepartmentsDetailed } from "./registry"
+import { getCompanyDepartmentsDetailed, showsOnRecords } from "./registry"
 
 function writeDefs(root: string, text: string) {
   fs.mkdirSync(path.join(root, "definitions"), { recursive: true })
@@ -90,6 +90,17 @@ describe("custom departments in the registry", () => {
     expect(by).toMatchObject({ support: "discovered", workflows: "app", roadmap: "app", funnel: "built-in" })
     expect(by).not.toHaveProperty("company")
     expect(by).not.toHaveProperty(".archive")
+  })
+  it("AC11: records/actions is the app's Actions log, shown and opened on Records; other app folders are not", () => {
+    const root = mk("reg-")
+    for (const f of ["actions", "workflows", "support"]) fs.mkdirSync(path.join(root, "records", f), { recursive: true })
+    const all = getCompanyDepartmentsDetailed(root).departments
+    const actions = all.find((d) => d.slug === "actions")!
+    expect(actions).toMatchObject({ source: "app", name: "Actions", tagline: "What your AI and jobs did outside the company, one line each." })
+    expect(all.filter(showsOnRecords).map((d) => d.slug)).toEqual(["actions", "support"])
+    expect(showsOnRecords({ source: "custom", slug: "legal" })).toBe(true)
+    expect(showsOnRecords({ source: "app", slug: "roadmap" })).toBe(false)
+    expect(showsOnRecords({ source: "built-in", slug: "funnel" })).toBe(false)
   })
   it("a malformed definitions file is reported and ignored; built-ins and discovered folders still show", () => {
     const root = mk("reg-")

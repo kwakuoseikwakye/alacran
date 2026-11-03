@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
-import { getCompanyDepartmentsDetailed } from "@/lib/os/departments/registry"
+import { getCompanyDepartmentsDetailed, showsOnRecords } from "@/lib/os/departments/registry"
 import { listDepartmentRecords, readDepartmentRecord } from "@/lib/os/departments/records"
 import { SLUG_PATTERN } from "@/lib/os/departments/rules"
 import { AddDepartmentDialog } from "@/components/os/departments/add-department-dialog"
@@ -26,7 +26,9 @@ export default async function DepartmentPage({
   if (!company || !SLUG_PATTERN.test(slug)) notFound()
   const { departments, definitionsError, definitionsRevision } = getCompanyDepartmentsDetailed(company.rootPath, null)
   const dept = departments.find((d) => d.slug === slug)
-  if (!dept || (dept.source !== "custom" && dept.source !== "discovered")) notFound()
+  if (!dept || !showsOnRecords(dept)) notFound()
+  // Written by Alacrán only: readable here, never added to or renamed.
+  const appOwned = dept.source === "app"
 
   const records = await listDepartmentRecords(company.rootPath, slug)
   const opened = open && /^[A-Za-z0-9][A-Za-z0-9._-]*\.md$/.test(open) ? await readDepartmentRecord(company.rootPath, slug, open) : null
@@ -37,10 +39,10 @@ export default async function DepartmentPage({
       <header className="flex flex-wrap items-start justify-between gap-4 border-l-4 pl-4" style={{ borderColor: dept.color }}>
         <div className="min-w-0">
           <h1 id="dept-title" className="text-3xl font-semibold [overflow-wrap:anywhere]">{dept.name}</h1>
-          <p className="mt-2 text-muted-foreground">{dept.source === "custom" ? dept.purpose : "A records folder that isn't set up as a department yet."}</p>
+          <p className="mt-2 text-muted-foreground">{dept.source === "custom" ? dept.purpose : appOwned ? dept.tagline : "A records folder that isn't set up as a department yet."}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <AddRecordDialog companyId={companyId} slug={slug} departmentName={dept.name} />
+          {!appOwned && <AddRecordDialog companyId={companyId} slug={slug} departmentName={dept.name} />}
           {dept.source === "custom" && !definitionsError && (
             <EditDepartmentDialog companyId={companyId} slug={slug} initial={{ name: dept.name, purpose: dept.purpose ?? "", color: dept.color ?? "#0369a1" }} revision={definitionsRevision} />
           )}
@@ -61,7 +63,7 @@ export default async function DepartmentPage({
       ) : records.length === 0 ? (
         <section className="rounded-xl border border-dashed border-os-border p-8 text-center">
           <h2 className="text-lg font-semibold">Nothing here yet</h2>
-          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">Keep anything that belongs to {dept.name} here: notes, agreements, decisions. Each one is a titled note.</p>
+          <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground">{appOwned ? "Alacrán adds a line here each time a job sends an email or you decide on a held step." : `Keep anything that belongs to ${dept.name} here: notes, agreements, decisions. Each one is a titled note.`}</p>
         </section>
       ) : (
         <table className="w-full text-left text-sm">
