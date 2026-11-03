@@ -14117,6 +14117,24 @@ Left open for the owner: whether held steps should expire; whether one-off mails
 
 Not yet run live: a real Outlook send on approval of a held mail. Tested only with a stand-in sender; the owner's live check (approve one held mail to their own address) is still owed.
 
+## v249 (2026-10-26): website fixes, download menu, link previews, icons and install guide
+
+Website only; nothing under `app/`, `components/` or `lib/` changed, so there is no app change to announce.
+
+Why: the owner reported four faults on www.alacran.app (shared links show no preview card, some icons missing, the download menu above the footer hidden on every page, no real logos) and asked for pages that say why you need Alacrán, not only what it does.
+
+Investigated, from the built pages and curl against the live site:
+- Link previews: all 13 pages already carried the full og and twitter set with absolute URLs, and `/og.png` returned 200 as a 1200x630 PNG to the Facebook, Twitter, Slack and WhatsApp crawlers. The real defect was four missing fields (`og:image:type`, `og:image:secure_url`, `og:locale`, `twitter:image:alt`) and no test. Those are added and `landing/test_landing.py` now fails if a page lacks any tag, a URL is relative, or an image is not 200 and 1200x630. A "no card" symptom that persists is most likely a platform cache, so the live check is a re-scrape after deploy, not something the HTML can prove.
+- Download menu: `.cta-card` had `overflow: hidden` and `.menu` was absolutely positioned under the button, so the card cut it off (white text on a white panel in the render). `privacy/` and `terms/` had no call-to-action card at all, and the footer had no download link. The menu now opens in flow, privacy and terms have the block, and the footer lists the three downloads. Checked with real renders (Chrome headless) on all 13 pages at 375, 768 and 1280 px.
+- Icons: added a 32px favicon and an apple-touch-icon from the real scorpion via `scripts/generate-logo.py`; vendor marks from `landing/brands.js` now sit beside the names on Integrations and the home agents list. Slack, Stripe, QuickBooks, OpenAI (so Codex), Canva, Lovable, DocuSign and LinkedIn have no vetted mark and stay text, with a line saying not every tool shows a logo. No mark was drawn by hand.
+- `/terms` was empty on the live site: a greedy regex in `read_pages` swallowed the page copy. Fixed, with a test that terms has body text.
+
+Decided: the getting-started guide now carries the Mac install steps in the page, including the "damaged" message and the one-time `xattr -cr` command with a Copy button that says what it is for, plus Linux steps; sections open with the visitor's problem; the home page gained four labelled example scenarios and each department page a "Why you need this" line. Copy makes no savings, customer or rating claims and no new third-party load was added (only the already-disclosed Buy Me a Coffee widget), so the privacy page stays true. The numbered-step layout bug (each inline piece became its own grid cell) was caught by QA in pixels and is now guarded by a test that checks one content child per step.
+
+Still open: the macOS minimum version is `<<TODO>>`; the home "Morning briefing" screenshot is cropped at phone width and needs a retake from the app; Why and Benefits on the home page overlap in message; `og.png` shows a picture of a red Download button; Slack, Stripe, QuickBooks and Codex stay text-only until a vetted mark source is given; `build-md.py` drops step numbers in the `.md` and `llms` mirrors (pre-existing); the hamburger has a tooltip but no visible phrase; at 375 px the Buy Me a Coffee widget can touch the border of "Read the setup guide" with the menu open (predates this change). Deploy and the Facebook and LinkedIn re-scrape are the owner's.
+
+Verified: `python3 landing/test_landing.py` passes (21 checks); the generators rerun with no diff. `lib/updates/parse-changelog.test.ts` was not run because node is not installed here; the entry copies the format of v245, which has no `### What's new for you` block either.
+
 ## v250 (2026-10-27): a log of what your jobs did
 
 ### What's new for you (feature)

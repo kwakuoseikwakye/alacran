@@ -6,11 +6,13 @@ Connect the AI that does the work and the services that hold relevant informatio
 
 ## Choose your AI executor.
 
-Supported executor options include Claude Code, Google Antigravity, Kiro, Kimi, and Codex. Availability and setup requirements vary by release and provider.
+Alacrán organizes your business; the AI you choose does the writing. Supported executor options include Claude Code, Google Antigravity, Kiro, Kimi, and Codex. Availability and setup requirements vary by release and provider.
 
 Choose an executor for each company while keeping its underlying business records in the same workspace. Provider subscriptions and usage limits apply separately.
 
 ## Connect the information behind your work.
+
+Useful answers need information that sits in other tools.
 
 ### Communication and inboxes
 
@@ -86,15 +88,17 @@ FigmaCanvaLovableDocuSignMiroArcadsLoomTypeform
 
 Catalogue availability does not mean every tool has a built-in department workflow. Review each connection’s status before relying on it.
 
+Logos belong to their owners and appear only to name the tool. Their use does not imply endorsement or partnership. Not every tool shows a logo.
+
 ## Know what a connection can do.
 
-Before connecting a service, check the required account, the information it can read, whether it can change external data, and any provider charges.
+Connecting a tool is a decision about what it can see and change. Before connecting a service, check the required account, the information it can read, whether it can change external data, and any provider charges.
 
 The standard inbox and chat catch-up workflows are read-only. Other configured tools can have different permissions. A prepared draft is not a sent message or a published post.
 
 ## Voice that fits your setup.
 
-Voice options include browser speech capabilities, Deepgram, and ElevenLabs configurations. Availability depends on your device, provider access, and settings. Review microphone permissions and data handling when enabling voice features.
+If you would rather speak than type, voice is optional. Voice options include browser speech capabilities, Deepgram, and ElevenLabs configurations. Availability depends on your device, provider access, and settings. Review microphone permissions and data handling when enabling voice features.
 
 ## For advanced users
 
