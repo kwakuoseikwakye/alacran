@@ -18,7 +18,7 @@ export default async function JobsPage({ params }: { params: Promise<{ companyId
         title="Unattended jobs"
         subtext="Your own scripts, run every day with no AI. New jobs practise first and send nothing. Anything they can't decide comes to Approvals."
       />
-      <JobsBoard companyId={companyId} view={view} />
+      <JobsBoard companyId={companyId} view={view} now={Date.now()} />
     </div>
   )
 }

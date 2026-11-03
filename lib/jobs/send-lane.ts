@@ -6,6 +6,7 @@ import { canonicalPolicy, readOptional, type Policy } from "./definitions"
 import type { SendRequest } from "./runner"
 import type { Approval, Flag, JobStore, SendOutcome } from "./store"
 import { outlookScriptPath } from "../outlook/outlook"
+import { SEND_TIMEOUT_MS } from "./held-words"
 
 /**
  * The only way an unattended job reaches another person. A script never sends: it asks, in its
@@ -15,7 +16,7 @@ import { outlookScriptPath } from "../outlook/outlook"
  * person instead of a guess.
  */
 export const DAY_MS = 24 * 60 * 60 * 1000
-const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/
+export const EMAIL = /^[^\s@<>,;"]+@[^\s@<>,;"]+\.[^\s@<>,;"]+$/
 
 export function sha256(text: string): string {
   return createHash("sha256").update(text).digest("hex")
@@ -94,7 +95,7 @@ export const outlookSend: SendFn = (mail) =>
     execFile(
       process.execPath,
       [outlookScriptPath(), "mail", "send", "--to", mail.to, "--subject", mail.subject, "--body", mail.body, "--confirm"],
-      { timeout: 60_000, maxBuffer: 1024 * 1024 },
+      { timeout: SEND_TIMEOUT_MS, maxBuffer: 1024 * 1024 },
       (error, stdout, stderr) => {
         if (error) {
           const line = String(stderr).split("\n").find((l) => l.startsWith("error: "))

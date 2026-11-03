@@ -16,8 +16,9 @@ vi.mock("@/components/os/tasks-board", () => ({ TasksBoard: () => null }))
 vi.mock("@/components/content-social/post-list", () => ({ PostList: () => null }))
 vi.mock("@/components/os/loop-strip", () => ({ LoopStrip: () => null }))
 vi.mock("@/components/os/guide/guide-proposal-card", () => ({ GuideProposalCard: () => null }))
-vi.mock("@/lib/jobs/view", () => ({ openFlags: vi.fn(async () => []) }))
+vi.mock("@/lib/jobs/view", () => ({ openFlags: vi.fn(async () => []), openHeld: vi.fn(async () => ({ ok: true, items: [] })) }))
 vi.mock("@/components/os/jobs/job-flag-list", () => ({ JobFlagList: () => null }))
+vi.mock("@/components/os/jobs/held-action-list", () => ({ HeldActionList: () => null }))
 
 import TasksPage from "./page"
 import { TasksBoard } from "@/components/os/tasks-board"
@@ -25,6 +26,9 @@ import { GuideProposalCard } from "@/components/os/guide/guide-proposal-card"
 import { getEffectiveAgents } from "@/lib/get-effective-agents"
 import { listPendingReviews } from "@/lib/company-commands/pending-reviews"
 import { observeGuide } from "@/lib/guide/observe"
+import { openFlags, openHeld } from "@/lib/jobs/view"
+import { JobFlagList } from "@/components/os/jobs/job-flag-list"
+import { HeldActionList } from "@/components/os/jobs/held-action-list"
 
 const PROPOSAL = {
   id: "a".repeat(64),
@@ -93,5 +97,30 @@ describe("Approvals page and the guide update", () => {
     vi.mocked(getEffectiveAgents).mockResolvedValue([])
     await expect(TasksPage({ params: Promise.resolve({ companyId: "ghost" }) })).rejects.toThrow("notFound")
     expect(observeGuide).not.toHaveBeenCalled()
+  })
+
+  it("AC5: held steps are listed in the 'Unattended jobs need you' section, with the job flags inside it", async () => {
+    const items = [{ id: "1", status: "pending" }]
+    vi.mocked(openHeld).mockResolvedValueOnce({ ok: true, items } as never)
+    vi.mocked(openFlags).mockResolvedValueOnce([{ key: "k" }] as never)
+    const tree = await render({ guide: "none" })
+    const [list] = ofType(tree, HeldActionList)
+    expect(list.props).toMatchObject({ companyId: "acme", items, unreadable: false, now: expect.any(Number) })
+    expect(ofType((list.props as { children?: unknown }).children, JobFlagList)).toHaveLength(1)
+    expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: true })
+  })
+
+  it("the held list stays mounted with an empty queue, so a decision's result survives the refresh", async () => {
+    const tree = await render({ guide: "none" })
+    expect(ofType(tree, HeldActionList)).toHaveLength(1)
+    expect(ofType(tree, HeldActionList)[0].props).toMatchObject({ items: [], unreadable: false })
+    expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: false })
+  })
+
+  it("AC12: an unreadable queue is passed on to be said plainly, not shown as an empty queue", async () => {
+    vi.mocked(openHeld).mockResolvedValueOnce({ ok: false })
+    const tree = await render({ guide: "none" })
+    expect(ofType(tree, HeldActionList)[0].props).toMatchObject({ items: [], unreadable: true })
+    expect(ofType(tree, TasksBoard)[0].props).toMatchObject({ suppressEmpty: true })
   })
 })

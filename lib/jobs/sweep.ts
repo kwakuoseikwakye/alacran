@@ -4,6 +4,7 @@ import { localStamp } from "../schedules/schedules-impl"
 import { readJobs, readPolicies, type Job } from "./definitions"
 import { runScript, type ExecFn } from "./runner"
 import { processSends, type SendFn } from "./send-lane"
+import { recordHolds } from "./held"
 import { jobStore, jobsDir, type Flag, type JobStore, type RunEntry } from "./store"
 
 /**
@@ -26,13 +27,17 @@ export function isJobDue(job: Job, lastRunDate: string | undefined, firstSeen: s
   return true
 }
 
-function summary(mode: Job["mode"], sends: RunEntry["sends"], flagCount: number): string {
+function summary(mode: Job["mode"], sends: RunEntry["sends"], flagCount: number, holds: NonNullable<RunEntry["holds"]> = []): string {
   const sent = sends.filter((s) => s.result === "sent").length
   const would = sends.filter((s) => s.result === "would-send").length
+  const waiting = holds.filter((h) => h.result !== "would-hold").length
+  const wouldHold = holds.length - waiting
   return [
     mode === "shadow" ? "Practice run" : "Ran",
     sent ? `sent ${sent}` : "",
     would ? `would have sent ${would}` : "",
+    waiting ? `${waiting} waiting for your OK` : "",
+    wouldHold ? `would hold ${wouldHold}` : "",
     flagCount ? `${flagCount} need${flagCount === 1 ? "s" : ""} you` : "",
   ]
     .filter(Boolean)
@@ -72,6 +77,7 @@ export async function runJob(root: string, job: Job, store: JobStore, deps: JobD
     if (result.reportError) flagged.push({ item: job.id, reason: result.reportError })
     const failed = result.timedOut || result.exitCode !== 0
     let sends: RunEntry["sends"] = []
+    let holds: RunEntry["holds"]
     if (failed) {
       flagged.push({ item: job.id, reason: result.timedOut ? "The job ran too long and was stopped." : `The job failed (exit ${result.exitCode ?? "unknown"}).` })
     } else if (report?.send.length) {
@@ -85,16 +91,27 @@ export async function runJob(root: string, job: Job, store: JobStore, deps: JobD
         flagged.push(...lane.flags)
       }
     }
+    if (!failed && report?.hold.length) {
+      // Held, never done: practice shows what it would hold and stores nothing anyone could approve.
+      holds =
+        job.mode === "live"
+          ? await recordHolds(store, { jobId: job.id, runId: base.runId, entries: report.hold, now: started }).catch(() => {
+              flagged.push({ item: job.id, reason: "The steps this job held for you couldn't be saved, because the held list can't be read." })
+              return undefined
+            })
+          : report.hold.map((h) => ({ row: h.row, title: h.title, result: "would-hold" as const }))
+    }
     entry = {
       ...base,
       finishedAt: now().toISOString(),
       status: failed ? "failed" : "ok",
-      message: failed ? flagged[flagged.length - 1].reason : summary(job.mode, sends, flagged.length),
+      message: failed ? flagged[flagged.length - 1].reason : summary(job.mode, sends, flagged.length, holds),
       exitCode: result.exitCode,
       did: report?.did ?? [],
       flagged,
       ...(report?.outcome ? { outcome: report.outcome } : {}),
       sends,
+      ...(holds?.length ? { holds } : {}),
       ...(failed && result.stderrTail ? { stderrTail: result.stderrTail } : {}),
     }
   }

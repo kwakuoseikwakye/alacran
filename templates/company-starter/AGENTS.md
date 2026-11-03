@@ -105,6 +105,13 @@ with the rest of the task while you wait. Approval covers the thing shown.
   or the limits change. Editing either file does not approve anything. A job
   script never sends by itself; it lists who to send to in its report, and
   anything it can't decide goes in `flagged` for a person.
+- **A one-off step an unattended job can't take goes in `hold`.** A job
+  that reaches a Publication, Money or Credentials step no approved policy
+  covers lists it in its report's `hold` (see `scripts/README.md`) and
+  carries on. Alacrán keeps it in Approvals, outside this folder, until the
+  owner decides. A held mail is sent only when the owner approves that one
+  message; a Money or Credentials step is recorded as approved and the owner
+  does it. A job never marks its own step approved.
 
 ## 7. The company's chats
 

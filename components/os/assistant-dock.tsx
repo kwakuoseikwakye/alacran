@@ -168,7 +168,7 @@ export function AssistantDock({
         ) : null}
       </div>
 
-      <aside id="assistant-dock" className="os-dock" aria-label={`Assistant — ${companyId}`}>
+      <aside id="assistant-dock" className="os-dock" data-open={open} aria-label={`Assistant — ${companyId}`}>
         {open ? (
           voiceProviderId === "elevenlabs" && voiceReady && elevenlabsAgentReady ? (
             <AgentStage
