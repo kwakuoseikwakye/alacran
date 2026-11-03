@@ -6,6 +6,7 @@ import { getCompanyCommand } from "./registry"
 import { COMPANY_COMMANDS_DATA_DIR } from "./paths"
 import { tailLines } from "../log-tail"
 import { getEffectiveAgents } from "../get-effective-agents"
+import { readableRunLog } from "../jobs/cost"
 
 const MAX_TAIL_LINES = 200
 
@@ -23,7 +24,7 @@ export async function getCompanyCommandLogTail(commandId: string, agentId: strin
 
   try {
     const content = await readFile(path.join(COMPANY_COMMANDS_DATA_DIR, agentId, `${command.id}.log`), "utf-8")
-    return { tail: tailLines(content.replace(/\n$/, ""), MAX_TAIL_LINES) }
+    return { tail: tailLines(readableRunLog(content).replace(/\n$/, ""), MAX_TAIL_LINES) }
   } catch {
     return { tail: "" }
   }

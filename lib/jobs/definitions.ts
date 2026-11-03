@@ -1,7 +1,8 @@
-import { readFile, writeFile } from "node:fs/promises"
+import { lstat, mkdir, readFile, writeFile } from "node:fs/promises"
 import path from "node:path"
 import yaml from "yaml"
 import { z } from "zod"
+import { contained } from "../os/departments/safety"
 
 /**
  * Unattended jobs (v240): plain scripts the app runs on a daily clock with no AI, and the send
@@ -132,4 +133,113 @@ export async function editJob(
   if (change.enabled !== undefined) entry.set("enabled", change.enabled)
   await writeFile(file, doc.toString(), "utf-8")
   return { ok: true }
+}
+
+/**
+ * The monthly limit on what unattended AI runs may cost (v251). It is a threshold on the gate's
+ * Money row, so it lives in the company's `definitions/` (AGENTS.md §6), in its own file because
+ * jobs.yaml is job definitions. The spend it is compared against stays in app data (lib/jobs/cost.ts).
+ */
+export const BUDGET_FILE = "definitions/budget.yaml"
+const LIMIT_KEY = "monthly_limit_usd"
+
+export type MonthlyLimit = { ok: true; limitUsd: number | null } | { ok: false; reason: string }
+
+/** Absent, empty or no key means no limit. A value that isn't a plain number >= 0 is reported, never guessed at. */
+export function parseMonthlyLimit(raw: string | null): MonthlyLimit {
+  if (raw === null || raw.trim() === "") return { ok: true, limitUsd: null }
+  let doc: unknown
+  try {
+    doc = yaml.parse(raw)
+  } catch (error) {
+    return { ok: false, reason: `The file isn't valid YAML: ${(error as Error).message.split("\n")[0]}` }
+  }
+  if (doc === null || doc === undefined) return { ok: true, limitUsd: null }
+  if (typeof doc !== "object" || Array.isArray(doc)) return { ok: false, reason: `The file must start with "${LIMIT_KEY}:"` }
+  const value = (doc as Record<string, unknown>)[LIMIT_KEY]
+  if (value === undefined || value === null) return { ok: true, limitUsd: null }
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return { ok: false, reason: `"${LIMIT_KEY}" must be a number of US dollars, 0 or more, written without quotes.` }
+  }
+  return { ok: true, limitUsd: value }
+}
+
+/**
+ * The limit file's path, only if `definitions/` really lives inside the company folder and the file,
+ * when it exists, is a plain file: a symlink could point the app at a number, or a write, outside it.
+ */
+async function budgetPath(root: string): Promise<{ ok: true; file: string } | { ok: false; reason: string }> {
+  const file = path.join(root, BUDGET_FILE)
+  if (!(await contained(root, path.dirname(file)))) return { ok: false, reason: "definitions/ isn't a plain folder inside the company folder." }
+  try {
+    if (!(await lstat(file)).isFile()) return { ok: false, reason: `${BUDGET_FILE} isn't a plain file.` }
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error
+  }
+  return { ok: true, file }
+}
+
+export async function readMonthlyLimit(root: string): Promise<MonthlyLimit> {
+  const where = await budgetPath(root)
+  if (!where.ok) return where
+  return parseMonthlyLimit(await readOptional(where.file))
+}
+
+/** Remove one top-level key; a comment written above it moves to what follows rather than vanishing with it. */
+function removeKeepingComment(doc: yaml.Document, key: string): void {
+  const map = doc.contents
+  if (!yaml.isMap(map)) return
+  const index = map.items.findIndex((pair) => yaml.isScalar(pair.key) && pair.key.value === key)
+  if (index < 0) return
+  const [removed] = map.items.splice(index, 1)
+  const comment = yaml.isNode(removed.key) ? removed.key.commentBefore : null
+  if (!comment) return
+  const next = map.items[index]?.key
+  if (index === 0) doc.commentBefore = [doc.commentBefore, comment].filter(Boolean).join("\n")
+  else if (yaml.isNode(next)) next.commentBefore = [comment, next.commentBefore].filter(Boolean).join("\n")
+  else doc.comment = [doc.comment, comment].filter(Boolean).join("\n")
+}
+
+/**
+ * Set or remove the limit in place, keeping every other line and comment. Refuses (writes nothing) on a
+ * file it can't parse or that isn't a plain file inside the company folder. `unchanged` means the file
+ * already says this, so there is nothing to write or commit.
+ */
+export async function editMonthlyLimit(
+  root: string,
+  limitUsd: number | null
+): Promise<{ ok: true; unchanged?: true } | { ok: false; reason: string }> {
+  const where = await budgetPath(root)
+  if (!where.ok) return where
+  const file = where.file
+  const raw = await readOptional(file)
+  if (raw === null) {
+    if (limitUsd === null) return { ok: true, unchanged: true }
+    await mkdir(path.dirname(file), { recursive: true })
+    await writeFile(file, `# What this company's unattended AI runs may cost in a month, in US dollars (estimated).\n${LIMIT_KEY}: ${limitUsd}\n`, "utf-8")
+    return { ok: true }
+  }
+  const doc = yaml.parseDocument(raw)
+  if (doc.errors.length) return { ok: false, reason: "The limit file needs fixing before it can be changed." }
+  if (doc.contents !== null && !yaml.isMap(doc.contents)) return { ok: false, reason: `The limit file must start with "${LIMIT_KEY}:".` }
+  const current = parseMonthlyLimit(raw)
+  if (current.ok && current.limitUsd === limitUsd) return { ok: true, unchanged: true }
+  if (limitUsd === null) removeKeepingComment(doc, LIMIT_KEY)
+  else {
+    // An emptied map prints as `{}` and then takes flow style; a limit file is always block style.
+    if (yaml.isMap(doc.contents)) doc.contents.flow = false
+    doc.set(LIMIT_KEY, limitUsd)
+  }
+  // Removing the last key leaves only the comments, never a bare `{}`.
+  const text = yaml.isMap(doc.contents) && doc.contents.items.length === 0 ? commentsOnly(doc) : doc.toString()
+  await writeFile(file, text, "utf-8")
+  return { ok: true }
+}
+
+function commentsOnly(doc: yaml.Document): string {
+  const lines = [doc.commentBefore, yaml.isNode(doc.contents) ? doc.contents.commentBefore : null, yaml.isNode(doc.contents) ? doc.contents.comment : null, doc.comment]
+    .filter((c): c is string => Boolean(c))
+    .flatMap((c) => c.split("\n"))
+    .map((l) => `#${l}`)
+  return lines.length ? lines.join("\n") + "\n" : ""
 }

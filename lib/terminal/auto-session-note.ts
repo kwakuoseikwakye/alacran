@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn } from "node:child_process"
-import { openSync, closeSync } from "node:fs"
-import { mkdir } from "node:fs/promises"
+import { openSync, closeSync, fstatSync } from "node:fs"
+import { mkdir, readFile } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "../get-effective-agents"
 import { getCompanyCommand } from "../company-commands/registry"
@@ -17,6 +17,7 @@ import { getSessionNotesForAgent } from "../session-notes-registry"
 import { setSessionNoteStatus } from "./session-note-status"
 import type { Agent } from "../adapters/types"
 import type { AiExecutor } from "../ai-executors"
+import { checkMonthlyLimit, readReportedCost, recordRunCost, SESSION_NOTES_JOB, type LimitCheck } from "../jobs/cost"
 
 export type SpawnLike = (
   command: string,
@@ -97,7 +98,9 @@ export async function writeSessionNoteFromLastConversation(
   notedStorePath?: string,
   /** Injectable so a test never has to stand up a pty registry or a clock. */
   isLive: (agentId: string, executorId: string) => boolean = hasLiveAssistant,
-  now: () => number = Date.now
+  now: () => number = Date.now,
+  /** The company's monthly limit on unattended AI runs (v251). Asked only once a note is really due. */
+  checkLimit: (agent: Agent) => Promise<LimitCheck> = (a) => checkMonthlyLimit(a, new Date(now()), dataRoot, " The note is written once the limit lifts.")
 ): Promise<{ started: boolean; message: string; quiet?: boolean }> {
   // Whichever AI this company is set to run on — not a hardcoded one. An
   // executor with no `resume` simply has no supported way to hand a prompt back
@@ -164,6 +167,13 @@ export async function writeSessionNoteFromLastConversation(
     return { started: false, quiet: true, message: "Too short to be worth a note." }
   }
 
+  // After the quiet skips, so it is asked only when a note is really due, and before anything is
+  // prepared or spawned. Not quiet, so the status shows why; the fingerprint isn't stamped, so the
+  // note is written once the limit lifts. ponytail: the status file is rewritten every tick while
+  // the limit holds; skip the write when the message is unchanged if that churn ever matters.
+  const limit = await checkLimit(agent)
+  if (limit.blocked) return { started: false, message: limit.message }
+
   const command = getCompanyCommand(SESSION_NOTE_COMMAND_ID)
   if (!command) return { started: false, message: "Saving notes isn't available in this version." }
 
@@ -189,8 +199,11 @@ export async function writeSessionNoteFromLastConversation(
     await prepareExecutorScope(executor.id, scopeInput, agent.rootPath)
 
     fd = openSync(logPath, "a")
+    const logStart = fstatSync(fd).size
+    const startedAt = new Date(now()).toISOString()
     inFlight.add(agent.id)
-    const child = spawnFn(executor.binaryName, [...executor.resume.buildArgs(scopeInput, last?.sessionId), ...(executor.routineModelArgs ?? [])], {
+    const resumeArgs = executor.costReport?.resumeArgs(scopeInput, last?.sessionId) ?? executor.resume.buildArgs(scopeInput, last?.sessionId)
+    const child = spawnFn(executor.binaryName, [...resumeArgs, ...(executor.routineModelArgs ?? [])], {
       cwd: agent.rootPath,
       detached: true,
       stdio: ["ignore", fd, fd],
@@ -222,8 +235,18 @@ export async function writeSessionNoteFromLastConversation(
           setNotedFingerprint(agent.id, fingerprint, notedStorePath).catch(() => {})
         )
     }
+    // Best-effort, like the run path's: a cost that can't be recorded never disturbs the note.
+    const record = async (code: number | null) => {
+      const costUsd = executor.costReport
+        ? readReportedCost((await readFile(logPath)).subarray(logStart).toString("utf-8"), code)
+        : null
+      await recordRunCost(dataDir, { job: SESSION_NOTES_JOB, executorId: executor.id, startedAt, finishedAt: new Date(now()).toISOString(), costUsd })
+    }
     child.on("error", settle)
-    child.on("exit", settle)
+    child.on("exit", (code: never) => {
+      settle()
+      void record(code as number | null).catch(() => {})
+    })
     child.unref()
     return { started: true, message: "Writing up the last session." }
   } catch (err) {

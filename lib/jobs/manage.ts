@@ -3,12 +3,13 @@ import path from "node:path"
 import { commitFile, type ExecFileFn } from "../git-commit-file"
 import { defaultExecFile } from "../default-exec-file"
 import { localStamp } from "../schedules/schedules-impl"
-import { editJob, JOBS_FILE, readJobs, readPolicies } from "./definitions"
+import { BUDGET_FILE, editJob, editMonthlyLimit, JOBS_FILE, readJobs, readPolicies } from "./definitions"
 import { approvePolicy, revokePolicy, sendTest, type SendFn } from "./send-lane"
 import { jobStore, jobsDir } from "./store"
 import { runJobNow, type JobDeps } from "./sweep"
 import { decideHeld, decideMessage } from "./held"
 import { appendActions } from "./action-log"
+import { checkMonthlyLimit } from "./cost"
 
 /**
  * The owner's actions on the Jobs page, kept out of the "use server" file so tests can drive them
@@ -34,6 +35,28 @@ export async function setJobEnabled(ctx: Ctx, jobId: string, enabled: boolean): 
   if (!edited.ok) return fail(edited.reason)
   await commitFile(ctx.root, JOBS_FILE, `${enabled ? "Turn on" : "Turn off"} job ${jobId}`, ctx.exec ?? defaultExecFile)
   return { ok: true, message: enabled ? "Turned on." : "Turned off. It won't run until you turn it back on." }
+}
+
+/**
+ * Set (or, with null, remove) the company's monthly limit on unattended AI runs, as a one-file
+ * commit to definitions/budget.yaml. The value arrives from the browser, so it is checked here.
+ */
+export async function setMonthlyLimit(ctx: Ctx, raw: string | null, costRoot?: string): Promise<Result> {
+  let limit: number | null = null
+  if (raw !== null) {
+    const text = String(raw).trim().replace(/^\$/, "")
+    if (!/^\d{1,7}(\.\d{1,2})?$/.test(text)) return fail("Enter an amount in US dollars, like 25 or 12.50.")
+    limit = Number(text)
+  }
+  const edited = await editMonthlyLimit(ctx.root, limit)
+  if (!edited.ok) return fail(edited.reason)
+  if (edited.unchanged) return { ok: true, message: limit === null ? "There's no limit to remove." : "That's already the limit." }
+  await commitFile(ctx.root, BUDGET_FILE, limit === null ? "Remove the monthly limit on AI runs" : `Set the monthly limit on AI runs to $${limit}`, ctx.exec ?? defaultExecFile)
+  if (limit === null) return { ok: true, message: "Limit removed. Alacrán starts scheduled runs and session notes whatever they cost." }
+  if ((await checkMonthlyLimit({ id: ctx.companyId, rootPath: ctx.root }, ctx.now ?? new Date(), costRoot)).blocked) {
+    return { ok: true, message: `Limit set to $${limit.toFixed(2)} a month. This month's estimated cost has already reached it, so Alacrán won't start AI runs on its own until next month or until you raise it.` }
+  }
+  return { ok: true, message: `Limit set to $${limit.toFixed(2)} a month. Once this month's estimated cost reaches it, Alacrán stops starting AI runs on its own.` }
 }
 
 export async function runNow(ctx: Ctx, jobId: string, deps: JobDeps = {}): Promise<Result> {

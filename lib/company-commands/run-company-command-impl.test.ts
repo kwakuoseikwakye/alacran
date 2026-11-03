@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, mkdir, readFile, rm, writeFile, stat } from "node:fs/promises"
 import { tmpdir } from "node:os"
+import { writeSync } from "node:fs"
 import path from "node:path"
 import { AI_EXECUTORS } from "../ai-executors"
 import { CANVA_DESIGN_TOOLS } from "../content-social/canva-tools"
@@ -15,6 +16,8 @@ const unscopedExecutor = {
   binaryName: "other-cli",
   enforcesToolScope: false,
   buildArgs: ({ prompt }: { prompt: string }) => ["--message", prompt, "--yes-always"],
+  // A different CLI: its cost output is not Claude Code's (v251).
+  costReport: null,
 }
 import type { SpawnedProcess } from "./run-company-command-impl"
 
@@ -1214,3 +1217,80 @@ describe("the owner's preferences in a drafting prompt", () => {
     expect(prompt).not.toContain("Keep replies short.")
   })
 })
+
+describe("what each run costs (v251)", () => {
+  const AGENT = "ai-company-starter-main"
+  const resultLine = JSON.stringify({ type: "result", subtype: "success", is_error: false, total_cost_usd: 0.0123, result: "Done" }) + "\n"
+
+  beforeEach(() => {
+    vi.doMock("../config", () => ({ AGENTS: [{ id: AGENT, name: "AI Company Starter", rootPath: root, kind: "command-set" }] }))
+  })
+
+  /** A headless run that prints Claude Code's json result into the log it was handed, then exits 0. */
+  function costSpawn(calls: string[][]) {
+    return (_command: string, args: string[], options: { stdio: [unknown, number | string, unknown] }) => {
+      calls.push(args)
+      writeSync(options.stdio[1] as number, resultLine)
+      return {
+        unref: () => {},
+        on: (event: string, cb: (code: number | null) => void) => {
+          if (event === "exit") cb(0)
+        },
+      }
+    }
+  }
+
+  async function ledger(): Promise<Record<string, unknown>[]> {
+    return (await readFile(path.join(dataDir, "costs.jsonl"), "utf-8")).trim().split("\n").map((l) => JSON.parse(l))
+  }
+
+  it("asks Claude Code for its json result and records the reported cost in app data", async () => {
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const calls: string[][] = []
+    const result = await runCompanyCommandImpl("digest", { period: "" }, AGENT, costSpawn(calls) as never, undefined, dataDir)
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls[0].join(" ")).toContain("--output-format json")
+    await vi.waitFor(async () => {
+      expect(await ledger()).toEqual([
+        { job: `${AGENT}:digest`, executorId: "claude-code", startedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/), finishedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT/), costUsd: 0.0123 },
+      ])
+    })
+    await expect(stat(path.join(root, "costs.jsonl"))).rejects.toThrow()
+  })
+
+  it("records an executor that reports no cost as not known, never 0", async () => {
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const calls: string[][] = []
+    await runCompanyCommandImpl("digest", { period: "" }, AGENT, costSpawn(calls) as never, undefined, dataDir, async () => unscopedExecutor as never)
+    expect(calls[0]).toContain("--yes-always")
+    await vi.waitFor(async () => {
+      expect(await ledger()).toEqual([expect.objectContaining({ costUsd: null, executorId: "claude-code" })])
+    })
+  })
+
+  it("keeps a visible run's terminal in plain text and counts it as cost not known", async () => {
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const spawnFn = () => handOffChild()
+    const result = await runCompanyCommandImpl("digest", { period: "" }, AGENT, spawnFn as never, undefined, dataDir, undefined, async () => true, "darwin")
+    expect(result.started).toBe(true)
+    const args = (await readFile(path.join(dataDir, "digest.args"), "utf-8")).split("\0")
+    expect(args[args.indexOf("--output-format") + 1]).toBe("text")
+    expect(await ledger()).toEqual([expect.objectContaining({ job: `${AGENT}:digest`, finishedAt: null, costUsd: null })])
+  })
+
+  it("never blocks a run the owner starts by hand, even over the limit, and counts it", async () => {
+    await mkdir(path.join(root, "definitions"), { recursive: true })
+    await writeFile(path.join(root, "definitions/budget.yaml"), "monthly_limit_usd: 1\n")
+    const now = new Date().toISOString()
+    await writeFile(path.join(dataDir, "costs.jsonl"), JSON.stringify({ job: `${AGENT}:digest`, executorId: "claude-code", startedAt: now, finishedAt: now, costUsd: 5 }) + "\n")
+    const { runCompanyCommandImpl } = await import("./run-company-command-impl")
+    const calls: string[][] = []
+    const result = await runCompanyCommandImpl("digest", { period: "" }, AGENT, costSpawn(calls) as never, undefined, dataDir)
+    expect(result).toEqual({ started: true, message: "Started" })
+    expect(calls).toHaveLength(1)
+    await vi.waitFor(async () => {
+      expect((await ledger()).map((e) => e.costUsd)).toEqual([5, 0.0123])
+    })
+  })
+})
+

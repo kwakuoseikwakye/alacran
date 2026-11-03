@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn, execFile as nodeExecFile } from "node:child_process"
 import { promisify } from "node:util"
-import { openSync, closeSync } from "node:fs"
+import { openSync, closeSync, fstatSync } from "node:fs"
 import { readdir, readFile, writeFile, mkdir, appendFile } from "node:fs/promises"
 import path from "node:path"
 import { getEffectiveAgents } from "../get-effective-agents"
@@ -21,6 +21,7 @@ import { resolveTerminalLaunchCommand, launchTerminalScript } from "../terminal-
 import { isSafePostFileName } from "../content-social/posts"
 import { writeRunningCommand } from "./running-command"
 import { buildPreferencesBlock } from "../os/preferences/block"
+import { commandJob, readReportedCost, recordRunCost } from "../jobs/cost"
 
 export type ResolveExecutorFn = (agentId: string) => Promise<AiExecutor>
 export type ResolveVisibleRunFn = (agentId: string) => Promise<boolean>
@@ -135,6 +136,27 @@ async function hasPendingNewFiles(recordPath: string, agentRootPath: string, com
     return current.some((name) => !record.before.includes(name) && isSafePostFileName(name))
   } catch {
     return false
+  }
+}
+
+/**
+ * Best-effort: a cost that can't be recorded must never disturb the run's own bookkeeping.
+ * ponytail: reads the whole log on exit; switch to a positioned read if logs grow large.
+ */
+async function recordCommandCost(
+  dataDir: string,
+  logPath: string,
+  logStart: number,
+  executor: AiExecutor,
+  job: string,
+  startedAt: string,
+  code: number | null
+): Promise<void> {
+  try {
+    const costUsd = executor.costReport ? readReportedCost((await readFile(logPath)).subarray(logStart).toString("utf-8"), code) : null
+    await recordRunCost(dataDir, { job, executorId: executor.id, startedAt, finishedAt: new Date().toISOString(), costUsd })
+  } catch {
+    // nothing to tell anyone: the run itself is unaffected
   }
 }
 
@@ -290,11 +312,15 @@ export async function runCompanyCommandImpl(
       bashPatterns,
       mcpTools: command.mcpTools ?? [],
     }
-    const spawnArgs = [
-      ...executor.buildArgs(scopeInput),
+    // The visible path keeps text: a person watching a terminal reads the answer, not a JSON object.
+    // Headless runs ask the tool to report its cost where it can (v251).
+    const argsFor = (headlessArgs: string[]) => [
+      ...headlessArgs,
       // Summarising upkeep runs on the cheapest model the executor offers.
       ...(command.routine ? (executor.routineModelArgs ?? []) : []),
     ]
+    const job = commandJob(agent.id, command.id)
+    const startedAt = new Date().toISOString()
 
     // For an executor whose edit scope is a file rather than argv (Kiro), this
     // is where the sandbox actually gets created. Inside the try and after the
@@ -310,13 +336,14 @@ export async function runCompanyCommandImpl(
       : null
 
     if (terminalLaunch) {
-      if (spawnArgs.some((a) => a.includes("\0"))) {
+      const visibleArgs = argsFor(executor.buildArgs(scopeInput))
+      if (visibleArgs.some((a) => a.includes("\0"))) {
         throw new Error("Refusing to run: a NUL byte in the command arguments would corrupt the args file")
       }
       const argsPath = path.join(dataDir, `${command.id}.args`)
       const promptPath = path.join(dataDir, `${command.id}.prompt`)
       const scriptPath = path.join(dataDir, `${command.id}.run.sh`)
-      await writeFile(argsPath, spawnArgs.join("\0") + "\0", "utf-8")
+      await writeFile(argsPath, visibleArgs.join("\0") + "\0", "utf-8")
       await writeFile(promptPath, prompt, "utf-8")
       const script = buildVisibleRunScript({
         binaryName: executor.binaryName,
@@ -344,16 +371,22 @@ export async function runCompanyCommandImpl(
       }
       // The terminal really opened: only now is the prefetch's evidence consumed.
       await prefetchResult.onRunStart?.().catch(() => {})
+      // Node never learns when this run ends (the script's trap releases the lock), so it is
+      // counted now, as a run whose cost isn't known.
+      await recordRunCost(dataDir, { job, executorId: executor.id, startedAt, finishedAt: null, costUsd: null }).catch(() => {})
       return { started: true, message: "Started" }
     }
 
     outFd = openSync(logPath, "a")
-    const child = spawnFn(executor.binaryName, spawnArgs, {
+    // Where this run's own output starts, so its cost is read from its own lines only.
+    const logStart = fstatSync(outFd).size
+    const child = spawnFn(executor.binaryName, argsFor(executor.costReport?.args(scopeInput) ?? executor.buildArgs(scopeInput)), {
       cwd: agent.rootPath,
       detached: true,
       stdio: ["ignore", outFd, outFd],
     })
-    child.on("exit", () => {
+    child.on("exit", (code) => {
+      void recordCommandCost(dataDir, logPath, logStart, executor, job, startedAt, code)
       // Released first: the result reader drops a run that changed nothing only once no run is in flight (v238).
       releaseRunLock(dataDir)
         .catch(() => {})

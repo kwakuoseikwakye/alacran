@@ -125,6 +125,19 @@ export type AiExecutor = {
    * to end.
    */
   interactiveResumeArgs: string[] | null
+  /**
+   * argv that makes this tool's own headless run end with one machine-readable
+   * result line carrying the tool's own cost estimate (v251). Used only for the
+   * two unattended paths that spend money with nobody watching: scheduled
+   * company commands and automatic session notes. Required and nullable, so a
+   * new executor fails `tsc` until someone answers: `null` means this tool's
+   * cost output has not been measured, and every run on it is recorded as
+   * "cost not known", never as 0.
+   */
+  costReport: {
+    args: (input: AiExecutorBuildArgsInput) => string[]
+    resumeArgs: (input: AiExecutorBuildArgsInput, sessionId?: string) => string[]
+  } | null
   /** Absent means this executor has no supported way to seed an interactive
    *  session with a first message while staying open. */
   buildInteractiveIntroArgs?: (introPrompt: string) => string[]
@@ -221,7 +234,7 @@ export const DEFAULT_AI_EXECUTOR_ID: AiExecutorId = "claude-code"
  */
 function claudeCodeArgs(
   { prompt, editScopePattern, alsoEditScopePatterns = [], bashPatterns, mcpTools = [] }: AiExecutorBuildArgsInput,
-  outputFormat: "text" | "stream-json" = "text"
+  outputFormat: "text" | "json" | "stream-json" = "text"
 ): string[] {
 
     const fileTools = `Read,Grep,Glob,${[editScopePattern, ...alsoEditScopePatterns].map((p) => `Edit(${p})`).join(",")}`
@@ -252,6 +265,15 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     streamingRunArgs: (input) => claudeCodeArgs(input, "stream-json"),
     streamingResumeArgs: (input) => ["--continue", ...claudeCodeArgs(input, "stream-json")],
     interactiveResumeArgs: ["--continue"],
+    // `--output-format json` prints one result object at the end, carrying
+    // `total_cost_usd`, where text prints only the answer. Same liveness as
+    // text (both print at the end). Only the unattended paths use it; the log
+    // is turned back into plain text for the Run tab (lib/jobs/cost.ts).
+    // <<TODO>> AC11: an owner-run live check of a fresh and a --resume run.
+    costReport: {
+      args: (input) => claudeCodeArgs(input, "json"),
+      resumeArgs: (input, sessionId) => [...(sessionId ? ["--resume", sessionId] : ["--continue"]), ...claudeCodeArgs(input, "json")],
+    },
     label: "Claude Code",
     // Verified live: a hand-written .mcp.json is reported by `claude mcp get`
     // as "Scope: Project config (shared via .mcp.json)".
@@ -287,6 +309,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     streamingRunArgs: null,
     streamingResumeArgs: null,
     interactiveResumeArgs: null,
+    // No measured cost output: every run is "cost not known".
+    costReport: null,
     label: "Kiro",
     // Verified against the installed kiro-cli 2.19.1 binary's own path table,
     // not its docs (which describe a 3.0 that stable does not ship).
@@ -341,6 +365,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     streamingRunArgs: null,
     streamingResumeArgs: null,
     interactiveResumeArgs: null,
+    // No measured cost output: every run is "cost not known".
+    costReport: null,
     label: "Kimi Code",
     // NOT measured on a machine with Kimi installed, so it declares no support
     // rather than a guessed path — the same standard that produced the two
@@ -422,6 +448,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     streamingRunArgs: null,
     streamingResumeArgs: null,
     interactiveResumeArgs: null,
+    // No measured cost output: every run is "cost not known".
+    costReport: null,
     label: "Codex CLI",
     binaryName: "codex",
     installHint: "npm install -g @openai/codex",
@@ -497,6 +525,8 @@ export const AI_EXECUTORS: Record<AiExecutorId, AiExecutor> = {
     streamingRunArgs: null,
     streamingResumeArgs: null,
     interactiveResumeArgs: null,
+    // No measured cost output: every run is "cost not known".
+    costReport: null,
     label: "Google Antigravity",
     // Antigravity had no MCP support at all when it was last measured (v99).
     // It was re-registered in v151 without that being re-checked, so this stays

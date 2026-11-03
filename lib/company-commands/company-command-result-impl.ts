@@ -5,6 +5,7 @@ import { pendingClaimedPaths } from "./pending-claims"
 import { getCompanyCommand } from "./registry"
 import { acquireRunLock, releaseRunLock } from "./run-lock"
 import { explainAssistantFailure } from "../assistant/clean-stderr"
+import { readableRunLog } from "../jobs/cost"
 
 /**
  * `strays` is what the run changed OUTSIDE the folder it was supposed to write
@@ -240,7 +241,7 @@ async function noChangeMessage(dataDir: string, commandId: string): Promise<stri
   const fallback = "No changes produced."
   try {
     const log = await readFile(path.join(dataDir, `${commandId}.log`), "utf-8")
-    const tail = log.trim().split("\n").slice(-4).join("\n")
+    const tail = readableRunLog(log).trim().split("\n").slice(-4).join("\n")
     const explained = explainAssistantFailure(tail, "The AI tool")
     return explained === tail ? fallback : explained
   } catch {
