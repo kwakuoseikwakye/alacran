@@ -82,6 +82,8 @@ GitHub: `https://github.com/kwakuoseikwakye/alacran-releases`
 
 Free app for macOS and Linux. Connected AI and third-party services may have separate charges.
 
+The footer also carries the three downloads (Mac Apple Silicon, Mac Intel, Linux Debian / Ubuntu) and **Read the setup guide**, always visible, so a visitor who scrolls past the call to action still has a way to start.
+
 ### Shared call to action
 
 **Put your business knowledge to work.**
@@ -140,6 +142,26 @@ Tour tabs and captions:
 
 Disclosure: **Example company · Sample data**
 
+#### Why — `#why`
+
+## Why people use it.
+
+Most AI chats start from nothing, so you keep explaining your business to them. Alacrán keeps what your AI needs to know in one place, and keeps you in charge of what it changes.
+
+### Stop retyping your business into every AI chat.
+
+Describe your company once. Alacrán keeps it as plain files on your computer and hands it to your AI before each task.
+
+### Stop hunting for the fact that changed.
+
+Your facts, decisions and notes live together in one company folder. You can see what your AI always knows, and what it is unsure about.
+
+### Stop wondering what your AI changed.
+
+Every change your AI proposes comes back as a before-and-after for you to approve, send back with feedback, or discard. Nothing is saved until you say yes.
+
+Link: **See how it works** → `#how`
+
 #### Benefits — `#features`
 
 ## Know what needs you. Give AI the work it can help with.
@@ -159,6 +181,68 @@ Use built-in skills and recurring jobs for summaries, department updates, resear
 ### Review changes before keeping them.
 
 Inspect proposed file changes from managed workflows, request revisions, and approve the work you want to save.
+
+#### Scenarios — `#scenarios`
+
+## Four ordinary situations, and what Alacrán does with each.
+
+Each one starts with a problem you will recognise, shows what you ask, shows what you get, and says how you stay in control. They use only what the app does today.
+
+### 1. Monday morning, and you cannot tell what needs you.
+
+Disclosure: **Example · illustrative scenario, not a customer result**
+
+**The situation:** You open your laptop and cannot tell what moved while you were away, or what is waiting on you.
+
+**You ask:** “What needs my attention this week, and what is waiting for my approval?”
+
+**You get:** Home shows what needs you today, which agents are working, and what Alacrán knows about your company. Ask for a weekly summary and it is written from your own notes.
+
+**You stay in control:** The summary arrives in Approvals as a draft to read. Nothing is saved until you approve it.
+
+Link: **See the morning briefing** → `/how-to-use#start-with-the-morning-briefing`
+
+### 2. A customer writes back and you do not want to start over.
+
+Disclosure: **Example · illustrative scenario, not a customer result**
+
+**The situation:** The owner of Northstar Café answers your quote with a question about delivery. You want a reply that matches what you actually offer, without pasting your whole business into a chat.
+
+**You ask:** “Draft a follow-up to Northstar Café using our service description and their last question. Do not promise a date.”
+
+**You get:** A draft written from your saved company profile and notes, with the change laid out for you to read.
+
+**You stay in control:** You can approve it, choose Ask for changes, or choose Discard. Approving saves the draft to your company records and history. It does not send anything, so you send it yourself from your usual account.
+
+Link: **See the Customers department** → `/departments/customers`
+
+### 3. Your AI keeps using a fact that is no longer true.
+
+Disclosure: **Example · illustrative scenario, not a customer result**
+
+**The situation:** You changed what you charge in a meeting last week, but your AI is still working from the old price.
+
+**You do:** Press “Save what we learned” at the end of a session with your AI, once you have settled something new.
+
+**You get:** Proposed changes to your company facts, each marked with where it came from. Alacrán also shows which parts of your company profile look out of date, and the Brain map shows what your AI always knows and what it is unsure about.
+
+**You stay in control:** You see which facts changed and where each one came from, and you approve them together with the note, or keep the note and drop the fact changes. Nothing is added to your company history until you approve.
+
+Link: **Record the reason for a decision** → `/how-to-use#decisions`
+
+### 4. You keep correcting the same thing.
+
+Disclosure: **Example · illustrative scenario, not a customer result**
+
+**The situation:** Every draft comes back a little too formal, and you keep asking for the same change.
+
+**You do:** Press “Learn from my feedback” on Home. Alacrán offers it after you have asked for changes to the same kind of work three times.
+
+**You get:** Short preference lines that quote your own words, kept in a plain file you can read.
+
+**You stay in control:** You approve each line. Delete a line and it stops applying.
+
+Link: **See how to ask for changes** → `/how-to-use#review-proposed-work`
 
 #### Departments
 
@@ -308,31 +392,49 @@ Set up Alacrán, describe your business, and prepare your first draft for review
 
 ## Before you start
 
-**A supported computer.** A Mac running macOS 12 or later, or a Debian or Ubuntu Linux computer. Choose the download that matches your Mac’s processor.
+**A Mac, or a Debian or Ubuntu computer.** On a Mac, choose the download that matches your Mac’s chip. Step 1 shows how to check.
 
-**An AI account for AI tasks.** The current guided setup starts with Claude Code. You will need a compatible account and provider access. Provider subscriptions, usage limits, and charges apply separately.
+**Git.** Alacrán keeps every company as a Git history, so Git has to be installed. The checklist you see on first launch tells you if it is missing.
+
+**An AI account for AI tasks.** Claude Code is the default, and it needs a paid Claude plan to sign in. If you already have Kiro, Kimi, Codex or Google Antigravity, you can choose that for each company instead. Alacrán is free; your AI provider’s subscription, usage limits and charges are separate. No AI yet? Choose **Explore without AI** and add your records first.
 
 **A short description of your business.** A sentence or two is enough to begin. You can improve the details as you work.
 
 ## 1. Install and open Alacrán.
 
-On Mac, open the downloaded `.dmg` and drag Alacrán into Applications. On Linux, install the downloaded `.deb` package using your package installer.
+Pick the instructions for your computer. You do not need an Alacrán account to create your local workspace.
 
-If installation is blocked, read the release-specific installation guidance before continuing. Some current Mac builds require an additional setup step because they are not notarized by Apple.
+**On a Mac:** Follow these five things in order.
 
-You do not need an Alacrán account to create your local workspace.
+1. Find your chip. Click the Apple menu, then **About This Mac**. If it says “Chip: Apple M1” (or M2, M3, M4), you have Apple Silicon. If it says “Processor: Intel”, you have Intel.
+2. Download the matching file with **Download Alacrán**: Mac Apple Silicon or Mac Intel.
+3. Open the downloaded `.dmg` and drag Alacrán into Applications.
+4. Open Terminal (press Cmd+Space, type Terminal, press Return). Paste the line below and press Return. Command: `xattr -cr "/Applications/Alacran.app"`
+5. Open Alacrán from your Applications folder.
+
+**Why this step exists:** Apple has not notarized Alacrán, because that needs a paid Apple Developer account. Until you run the line above once, macOS may say “Alacrán is damaged and can’t be opened”. It is not damaged. The command clears the flag your browser attached to this one download, so macOS lets the app open. Right-click and Open is not enough on its own. Use it only on the app you downloaded from this site or the official releases page. Updates inside the app do not need it again.
+
+**On Debian or Ubuntu:** Open Terminal, go to the folder where you saved the download (usually Downloads), and run the line below. Use it only on the file you downloaded from this site or the official releases page. Then open Alacrán from your applications menu.
+
+Command: `sudo apt install ./Alacran.deb`
+
+**You will see:** Alacrán opens on a “Welcome to Alacrán” screen with a short checklist. It checks that you have Git and one AI tool, which the next steps cover.
 
 ## 2. Choose your starting goal.
 
-Choose the work you want help with: running your business, building software, winning customers, or growing your audience. Read the trust information so you understand local storage, provider access, and review expectations.
+You do not need to know your whole plan yet. Choose the work you want help with: running your business, building software, winning customers, or growing your audience. Read the trust information so you understand local storage, provider access, and review expectations.
 
 Your starting goal helps shape the workspace. It does not lock you into one way of working.
 
+**You will see:** A screen that asks “What should Alacrán help you accomplish?” with four choices, then a screen headed “You stay in control”.
+
 ## 3. Connect your AI.
 
-Follow the AI setup screen to install and sign in to the supported agent. Return to Alacrán and use **Re-check** to confirm the connection.
+Alacrán needs an AI to do the writing, and you sign in to it yourself with your own account. Follow the AI setup screen to install and sign in to the supported agent. Return to Alacrán and use **Re-check** to confirm the connection.
 
 You can choose **Explore without AI** if you want to look around and add records first. Connect an agent when you are ready for AI-generated work.
+
+**You will see:** A screen headed “Connect the AI that does the work”. Claude Code is listed as missing or not connected until you install it and sign in. Press **Re-check** when you come back.
 
 ## 4. Create your company.
 
@@ -340,9 +442,11 @@ Give the workspace a name and choose an appropriate starter pack. Alacrán creat
 
 If you already have a suitable project folder or backup, use the available import or restore option. Existing folders may follow a different onboarding path.
 
+**You will see:** A list headed “What gets created”, and a form to name your company on the **New Company** tab.
+
 ## 5. Describe how your business works.
 
-Answer the guided questions:
+Your AI is only as useful as what it knows about you, so answer the guided questions:
 
 - What does your business do, and who does it serve?
 - Who is involved: customers, team members, partners, or suppliers?
@@ -353,11 +457,15 @@ Keep unknown details visibly incomplete rather than filling them with assumption
 
 On **Check & save**, choose **Let Alacrán write it up** to prepare a draft for approval, or **Save my answers as they are** to keep your own wording.
 
+**You will see:** Four short screens (What you do, Who’s involved, How work flows, What’s hardest), then **Check & save** with those two buttons.
+
 ## 6. Review your first draft.
 
-Open **Approvals** and inspect the proposed company information. Choose **Review & approve**, **Ask for changes**, or **Discard**.
+Nothing is saved until you say so. Open **Approvals** and inspect the proposed company information. Choose **Review & approve**, **Ask for changes**, or **Discard**.
 
 Your company profile influences later tasks, so check its facts carefully. Some previews currently show structured text such as `name: value` rather than a formatted summary.
+
+**You will see:** Approvals reads your draft back in plain sentences and marks it “High risk”. That only means everything Alacrán does later builds on your company profile, so it deserves a careful read. It does not mean anything is wrong. After you approve, a line reads “Saved. Alacrán keeps it in your company’s files.”
 
 ## 7. Ask a useful first question.
 
@@ -370,6 +478,8 @@ For a follow-up task, try:
 > Draft a short introduction to my business using the company profile. Mark anything that needs my confirmation.
 
 Review the result before using it outside the workspace.
+
+**You will see:** An answer written from the company profile you just saved. Anything it could not find should be listed as missing, so you know what to add next.
 
 ## If something needs attention
 
@@ -393,7 +503,7 @@ Review the result before using it outside the workspace.
 
 ### Release checks
 
-Confirm the minimum macOS version and exact onboarding labels against the shipped build. Link installation troubleshooting to official release instructions. Do not state that every blocked download is safe or encourage indiscriminate removal of operating-system security protections. Do not promise a setup time until measured.
+Confirm the minimum macOS version <<TODO>> and exact onboarding labels against the shipped build. The version is deliberately left out of the published copy because nothing in the repository states it. Link installation troubleshooting to official release instructions. Do not state that every blocked download is safe or encourage indiscriminate removal of operating-system security protections. Do not promise a setup time until measured.
 
 ---
 
@@ -415,7 +525,7 @@ New to the app? **Start with installation** → `/getting-started`
 
 ## Start with the morning briefing.
 
-Open your company workspace to see recent activity and work needing attention. Check when each department was last updated before treating its figures as current.
+You open the app and do not know where to look first. Open your company workspace to see recent activity and work needing attention. Check when each department was last updated before treating its figures as current.
 
 Try asking:
 
@@ -423,7 +533,7 @@ Try asking:
 
 ## Choose a department and a concrete task.
 
-In Customers, review the opportunities that need follow-up. In Finances, inspect the latest recorded income and expenses. In Content, move an idea into a draft. In Messages, work through inquiries that need a response.
+A vague request gets a vague answer. In Customers, review the opportunities that need follow-up. In Finances, inspect the latest recorded income and expenses. In Content, move an idea into a draft. In Messages, work through inquiries that need a response.
 
 A clear task gives the agent a useful target:
 
@@ -431,7 +541,7 @@ A clear task gives the agent a useful target:
 
 ## Review proposed work.
 
-Read the result and inspect any proposed file changes. Use the risk indicator to help prioritize review, then approve, request changes, or discard the proposal.
+AI work you cannot check is work you cannot trust. Read the result and inspect any proposed file changes. Use the risk indicator to help prioritize review, then approve, request changes, or discard the proposal.
 
 A revision can be specific:
 
@@ -441,11 +551,11 @@ Saving a draft and sending it are separate steps. Check the workflow before taki
 
 ## Keep your company knowledge useful. {#template}
 
-Maintain the company profile as your products, customers, team, and operating rules change. The quality of later work depends on the information available to it.
+Your AI works from what it has been told, so out-of-date facts make out-of-date drafts. Maintain the company profile as your products, customers, team, and operating rules change. The quality of later work depends on the information available to it.
 
 ## Record why a decision was made. {#decisions}
 
-Save the choice, the alternatives considered, and the reason behind it. Include what new information would justify revisiting it.
+Months later, nobody remembers why you chose it. Save the choice, the alternatives considered, and the reason behind it. Include what new information would justify revisiting it.
 
 Try asking:
 
@@ -453,27 +563,27 @@ Try asking:
 
 ## Maintain operational records. {#records}
 
-Review department updates against their source information. Keep customer stages, content status, and financial entries current so later summaries reflect the business as it is.
+Summaries are only as good as the records behind them. Review department updates against their source information. Keep customer stages, content status, and financial entries current so later summaries reflect the business as it is.
 
 ## Turn useful tasks into repeatable workflows.
 
-Once a task produces a useful result, reuse an appropriate skill or configure a recurring job. Monitor the run status and review its output.
+If you do the same task every week, you should not have to set it up every week. Once a task produces a useful result, reuse an appropriate skill or configure a recurring job. Monitor the run status and review its output.
 
 Local background work depends on the app, computer, and required connections being available. Closing the window can leave work running; quitting the app stops its local processes.
 
 ## Use the assistant your way. {#assistant}
 
-Type a request or use supported voice input. Choose your assistant’s language, tone, and voice settings. Voice processing depends on the selected provider and configuration.
+Some people would rather type and some would rather talk. Type a request or use supported voice input. Choose your assistant’s language, tone, and voice settings. Voice processing depends on the selected provider and configuration.
 
 For technical work, Advanced mode exposes terminals, agent workspaces, skills, and connection configuration.
 
 ## Switch companies deliberately.
 
-Keep each business in its own workspace. Before sharing context through Company Strings, inspect what will become available to the other workspace. Cross-company questions should use only the scope you intend.
+If you run more than one business, one mixed-up workspace gets confusing fast. Keep each business in its own workspace. Before sharing context through Company Strings, inspect what will become available to the other workspace. Cross-company questions should use only the scope you intend.
 
 ## Check the system when something looks wrong.
 
-Use System Doctor to inspect company files, record validation, repository status, and connector readiness. Review suggested repairs before applying them.
+When something looks off, you should not have to guess why. Use System Doctor to inspect company files, record validation, repository status, and connector readiness. Review suggested repairs before applying them.
 
 **Find a workflow to try** → `/use-cases`
 
@@ -697,11 +807,13 @@ Connect the AI that does the work and the services that hold relevant informatio
 
 ## Choose your AI executor.
 
-Supported executor options include Claude Code, Google Antigravity, Kiro, Kimi, and Codex. Availability and setup requirements vary by release and provider.
+Alacrán organizes your business; the AI you choose does the writing. Supported executor options include Claude Code, Google Antigravity, Kiro, Kimi, and Codex. Availability and setup requirements vary by release and provider.
 
 Choose an executor for each company while keeping its underlying business records in the same workspace. Provider subscriptions and usage limits apply separately.
 
 ## Connect the information behind your work.
+
+Useful answers need information that sits in other tools.
 
 **Communication and inboxes**
 
@@ -747,15 +859,17 @@ Browse the tools listed in the connection catalogue. Inclusion does not imply a 
 
 Catalogue availability does not mean every tool has a built-in department workflow. Review each connection’s status before relying on it.
 
+Disclosure: **Logos belong to their owners and appear only to name the tool. Their use does not imply endorsement or partnership. Not every tool shows a logo.**
+
 ## Know what a connection can do.
 
-Before connecting a service, check the required account, the information it can read, whether it can change external data, and any provider charges.
+Connecting a tool is a decision about what it can see and change. Before connecting a service, check the required account, the information it can read, whether it can change external data, and any provider charges.
 
 The standard inbox and chat catch-up workflows are read-only. Other configured tools can have different permissions. A prepared draft is not a sent message or a published post.
 
 ## Voice that fits your setup.
 
-Voice options include browser speech capabilities, Deepgram, and ElevenLabs configurations. Availability depends on your device, provider access, and settings. Review microphone permissions and data handling when enabling voice features.
+If you would rather speak than type, voice is optional. Voice options include browser speech capabilities, Deepgram, and ElevenLabs configurations. Availability depends on your device, provider access, and settings. Review microphone permissions and data handling when enabling voice features.
 
 ## For advanced users
 
@@ -800,6 +914,8 @@ Meta description: **Explore business workflows for briefings, follow-ups, conten
 # Start with one task you already need to do.
 
 Alacrán becomes useful when company knowledge supports real work. These examples show how to move from a business question to an output you can review.
+
+Most people stall because they do not know what to ask first. Each example starts with a situation you will recognise, shows what you ask, and ends with something you review before anything is kept.
 
 The examples below use illustrative scenarios, not customer results.
 
@@ -901,25 +1017,29 @@ Eyebrow: **Departments / Customers**
 
 Research prospects, track opportunities, and prepare follow-ups from what your business already knows. Keep the customer record and the proposed next step in the same workspace.
 
+**Why you need this:** Without it, who said what lives in your inbox, your notes and your memory, and every follow-up starts with digging. Here the customer record and the proposed next step sit together, so your AI drafts from what is already saved instead of from a blank chat.
+
 **Download Alacrán** · **See customer workflow examples** → `/use-cases`
 
 ## See where each opportunity stands.
 
-Track prospects through Discovery, Evaluation, Proposal, and Won or Lost. Review recorded deal values, contact history, and the opportunities that need attention.
+It is easy to lose track of which prospects are waiting on you and which have gone quiet. Track prospects through Discovery, Evaluation, Proposal, and Won or Lost. Review recorded deal values, contact history, and the opportunities that need attention.
 
 ## Research with a relevant offer in mind.
 
-Give your AI a prospect, a set of websites, or a description of the customers you want to reach. Use your company profile to prepare relevant research and an outreach angle for review.
+Researching every prospect by hand takes time, and a message that does not match what you offer is easy to dismiss. Give your AI a prospect, a set of websites, or a description of the customers you want to reach. Use your company profile to prepare relevant research and an outreach angle for review.
 
 ## Prepare a follow-up with the history available.
 
-Use saved notes and approved business information to draft the next message. Check the details and commitments before contacting the customer.
+Before you write to a customer you have to remember what was said last time. Use saved notes and approved business information to draft the next message. Check the details and commitments before contacting the customer.
 
 ## Keep the record useful for next time.
 
-Log contact activity and update the lead stage as the conversation develops. Add records manually or review proposed updates from managed workflows. Export leads when you need them elsewhere.
+A record nobody updates stops being useful, so each conversation starts cold. Log contact activity and update the lead stage as the conversation develops. Add records manually or review proposed updates from managed workflows. Export leads when you need them elsewhere.
 
 ## A practical workflow
+
+A set order of steps keeps follow-ups from depending on memory.
 
 1. Add or select a prospect.
 2. Review the available context and request research or a draft.
@@ -969,25 +1089,27 @@ Eyebrow: **Departments / Finances**
 
 Bring income, expenses, and cash information into a working view of your business. Track changes, investigate costs, and prepare questions for a more informed financial review.
 
+**Why you need this:** Without it, your income, expenses and cash sit in separate places, and every question to your AI means pasting numbers in again. Here the records you keep are the ones your AI reads, and by default what it proposes waits for your approval.
+
 **Download Alacrán** · **Explore financial review examples** → `/use-cases`
 
 ## Bring the records together.
 
-Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
+Your numbers are probably spread across statements, payment tools and spreadsheets. Add income and expenses, import supported statement files, or use available payment-data connections. Check imported information against its source before relying on the totals.
 
 ## Understand the recorded trend.
 
-Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
+One month’s figure rarely tells you whether things are getting better or worse. Review revenue, spending, and cash figures over time. Where the necessary information is available, use burn and runway estimates to explore the current position.
 
 Estimates depend on the completeness of your records and their assumptions. They are not a forecast of guaranteed future results.
 
 ## Investigate potential savings.
 
-Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
+Costs creep up quietly, and nobody has time to read every line. Ask your AI to examine the information you provide for possible duplication, changing costs, or spending worth reviewing. Inspect each recommendation before changing a subscription or business commitment.
 
 ## Review financial changes carefully.
 
-Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
+A wrong number that slips into your records is hard to spot later. Check proposed updates against the original records. Keep a history of approved changes so you can trace how the working view developed.
 
 Try asking:
 
@@ -1035,33 +1157,35 @@ Eyebrow: **Departments / Content & social**
 
 Develop ideas, prepare drafts, and keep the review process connected to your company’s voice and priorities. Track what is ready and what has already been published.
 
+**Why you need this:** Without it, every post starts from a blank prompt and you explain your audience and tone again each time. Here your company facts say what you offer and who it serves, your past posts set the voice, and you review each draft before approving it.
+
 **Download Alacrán** · **See a content workflow** → `/use-cases`
 
 ## Start with your audience and your offer.
 
-Use company facts, audience information, and tone guidance to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
+A generic post is easy to scroll past, and writing a good brief every time is slow. Use company facts, audience information, and your past posts to give each draft a useful starting point. Ask for a specific message and purpose instead of another generic post.
 
 ## Move from idea to reviewed draft.
 
-Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
+Ideas, drafts, and half-finished edits tend to end up scattered across documents and chats. Keep ideas, drafts, and review status in the content pipeline. Inspect the wording, check factual claims, and ask for revisions before approving a piece.
 
 ## Prepare the details in one place.
 
-Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
+Copy, previews, and visuals often get prepared in different places. Use the post composer to work on copy and previews. Where supported, connect creative tools or image-generation capabilities to prepare accompanying visuals.
 
 ## Keep publication status visible.
 
-Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
+It is easy to lose track of what is approved, what is scheduled, and what is actually live. Record what has been published and maintain a useful history. Supported newsletter and social connections can bring additional status and audience information into the workspace.
 
 Approval, scheduling, and publication are different states. Confirm what your configured workflow actually does before treating a post as live.
 
 ## Learn from the available signals.
 
-Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
+Posting more often is not the same as learning what works. Review supported follower metrics and audience trends alongside your content records. Use the information to form the next experiment; growth is not guaranteed by publishing more often.
 
 Try asking:
 
-> Draft three posts explaining this service to our target audience. Give each one a different useful angle, follow our saved tone guidance, and flag claims that need proof.
+> Draft three posts explaining this service to our target audience. Give each one a different useful angle, match the voice of our past posts, and flag claims that need proof.
 
 ## Questions
 
@@ -1105,29 +1229,33 @@ Eyebrow: **Departments / Messages**
 
 Catch up on connected messages, identify inquiries awaiting attention, and prepare replies using your company’s recorded information.
 
+**Why you need this:** Without it, finding who is waiting on a reply means opening every inbox and chat in turn. Here the catch-up reads your connected messages and prepares drafts, and you send each reply yourself.
+
 **Download Alacrán** · **Explore messaging connections** → `/integrations`
 
 ## Catch up across connected services.
 
-Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
+Messages arrive in many places, and something important is easy to miss. Bring supported email and chat information into one working view. Read summaries alongside the original context when you need to check a detail.
 
 ## See who may need a reply.
 
-Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
+Not every message needs you, and the ones that do should not get buried. Use the inquiry scanner and reply queue to identify conversations worth reviewing. Separate work waiting for your attention from drafts ready for the next step.
 
 ## Prepare a reply with the business facts available.
 
-Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
+A fast reply is only useful if it is right about names, prices, and commitments. Give your AI access to the relevant company information when preparing a response. Check names, commitments, prices, and unresolved questions before using it.
 
 ## Keep a record of the conversation.
 
-Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
+A reply you sent last month is easy to forget when the customer writes again. Save useful summaries and record completed replies so later work can draw on the history. Information from an incoming message should remain attributable to its sender rather than automatically becoming an approved company fact.
 
 Try asking:
 
 > Find customer inquiries that appear to need a response. Draft replies using our documented service information, and flag anything that requires my decision.
 
 ## How the standard reply workflow works
+
+A set order for catching up keeps replies from depending on who remembers.
 
 1. Connect a supported inbox or messaging source.
 2. Review the catch-up summary and inquiries.
