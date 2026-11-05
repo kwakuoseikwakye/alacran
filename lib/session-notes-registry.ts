@@ -14,10 +14,10 @@ export type SessionNotesAssignment = { agentId: string; autoWrite: boolean }
  * nobody finds at 3am. Same shape, same default-and-fallback behaviour, so
  * there is one pattern here rather than two.
  *
- * **Default ON**, which is the one place this deliberately differs from
- * `visible-run-registry`. The feature is the app's whole premise — a company
- * that remembers what was said to it — so the file records the opt-OUT. A user
- * who has never touched this has no entry and gets notes.
+ * **Default OFF.** Writing a note spends the user's own AI usage unattended, so
+ * a company nobody has opted in must not do it (a default of ON with no cap
+ * burned a real account's quota on notes nobody read). The file records the
+ * opt-IN; an explicit entry, either way, is always honoured.
  */
 const DEFAULT_REGISTRY_PATH = dataPath("session-notes.json")
 
@@ -38,13 +38,13 @@ export async function getSessionNotesAssignments(
   }
 }
 
-/** Absent means ON — see the note above. */
+/** Absent means OFF — see the note above. */
 export async function getSessionNotesForAgent(
   agentId: string,
   registryPath: string = DEFAULT_REGISTRY_PATH
 ): Promise<boolean> {
   const assignments = await getSessionNotesAssignments(registryPath)
-  return assignments.find((a) => a.agentId === agentId)?.autoWrite ?? true
+  return assignments.find((a) => a.agentId === agentId)?.autoWrite ?? false
 }
 
 export async function setSessionNotesImpl(

@@ -22,7 +22,7 @@ function formatWhen(iso: string): string {
  * guessed default, so the box never flips under the user after it paints.
  */
 export function SessionNotesToggle({ agentId }: { agentId: string }) {
-  const [checked, setChecked] = useState(true)
+  const [checked, setChecked] = useState(false)
   const [loaded, setLoaded] = useState(false)
   const [pending, setPending] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
@@ -82,14 +82,15 @@ export function SessionNotesToggle({ agentId }: { agentId: string }) {
         write a short note — what you worked on, what was decided, what&rsquo;s still open — into this
         company&rsquo;s own folder. The note waits for you to approve it, like every other job. Turning this
         off means conversations are only remembered if you press &ldquo;Save what we learned&rdquo; yourself.
-        Leaving it on uses your AI account each time a conversation finishes.
+        When on, this uses your AI account for each note, but at most one note per company every 30
+        minutes and three a day across all your companies.
       </p>
       {message && <p className="text-xs text-destructive">{message}</p>}
       {/* Only when it is ON: an outcome from before the switch was turned off
           describes a job that no longer runs, which reads as a live problem. */}
       {checked && last && (
-        <p className={`text-xs ${last.started ? "text-muted-foreground" : "text-destructive"}`}>
-          {last.started ? "Last written up" : "Last attempt failed"} {formatWhen(last.at)}
+        <p className="pt-1 text-xs text-muted-foreground">
+          {last.started ? "Last written up" : "Last attempt didn't write a note"} &ndash; {formatWhen(last.at)}
           {last.started ? "." : `: ${last.message}`}
         </p>
       )}

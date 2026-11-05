@@ -14,9 +14,15 @@ import { getNotedFingerprint, setNotedFingerprint } from "./noted-conversations"
 import { prepareExecutorScope } from "../executor-scope"
 import { defaultCwdExecFile, type ExecFileFn } from "../company-commands/repo-changes"
 import { getSessionNotesForAgent } from "../session-notes-registry"
+import { readAttempts, writeAttempts } from "./session-note-attempts"
 import { setSessionNoteStatus } from "./session-note-status"
 import type { Agent } from "../adapters/types"
 import type { AiExecutor } from "../ai-executors"
+
+/** Minimum time between automatic note runs for one company. */
+export const SESSION_NOTE_MIN_GAP_MS = 30 * 60_000
+/** Most automatic note runs, machine-wide, per local day. */
+export const SESSION_NOTE_DAILY_CAP = 3
 
 export type SpawnLike = (
   command: string,
@@ -27,16 +33,9 @@ export type SpawnLike = (
 /**
  * Companies with an auto-note spawn currently in flight.
  *
- * The 60-second ticker has no per-company lock the way a real command run
- * does (runCompanyCommandImpl's acquireRunLock) — this path never had one,
- * because until now it recorded "noted" synchronously right after spawning,
- * which incidentally also blocked the next tick. Recording the fingerprint
- * after the run finishes (see the fix below) reopens that gap: a `--continue`
- * on a long conversation can easily outlive 60 seconds, and without this a
- * second tick would fire a SECOND concurrent resume of the same conversation
- * before the first one's fingerprint even lands. Module-level and in-memory
- * on purpose — the ticker is one setInterval per server process, so there is
- * exactly one of these to guard.
+ * Module-level and in-memory on purpose: it only stops a second tick firing a
+ * concurrent resume while the first still runs. It does NOT survive a restart —
+ * the persisted attempts file (session-note-attempts.ts) is the real gate.
  */
 const inFlight = new Set<string>()
 
@@ -97,7 +96,12 @@ export async function writeSessionNoteFromLastConversation(
   notedStorePath?: string,
   /** Injectable so a test never has to stand up a pty registry or a clock. */
   isLive: (agentId: string, executorId: string) => boolean = hasLiveAssistant,
-  now: () => number = Date.now
+  now: () => number = Date.now,
+  /** Defaults beside `notedStorePath` when that is given, so a test that passes
+   *  a temp noted path never touches the real .data (v75). */
+  attemptsStorePath: string | undefined = notedStorePath
+    ? path.join(path.dirname(notedStorePath), "session-note-attempts.json")
+    : undefined
 ): Promise<{ started: boolean; message: string; quiet?: boolean }> {
   // Whichever AI this company is set to run on — not a hardcoded one. An
   // executor with no `resume` simply has no supported way to hand a prompt back
@@ -164,6 +168,34 @@ export async function writeSessionNoteFromLastConversation(
     return { started: false, quiet: true, message: "Too short to be worth a note." }
   }
 
+  // Persisted gates: they hold across a restart, a launch tick and a second
+  // server process, which the in-memory `inFlight` set cannot. Executor-agnostic,
+  // so they cover Kiro too; the transcript attribution above is Claude-only and
+  // no Kiro transcript measurement is claimed.
+  const attempts = await readAttempts(now(), attemptsStorePath)
+  const mine = attempts.companies[agent.id]
+  if (mine && now() - mine.lastAttemptAt < SESSION_NOTE_MIN_GAP_MS) {
+    // Quiet unless the conversation changed since we last said so: one line per
+    // held-back conversation, not one per tick.
+    if (mine.rateLimitReportedFor === fingerprint) {
+      return { started: false, quiet: true, message: "Written up recently." }
+    }
+    mine.rateLimitReportedFor = fingerprint
+    await writeAttempts(attempts, attemptsStorePath).catch(() => {})
+    return { started: false, message: "Held back: written up recently, will try again later." }
+  }
+  if (attempts.day.count >= SESSION_NOTE_DAILY_CAP) {
+    if (attempts.day.capReported.includes(agent.id)) {
+      return { started: false, quiet: true, message: "Daily limit reached." }
+    }
+    attempts.day.capReported.push(agent.id)
+    await writeAttempts(attempts, attemptsStorePath).catch(() => {})
+    return {
+      started: false,
+      message: `Reached today's limit of ${SESSION_NOTE_DAILY_CAP} automatic notes; will resume tomorrow.`,
+    }
+  }
+
   const command = getCompanyCommand(SESSION_NOTE_COMMAND_ID)
   if (!command) return { started: false, message: "Saving notes isn't available in this version." }
 
@@ -188,6 +220,16 @@ export async function writeSessionNoteFromLastConversation(
     // quietly gets the whole repo.
     await prepareExecutorScope(executor.id, scopeInput, agent.rootPath)
 
+    // Recorded BEFORE the spawn and not swallowed: if either write fails nothing
+    // spawns (the attempt is simply not made). The fingerprint is the newest
+    // HUMAN turn, which this app's own `-p` run (entrypoint sdk-cli) never
+    // moves, so the value taken above is still right after the run and an app
+    // closed mid-run cannot respawn the same conversation.
+    attempts.companies[agent.id] = { lastAttemptAt: now() }
+    attempts.day.count++
+    await writeAttempts(attempts, attemptsStorePath)
+    await setNotedFingerprint(agent.id, fingerprint, notedStorePath)
+
     fd = openSync(logPath, "a")
     inFlight.add(agent.id)
     const child = spawnFn(executor.binaryName, [...executor.resume.buildArgs(scopeInput, last?.sessionId), ...(executor.routineModelArgs ?? [])], {
@@ -198,30 +240,7 @@ export async function writeSessionNoteFromLastConversation(
     // Fires on both "exit" (the ordinary case) and "error" (missing binary —
     // v56's five-call-site bug: an unlistened 'error' event takes the whole
     // server down). Either way the attempt is over, so the guard lifts.
-    const settle = () => {
-      inFlight.delete(agent.id)
-      // **The fix.** `--continue` appends this run's own turn to the very
-      // transcript conversationFingerprint reads, so the fingerprint taken
-      // BEFORE spawning is stale the instant the run starts — recording that
-      // value would make the next tick see "new" content again forever, an
-      // unattended loop re-asking (and re-billing) every 60 seconds for good.
-      // Recomputing now, after the run is actually done, records what the
-      // conversation looks like AFTER our own turn — so the next tick only
-      // fires on a conversation that happened after this one, not on this
-      // one's own echo.
-      //
-      // **v150 circuit-breaker:** if the recomputed fingerprint can't be
-      // saved, fall back to saving the PRE-spawn fingerprint. That value is
-      // stale — the next tick will see a match and SKIP, which is one missed
-      // note-write, not an infinite loop. The alternative (.catch(() => {}))
-      // silently swallowed the error and let every subsequent tick re-spawn
-      // the same session, re-billing every 60 seconds forever.
-      void conversationFingerprint(executor, agent.rootPath, execFn, home)
-        .then((fp) => setNotedFingerprint(agent.id, fp ?? fingerprint, notedStorePath))
-        .catch(() =>
-          setNotedFingerprint(agent.id, fingerprint, notedStorePath).catch(() => {})
-        )
-    }
+    const settle = () => inFlight.delete(agent.id)
     child.on("error", settle)
     child.on("exit", settle)
     child.unref()

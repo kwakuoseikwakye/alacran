@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest"
 import { mkdtemp, mkdir, writeFile, appendFile, utimes, stat, rm } from "node:fs/promises"
+import { readFileSync } from "node:fs"
 import os from "node:os"
 import path from "node:path"
 import { writeSessionNoteFromLastConversation, catchUpSessionNotes, type SpawnLike } from "./auto-session-note"
@@ -301,6 +302,103 @@ describe("writeSessionNoteFromLastConversation", () => {
   })
 })
 
+describe("AC6: the loop that burned a real account", () => {
+  it("spawns at most once per 30 minutes and 3 a day, across restarts and headless sessions appearing", async () => {
+    await haveConversation(new Date("2026-11-05T09:00:00"))
+    const dir = claudeProjectDir(root, home)
+    const owner = path.join(dir, "a.jsonl")
+    let clock = new Date("2026-11-05T10:00:00").getTime()
+    const spawnTimes: number[] = []
+    const fn: SpawnLike = () => {
+      spawnTimes.push(clock)
+      // What a real run leaves behind: its own turn appended to the resumed
+      // file, and a headless session from some other tool landing beside it.
+      void appendFile(owner, turn(new Date(clock), "s-a", "sdk-cli"))
+      void writeFile(path.join(dir, `h${spawnTimes.length}.jsonl`), turn(new Date(clock), `h${spawnTimes.length}`, "sdk-cli"))
+      return { unref: () => {}, on: (event, cb) => { if (event === "exit") cb(0 as never) } }
+    }
+    for (let i = 0; i < 20; i++) {
+      // The owner says something new, then goes quiet for longer than the idle guard.
+      await appendFile(owner, turn(new Date(clock), "s-a", "cli"))
+      clock += 11 * 60_000
+      vi.resetModules() // a restart: nothing in memory survives
+      const mod = await import("./auto-session-note")
+      await mod.catchUpSessionNotes(
+        async () => [agent()],
+        (a) => mod.writeSessionNoteFromLastConversation(a, fn, claude, dataRoot, home, undefined, noted(), () => false, () => clock),
+        async () => true,
+        async () => {}
+      )
+    }
+    expect(spawnTimes.length).toBeGreaterThan(0)
+    expect(spawnTimes.length).toBeLessThanOrEqual(3)
+    for (let i = 1; i < spawnTimes.length; i++) expect(spawnTimes[i] - spawnTimes[i - 1]).toBeGreaterThanOrEqual(30 * 60_000)
+  })
+})
+
+describe("persisted gates", () => {
+  const attemptsFile = () => path.join(dataRoot, "session-note-attempts.json")
+  const T0 = new Date("2026-11-05T10:00:00").getTime()
+  const run = (a: Agent, fn: SpawnLike, at: number) =>
+    writeSessionNoteFromLastConversation(a, fn, claude, dataRoot, home, undefined, noted(), () => false, () => at)
+
+  it("writes the attempt and the fingerprint to disk before the spawn", async () => {
+    await haveConversation()
+    let seen = ""
+    let notedSeen: string | null = null
+    const fn: SpawnLike = () => {
+      seen = readFileSync(attemptsFile(), "utf-8")
+      notedSeen = readFileSync(noted(), "utf-8")
+      return { unref: () => {}, on: () => {} }
+    }
+    expect((await run({ ...agent(), id: "pre" } as Agent, fn, T0 + 3_600_000)).started).toBe(true)
+    expect(JSON.parse(seen).day.count).toBe(1)
+    expect(notedSeen).toContain("pre")
+  })
+
+  it("holds a changed conversation back within 30 minutes, says so once, then allows it after", async () => {
+    await haveConversation()
+    const a = { ...agent(), id: "gap" } as Agent
+    const { fn, calls } = recordingSpawn()
+    const t = T0 + 3_600_000
+    expect((await run(a, fn, t)).started).toBe(true)
+    await appendFile(path.join(claudeProjectDir(root, home), "a.jsonl"), turn(new Date(t), "s-a", "cli"))
+    const held = await run(a, fn, t + 12 * 60_000)
+    expect(held).toMatchObject({ started: false, message: expect.stringContaining("Held back") })
+    expect(held.quiet).toBeUndefined()
+    expect((await run(a, fn, t + 13 * 60_000)).quiet).toBe(true)
+    expect((await run(a, fn, t + 31 * 60_000)).started).toBe(true)
+    expect(calls).toHaveLength(2)
+  })
+
+  it("stops at the daily cap across companies, reports it once, resets next day", async () => {
+    await haveConversation()
+    const { fn, calls } = recordingSpawn()
+    const t = T0 + 3_600_000
+    for (const id of ["c1", "c2", "c3"]) expect((await run({ ...agent(), id } as Agent, fn, t)).started).toBe(true)
+    const capped = await run({ ...agent(), id: "c4" } as Agent, fn, t)
+    expect(capped).toMatchObject({ started: false, message: expect.stringContaining("limit of 3") })
+    expect(capped.quiet).toBeUndefined()
+    expect((await run({ ...agent(), id: "c4" } as Agent, fn, t)).quiet).toBe(true)
+    expect(calls).toHaveLength(3)
+    expect((await run({ ...agent(), id: "c4" } as Agent, fn, t + 24 * 3_600_000)).started).toBe(true)
+  })
+
+  it("does not spawn when the attempt cannot be written (fails closed)", async () => {
+    await haveConversation()
+    const { fn, calls } = recordingSpawn()
+    // A path under a regular file can never be created.
+    const blocker = path.join(dataRoot, "blocker")
+    await writeFile(blocker, "x")
+    const result = await writeSessionNoteFromLastConversation(
+      { ...agent(), id: "fc" } as Agent, fn, claude, dataRoot, home, undefined, noted(),
+      () => false, () => T0 + 3_600_000, path.join(blocker, "attempts.json")
+    )
+    expect(result.started).toBe(false)
+    expect(calls).toHaveLength(0)
+  })
+})
+
 describe("catchUpSessionNotes", () => {
   /**
    * Collects instead of writing. Without this the default `recordStatus` is
@@ -330,7 +428,7 @@ describe("catchUpSessionNotes", () => {
         seen.push(a.id)
         return { started: true, message: "" }
       },
-      undefined,
+      async () => true,
       recorder().record
     )
     expect(seen).toEqual(["a"])
@@ -369,7 +467,7 @@ describe("catchUpSessionNotes", () => {
         if (a.id === "a") throw new Error("boom")
         return { started: true, message: "" }
       },
-      undefined,
+      async () => true,
       recorder().record
     )
     expect(started).toBe(1)
@@ -387,7 +485,7 @@ describe("catchUpSessionNotes", () => {
     await catchUpSessionNotes(
       async () => agents,
       async () => ({ started: false, message: "claude isn't installed." }),
-      undefined,
+      async () => true,
       r.record
     )
     expect(r.wrote).toEqual([{ agentId: "a", started: false, message: "claude isn't installed." }])
@@ -401,7 +499,7 @@ describe("catchUpSessionNotes", () => {
       async () => {
         throw new Error("scope write failed")
       },
-      undefined,
+      async () => true,
       r.record
     )
     expect(r.wrote).toEqual([{ agentId: "a", started: false, message: "scope write failed" }])
@@ -418,7 +516,7 @@ describe("catchUpSessionNotes", () => {
     await catchUpSessionNotes(
       async () => agents,
       async () => ({ started: false, quiet: true, message: "Nothing new to write down." }),
-      undefined,
+      async () => true,
       r.record
     )
     expect(r.wrote).toEqual([])
@@ -430,7 +528,7 @@ describe("catchUpSessionNotes", () => {
     await catchUpSessionNotes(
       async () => agents,
       async () => ({ started: true, message: "Writing up the last session." }),
-      undefined,
+      async () => true,
       r.record
     )
     expect(r.wrote).toEqual([{ agentId: "a", started: true, message: "Writing up the last session." }])
