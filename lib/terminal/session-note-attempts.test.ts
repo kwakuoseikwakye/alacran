@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { mkdtemp, writeFile, readdir } from "node:fs/promises"
+import { mkdtemp, writeFile, readdir, mkdir } from "node:fs/promises"
 import os from "node:os"
 import path from "node:path"
 import { readAttempts, writeAttempts, localDate } from "./session-note-attempts"
@@ -30,6 +30,22 @@ describe("session-note-attempts", () => {
   it("writes atomically: no temp file is left beside the store", async () => {
     const p = await tmp()
     await writeAttempts(await readAttempts(Date.now(), p), p)
+    expect(await readdir(path.dirname(p))).toEqual(["a.json"])
+  })
+
+  it("reads a missing file as empty but an unparseable existing one as corrupt", async () => {
+    const p = await tmp()
+    expect((await readAttempts(Date.now(), p)).corrupt).toBeUndefined()
+    await writeFile(p, "{nope")
+    expect((await readAttempts(Date.now(), p)).corrupt).toBe(true)
+    await writeFile(p, "[]")
+    expect((await readAttempts(Date.now(), p)).corrupt).toBe(true)
+  })
+
+  it("cleans up its temp file when the rename fails", async () => {
+    const p = await tmp()
+    await mkdir(p) // a directory where the file should go: rename onto it fails
+    await expect(writeAttempts(await readAttempts(Date.now(), p + "x"), p)).rejects.toThrow()
     expect(await readdir(path.dirname(p))).toEqual(["a.json"])
   })
 })

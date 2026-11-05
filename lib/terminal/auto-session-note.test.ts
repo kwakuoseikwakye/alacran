@@ -384,6 +384,19 @@ describe("persisted gates", () => {
     expect((await run({ ...agent(), id: "c4" } as Agent, fn, t + 24 * 3_600_000)).started).toBe(true)
   })
 
+  it("treats a corrupt attempts file as the cap being reached, reported once", async () => {
+    await haveConversation()
+    await writeFile(attemptsFile(), "{nope")
+    const { fn, calls } = recordingSpawn()
+    const a = { ...agent(), id: "cor" } as Agent
+    const t = T0 + 3_600_000
+    const first = await run(a, fn, t)
+    expect(first).toMatchObject({ started: false, message: expect.stringContaining("limit of 3") })
+    expect(first.quiet).toBeUndefined()
+    expect((await run(a, fn, t)).quiet).toBe(true)
+    expect(calls).toHaveLength(0)
+  })
+
   it("does not spawn when the attempt cannot be written (fails closed)", async () => {
     await haveConversation()
     const { fn, calls } = recordingSpawn()
@@ -396,6 +409,32 @@ describe("persisted gates", () => {
     )
     expect(result.started).toBe(false)
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe("Kiro: its own run adds messages", () => {
+  it("does not respawn the same conversation once the gap has passed", async () => {
+    const kiro = async () => getAiExecutor("kiro")
+    let msgs = 2
+    const exec = async () => ({
+      stdout: `Chat SessionId: 11111111-2222-3333-4444-555555555555\n  1 min ago | ${msgs} msgs | hi\n`,
+      stderr: "",
+    })
+    const calls: number[] = []
+    const fn: SpawnLike = () => {
+      calls.push(1)
+      msgs += 2 // a --resume run appends its own messages to the listing
+      return { unref: () => {}, on: (event, cb) => { if (event === "exit") setTimeout(() => cb(0 as never), 0) } }
+    }
+    const t = new Date("2026-11-05T10:00:00").getTime()
+    const run = (at: number) =>
+      writeSessionNoteFromLastConversation(
+        { ...agent(), id: "kiro-co" } as Agent, fn, kiro, dataRoot, home, exec, noted(), () => false, () => at
+      )
+    expect((await run(t)).started).toBe(true)
+    await new Promise((r) => setTimeout(r, 50)) // let the run settle
+    expect((await run(t + 31 * 60_000)).started).toBe(false)
+    expect(calls).toHaveLength(1)
   })
 })
 

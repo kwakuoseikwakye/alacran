@@ -173,6 +173,9 @@ export async function writeSessionNoteFromLastConversation(
   // so they cover Kiro too; the transcript attribution above is Claude-only and
   // no Kiro transcript measurement is claimed.
   const attempts = await readAttempts(now(), attemptsStorePath)
+  // An unparseable existing file fails CLOSED: it is treated as "cap reached"
+  // and rewritten as a valid file at the cap, so it is reported once per company.
+  if (attempts.corrupt) attempts.day.count = SESSION_NOTE_DAILY_CAP
   const mine = attempts.companies[agent.id]
   if (mine && now() - mine.lastAttemptAt < SESSION_NOTE_MIN_GAP_MS) {
     // Quiet unless the conversation changed since we last said so: one line per
@@ -221,10 +224,12 @@ export async function writeSessionNoteFromLastConversation(
     await prepareExecutorScope(executor.id, scopeInput, agent.rootPath)
 
     // Recorded BEFORE the spawn and not swallowed: if either write fails nothing
-    // spawns (the attempt is simply not made). The fingerprint is the newest
-    // HUMAN turn, which this app's own `-p` run (entrypoint sdk-cli) never
-    // moves, so the value taken above is still right after the run and an app
-    // closed mid-run cannot respawn the same conversation.
+    // spawns (the attempt is simply not made). CLAUDE ONLY: its fingerprint is
+    // the newest HUMAN turn, which this app's own `-p` run (entrypoint sdk-cli)
+    // never moves, so the value taken above is still right after the run and an
+    // app closed mid-run cannot respawn the same conversation. A listing-based
+    // executor (Kiro) hashes message counts, which its own run grows, so it
+    // re-records after the run in settle() below.
     attempts.companies[agent.id] = { lastAttemptAt: now() }
     attempts.day.count++
     await writeAttempts(attempts, attemptsStorePath)
@@ -240,7 +245,18 @@ export async function writeSessionNoteFromLastConversation(
     // Fires on both "exit" (the ordinary case) and "error" (missing binary —
     // v56's five-call-site bug: an unlistened 'error' event takes the whole
     // server down). Either way the attempt is over, so the guard lifts.
-    const settle = () => inFlight.delete(agent.id)
+    const listing = executor.resume.listSessions
+    const settle = () => {
+      inFlight.delete(agent.id)
+      // Best-effort, listing executors only (see above): record what the
+      // conversation looks like AFTER our own turn. If this is lost, the 30-min
+      // gap and the daily cap still bound the damage.
+      if (listing) {
+        void conversationFingerprint(executor, agent.rootPath, execFn, home)
+          .then((fp) => (fp !== null ? setNotedFingerprint(agent.id, fp, notedStorePath) : undefined))
+          .catch(() => {})
+      }
+    }
     child.on("error", settle)
     child.on("exit", settle)
     child.unref()
