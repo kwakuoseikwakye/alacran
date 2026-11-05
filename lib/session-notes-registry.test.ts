@@ -15,29 +15,33 @@ afterEach(async () => {
 })
 
 describe("getSessionNotesForAgent", () => {
-  // The one place this differs from visible-runs, so it is the one pinned
-  // hardest: the file records the opt-OUT, so absence means on.
-  it("is ON for a company with no entry", async () => {
+  // Absence means OFF: unattended spend is opt-IN.
+  it("is OFF for a company with no entry", async () => {
+    expect(await getSessionNotesForAgent("co", registry())).toBe(false)
+  })
+
+  it("is OFF when the registry file does not exist at all", async () => {
+    expect(await getSessionNotesForAgent("co", path.join(dir, "nope.json"))).toBe(false)
+  })
+
+  it("is ON once a company has opted in", async () => {
+    await writeFile(registry(), JSON.stringify([{ agentId: "co", autoWrite: true }]))
     expect(await getSessionNotesForAgent("co", registry())).toBe(true)
   })
 
-  it("is ON when the registry file does not exist at all", async () => {
-    expect(await getSessionNotesForAgent("co", path.join(dir, "nope.json"))).toBe(true)
-  })
-
-  it("is OFF once a company has opted out", async () => {
+  it("keeps an explicit OFF", async () => {
     await writeFile(registry(), JSON.stringify([{ agentId: "co", autoWrite: false }]))
     expect(await getSessionNotesForAgent("co", registry())).toBe(false)
   })
 
   it("does not let one company's setting decide another's", async () => {
-    await writeFile(registry(), JSON.stringify([{ agentId: "co", autoWrite: false }]))
-    expect(await getSessionNotesForAgent("other", registry())).toBe(true)
+    await writeFile(registry(), JSON.stringify([{ agentId: "co", autoWrite: true }]))
+    expect(await getSessionNotesForAgent("other", registry())).toBe(false)
   })
 
-  it("falls back to ON rather than throwing on a corrupt file", async () => {
+  it("falls back to OFF rather than throwing on a corrupt file", async () => {
     await writeFile(registry(), "{not json")
-    expect(await getSessionNotesForAgent("co", registry())).toBe(true)
+    expect(await getSessionNotesForAgent("co", registry())).toBe(false)
     expect(await getSessionNotesAssignments(registry())).toEqual([])
   })
 })
